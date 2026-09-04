@@ -1,0 +1,5 @@
+dist
+node_modules
+src/schemas/zod
+prisma/generated
+uploads

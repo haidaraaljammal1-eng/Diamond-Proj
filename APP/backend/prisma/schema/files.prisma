@@ -1,0 +1,22 @@
+// ---------------------------------------------------------------------------
+// Attachment metadata (generic). Files are private by default: upload and
+// download are authenticated + permission-checked. `storageKey` is a
+// server-generated safe name — NEVER the client's original filename.
+// Entity relations can be added per-domain later.
+// ---------------------------------------------------------------------------
+
+model Attachment {
+  id           String   @id @default(uuid())
+  originalName String
+  // Server-generated, path-traversal-safe storage identifier. Unique.
+  storageKey   String   @unique
+  mimeType     String
+  size         Int
+  checksum     String?
+  uploadedById Int?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([uploadedById])
+  @@map("attachments")
+}

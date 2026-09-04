@@ -1,0 +1,224 @@
+// Call Center domain.
+// Turns complaint follow-ups, due callbacks and manual candidates into a
+// prioritized, claimable call queue with call sessions, callbacks and recording
+// metadata.
+
+// ---- Enums ------------------------------------------------------------------
+
+enum CallQueueSourceType {
+  COMPLAINT
+  CALLBACK
+  MANUAL
+}
+
+enum CallQueuePriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum CallQueueStatus {
+  NEW
+  CLAIMED
+  IN_PROGRESS
+  CALLBACK_SCHEDULED
+  COMPLETED
+  UNREACHABLE
+  REFUSED
+  INVALID_CONTACT
+  CANCELLED
+}
+
+enum CallSessionMode {
+  MANUAL
+  PROVIDER
+}
+
+enum CallSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  ABANDONED
+}
+
+enum CallOutcome {
+  CALL_COMPLETED
+  NO_ANSWER
+  WRONG_NUMBER
+  PHONE_OFF
+  BUSY
+  CALLBACK_REQUESTED
+  REFUSED_PARTICIPATION
+  FOLLOW_UP_COMPLETED
+}
+
+enum CallCallbackStatus {
+  SCHEDULED
+  DUE
+  CLAIMED
+  COMPLETED
+  CANCELLED
+}
+
+enum CallCallbackReason {
+  CUSTOMER_REQUESTED
+  NO_ANSWER_RETRY
+  PHONE_OFF_RETRY
+  BUSY_RETRY
+}
+
+enum CallRecordingStatus {
+  PENDING
+  AVAILABLE
+  FAILED
+  UNAVAILABLE
+}
+
+// ---- Models -----------------------------------------------------------------
+
+/// One real reason to call a customer. Filled automatically from queue sources
+/// (complaint follow-up, due callback) or manually.
+/// One historical row per reason; retries/callbacks reuse the same row.
+model CallCenterQueueItem {
+  id Int @id @default(autoincrement())
+
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  purchaseExperienceId Int?
+  purchaseExperience   PurchaseExperience? @relation(fields: [purchaseExperienceId], references: [id])
+
+  branchId Int?
+  branch   Branch? @relation(fields: [branchId], references: [id])
+
+  sourceType    CallQueueSourceType
+  reasonCode    String?
+  reasonSummary String?
+
+  priority     CallQueuePriority @default(MEDIUM)
+  // Central ordering key set from sourceType/severity (lower = called sooner).
+  priorityRank Int               @default(500)
+
+  status CallQueueStatus @default(NEW)
+
+  assignedToUserId Int?
+  assignedTo       User?     @relation("CallQueueAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  claimedAt        DateTime?
+
+  // When the item becomes eligible again (callback scheduled time / retry time).
+  dueAt DateTime?
+
+  attemptCount           Int @default(0)
+  unansweredAttemptCount Int @default(0)
+
+  wantsFurtherContact Boolean?
+  complaintRequested  Boolean  @default(false)
+
+  revision Int @default(0)
+
+  // Stable idempotency key, e.g. "RESPONSE:123", "INVITATION:9:NON_RESPONDER", "MANUAL:<uuid>".
+  dedupeKey String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions  CallSession[]
+  callbacks CallCallback[]
+
+  @@index([status])
+  @@index([priorityRank])
+  @@index([branchId])
+  @@index([assignedToUserId])
+  @@index([customerId])
+  @@index([dueAt])
+  @@index([sourceType])
+  @@index([status, priorityRank, dueAt])
+  @@map("call_center_queue_items")
+}
+
+/// One call attempt against a queue item. Every attempt is its own record —
+/// history is never overwritten. Duration is computed backend-side.
+model CallSession {
+  id          Int                 @id @default(autoincrement())
+  queueItemId Int
+  queueItem   CallCenterQueueItem @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
+
+  agentUserId Int
+  agent       User @relation("CallSessionAgent", fields: [agentUserId], references: [id])
+
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+
+  mode   CallSessionMode   @default(MANUAL)
+  status CallSessionStatus @default(IN_PROGRESS)
+
+  outcome        CallOutcome?
+  providerCallId String?
+
+  recordingStatus CallRecordingStatus @default(UNAVAILABLE)
+
+  // Internal note — permissioned; never written to logs/audit metadata.
+  internalNote String?
+
+  wantsFurtherContact Boolean?
+  complaintRequested  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recording CallRecording?
+  callback  CallCallback?
+
+  @@index([queueItemId])
+  @@index([agentUserId])
+  @@index([status])
+  @@index([outcome])
+  @@index([startedAt])
+  @@map("call_sessions")
+}
+
+/// A scheduled callback for a queue item. When due, the item re-enters the
+/// call queue (the same historical queue item — no duplicate is created).
+model CallCallback {
+  id          Int                 @id @default(autoincrement())
+  queueItemId Int
+  queueItem   CallCenterQueueItem @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
+
+  callSessionId Int?         @unique
+  callSession   CallSession? @relation(fields: [callSessionId], references: [id])
+
+  scheduledAt DateTime
+  timezone    String             @default("UTC")
+  reason      CallCallbackReason
+  status      CallCallbackStatus @default(SCHEDULED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([queueItemId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("call_callbacks")
+}
+
+/// Recording metadata for a call session. No public permanent URL is stored;
+/// access is granted only via a short-lived signed URL endpoint when AVAILABLE.
+model CallRecording {
+  id            Int         @id @default(autoincrement())
+  callSessionId Int         @unique
+  callSession   CallSession @relation(fields: [callSessionId], references: [id], onDelete: Cascade)
+
+  providerRecordingId String?
+  // Encrypted/safe storage reference — never a public URL.
+  storageKey          String?
+
+  status          CallRecordingStatus @default(UNAVAILABLE)
+  durationSeconds Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("call_recordings")
+}

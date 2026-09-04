@@ -1,0 +1,45 @@
+import { HttpStatus } from "src/constants/http-status";
+
+/**
+ * Stable, machine-readable error codes. The frontend branches on THESE, never
+ * on localized `message` text. Add generic codes here; do not add domain codes
+ * to the starter.
+ */
+export const ErrorCode = {
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+  UNAUTHORIZED: "UNAUTHORIZED",
+  FORBIDDEN: "FORBIDDEN",
+  NOT_FOUND: "NOT_FOUND",
+  CONFLICT: "CONFLICT",
+  RESOURCE_ALREADY_ASSIGNED: "RESOURCE_ALREADY_ASSIGNED",
+  RESOURCE_TIME_CONFLICT: "RESOURCE_TIME_CONFLICT",
+  RESOURCE_MODIFIED: "RESOURCE_MODIFIED",
+  IMPACT_REVIEW_REQUIRED: "IMPACT_REVIEW_REQUIRED",
+  RATE_LIMITED: "RATE_LIMITED",
+  ACCOUNT_SUSPENDED: "ACCOUNT_SUSPENDED",
+  ACCOUNT_SETUP_REQUIRED: "ACCOUNT_SETUP_REQUIRED",
+  TOKEN_INVALID: "TOKEN_INVALID",
+  TOKEN_EXPIRED: "TOKEN_EXPIRED",
+  INTERNAL_ERROR: "INTERNAL_ERROR",
+} as const;
+
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+
+/** Default HTTP status per error code (overridable per-throw). */
+export const DEFAULT_STATUS_FOR_CODE: Record<ErrorCode, HttpStatus> = {
+  VALIDATION_ERROR: HttpStatus.UNPROCESSABLE_ENTITY,
+  UNAUTHORIZED: HttpStatus.UNAUTHORIZED,
+  FORBIDDEN: HttpStatus.FORBIDDEN,
+  NOT_FOUND: HttpStatus.NOT_FOUND,
+  CONFLICT: HttpStatus.CONFLICT,
+  RESOURCE_ALREADY_ASSIGNED: HttpStatus.CONFLICT,
+  RESOURCE_TIME_CONFLICT: HttpStatus.CONFLICT,
+  RESOURCE_MODIFIED: HttpStatus.CONFLICT,
+  IMPACT_REVIEW_REQUIRED: HttpStatus.CONFLICT,
+  RATE_LIMITED: HttpStatus.TOO_MANY_REQUESTS,
+  ACCOUNT_SUSPENDED: HttpStatus.FORBIDDEN,
+  ACCOUNT_SETUP_REQUIRED: HttpStatus.FORBIDDEN,
+  TOKEN_INVALID: HttpStatus.UNAUTHORIZED,
+  TOKEN_EXPIRED: HttpStatus.UNAUTHORIZED,
+  INTERNAL_ERROR: HttpStatus.INTERNAL_SERVER_ERROR,
+};

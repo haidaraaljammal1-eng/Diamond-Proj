@@ -1,0 +1,508 @@
+// ---------------------------------------------------------------------------
+// Complaints & Resolution Management domain (BE-4). A complaint is a full
+// lifecycle (source → routing → SLA → escalation → actions → resolution →
+// closure → reopen), never a single status field.
+// Lifecycle status is separate from operational stage; escalation is separate
+// from stage; every SLA cycle is snapshotted so policy edits never rewrite
+// history. Automation is fed by the durable outbox (outbox.prisma), not logs.
+// ---------------------------------------------------------------------------
+
+// --- Enums ------------------------------------------------------------------
+
+enum ComplaintSourceType {
+  CALL_CENTER
+  MANUAL
+  SYSTEM_ROUTING
+}
+
+enum ComplaintPriority {
+  CRITICAL
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ComplaintLifecycleStatus {
+  OPEN
+  RESOLVED
+  CLOSED
+}
+
+// Simplified 5-stage processing model — the stage answers only "where is the
+// handling now?". Operational detail (received / reviewed / assigned / contacted /
+// solution offered / confirmation) lives in the timeline as events, and the pause
+// reason lives in `waitingReason`. Movement between stages is FREE (no matrix).
+enum ComplaintStage {
+  NEW
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+// Optional reason a complaint is paused (only meaningful while stage = WAITING).
+enum WaitingReason {
+  CUSTOMER
+  DOCUMENTS
+  OTHER_DEPARTMENT
+  APPROVAL
+  OTHER
+}
+
+enum ComplaintRoutingStatus {
+  ROUTED
+  UNROUTED
+}
+
+enum ComplaintSummaryStatus {
+  GENERATED
+  UNAVAILABLE
+  NOT_REQUESTED
+}
+
+// What a routing rule tests. Typed — never arbitrary executable JSON.
+enum RoutingFactType {
+  SOURCE_TYPE
+  COMPLAINT_REQUESTED
+}
+
+enum RoutingRuleOperator {
+  EQUALS
+  NOT_EQUALS
+  IN
+  IS_TRUE
+}
+
+enum ComplaintActionType {
+  PHONE_CALL
+  WHATSAPP
+  EMAIL
+  SMS
+  VISIT_MEETING
+  INTERNAL_NOTE
+  OTHER
+}
+
+enum ComplaintTimelineEventType {
+  COMPLAINT_OPENED
+  ROUTED
+  DEPARTMENT_CHANGED
+  ASSIGNED
+  REASSIGNED
+  PRIORITY_CHANGED
+  STAGE_CHANGED
+  FIRST_RESPONSE
+  ACTION_ADDED
+  ATTACHMENT_ADDED
+  SLA_WARNING
+  SLA_BREACHED
+  ESCALATED
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum EscalationTrigger {
+  MANUAL
+  SLA_BREACH
+  SLA_BREACH_DELAY
+}
+
+enum ComplaintAttachmentStatus {
+  ACTIVE
+  DELETED
+}
+
+// --- Reference / configuration ----------------------------------------------
+
+/// A complaint category. `code` is the immutable business key; Arabic label is
+/// display only — logic must branch on code/id, never the localized name.
+model ComplaintCategory {
+  id                  Int                @id @default(autoincrement())
+  code                String             @unique
+  nameEn              String
+  nameAr              String
+  defaultDepartmentId Int?
+  defaultDepartment   Department?        @relation(fields: [defaultDepartmentId], references: [id])
+  defaultPriority     ComplaintPriority?
+  active              Boolean            @default(true)
+  sortOrder           Int                @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  complaints   Complaint[]
+  routingRules ComplaintRoutingRule[]
+
+  @@index([active])
+  @@map("complaint_categories")
+}
+
+/// A typed, deterministic routing rule. Conditions are structured columns (no
+/// eval / free JSON logic). FIRST_MATCH_WINS by EXECUTION ORDER:
+/// (sortOrder ASC, createdAt ASC, id ASC). A rule has NO priority of its own —
+/// `priority` below is the priority of the COMPLAINT the rule opens.
+model ComplaintRoutingRule {
+  id        Int     @id @default(autoincrement())
+  name      String
+  /// Stable business key for seeded template rules (e.g. DEFAULT_VERY_DISSATISFIED),
+  /// so a seed can upsert idempotently. Null for user-created rules.
+  code      String? @unique
+  active    Boolean @default(true)
+  /// EXECUTION ORDER — the only thing that decides which rule is evaluated
+  /// first. Non-null with a default, so a rule can never be unordered.
+  sortOrder Int     @default(0)
+  revision  Int     @default(0)
+
+  // Optional source scoping.
+  sourceType ComplaintSourceType?
+
+  // Typed condition.
+  factType    RoutingFactType
+  operator    RoutingRuleOperator
+  valueString String?
+  valueNumber Int?
+  valueBool   Boolean?
+
+  // Outcome.
+  categoryId       Int
+  category         ComplaintCategory @relation(fields: [categoryId], references: [id])
+  departmentId     Int?
+  department       Department?       @relation(fields: [departmentId], references: [id])
+  /// Optional SUGGESTED assignee. When set, an auto-routed complaint is created
+  /// assigned to this user and its department is derived from them (see
+  /// departmentForAssignee); the complaint-assignee lookup preselects them. Null
+  /// = route to department only (the pre-existing behaviour).
+  assignedToUserId Int?
+  assignedTo       User?             @relation("RoutingRuleAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  /// The priority stamped on the COMPLAINT this rule opens (and snapshotted into
+  /// its SLA cycle). NOT the rule's own precedence — see sortOrder for that.
+  priority         ComplaintPriority
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  complaints Complaint[]
+
+  @@index([active, sortOrder])
+  @@index([categoryId])
+  @@index([assignedToUserId])
+  @@map("complaint_routing_rules")
+}
+
+/// Channels a complaint notification can be configured for. Distinct from the
+/// generic NotificationChannel pipeline: WHATSAPP/SMS are surfaced here as
+/// configurable preferences even though their providers are NOT_CONFIGURED in
+/// this build — availability is computed at read time, never implied by `enabled`.
+enum ComplaintNotificationChannel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+  SMS
+}
+
+/// Admin-configurable event×channel notification preference for the complaint
+/// domain (BE-4). One row per (eventKey, channel), optimistic-locked per cell
+/// (revision). Enabling a channel is a preference only — provider readiness is
+/// computed separately and an unconfigured channel is never reported as working.
+model ComplaintNotificationSetting {
+  id        Int                          @id @default(autoincrement())
+  eventKey  String
+  channel   ComplaintNotificationChannel
+  enabled   Boolean                      @default(false)
+  revision  Int                          @default(0)
+  createdAt DateTime                     @default(now())
+  updatedAt DateTime                     @updatedAt
+
+  @@unique([eventKey, channel])
+  @@map("complaint_notification_settings")
+}
+
+/// Status of one queued complaint-notification delivery (outbox row).
+enum ComplaintDeliveryStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+/// Durable per-recipient delivery outbox for complaint EMAIL (and future
+/// WHATSAPP/SMS) notifications. Enqueued idempotently (unique identity) so a
+/// worker retry / restart / concurrent worker never double-sends; processed with
+/// advisory-lock claim + attempt/backoff. IN_APP stays synchronous (already
+/// idempotent) — only external channels are queued. No PII/HTML is stored: the
+/// message is RE-RENDERED from live complaint data at send time.
+model ComplaintNotificationDelivery {
+  id          Int       @id @default(autoincrement())
+  complaintId Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  eventKey        String
+  // cycle/level/closure discriminator so a reminder/escalation cycle is distinct.
+  dedupeSuffix    String                       @default("")
+  channel         ComplaintNotificationChannel
+  recipientUserId Int
+  // Snapshot of the address the notice targets (safe reference, not body PII).
+  recipientEmail  String
+  lang            String                       @default("ar")
+
+  status              ComplaintDeliveryStatus @default(QUEUED)
+  attempts            Int                     @default(0)
+  maxAttempts         Int                     @default(5)
+  nextAttemptAt       DateTime                @default(now())
+  processingStartedAt DateTime?
+  providerMessageId   String?
+  failureReason       String?
+  sentAt              DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Exactly-once enqueue per (complaint, event, cycle, channel, recipient).
+  @@unique([complaintId, eventKey, dedupeSuffix, channel, recipientUserId])
+  @@index([status, nextAttemptAt])
+  @@index([complaintId])
+  @@map("complaint_notification_deliveries")
+}
+
+/// SLA targets per priority (configurable, revision-safe). Snapshotted into each
+/// ComplaintSlaCycle at open/reopen so later edits never move historical deadlines.
+model ComplaintSlaPolicy {
+  id                           Int               @id @default(autoincrement())
+  priority                     ComplaintPriority @unique
+  firstResponseMinutes         Int
+  resolutionMinutes            Int
+  warningBeforeMinutes         Int
+  breachEscalationDelayMinutes Int?
+  active                       Boolean           @default(true)
+  revision                     Int               @default(0)
+  createdAt                    DateTime          @default(now())
+  updatedAt                    DateTime          @updatedAt
+
+  @@map("complaint_sla_policies")
+}
+
+// --- Core aggregate ---------------------------------------------------------
+
+model Complaint {
+  id           Int    @id @default(autoincrement())
+  // Human-facing number (e.g. CMP-000123). Unique, concurrency-safe generation.
+  publicNumber String @unique
+
+  customerId           Int
+  customer             Customer            @relation(fields: [customerId], references: [id])
+  purchaseExperienceId Int?
+  purchaseExperience   PurchaseExperience? @relation(fields: [purchaseExperienceId], references: [id])
+  branchId             Int?
+  branch               Branch?             @relation(fields: [branchId], references: [id])
+
+  categoryId   Int?
+  category     ComplaintCategory? @relation(fields: [categoryId], references: [id])
+  departmentId Int?
+  department   Department?        @relation(fields: [departmentId], references: [id])
+
+  assignedToUserId Int?
+  assignedTo       User? @relation("ComplaintAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+
+  // Immutable after creation. sourceId = responseId / callSessionId / manual key.
+  sourceType ComplaintSourceType
+  sourceId   String?
+
+  priority          ComplaintPriority        @default(MEDIUM)
+  lifecycleStatus   ComplaintLifecycleStatus @default(OPEN)
+  stage             ComplaintStage           @default(NEW)
+  // Only set while stage = WAITING (why the handling is paused); cleared on move out.
+  waitingReason     WaitingReason?
+  waitingReasonNote String?
+  routingStatus     ComplaintRoutingStatus   @default(UNROUTED)
+
+  routingRuleId   Int?
+  routingRule     ComplaintRoutingRule? @relation(fields: [routingRuleId], references: [id], onDelete: SetNull)
+  // Snapshot of category/department/priority/SLA at routing time (rule edits never change history).
+  routingSnapshot Json?
+
+  // Complaint body (manual text) / safe reference to the source (no PII duplication).
+  description   String?
+  systemSummary String?
+  summaryStatus ComplaintSummaryStatus @default(NOT_REQUESTED)
+
+  firstRespondedAt DateTime?
+  openedAt         DateTime  @default(now())
+
+  resolvedAt        DateTime?
+  resolvedByUserId  Int?
+  resolutionSummary String?
+  solutionProposed  String?
+
+  closedAt       DateTime?
+  closedByUserId Int?
+  closureCount   Int       @default(0)
+
+  reopenedCount  Int       @default(0)
+  lastReopenedAt DateTime?
+
+  isEscalated     Boolean   @default(false)
+  escalationLevel Int       @default(0)
+  escalatedAt     DateTime?
+
+  isLate Boolean @default(false)
+
+  // Denormalized current-cycle SLA deadlines (index-friendly for list + worker).
+  slaCurrentCycleNumber Int?
+  slaFirstResponseDueAt DateTime?
+  slaResolutionDueAt    DateTime?
+  slaWarnAt             DateTime?
+
+  revision  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slaCycles              ComplaintSlaCycle[]
+  escalations            ComplaintEscalation[]
+  actions                ComplaintAction[]
+  timeline               ComplaintTimelineEvent[]
+  attachments            ComplaintAttachment[]
+  notificationDeliveries ComplaintNotificationDelivery[]
+
+  // One complaint per source event.
+  @@unique([sourceType, sourceId])
+  @@index([branchId])
+  @@index([customerId])
+  @@index([departmentId])
+  @@index([assignedToUserId])
+  @@index([categoryId])
+  @@index([lifecycleStatus])
+  @@index([stage])
+  @@index([priority])
+  @@index([slaResolutionDueAt])
+  @@index([isLate])
+  @@index([isEscalated])
+  @@index([createdAt])
+  @@map("complaints")
+}
+
+/// A single SLA cycle. Reopen starts a new cycle; old cycles are preserved.
+model ComplaintSlaCycle {
+  id          Int       @id @default(autoincrement())
+  complaintId Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  cycleNumber Int
+
+  prioritySnapshot     ComplaintPriority
+  firstResponseMinutes Int
+  resolutionMinutes    Int
+  warningBeforeMinutes Int
+
+  startedAt          DateTime
+  firstResponseDueAt DateTime
+  resolutionDueAt    DateTime
+  warningAt          DateTime
+
+  firstRespondedAt DateTime?
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+
+  firstResponseBreachedAt DateTime?
+  resolutionBreachedAt    DateTime?
+  warningNotifiedAt       DateTime?
+  breachEscalatedAt       DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([complaintId, cycleNumber])
+  @@index([complaintId])
+  @@index([closedAt, resolutionDueAt])
+  @@map("complaint_sla_cycles")
+}
+
+/// One escalation of a case. An escalation is an EXPLICIT TRANSFER: it records
+/// where the case was (from*) and where it went (to*), so the history answers
+/// "who did this go to?" without a lookup table.
+///
+/// `level` is DEPRECATED for new escalations: it was never connected to a
+/// destination (no matrix, no configured owner per level), so it is kept only so
+/// historical rows stay readable and the SLA worker's auto-escalation counter
+/// keeps incrementing. Nothing in the UI routes by it.
+model ComplaintEscalation {
+  id          Int       @id @default(autoincrement())
+  complaintId Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  /// Deprecated as a destination; still the ordinal of this escalation.
+  level       Int
+  reason      String?
+
+  /// Where the case sat before this escalation, and where it went. Nullable:
+  /// historical rows predate explicit destinations, and an auto-escalation
+  /// (SLA breach) transfers nothing — it only raises the alarm.
+  fromDepartmentId Int?
+  fromDepartment   Department? @relation("EscalationFromDepartment", fields: [fromDepartmentId], references: [id], onDelete: SetNull)
+  toDepartmentId   Int?
+  toDepartment     Department? @relation("EscalationToDepartment", fields: [toDepartmentId], references: [id], onDelete: SetNull)
+  fromUserId       Int?
+  fromUser         User?       @relation("EscalationFromUser", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUserId         Int?
+  toUser           User?       @relation("EscalationToUser", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  triggerType     EscalationTrigger
+  createdByUserId Int?
+  createdAt       DateTime          @default(now())
+
+  @@index([complaintId])
+  @@index([toDepartmentId])
+  @@index([toUserId])
+  @@map("complaint_escalations")
+}
+
+model ComplaintAction {
+  id              Int                 @id @default(autoincrement())
+  complaintId     Int
+  complaint       Complaint           @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  type            ComplaintActionType
+  // Body — internal notes never enter logs/audit/notifications.
+  content         String
+  result          String?
+  customerVisible Boolean             @default(false)
+  createdByUserId Int
+  createdAt       DateTime            @default(now())
+
+  attachments ComplaintAttachment[]
+
+  @@index([complaintId, createdAt])
+  @@map("complaint_actions")
+}
+
+/// Immutable timeline event. Metadata carries safe ids only (never PII / note text).
+model ComplaintTimelineEvent {
+  id          Int                        @id @default(autoincrement())
+  complaintId Int
+  complaint   Complaint                  @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  type        ComplaintTimelineEventType
+  actorUserId Int?
+  metadata    Json?
+  createdAt   DateTime                   @default(now())
+
+  @@index([complaintId, createdAt])
+  @@map("complaint_timeline_events")
+}
+
+/// Attachment metadata for a complaint / action. Private storage only — no public
+/// URL; download is via a short-lived signed token endpoint (audited by ids).
+model ComplaintAttachment {
+  id               String                    @id @default(uuid())
+  complaintId      Int
+  complaint        Complaint                 @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  actionId         Int?
+  action           ComplaintAction?          @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  originalName     String
+  mimeType         String
+  size             Int
+  checksum         String?
+  storageKey       String                    @unique
+  uploadedByUserId Int?
+  status           ComplaintAttachmentStatus @default(ACTIVE)
+  createdAt        DateTime                  @default(now())
+
+  @@index([complaintId])
+  @@map("complaint_attachments")
+}

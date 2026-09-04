@@ -1,0 +1,39 @@
+// ---------------------------------------------------------------------------
+// Durable domain-event outbox (generic infrastructure). Producers write an event
+// row inside the SAME transaction as the business state change (transactional
+// outbox pattern); a background worker consumes PENDING rows idempotently. This
+// guarantees no domain event (e.g. a complaint-worthy signal) is lost on crash.
+// Payloads carry IDs only — never PII / free text / tokens.
+// ---------------------------------------------------------------------------
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model DomainOutboxEvent {
+  id            Int          @id @default(autoincrement())
+  eventType     String
+  aggregateType String
+  aggregateId   String
+  // Safe payload — IDs only (no phone/email/comment/note/token).
+  payload       Json
+  // Stable idempotency key, e.g. "call_center.complaint_requested:123". Unique.
+  dedupeKey     String       @unique
+  status        OutboxStatus @default(PENDING)
+  attemptCount  Int          @default(0)
+  maxAttempts   Int          @default(10)
+  availableAt   DateTime     @default(now())
+  // Worker lease (claim + stale-lease recovery), mirrors MessageDelivery.
+  lockedAt      DateTime?
+  processedAt   DateTime?
+  lastErrorCode String?
+  createdAt     DateTime     @default(now())
+
+  @@index([status, availableAt])
+  @@index([lockedAt])
+  @@index([aggregateType, aggregateId])
+  @@map("domain_outbox_events")
+}

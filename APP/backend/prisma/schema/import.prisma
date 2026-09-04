@@ -1,0 +1,87 @@
+// ---------------------------------------------------------------------------
+// Import pipeline (product): staged, confirm-gated bulk load of operational data.
+// An ImportJob NEVER stores business data itself — it writes only into the
+// authoritative Customer / Vehicle / PurchaseExperience tables at confirm time.
+// Preview/validation write nothing. Per-row outcomes are persisted ONLY at
+// confirm (ImportRowOutcome) and hold resolved entity ids + templated errors,
+// never raw cell PII. The uploaded file lives on disk under a safe storageKey;
+// fileHash (sha256) supports idempotency / duplicate-upload detection.
+// ---------------------------------------------------------------------------
+
+enum ImportSourceType {
+  CSV
+  XLSX
+}
+
+enum ImportJobStatus {
+  UPLOADED
+  MAPPING_REQUIRED
+  VALIDATING
+  READY
+  IMPORTING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+  CANCELLED
+}
+
+// Terminal, per-row write result recorded at confirm time.
+enum ImportRowResultStatus {
+  IMPORTED
+  UPDATED
+  SKIPPED
+  FAILED
+  NEEDS_MANUAL_REVIEW
+}
+
+model ImportJob {
+  id               Int              @id @default(autoincrement())
+  sourceType       ImportSourceType
+  originalFileName String
+  // Server-generated, path-traversal-safe storage identifier (never the client
+  // filename). Unique so the same physical upload maps to exactly one job.
+  storageKey       String           @unique
+  // sha256 of the uploaded bytes — duplicate-upload detection + idempotency.
+  fileHash         String?
+  status           ImportJobStatus  @default(UPLOADED)
+  // Column -> field mapping: { [fileHeader]: targetFieldKey }. Null until saved.
+  mapping          Json?
+  totalRows        Int              @default(0)
+  validRows        Int              @default(0)
+  invalidRows      Int              @default(0)
+  importedRows     Int              @default(0)
+  updatedRows      Int              @default(0)
+  skippedRows      Int              @default(0)
+  failedRows       Int              @default(0)
+  manualReviewRows Int              @default(0)
+  createdById      Int
+  createdBy        User             @relation(fields: [createdById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  rows ImportRowOutcome[]
+
+  @@index([status])
+  @@index([createdById])
+  @@index([fileHash])
+  @@map("import_jobs")
+}
+
+model ImportRowOutcome {
+  id           Int                   @id @default(autoincrement())
+  jobId        Int
+  job          ImportJob             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  rowNumber    Int
+  status       ImportRowResultStatus
+  // Authoritative rows written/matched by this source row (null when not written).
+  customerId   Int?
+  vehicleId    Int?
+  experienceId Int?
+  // [{ field, code, reason, message }] — generic/templated, never raw cell PII.
+  errors       Json?
+  createdAt    DateTime              @default(now())
+
+  @@unique([jobId, rowNumber])
+  @@index([jobId])
+  @@map("import_row_outcomes")
+}

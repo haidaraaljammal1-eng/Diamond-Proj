@@ -1,0 +1,937 @@
+# Haidara Backend Technical & Architecture Audit
+
+تاريخ الفحص: 2026-09-04
+نطاق الفحص: ملفات الجذر، `src/`, `prisma/`, `tests/`, `scripts/`, `docs/`، إعدادات TypeScript/ESLint/Prettier، lockfile وpackage metadata.
+
+## منهجية التصنيف
+
+- `EXPLICIT`: موجود مباشرة في implementation أو schema أو migration أو test.
+- `INFERRED`: استنتاج قوي من أكثر من implementation، لكنه ليس تصريحًا مستقلًا.
+- `UNKNOWN`: لا يمكن إثباته من الملفات المفحوصة.
+
+لم يتم تعديل أي ملف تشغيلي. هذا الملف هو artifact التقرير الوحيد.
+
+## 1. Executive Architecture Summary
+
+`EXPLICIT`: المشروع Backend مبني على Fastify 5 + TypeScript CommonJS + Prisma 7 + PostgreSQL عبر `@prisma/adapter-pg`. التحقق والـserialization يستخدمان Zod 4 عبر `fastify-type-provider-zod`، وOpenAPI يولد من schemas routes.
+
+`EXPLICIT`: المعمارية الفعلية هي modular/domain-oriented مع طبقات عملية غير مفروضة كـinterfaces عامة:
+
+```text
+HTTP Request
+  -> Fastify instance / global onRequest
+  -> access-level encapsulation: public | user | admin | external
+  -> authentication hook عند الحاجة
+  -> Zod validation
+  -> permission أو API-scope preHandler
+  -> route handler
+  -> module service
+  -> Prisma client / أحيانًا raw SQL advisory lock
+  -> response envelope + Zod serialization
+  -> centralized audit onResponse عند انطباقه
+```
+
+`EXPLICIT`: لا توجد Controller classes أو Repository layer عامة مستقلة. معظم handlers تنشئ service وتستدعيها مباشرة؛ services تحتوي business logic وPrisma queries. توجد helpers وطبقة DB مشتركة (`transaction`, `advisory-lock`, `idempotency`, `prisma-error`, `outbox`) لكنها ليست repository abstraction موحدة.
+
+`EXPLICIT`: النظام ليس generic auth template فقط؛ يحتوي domain فعليًا على master data، customers/vehicles/purchase experiences، complaints، call center، communication templates، imports، reports، integrations وexternal API.
+
+`INFERRED`: أفضل mental model لإضافة Diamond Rent Car هو الحفاظ على module domain بنفس convention، مع جعل route contract وpermission وservice وPrisma model جزءًا من feature boundary.
+
+## 2. Project Structure
+
+### Root
+
+- `package.json`: scripts/dependencies وentry point `dist/src/server.js`.
+- `package-lock.json`: npm dependency lockfile. لا يوجد pnpm/yarn lockfile.
+- `tsconfig.json`: strict TypeScript، CommonJS، path alias `src/*`، rootDir هو root repository.
+- `eslint.config.mjs`: ESLint flat config مع TypeScript ESLint وقواعد منع unused vars وconsole في server.
+- `.prettierrc`, `.prettierignore`.
+- `.env.example`, `.npmrc`, `README.md`, `AGENTS.md`, `CLAUDE.md`.
+- لا يوجد Dockerfile أو docker-compose أو CI workflow ظاهر في الجرد. `UNKNOWN`: هل deployment الخارجي يضيف هذه الملفات خارج repository.
+
+### `src/`
+
+- `app.ts`, `server.ts`: bootstrap.
+- `config/`: env، i18n، logger.
+- `constants/`: permissions، roles، errors، HTTP statuses.
+- `lib/`: context، db، errors، files، security، HTTP، email وhelpers.
+- `plugins/`: infrastructure/decorators/autoload/scheduler.
+- `services/roles/`: access-level hooks وauthentication/authorization.
+- `modules/<feature>/`: schemas/services/routes/domain helpers.
+- `schemas/zod/`: generated Prisma Zod schemas، مستثناة من TypeScript/ESLint حسب config.
+- `worker/`: in-process background runner.
+- `types/fastify.d.ts`: Fastify module augmentation.
+
+### `prisma/`
+
+`EXPLICIT`: schema مقسم إلى concern files ويجمعه Prisma generator: `auth`, `audit`, `system`, `master-data`, `operational`, `complaints`, `call-center`, `communication`, `files`, `import`, `notifications`, `outbox`, `reports`, `settings`, و`schema.prisma`.
+
+### `tests/`
+
+`EXPLICIT`: Unit tests لـpassword/tokens/2FA/redaction/auth-context/errors/magic-bytes/domain helpers/integrations/imports/master data/operational/complaints. Integration tests لـsecurity/auth/2FA/rate-limit/scopes/lookups/imports/complaints/master data/integrations/templates وغيرها.
+
+## 3. Bootstrap & Runtime Lifecycle
+
+### Entry point
+
+`EXPLICIT`: `src/server.ts` هو process entry point. يستدعي `buildApp()`، يسجل SIGINT/SIGTERM، ثم `app.listen({ port: env.PORT, host: "0.0.0.0" })`.
+
+`EXPLICIT`: `src/app.ts` ينشئ Fastify بهذه الخيارات:
+
+- `logger: loggerOptions`.
+- `genReqId: randomUUID`.
+- `trustProxy: true`.
+- `bodyLimit: env.MAX_UPLOAD_SIZE`.
+- `pluginTimeout: 60_000`.
+- `ignoreTrailingSlash: true`.
+- `maxParamLength: 500`.
+
+ثم يسجل Zod validator/serializer compilers، global `onRequest` للغة، global error handler وnot-found handler، root `GET /`، ثم plugins، ثم `app.ready()`.
+
+### Plugin order
+
+`EXPLICIT` الترتيب في `src/plugins/index.ts`:
+
+1. Prisma
+2. CORS
+3. rate limit
+4. Helmet
+5. formbody + compression
+6. cookies
+7. JWT
+8. multipart
+9. capabilities
+10. settings
+11. mailer
+12. notifications
+13. Swagger عند development أو `OPENAPI_EXPORT=true`
+14. audit
+15. route autoload
+16. scheduler
+
+`INFERRED`: الترتيب مقصود لضمان توفر Prisma/JWT/decorators قبل autoload، ولهذا routes تأتي بعد infrastructure.
+
+### Shutdown
+
+`EXPLICIT`: SIGINT/SIGTERM يستدعيان `app.close()` ثم `process.exit(0)`. Prisma disconnect في `prismaPlugin.onClose`. scheduler interval يمسح نفسه في `onClose`. startup failure يسجل الخطأ وينهي process بـexit 1.
+
+`UNKNOWN`: لا توجد آلية timeout/forced shutdown أو shutdown coordination مع requests الجارية beyond Fastify close behavior.
+
+## 4. Fastify Plugins
+
+| Plugin | الوظيفة/التسجيل | Decorators/hooks/dependencies |
+|---|---|---|
+| `prisma.ts` | ينشئ PrismaPg + PrismaClient ويتصل عند startup | `fastify.prisma`; `onClose` disconnect؛ global omit للحقول الحساسة؛ يعتمد عليه audit/settings/routes |
+| `cors.ts` | CORS من `CORS_ORIGINS` | credentials، methods، exposed `content-disposition`; no-origin مسموح |
+| `rate-limit.ts` | global per-instance limiter | `authRateLimit()` للـlogin/refresh/reset/setup؛ error envelope 429 |
+| `helmet.ts` | security headers | CSP معطل صراحة، `crossOriginResourcePolicy: same-site` |
+| `body-parsers.ts` | formbody وcompression | gzip/deflate global |
+| `cookies.ts` | signed cookies | Cookie secret؛ defaults httpOnly/lax/root/secure production |
+| `jwt.ts` | `@fastify/jwt` access tokens | JWT secret هو `JWT_ACCESS_SECRET`؛ cookie name `access_token` unsigned |
+| `multipart.ts` | file parsing | fileSize `MAX_UPLOAD_SIZE`, files=1, fields=10 |
+| `capabilities.ts` | capability flags | `fastify.capabilities` |
+| `settings.ts` | typed DB settings accessors | `fastify.settings`؛ يعتمد Prisma |
+| `mailer.ts` | SMTP/integration mail delivery | `fastify.mailer`; skip/fail/sent statuses |
+| `notifications.ts` | notification pipeline | `fastify.notify`; preferences/dedupe/in-app delivery |
+| `swagger.ts` | OpenAPI UI/export | `/docs` في development أو export mode |
+| `audit.ts` | central audit writer | request `auditContext`, `setAudit`, `onResponse`; يعتمد Prisma |
+| `autoload.ts` | loads module routes by access level | encapsulated public/user/admin/external scopes؛ يعتمد Prisma/JWT/audit |
+| `scheduler.ts` | in-process background cycles | `onListen` يبدأ interval، `onClose` يوقفه |
+
+`EXPLICIT`: جميع plugins تقريبًا تستخدم `fastify-plugin`. `UNKNOWN`: لا يوجد plugin مستقل لـrefresh token؛ refresh logic داخل auth service.
+
+## 5. Hooks & Decorators
+
+### Hooks الفعلية
+
+- Global `onRequest` في `app.ts`: يحدد `request.language` من `Accept-Language`.
+- `auditPlugin.onResponse`: يحفظ audit row للـmutating successful requests أو request تم تعليمه بـ`setAudit`.
+- `prismaPlugin.onClose`: disconnect.
+- `schedulerPlugin.onListen/onClose`: تشغيل وإيقاف background timer.
+- User/admin scopes: `verifyToken` في `preValidation` ثم `enforcePermissions` في `preHandler`.
+- External scope: API-key verification في `onRequest` ثم `enforceApiScopes` في `preHandler`، وAPI usage logging في `onResponse`.
+- لا يوجد implementation ظاهر لـ`preParsing`, `preSerialization`, `onSend`, `onError` custom hooks.
+
+### Decorators
+
+`EXPLICIT`:
+
+- `fastify.prisma`: Prisma client.
+- `fastify.capabilities`: flags email/files/push/SMS.
+- `fastify.settings`: typed settings service.
+- `fastify.mailer`: mail service.
+- `fastify.notify`: notification service.
+- `request.auth`: read-only current user identity.
+- `request.apiAuth`: API-key identity.
+- `request.language`.
+- `request.auditContext` و`request.setAudit`.
+- Fastify JWT decorators من `@fastify/jwt`, منها `request.jwtVerify` و`fastify.jwt`.
+
+`request.auth` يحتوي: `id`, `email`, `status`, `permissions`, `roleKeys`, `sessionId`. `request.apiAuth` يحتوي: `apiKeyId`, `scopes`, `allBranches`, `branchScope`.
+
+## 6. Authentication Architecture
+
+### التقنية
+
+`EXPLICIT`: combination من:
+
+- Short-lived signed JWT access token.
+- Opaque random refresh token مخزن hash فقط في `AuthSession`.
+- Opaque password reset/account setup/2FA challenge tokens في `SecurityToken`.
+- TOTP 2FA وrecovery codes.
+- External API keys منفصلة عن user JWT.
+- Cookie support موجود للـaccess token، لكن login response أيضًا يعيد token pair.
+
+### Login flow
+
+```text
+POST /auth/login
+ -> authRateLimit + Zod LoginSchema
+ -> normalize email
+ -> user lookup with passwordHash omission override
+ -> reject missing user/hash أو suspended
+ -> Argon2id verify
+ -> إذا 2FA enabled: create opaque challenge فقط
+ -> غير ذلك: create AuthSession + opaque refresh token
+ -> sign JWT access token
+ -> return { data: result }
+```
+
+`EXPLICIT`: login لا ينشئ session أو access token قبل نجاح factor الثاني عند تفعيل 2FA.
+
+### JWT
+
+- Library: `@fastify/jwt`.
+- Secret: `JWT_ACCESS_SECRET`.
+- Payload الفعلي: `{ sub: userId, sid: sessionId, type: "access" }`.
+- TTL: `ACCESS_TOKEN_TTL`, default 900 seconds.
+- لا توجد permissions داخل JWT.
+- لا يوجد issuer/audience configured في plugin المفحوص. `UNKNOWN`: هل هناك reverse proxy أو outer layer يفرضهما.
+- يمكن التحقق من access token من Authorization Bearer عبر fastify-jwt، وcookie `access_token` configured.
+
+### Refresh
+
+`EXPLICIT`: `POST /auth/refresh` يستقبل `{ refreshToken }`. القيمة raw random base64url، تخزن SHA-256 hash فقط، session تحمل `familyId`, expiry, revokedAt, rotatedAt, IP وuser-agent.
+
+Rotation تستخدم conditional `updateMany` كـcompare-and-set. token المعاد استخدامه أو المنتهي يلغي sessions غير الملغاة في نفس family. replacement يبقى في نفس family. TTL الافتراضي 30 يومًا.
+
+`HIGH/INFO`: `JWT_REFRESH_SECRET` مطلوب في env لكنه غير مستخدم لأن refresh ليس JWT. هذا configuration debt ويمكن أن يضلل المشغل.
+
+### Logout
+
+`POST /auth/logout`: يأخذ `sessionId` من request.auth وuser ID، ويضع `revokedAt` للـsession الحالية فقط. إذا لم يوجد sessionId لا يفعل شيئًا. لا يوجد blacklist access JWT؛ access token يبقى صالحًا حتى expiry، بينما refresh session تلغى.
+
+### Password reset/setup
+
+- `POST /auth/password-reset-request`: لا يكشف وجود الحساب خارجيًا.
+- token opaque/hash-only، scope `PASSWORD_RESET`, expiry من env.
+- `POST /auth/password-reset-confirm`: يتحقق scope/expiry/usedAt، ثم transaction يستهلك token، يضع Argon2id hash، يفعل user، ويلغي sessions.
+- `POST /auth/account-setup`: نفس pattern مع `ACCOUNT_SETUP`.
+- عند email disabled في non-production قد يسجل reset link raw للتجربة المحلية. `MEDIUM`: هذا مقبول محليًا لكنه يتطلب حماية logs والالتزام بعدم تفعيل هذا المسار في production.
+- admin reset: `POST /users/:id/reset-password`، permission منفصلة، transaction hash + session revocation.
+- `UNKNOWN`: لا يوجد self-service change-current-password endpoint مستقل في routes المفحوصة.
+
+### 2FA
+
+`EXPLICIT`: TOTP RFC 6238-compatible: SHA-1، 6 digits، 30 seconds، window ±1. secret 160-bit مشفر AES-256-GCM بالمفتاح `TWO_FACTOR_ENCRYPTION_KEY`.
+
+Setup: pending encrypted secret -> verify code -> promote active -> generate recovery codes. replay guard عبر `twoFactorLastUsedStep`. recovery codes hash-only and single-use conditional update. Login challenge opaque scope `TWO_FACTOR_CHALLENGE` مع expiry وmaximum attempts. لا تصدر session قبل verify/recovery.
+
+2FA management routes authenticated، account ID دائمًا من `request.auth.id`; disable/regenerate يتطلبان password + second factor، ويلغيان sessions الأخرى. 
+
+## 7. Login / Token / Refresh / Logout Flows
+
+### Access token request
+
+كل route تحت `routes/user` أو `routes/admin` يدخل `preValidation`:
+
+1. `request.jwtVerify()`.
+2. expired -> `TOKEN_EXPIRED`/401.
+3. invalid -> `TOKEN_INVALID`/401.
+4. database lookup user بواسطة `sub` مع roles/permissions الحالية.
+5. missing -> unauthorized.
+6. `SUSPENDED` -> `ACCOUNT_SUSPENDED`.
+7. `PENDING` -> `ACCOUNT_SETUP_REQUIRED`.
+8. بناء `request.auth`.
+9. best-effort throttled `lastSeenAt`.
+
+### Account states
+
+`PENDING`: setup مطلوب ولا login عادي.
+`ACTIVE`: يسمح بالمصادقة.
+`SUSPENDED`: يمنع login/new authenticated requests؛ users service يسحب sessions عند suspension حسب implementation المرتبط بالstatus path.
+`DELETED`, `UNVERIFIED`: غير موجودة كـUserStatus enum.
+
+### Session end
+
+`EXPLICIT`: session تنتهي بالexpiry، logout، password reset/admin reset، refresh reuse detection، أو suspension behavior. access JWT نفسه ليس stateful blacklist.
+
+## 8. Authorization Architecture
+
+### User RBAC
+
+```text
+User
+  -> UserRole
+      -> Role
+          -> RolePermission
+              -> Permission.key
+  -> request.auth.permissions
+  -> route schema.permissions
+  -> hasAnyPermission
+  -> handler/service
+```
+
+`EXPLICIT`: permission list تقرأ من DB في كل authenticated request؛ لذلك تغيير role/permission ينعكس دون إعادة إصدار JWT. semantics للroute metadata هي ANY-of: يكفي وجود permission واحدة من القائمة.
+
+route بلا `permissions` داخل user/admin ليس public؛ هو authenticated-only.
+
+### External authorization
+
+```text
+API key header
+  -> verify prefix/hash/revocation/expiry
+  -> request.apiAuth
+  -> schema.apiScopes
+  -> ALL scopes required
+  -> external service
+```
+
+API keys لها scopes وbranch scope. creation يقيد authority الممنوحة بسلطة المنشئ.
+
+### Ownership and scoping
+
+`EXPLICIT` توجد ownership/scoping service rules، وليست global Fastify guard عامة:
+
+- notifications user routes تستعلم userId الحالي فقط.
+- 2FA user routes تستخدم current auth id فقط.
+- complaints/customers/call center/reports تستخدم branch/department visibility permissions وquery filters في services.
+- `view_all_branches` و`view_all_departments` permissions تتجاوز scoping في domains المحددة.
+- user branch assignments قد تشتق من department assignments.
+- لا يوجد multi-tenant isolation عام؛ `KNOWN-LIMITATIONS.md` يصرح بذلك.
+
+`UNKNOWN`: لا يمكن إثبات أن كل resource-level path في كل domain متسق بدون مراجعة سطرية لكل service/query؛ tests تغطي أجزاء منها.
+
+## 9. Roles & Permissions Matrix
+
+### Roles
+
+`EXPLICIT`: catalog الثابت يحتوي `system_admin` فقط. role database قابل للتوسع، وroles الأخرى إن وجدت تأتي من DB/admin API لا من `constants/roles.ts` catalog.
+
+`system_admin` هو `isSystem=true` ويأخذ كل `PERMISSION_CATALOG` في seed. يمنع حذف آخر administrator عبر users service. business logic يفترض ألا يفرع على role key بل permissions أو `isSystem`.
+
+### Permissions
+
+الـcatalog الفعلي في `src/constants/permissions.ts` يتضمن:
+
+- dashboard: `dashboard.read`
+- users: read/create/update/delete/reset_password/lookup
+- roles: read/manage
+- permissions: read
+- settings: read/manage
+- audit/audit_log: read وexport بحسب module
+- notifications: read/manage
+- files: read/upload/delete
+- master data: regions, cities, branches, vehicle_models, departments, salespeople read/manage
+- `reference_data.lookup`
+- customers: read/manage/view_all_branches/lookup
+- vehicles: read/manage
+- purchase_experiences: read/manage
+- imports: read/manage
+- communication templates: read/manage/publish/lookup
+- call center: queue, calls, callbacks, contacts, recordings, export, view_all_branches
+- complaints: read/manage/create/assign/escalate/resolve/close/reopen/export/view_all_branches/view_all_departments
+- complaint actions/attachments/routing/SLA/notifications/escalation audience permissions
+- reports: read/export/schedule/executive/customer_satisfaction/complaints/call_center/view_all_branches
+- report targets read/manage
+- integrations read/manage
+- API keys read/manage
+- security posture read
+
+### Matrix summary
+
+| Subject | Stored where | Loaded when | Check semantics |
+|---|---|---|---|
+| User role membership | `UserRole` | every protected request | union of role permissions |
+| Role permissions | `RolePermission` | every protected request | deduplicated strings |
+| Route permission | `schema.permissions` | `preHandler` | ANY listed permission |
+| API key scopes | `ApiKey.scopes` JSON | external `onRequest` | ALL listed `apiScopes` |
+| branch/department scope | assignment tables + permission | service/query | domain-specific |
+
+## 10. User & Identity Model
+
+`User` fields: `id`, normalized unique `email`, nullable `name`, `status` (`PENDING|ACTIVE|SUSPENDED`), nullable `passwordHash`, `language`, `lastSeenAt`, timestamps، 2FA encrypted/pending secret fields, enabled/at timestamps، replay step، relations.
+
+Relations تشمل roles/sessions/security tokens/notifications/preferences/audit logs/attachments، optional salesperson، import jobs، templates، managed branches، call center assignments/sessions، branch and department assignments، complaints/escalations، recovery codes.
+
+`passwordHash` global Prisma omit؛ login يرفع omission صراحة فقط للتحقق، وpublic mappers لا تعرضه.
+
+### Auth/RBAC ERD
+
+```mermaid
+erDiagram
+  USER ||--o{ USER_ROLE : has
+  ROLE ||--o{ USER_ROLE : assigned
+  ROLE ||--o{ ROLE_PERMISSION : grants
+  PERMISSION ||--o{ ROLE_PERMISSION : included
+  USER ||--o{ AUTH_SESSION : owns
+  USER ||--o{ SECURITY_TOKEN : receives
+  USER ||--o{ USER_BRANCH_ASSIGNMENT : belongs
+  USER ||--o{ USER_DEPARTMENT_ASSIGNMENT : belongs
+  BRANCH ||--o{ USER_BRANCH_ASSIGNMENT : scopes
+  DEPARTMENT ||--o{ USER_DEPARTMENT_ASSIGNMENT : scopes
+```
+
+## 11. Database Architecture
+
+`EXPLICIT`: PostgreSQL + Prisma 7 + `PrismaPg` driver adapter. Connection من `DATABASE_URL`. Prisma Client يتصل أثناء plugin registration، وdisconnect أثناء close.
+
+Global omission:
+
+- `User.passwordHash`, active/pending 2FA encrypted secrets.
+- `AuthSession.refreshTokenHash`.
+- `SecurityToken.tokenHash`.
+- `TwoFactorRecoveryCode.codeHash`.
+
+`EXPLICIT`: transactions عبر `withTransaction`، advisory locks PostgreSQL عبر `pg_advisory_xact_lock`، idempotency create-first عبر `IdempotencyKey`، وoutbox durable event tables. الاستعمال ليس repository-mediated؛ services تستدعي Prisma مباشرة أو helpers.
+
+`EXPLICIT`: migration system Prisma، migration الحالية `20260903000000_init` هي initial schema الظاهرة. التاريخ التفصيلي قبلها غير موجود في repository؛ `UNKNOWN`.
+
+## 12. Database Entities & Relationships
+
+### Identity/system
+
+- `User`, `Role`, `Permission`, `UserRole`, `RolePermission`.
+- `AuthSession`, `SecurityToken`, `TwoFactorRecoveryCode`.
+- `UserBranchAssignment`, `UserDepartmentAssignment`.
+- `AuditLog`, `IdempotencyKey`.
+
+### Master/operational
+
+- `Region -> City -> Branch`.
+- `Branch -> Department`, `Department -> UserDepartmentAssignment`.
+- `Branch -> VehicleModel`, `VehicleModel -> Vehicle`.
+- `Branch -> Salesperson`; optional `Salesperson -> User`.
+- `Customer -> PurchaseExperience`; `Vehicle -> PurchaseExperience`; `Branch -> PurchaseExperience`; optional salesperson.
+
+Master data غالبًا تستخدم `isActive` soft deactivation، normalized business keys وDB unique constraints؛ لا hard delete في core master entities حسب schema comments/services.
+
+### Complaints
+
+`ComplaintCategory`, `ComplaintRoutingRule`, `ComplaintNotificationSetting`, `ComplaintNotificationDelivery`, `ComplaintSlaPolicy`, `Complaint`، ثم child histories `ComplaintSlaCycle`, `ComplaintEscalation`, `ComplaintAction`, `ComplaintTimelineEvent`, `ComplaintAttachment`.
+
+Complaint يرتبط customer/purchase experience/branch/category/department/assignee/routing rule ويحتفظ lifecycle status وstage وSLA snapshots وrevision.
+
+### Call center
+
+`CallCenterQueueItem -> CallSession`, `CallCallback`, `CallRecording`. queue يدعم dedupeKey، status، assignment، priority وbranch scope.
+
+### Communication
+
+`MessageTemplate -> MessageTemplateVersion -> TemplateVariant -> TemplateButton`; published versions immutable conceptually، HTML sanitized.
+
+### Files/imports
+
+`Attachment` metadata + private filesystem storage key.
+`ImportJob -> ImportRowOutcome`; upload staged ثم confirm يكتب authoritative tables.
+
+### Notifications/settings/outbox
+
+`NotificationDefinition`, `NotificationPreference`, `Notification`, `NotificationDeliveryLog`.
+`Setting` typed serialized values، secret/public flags.
+`DomainOutboxEvent` durable event payload IDs-only.
+
+### Reports/integrations
+
+`ReportKpiTarget`, `ReportSchedule`, `ReportArtifact`, `IntegrationConnection`, `ApiKey`, `ApiUsageLog`.
+
+## 13. Complete API Inventory
+
+`EXPLICIT`: prefixes derived by autoload؛ `routes` وaccess-level folders تزال من URL. لا يوجد global `/api/v1` لكل API. versioning موجود فقط للـexternal module: `/api/v1`.
+
+### Public
+
+- `GET /` liveness.
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/password-reset-request`
+- `POST /auth/password-reset-confirm`
+- `POST /auth/account-setup`
+- `POST /auth/two-factor/verify`
+- `POST /auth/two-factor/recovery`
+- `GET /capabilities`
+- health routes تحت `/health` (health/readiness حسب route implementation).
+- public settings route تحت `/settings`.
+
+كل public auth route يستخدم Zod body/response، `public: true`، وauth rate limit.
+
+### User authenticated
+
+- `GET /auth/me`
+- `POST /auth/logout`
+- `GET /auth/two-factor/`
+- `POST /auth/two-factor/setup`
+- `POST /auth/two-factor/setup/verify`
+- `POST /auth/two-factor/setup/cancel`
+- `POST /auth/two-factor/disable`
+- `POST /auth/two-factor/recovery-codes`
+- notifications inbox/read/preferences routes تحت `/notifications`.
+- file upload/download/delete routes تحت `/files`.
+- lookup routes تحت `/lookups`.
+
+User routes لا تعلن permission عندما تكون ownership-based أو لا تحتاج أكثر من authenticated identity؛ auth hook لا يزال إلزاميًا بسبب folder scope.
+
+### Admin/resource routes
+
+- `/users`: list/get/department-options/create/update/reset-password/status/roles/departments/branches/delete operations.
+- `/roles`: list/get/create/update/set permissions/delete.
+- `/permissions`: catalog read.
+- `/audit` و`/audit-log`: audit reads/stats/detail/export حسب module.
+- `/security/posture`.
+- `/settings`: list/read/update.
+- `/notifications`: administrative broadcast/manage.
+- master data: `/regions`, `/cities`, `/branches`, `/departments`, `/salespeople`, `/vehicle-models` CRUD/activate/deactivate.
+- operational: `/customers`, `/vehicles`, `/purchase-experiences` list/detail/create/update/activation/import-related actions.
+- `/imports`: upload, list/detail, mapping, preview/validate, confirm/cancel/results.
+- communication: `/communication-templates`, `/communication-template-versions`, `/communication-template-preview`, `/communication-template-variables`, `/communication-channels`.
+- complaint configuration: `/complaint-routing-rules`, `/complaint-sla-policies`, `/complaint-notification-settings`.
+- complaints: list/export/categories/overview/assignees, create/detail/timeline/similar/actions/attachments, lifecycle transitions, escalation/targets.
+- call center: queue/list/export/enqueue/claim/release/reassign/agents, calls start/list/detail/complete, callbacks/list/cancel, overview, recording access.
+- reports: executive KPI, complaints, call-center, library, run, export, export-job, artifact access/stream, schedules enable/disable/delete.
+- `/report-targets`: list/create/delete.
+- `/integrations`: catalog/list/configure/test/health operations.
+- `/api-keys`: list/create/revoke.
+
+`EXPLICIT`: route metadata في الملفات يحدد `summary`, `operationId`, `tags`, permissions، body/query/params والـresponse. أغلب responses envelope `{ data, meta? }`، وexports/streams لها response handling خاص.
+
+`UNKNOWN`: هذا الملخص يجمع endpoints حسب module؛ القيم الدقيقة لكل schema field موجودة في route schemas ولا تُعاد هنا كاملة حرفيًا. المصدر التنفيذي/OpenAPI هو المرجع الحاكم ويمكن توليده بـ`npm run openapi:export`.
+
+### External API v1
+
+- `GET /api/v1/customers`, scope `customers.read`.
+- `POST /api/v1/complaints`, scope `complaints.create`, requires `Idempotency-Key`.
+- `GET /api/v1/complaints/:id`, scope `complaints.read`.
+- `POST /api/v1/complaints/:id/transition`, scope `complaints.update`.
+- `GET /api/v1/reports/kpi`, scope `reports.kpi.read`.
+
+External authentication API key عبر `Authorization: Bearer <key>` أو `X-API-Key`، وليس user JWT.
+
+## 14. Validation & Serialization
+
+`EXPLICIT`: Zod schemas هي contract source، registered as Fastify validator/serializer compilers. كل route المفحوص تقريبًا يعلن input schemas وresponse schemas. Prisma-generated Zod schemas موجودة في `src/schemas/zod`.
+
+Validation failure mapped إلى HTTP 422:
+
+```json
+{ "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [...], "requestId": "..." } }
+```
+
+Response serialization errors تعتبر server bug وتعود 500 بدون stack.
+
+`EXPLICIT`: response mappers مثل `toUserPublic`، Zod response schemas، وPrisma global omit تمنع خروج passwords/token hashes/2FA secrets. لا يتم الاعتماد على global omit وحده في response contract.
+
+`EXPLICIT`: input whitelist على مستوى Zod/services؛ user service يبني update data صراحة ولا يعمل blind body spread.
+
+## 15. Error Handling
+
+Global handler في `src/lib/errors/error-handler.ts` يعالج:
+
+1. `AppError`: status/code/message/details/context/conflicts/suggestedActions/requestId.
+2. Zod validation -> 422.
+3. response serialization -> 500.
+4. known Prisma errors -> mapped status/code بدون DB internals.
+5. framework 4xx مثل JWT/rate limit -> mapped code.
+6. unexpected -> 500 `INTERNAL_ERROR` مع log stack فقط.
+
+الشكل:
+
+```json
+{
+  "error": {
+    "code": "STABLE_CODE",
+    "message": "localized message",
+    "details": {},
+    "context": {},
+    "requestId": "uuid"
+  }
+}
+```
+
+`EXPLICIT`: localization بواسطة request language و`src/locales/en.ts`/`ar.ts`. clients يجب أن تفرع على `code` لا message.
+
+## 16. Security Model
+
+### Controls present
+
+- Argon2id password hashing.
+- short-lived JWT access token.
+- opaque hashed rotating refresh token + family reuse detection.
+- global Prisma secret omission.
+- AES-256-GCM for TOTP/integration secrets.
+- opaque/hash-only reset/setup/challenge/recovery materials.
+- global + auth rate limits.
+- CORS env allow-list، wildcard rejected in production.
+- Helmet، though CSP disabled.
+- multipart size/file count/field count limits.
+- magic-byte upload verification، server-generated storage key، traversal check.
+- structured Pino redaction for auth headers/cookies/passwords/tokens/secrets.
+- no stack returned to clients.
+- permission metadata automatic enforcement.
+- branch/department/resource scope in services.
+- idempotency/advisory locks/transactional outbox patterns.
+
+### Findings
+
+**HIGH: `trustProxy: true` without repository-visible proxy boundary.**
+
+`src/app.ts` trusts forwarded request metadata. IP drives rate limit/audit and can affect security telemetry. If deployment proxy does not sanitize forwarded headers, client can spoof source information. Proxy configuration is `UNKNOWN`; deployment must constrain trusted proxy or sanitize headers.
+
+**MEDIUM: rate limiting is in-memory/per-instance.**
+
+Global, auth and API-key buckets do not coordinate between replicas. A horizontally scaled deployment gets a multiplied limit and weaker brute-force protection. This is explicitly documented in `KNOWN-LIMITATIONS.md`.
+
+**MEDIUM: scheduler is in-process.**
+
+`SCHEDULER_ENABLED=true` starts cycles in every listening replica. Code uses idempotency/advisory locks, which reduces duplicate work, but timer HA/throughput/ownership remains deployment-sensitive. Documentation itself says dedicated distributed runner/leader election is needed for scale.
+
+**MEDIUM: audit is best-effort.**
+
+`audit.onResponse` writes after response and catches failures. Security-sensitive operations can succeed while their audit row is absent. For mandatory audit operations the row should be part of the business transaction, but this is an observation only, not a change.
+
+**MEDIUM: email delivery is best-effort/no durable retry for generic mailer.**
+
+Mailer returns status and notifications can be skipped. Complaint delivery has a durable model, but generic account email is not a queue-backed provider in the inspected implementation.
+
+**LOW/MEDIUM: CSP disabled.**
+
+Helmet is enabled but CSP intentionally disabled for JSON API/Swagger. This is reasonable for an API, but responsibility shifts to frontend/reverse proxy.
+
+**LOW: unused `JWT_REFRESH_SECRET`.**
+
+Required secret implies JWT refresh design while implementation uses opaque refresh tokens. It increases operational secret surface and can create false assumptions.
+
+**INFO: no multi-tenancy.**
+
+No tenant/org isolation is implemented. Branch/department scopes are operational filters, not tenant boundaries.
+
+**INFO: no Redis/cache/queue/realtime.**
+
+No Redis, BullMQ, WebSockets or distributed broker. In-app notifications are DB-polled.
+
+### Security items not evidenced
+
+- CSRF strategy: `UNKNOWN`. Cookie support exists and credentials are enabled; sameSite lax helps but no explicit CSRF token mechanism was found.
+- WAF/reverse proxy/TLS termination: `UNKNOWN`.
+- secret rotation process: `UNKNOWN`.
+- database encryption/backups/least-privilege DB user: `UNKNOWN`.
+- external penetration test: `UNKNOWN`.
+
+## 17. Logging & Auditing
+
+Pino/Fastify structured logger، request UUIDs عبر `genReqId`. Development pretty output؛ production no pretty transport. `LOG_LEVEL` env.
+
+Redaction paths include authorization/cookie/refresh headers، set-cookie، password/hash، access/refresh/token/hash، secrets، TOTP/recovery/challenge material.
+
+Audit writer:
+
+- default successful POST/PUT/PATCH/DELETE.
+- explicit `request.setAudit` can audit other operations.
+- status/action/entity/requestId/IP masked/user-agent/metadata.
+- bodies لا تسجل تلقائيًا.
+- `sanitizeForAudit` masks PII and removes secrets.
+- failed audit لا يغير response.
+
+`INFERRED`: `request.log` يحمل request context حسب Fastify/Pino behavior. `UNKNOWN`: log aggregation/retention/SIEM policy.
+
+## 18. Configuration & Environment
+
+| Variable | الغرض | Required/default | Sensitive |
+|---|---|---|---|
+| `NODE_ENV` | environment | default development | لا |
+| `PORT` | listen port | 3000 | لا |
+| `LOG_LEVEL` | Pino level | info | لا |
+| `DATABASE_URL` | PostgreSQL | required | نعم |
+| `JWT_ACCESS_SECRET` | access JWT | required min 32 | نعم |
+| `JWT_REFRESH_SECRET` | غير مستخدم حاليًا | required min 32 | نعم |
+| `COOKIE_SECRET` | signed cookies | required min 32 | نعم |
+| `TWO_FACTOR_ENCRYPTION_KEY` | AES-GCM TOTP | required min 32 | نعم |
+| `ACCESS_TOKEN_TTL` | seconds | 900 | لا |
+| `REFRESH_TOKEN_TTL` | seconds | 2592000 | لا |
+| `ACCOUNT_SETUP_TOKEN_TTL` | seconds | 86400 | لا |
+| `PASSWORD_RESET_TOKEN_TTL` | seconds | 3600 | لا |
+| `TWO_FACTOR_CHALLENGE_TTL` | seconds | 300 | لا |
+| `TWO_FACTOR_SETUP_TTL` | seconds | 600 | لا |
+| `TWO_FACTOR_MAX_ATTEMPTS` | challenge attempts | 5 | لا |
+| `TWO_FACTOR_RECOVERY_CODE_COUNT` | count | 10 | لا |
+| `TWO_FACTOR_ISSUER` | authenticator issuer | Enterprise Starter | لا |
+| `CORS_ORIGINS` | CSV allowlist | empty | لا |
+| `FRONTEND_URL` | reset/setup links | localhost URL | لا |
+| `SCHEDULER_ENABLED` | in-process worker | true | لا |
+| `SCHEDULER_POLL_MS` | poll interval | 30000 | لا |
+| `RATE_LIMIT_GLOBAL_MAX/WINDOW` | global limiter | 100/60000 | لا |
+| `RATE_LIMIT_AUTH_MAX/WINDOW` | auth limiter | 5/60000 | لا |
+| `FILE_STORAGE_DIR` | local uploads path | ./uploads | لا |
+| `MAX_UPLOAD_SIZE` | upload/body bytes | 5242880 | لا |
+| `ALLOWED_UPLOAD_MIME` | CSV allowed MIME list | png/jpeg/pdf | لا |
+| `EMAIL_ENABLED` | mail capability | false | لا |
+| SMTP variables | mail transport | documented defaults/optional | `SMTP_PASSWORD` نعم |
+| `EMAIL_RECIPIENT_ALLOWLIST` | non-production safety | empty | may contain addresses |
+| `SEED_DEV_ADMIN` | seed admin | false | لا |
+| `DEV_ADMIN_EMAIL/PASSWORD` | dev seed credentials | email default/password required if enabled | password نعم |
+
+`EXPLICIT`: env parse uses Zod and process exits on invalid config. Production rejects placeholder secrets, wildcard CORS and dev-admin seeding. Boolean parser accepts only `true`/`1`.
+
+## 19. External Integrations
+
+- Email: nodemailer، SMTP env أو IntegrationConnection config، capability-gated، allowlist non-production.
+- Integration registry: encrypted secrets، catalog/adapters لـemail/SMS/CRM بحسب actual module catalog؛ status honest (`NOT_CONFIGURED` etc.).
+- SMS/WhatsApp/push: model/capability placeholders، providers ليست active by default.
+- External API: API keys، scopes، branch scope، usage logs، `/api/v1`.
+- Files: local filesystem، abstraction `storage-key`/`resolveStoragePath`; لا S3/GCS.
+- Reports: XLSX via ExcelJS، PDF via PDFKit، CSV، private artifacts/signed access.
+- No payment integration found.
+- No Redis/BullMQ/message broker found.
+
+`UNKNOWN`: production provider credentials/actual network topology and operational retry policies outside code.
+
+## 20. Testing Architecture
+
+`EXPLICIT`: Node built-in `node:test` مع `tsx`; scripts:
+
+- `npm run test`: unit + integration files.
+- `npm run test:unit`.
+- `npm run test:integration` concurrency=1.
+- README يوضح integration self-skip unless `RUN_INTEGRATION=true`.
+
+Integration test pattern يعتمد Fastify `.inject()`، ولذلك scheduler لا يبدأ قبل listen. توجد تغطية واضحة لـ:
+
+- auth context/error/password/tokens/2FA.
+- security, rate limits, permission lookup/contextual lookup.
+- operational/master data/imports/complaints/templates/integrations.
+- department scope.
+
+`EXPLICIT`: tests موجودة للـpermission bypass ضمن security/lookup/integration suites بحسب أسماء الملفات. 
+
+`UNKNOWN`: coverage percentage، CI execution، production-like PostgreSQL matrix، mutation testing؛ لا توجد CI files ظاهرة.
+
+## 21. Module Development Pattern
+
+الـpattern الفعلي/المعلن:
+
+```text
+src/modules/<feature>/
+  <feature>.schema.ts
+  <feature>.service.ts
+  [domain helpers/config/errors]
+  routes/
+    public/route.ts
+    user/route.ts
+    admin/route.ts
+    external/.../route.ts
+```
+
+خطوات إضافة module جديد:
+
+1. حدد model/schema contract.
+2. أضف Prisma schema file إذا احتاج domain persistence.
+3. شغل `npm run db:generate` ثم migration حسب environment.
+4. أنشئ Zod input/output schemas وresponse envelope.
+5. أضف permissions إلى `src/constants/permissions.ts`، فتدخل seed catalog.
+6. أنشئ service للbusiness logic وPrisma access.
+7. ضع route تحت access-level الصحيح.
+8. في protected route أضف `permissions`; في public route ضعها تحت `routes/public` و`public: true`.
+9. استخدم `withTransaction` للmulti-write، advisory lock للمنافسة، `runIdempotent` للآثار الخارجية.
+10. استخدم `request.setAudit` للتغييرات الحساسة.
+11. أضف locale keys EN/AR عند وجود نص user-facing.
+12. أضف unit/integration security tests وOpenAPI check.
+13. شغل quality gates.
+
+`EXPLICIT`: route handler يجب أن validate/delegate/return؛ business logic في service. `INFERRED`: repository منفصل ليس invariant؛ لا ينبغي اختراعه إلا إذا أضيف باتساق مع module complexity.
+
+## 22. Request Lifecycle
+
+```text
+HTTP request
+  -> Fastify router / request id
+  -> global onRequest: resolve language
+  -> global rate limit / CORS / Helmet / parsers بحسب plugin
+  -> route encapsulation selected by path folder
+       public: no auth hook
+       user/admin: preValidation JWT + DB identity
+       external: onRequest API key + usage limiter
+  -> Zod validation (body/query/params)
+  -> preHandler permission ANY أو API scope ALL
+  -> route handler
+  -> service business logic
+  -> Prisma transaction/query/advisory lock/idempotency/outbox as needed
+  -> Zod response serialization/envelope
+  -> onResponse audit and/or API usage log
+  -> client
+```
+
+ملاحظة ordering مهمة: user authentication قبل schema validation عمدًا حتى anonymous malformed request يحصل على 401 بدل كشف schema بـ422. public routes لا تتأثر.
+
+## 23. Authentication Mental Model
+
+```text
+User submits email/password
+  -> normalize + DB lookup
+  -> Argon2id verify
+  -> optional TOTP challenge
+  -> AuthSession row with hashed opaque refresh token
+  -> signed short-lived JWT {sub, sid, type}
+
+Next request
+  -> JWT verify
+  -> DB reload current User + Roles + Permissions
+  -> request.auth
+  -> route metadata permission check
+```
+
+- المستخدم identity هو DB User، وليس claims كاملة.
+- ما يخزن بعد login: AuthSession row؛ raw refresh token يعود للclient ولا يخزن raw.
+- request recognition من JWT `sub/sid` ثم DB.
+- Role يحدد عبر UserRole/Role.
+- Permissions يعاد تحميلها من RolePermission/Permission كل request.
+- المنع عند auth `preValidation` أو permission `preHandler`.
+- تعطيل user عبر status `SUSPENDED`، ويمنع login/requests الجديدة، مع session revocation حسب service.
+- logout revokes current refresh session فقط.
+- session تنتهي expiry/revoke/reuse detection/password reset/suspension paths؛ access token لا يلغى server-side قبل expiry بشكل عام.
+
+## 24. Authorization Mental Model
+
+```text
+User
+  -> UserRole
+  -> Role
+  -> RolePermission
+  -> Permission keys
+  -> request.auth.permissions
+  -> route schema.permissions
+  -> enforcePermissions preHandler (ANY)
+  -> service resource/branch/department checks
+  -> business logic
+```
+
+مثال request: `GET /complaints/:id`:
+
+1. autoload يضع route في admin scope.
+2. admin hook يضيف JWT `preValidation`.
+3. token `sub` يتحقق، user/roles/permissions تقرأ من DB، `request.auth` يبنى.
+4. Zod يتحقق من numeric id.
+5. preHandler يقرأ `permissions: [complaints.read]`; missing -> 403.
+6. complaints service يحمّل complaint ويطبق branch/department visibility بحسب caller permissions/assignments.
+7. mapper يعيد `data` schema-safe.
+8. audit لا يسجل GET تلقائيًا إلا لو explicit action.
+
+External example يمر بدل ذلك بـAPI key `onRequest`, `apiScopes` ALL، ثم external service وusage log.
+
+## 25. Database Mental Model
+
+- Identity/system: users, roles, permissions, sessions, security tokens, audits, idempotency.
+- Organization: branches/departments and user assignments.
+- Operational: customer has many purchase experiences; vehicles/models and branch/salesperson connect to experiences.
+- Complaint aggregate preserves lifecycle/timeline/SLA/escalation histories.
+- Call-center queue creates call/session/callback/recording history.
+- Notification/settings/outbox provide cross-cutting persistence.
+- Reports/integrations add artifacts, schedules, encrypted connections and external API keys.
+
+User-owned rows: sessions, tokens, notifications, preferences, audit actor relationship, attachments uploader, jobs creator, templates creator, assignments. System-level rows: permission catalog, system roles, settings, notification definitions, outbox and integration catalog. Operational ownership is domain-specific and branch/department scoped, not tenant scoped.
+
+## 26. Architecture Invariants
+
+`EXPLICIT` invariants extracted from code/docs:
+
+1. Backend is authority for auth, authorization, validation.
+2. Public access is folder-explicit; absence of permission never means public.
+3. Protected routes declare metadata permissions; no forgotten manual guard.
+4. Permission checks use stable permission keys, not localized messages or role names.
+5. Passwords only Argon2id hashes; raw passwords never logged/returned.
+6. Secret/token hashes and 2FA secrets are globally omitted from Prisma results.
+7. Multi-row/multi-table writes use transaction.
+8. Concurrency-sensitive operations use advisory lock/CAS/unique constraints.
+9. External side effects use idempotency where required.
+10. User-facing text uses i18n; clients branch on stable error codes.
+11. Responses use `{ data, meta? }`; errors use structured envelope.
+12. Every route should have Zod summary/operationId/tags/inputs/response.
+13. Sensitive mutations call `request.setAudit`.
+14. Files use server-generated storage keys and content/magic-byte validation.
+15. Master/reference entities prefer soft deactivation and preserve history.
+16. No fake provider connected status; integrations report real configuration.
+17. No tenant isolation should be assumed from branch scope.
+18. Add modules under domain folder and access-level route folder so autoload applies correct hook.
+
+## 27. Risks & Technical Debt
+
+### High priority
+
+- Trusted proxy boundary is not represented in repository (`trustProxy: true`). Validate production proxy sanitization and trusted-hop configuration.
+- Route-level permission completeness requires ongoing review: centralized enforcement is strong, but an authenticated-only route with no `permissions` is intentional only if ownership/auth-only semantics are correct. This is a review risk, not proven bypass.
+
+### Medium priority
+
+- Per-instance in-memory rate limiting is unsuitable as the sole control with multiple replicas.
+- In-process scheduler can run in every replica; locks/idempotency mitigate duplicates but not distributed worker architecture concerns.
+- Best-effort audit means successful sensitive operation can lack audit row.
+- Generic email is best-effort and disabled by default without durable retry.
+- `JWT_REFRESH_SECRET` is mandatory but unused; configuration/documentation mismatch.
+- `runIdempotent` reserves before effect but does not show a recovery state if the process crashes after reservation and before effect completion; suitability depends on caller/effect semantics.
+- Local disk file storage does not provide object-storage durability or multi-instance shared files.
+
+### Low/Info
+
+- CSP disabled intentionally; frontend/proxy responsibility must be explicit.
+- No generic cache; every authenticated request reloads permissions from DB.
+- No tenant model, queue broker, Redis or realtime channel.
+- Generated Prisma Zod file is excluded from typecheck/lint by design; generated artifact integrity relies on `db:generate`.
+- Docs mention Node 20+; exact production Node image/process manager is `UNKNOWN`.
+
+### Potential inconsistencies to monitor
+
+- `src/constants/permissions.ts` includes product permissions even though CLAUDE describes template plus operational core; this is intentional in current repository but Diamond Rent Car should decide whether to extend or replace domain catalog.
+- `docs/engineering-standards/KNOWN-LIMITATIONS.md` contains a section saying 2FA is intentionally not included, while current implementation clearly includes TOTP/2FA. This is documentation drift and should be corrected before using docs as sole authority.
+- README says `npm test` unit tests/no DB while script includes integration files; integration tests may self-skip, but wording is not exact.
+
+## 28. Ambiguities
+
+### EXPLICIT
+
+- Fastify/Prisma/Zod/PostgreSQL stack.
+- Plugin registration order.
+- Access-level route loading and URL stripping.
+- User/admin auth lifecycle and external API-key lifecycle.
+- JWT payload fields and TTL source.
+- Opaque hashed refresh tokens with rotation/family reuse detection.
+- RBAC tables and permission metadata enforcement.
+- User status values and 2FA behavior.
+- Global error envelope and localization.
+- Prisma models, relations, indexes/unique constraints in schema files.
+- Initial migration exists and is named `20260903000000_init`.
+- In-process scheduler, local files, in-memory rate limits, best-effort audit/email.
+
+### INFERRED
+
+- Plugin order is dependency-driven and intentionally keeps routes last.
+- Permission changes take effect immediately because permissions are reloaded each request.
+- Services are the effective business/application layer even when no repository class exists.
+- Branch and department filters are resource authorization, not multi-tenancy.
+- The app is intended for a single-service deployment first, with documented migration path to dedicated worker.
+- `request.log` carries useful request context because Fastify/Pino integration supplies it.
+
+### UNKNOWN
+
+- Actual production reverse proxy and forwarded-header sanitization.
+- TLS termination, WAF, secrets manager, rotation schedule, backup/restore and DB network policy.
+- CI/CD execution and deployment topology; no CI/Docker files found in repository.
+- Exact route coverage percentage for every permission declaration and every ownership check.
+- Full OpenAPI generated output unless `npm run openapi:export` is run in a configured environment.
+- Production SMTP/provider configuration and external API consumers.
+- Whether any external system calls `JWT_REFRESH_SECRET`; current repository code does not.
+- Runtime Node version and process manager in deployment.
+- Operational retention policies for audit/API usage/outbox/artifacts.
+
+## Final Conclusion
+
+هذا Backend Template فعلي modular وليس skeleton فارغًا. أقوى contract لديه هو: Fastify access-level autoload + Zod route contracts + automatic metadata RBAC + Prisma global secret omission + service-owned business logic + transaction/CAS/advisory-lock/idempotency patterns.
+
+عند بناء Diamond Rent Car، المسار الأقل مخاطرة هو إضافة domain modules تحت `src/modules` بنفس route access-level convention، إضافة Prisma schema في ملف domain مستقل، تعريف permissions/catalog/seed، وضع business rules في service، وتغطية branch/department/ownership authorization في service/query لا في frontend. يجب التعامل مع rate limiting الموزع، scheduler، audit atomicity، local storage، proxy trust وغياب tenant isolation كقرارات deployment/architecture صريحة، لا كميزات موجودة ضمن template تلقائيًا.

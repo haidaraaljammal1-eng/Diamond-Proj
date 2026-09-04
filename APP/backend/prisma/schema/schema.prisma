@@ -1,0 +1,29 @@
+// ---------------------------------------------------------------------------
+// Generic starter schema — generator + datasource only.
+// Domain models are split by concern across the other prisma/schema/*.prisma
+// files; Prisma merges them automatically. Add NEW domain files here later;
+// do NOT put every model in one file.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+generator zod {
+  provider                  = "zod-prisma-types"
+  output                    = "../../src/schemas/zod"
+  useMultipleFiles          = false
+  createInputTypes          = false
+  addInputTypeValidation    = false
+  addIncludeType            = false
+  addSelectType             = false
+  createRelationValuesTypes = true
+  validateWhereUniqueInput  = true
+  useDefaultValidators      = true
+  coerceDate                = true
+}
+
+datasource db {
+  provider = "postgresql"
+}

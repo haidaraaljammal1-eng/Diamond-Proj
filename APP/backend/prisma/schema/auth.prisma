@@ -1,0 +1,243 @@
+// ---------------------------------------------------------------------------
+// Auth + RBAC (generic). No business domain.
+// - Passwords are NEVER stored plaintext: only `passwordHash` (argon2id) exists.
+// - Refresh tokens are stored HASHED in AuthSession (rotation + reuse detection).
+// - Password-reset / account-setup tokens are stored HASHED in SecurityToken.
+// ---------------------------------------------------------------------------
+
+enum UserStatus {
+  // Created by an admin but has not completed account setup (no password yet).
+  PENDING
+  // Can authenticate.
+  ACTIVE
+  // Login + new sessions blocked. Account-level only — never cascades to domain entities.
+  SUSPENDED
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  // Canonical, normalized (lowercased/trimmed) email. Uniqueness relies on this
+  // canonical value + the DB unique index, not only application checks.
+  email        String     @unique
+  name         String?
+  status       UserStatus @default(PENDING)
+  // Nullable until the user completes account setup. Login rejects null hashes.
+  passwordHash String?
+  language     String     @default("en")
+  lastSeenAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // --- Two-factor authentication (TOTP) ---------------------------------------
+  // Enabled ONLY after a first valid code is verified. Generating a QR is not
+  // enrolment: until then the secret lives in the *pending* columns below.
+  twoFactorEnabled                Boolean   @default(false)
+  // AES-256-GCM(TOTP secret) under TWO_FACTOR_ENCRYPTION_KEY — never plaintext,
+  // never returned by the API, never logged (see prisma globalOmit + redact.ts).
+  twoFactorSecretEncrypted        String?
+  twoFactorEnabledAt              DateTime?
+  // Abandoned enrolments die on their own: a pending secret is only ever promoted
+  // by a successful setup verification, and is ignored once expired.
+  twoFactorPendingSecretEncrypted String?
+  twoFactorPendingExpiresAt       DateTime?
+  // Replay guard: the last TOTP time-step accepted for this user. A given step is
+  // honoured at most once, so a code observed in transit cannot be replayed.
+  twoFactorLastUsedStep           Int?
+
+  roles                     UserRole[]
+  sessions                  AuthSession[]
+  securityTokens            SecurityToken[]
+  notifications             Notification[]
+  notificationPreferences   NotificationPreference[]
+  auditLogs                 AuditLog[]                 @relation("audit_actor")
+  attachments               Attachment[]
+  // Product-domain link (master-data.prisma): a login account may back at most
+  // one Salesperson. Optional back-relation required by Prisma for the FK.
+  salesperson               Salesperson?
+  // Import pipeline (import.prisma): jobs this user created. Back-relation
+  // required by Prisma for the ImportJob.createdBy FK.
+  importJobs                ImportJob[]
+  // Communication templates (communication.prisma).
+  messageTemplates          MessageTemplate[]
+  publishedTemplateVersions MessageTemplateVersion[]
+  // Response domain (master-data.prisma): branches this user manages.
+  managedBranches           Branch[]                   @relation("BranchManager")
+  // Call center (call-center.prisma): queue items assigned to / calls made by this user.
+  callQueueAssignments      CallCenterQueueItem[]      @relation("CallQueueAssignee")
+  callSessions              CallSession[]              @relation("CallSessionAgent")
+  // Branch membership — drives hard branch-scoped visibility (call center, later others).
+  branchAssignments         UserBranchAssignment[]
+  // Department membership (complaints.prisma): assignee eligibility + escalation audience.
+  departmentAssignments     UserDepartmentAssignment[]
+  // Complaints (complaints.prisma): complaints assigned to this user.
+  complaintAssignments      Complaint[]                @relation("ComplaintAssignee")
+  // Routing rules that suggest this user as the assignee (complaints.prisma).
+  routingRuleAssignments    ComplaintRoutingRule[]     @relation("RoutingRuleAssignee")
+  // Escalation history: cases handed OFF by / handed TO this user (complaints.prisma).
+  escalationsFrom           ComplaintEscalation[]      @relation("EscalationFromUser")
+  escalationsTo             ComplaintEscalation[]      @relation("EscalationToUser")
+  twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
+
+  @@index([status])
+  @@map("users")
+}
+
+// Single-use 2FA recovery codes. Only the SHA-256 hash is stored; the raw codes
+// are shown to the user exactly once, at generation. Consumption is a conditional
+// update (usedAt: null -> now) so a code can never be redeemed twice, even under
+// concurrent requests. Regenerating deletes every outstanding code for the user.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("two_factor_recovery_codes")
+}
+
+// A user's membership in a department. Drives complaint assignee eligibility,
+// department-manager escalation, and department notification audience. Distinct
+// from any role name — this is real membership data.
+model UserDepartmentAssignment {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  isManager    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, departmentId])
+  @@index([userId])
+  @@index([departmentId])
+  @@map("user_department_assignments")
+}
+
+// A user's membership in a branch. Drives hard, backend-enforced branch scoping.
+// This is DISTINCT from Branch.managerUserId (which names the single branch manager,
+// not general membership). A user may belong to several branches.
+model UserBranchAssignment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId  Int
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, branchId])
+  @@index([userId])
+  @@index([branchId])
+  @@map("user_branch_assignments")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  // Stable machine key (e.g. "system_admin"). Business logic must branch on
+  // permissions / isSystem, NEVER on this string.
+  key         String   @unique
+  name        String
+  description String?
+  // System roles cannot be deleted and their key cannot change.
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  // "resource.action" convention, e.g. "users.read".
+  key         String   @unique
+  category    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@index([category])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId Int
+  roleId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// One row per issued refresh token. Rotation: on refresh the presented token is
+// revoked and a new row is created with the same `familyId`. Presenting an
+// already-revoked token from a family triggers reuse detection → revoke family.
+model AuthSession {
+  id               String    @id @default(uuid())
+  userId           Int
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId         String
+  refreshTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  // Set when this token was rotated into a successor (normal, non-malicious use).
+  rotatedAt        DateTime?
+  ip               String?
+  userAgent        String?
+  createdAt        DateTime  @default(now())
+  lastUsedAt       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+enum SecurityTokenScope {
+  PASSWORD_RESET
+  ACCOUNT_SETUP
+  // Short-lived proof that email+password already succeeded, pending a 2FA code.
+  // Deliberately an OPAQUE token, not a JWT: the access-token guard would accept
+  // any JWT signed with JWT_ACCESS_SECRET, so a JWT challenge could reach
+  // protected APIs. An opaque token cannot pass jwtVerify() at all.
+  TWO_FACTOR_CHALLENGE
+}
+
+model SecurityToken {
+  id        String             @id @default(uuid())
+  userId    Int
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Hash of the single-use token; the raw token is only ever sent to the user.
+  tokenHash String             @unique
+  scope     SecurityTokenScope
+  expiresAt DateTime
+  usedAt    DateTime?
+  // Failed verification attempts against THIS token. The IP-keyed rate limiter is
+  // per-process and in-memory, so per-challenge counting is what actually bounds
+  // distributed guessing of a 6-digit code.
+  attempts  Int                @default(0)
+  createdAt DateTime           @default(now())
+
+  @@index([userId, scope])
+  @@index([expiresAt])
+  @@map("security_tokens")
+}

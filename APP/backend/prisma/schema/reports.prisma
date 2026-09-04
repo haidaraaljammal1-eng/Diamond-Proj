@@ -1,0 +1,198 @@
+// ---------------------------------------------------------------------------
+// Reports, Integrations & Security domain (BE-5). Central metrics/reporting
+// layer (KPI catalog + report library live in code, not DB), KPI targets,
+// scheduled reports + private artifacts, integration registry (honest statuses,
+// encrypted secrets), external API keys (hash-only), and API usage logging.
+// No KPI is recomputed differently here — formulas reuse BE-2C/3A/4 definitions.
+// ---------------------------------------------------------------------------
+
+enum KpiScopeType {
+  GLOBAL
+  BRANCH
+}
+
+enum ReportPeriodType {
+  MONTH
+  QUARTER
+  YEAR
+  CUSTOM
+}
+
+enum ReportFormat {
+  CSV
+  XLSX
+  PDF
+}
+
+enum ReportScheduleRecurrence {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ReportJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ReportDeliveryStatus {
+  PENDING
+  SENT
+  NOT_CONFIGURED
+  FAILED
+}
+
+enum IntegrationKind {
+  ERP
+  CRM
+  WHATSAPP
+  SMS
+  EMAIL
+  SSO_ACTIVE_DIRECTORY
+  POWER_BI
+  CUSTOM
+}
+
+enum IntegrationStatus {
+  NOT_CONFIGURED
+  CONFIGURED
+  HEALTHY
+  DEGRADED
+  ERROR
+  DISABLED
+}
+
+/// A KPI target (global or per-branch, per period). Actuals are computed live;
+/// targets are stored separately and never conflated with actuals.
+model ReportKpiTarget {
+  id              Int              @id @default(autoincrement())
+  kpiCode         String
+  scopeType       KpiScopeType     @default(GLOBAL)
+  branchId        Int?
+  periodType      ReportPeriodType @default(MONTH)
+  targetValue     Float
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  createdByUserId Int?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([kpiCode, scopeType, branchId])
+  @@map("report_kpi_targets")
+}
+
+/// A scheduled report. The worker generates an artifact + delivers it (email if
+/// configured, else honest NOT_CONFIGURED). Idempotent per (schedule, run).
+model ReportSchedule {
+  id               Int                      @id @default(autoincrement())
+  name             String
+  reportCode       String
+  format           ReportFormat             @default(XLSX)
+  filters          Json?
+  timezone         String                   @default("Asia/Riyadh")
+  recurrence       ReportScheduleRecurrence @default(MONTHLY)
+  hourOfDay        Int                      @default(8)
+  dayOfWeek        Int? // 0-6 (WEEKLY)
+  dayOfMonth       Int? // 1-28 (MONTHLY)
+  recipientUserIds Json? // number[]
+  recipientEmails  Json? // string[]
+  enabled          Boolean                  @default(true)
+  lastRunAt        DateTime?
+  nextRunAt        DateTime?
+  createdByUserId  Int?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([enabled, nextRunAt])
+  @@map("report_schedules")
+}
+
+/// A generated report artifact in private storage. Download is via a short-lived
+/// signed token only — never a public URL.
+model ReportArtifact {
+  id                String                @id @default(uuid())
+  reportCode        String
+  format            ReportFormat
+  filtersSnapshot   Json?
+  scopeSnapshot     Json?
+  generatedByUserId Int?
+  scheduleId        Int?
+  storageKey        String?               @unique
+  sizeBytes         Int?
+  status            ReportJobStatus       @default(PENDING)
+  deliveryStatus    ReportDeliveryStatus?
+  errorCode         String?
+  // Idempotency for scheduled runs: `schedule:<id>:<intendedRunAtISO>`.
+  runDedupeKey      String?               @unique
+  expiresAt         DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([reportCode])
+  @@index([status])
+  @@map("report_artifacts")
+}
+
+/// A registered external integration. Status is derived from real configuration
+/// — never hardcoded "connected". Secrets are AES-GCM encrypted, never returned.
+model IntegrationConnection {
+  id                Int               @id @default(autoincrement())
+  kind              IntegrationKind
+  name              String
+  status            IntegrationStatus @default(NOT_CONFIGURED)
+  configured        Boolean           @default(false)
+  enabled           Boolean           @default(true)
+  lastHealthCheckAt DateTime?
+  lastSuccessAt     DateTime?
+  lastErrorCode     String?
+  // Safe, non-secret metadata only (endpoint host, region, etc.).
+  metadata          Json?
+  // AES-256-GCM ciphertext of the connection secret. Never returned/audited.
+  secretEncrypted   String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([kind, name])
+  @@map("integration_connections")
+}
+
+/// An external API key. Only the SHA-256 hash is stored; the full secret is
+/// shown once at creation. Scopes + branch scope bound the key's authority.
+model ApiKey {
+  id              Int       @id @default(autoincrement())
+  name            String
+  // Non-secret lookup/display prefix (e.g. "cxk_ab12cd").
+  prefix          String    @unique
+  // sha256(full secret). The raw secret is never stored or recoverable.
+  secretHash      String    @unique
+  scopes          Json // string[] (bounded catalog)
+  allBranches     Boolean   @default(false)
+  branchScope     Json? // number[]
+  createdByUserId Int?
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  usageLogs ApiUsageLog[]
+
+  @@index([revokedAt])
+  @@map("api_keys")
+}
+
+/// Per-request external API usage (safe metadata only — no payload/PII).
+model ApiUsageLog {
+  id        String   @id @default(uuid())
+  apiKeyId  Int
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  endpoint  String
+  method    String
+  status    Int
+  requestId String?
+  createdAt DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+  @@map("api_usage_logs")
+}

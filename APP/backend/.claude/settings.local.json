@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(RUN_INTEGRATION=true node --import tsx --test tests/integration/operational.test.ts)",
+      "Bash(RUN_INTEGRATION=true npm test)",
+      "Bash(curl -s -i -X OPTIONS http://localhost:4000/auth/login -H \"Origin: http://localhost:5173\" -H \"Access-Control-Request-Method: POST\" -H \"Access-Control-Request-Headers: content-type\")",
+      "Bash(echo \"=== EXIT $? ===\")",
+      "Bash(node \"C:/Users/ASUS/AppData/Local/Temp/claude/c--rs4it-fastify-enterprise-starter/32dd6f9f-e788-498b-a79e-35ea31daf2fb/scratchpad/smtp-test.cjs\" zmamznan66@gmail.com)",
+      "Bash(export NODE_PATH=\"C:/rs4it/fastify-enterprise-starter/node_modules\")",
+      "Bash(node \"C:/Users/ASUS/AppData/Local/Temp/claude/c--rs4it-fastify-enterprise-starter/32dd6f9f-e788-498b-a79e-35ea31daf2fb/scratchpad/count-rows.cjs\")",
+      "Bash(node \"C:/Users/ASUS/AppData/Local/Temp/claude/c--rs4it-fastify-enterprise-starter/32dd6f9f-e788-498b-a79e-35ea31daf2fb/scratchpad/truncate-target.cjs\")"
+    ]
+  }
+}

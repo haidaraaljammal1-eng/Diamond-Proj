@@ -1,0 +1,11 @@
+{
+  "Foundation": {
+    "title": "أساس Diamond Rent Car",
+    "description": "بنية الواجهة جاهزة لبناء الصفحات وفق عقود النظام.",
+    "language": "العربية",
+    "architecture": "صفحة ← Hook ← Store ← API",
+    "checkBackend": "فحص اتصال Backend",
+    "checking": "جارٍ الفحص...",
+    "backend": "Backend: {status}"
+  }
+}

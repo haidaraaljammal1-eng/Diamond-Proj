@@ -1,0 +1,107 @@
+// ---------------------------------------------------------------------------
+// Operational domain (product): Customer -> Vehicle -> PurchaseExperience.
+// The clean source of truth that BE-1C import will later populate. See
+// docs/superpowers/specs/ for BE-1B design.
+//
+// Key modeling rules:
+//   - Customer != a single sale. A customer has MANY PurchaseExperiences.
+//   - Vehicle may recur across experiences (e.g. resale) — vehicleId is NOT unique.
+//   - Required master-data FKs use the default Restrict action: operational
+//     history is NEVER cascade-deleted. Deactivating master data is soft and
+//     preserves these historical references.
+//   - mobile/email are normalized + indexed for search but NOT unique (a number
+//     or address may be shared); the only hard customer key is `externalId`.
+// ---------------------------------------------------------------------------
+
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+model Customer {
+  id             Int          @id @default(autoincrement())
+  name           String
+  // Normalized (digits/+) & lowercased respectively; indexed for search, NOT unique.
+  mobile         String?
+  email          String?
+  type           CustomerType @default(INDIVIDUAL)
+  // Per-channel communication opt-out foundation (WhatsApp is its own channel).
+  optOutEmail    Boolean      @default(false)
+  optOutSms      Boolean      @default(false)
+  optOutPhone    Boolean      @default(false)
+  optOutWhatsApp Boolean      @default(false)
+  // ERP/CRM identity — the only hard unique business key for a customer.
+  externalId     String?      @unique
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  experiences    PurchaseExperience[]
+  callQueueItems CallCenterQueueItem[]
+  complaints     Complaint[]
+
+  @@index([mobile])
+  @@index([email])
+  @@index([isActive])
+  @@map("customers")
+}
+
+model Vehicle {
+  id         Int          @id @default(autoincrement())
+  // Strongest vehicle identifier where available. Stored normalized (UPPER+trim);
+  // unique when present (nullable => many null VINs allowed).
+  vin        String?      @unique
+  modelId    Int
+  model      VehicleModel @relation(fields: [modelId], references: [id])
+  modelYear  Int?
+  // CX display context only (not a colour taxonomy). Free-text from ERP/import;
+  // trimmed, nullable. Belongs to the vehicle itself, not the sale.
+  color      String?
+  externalId String?      @unique
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  experiences PurchaseExperience[]
+
+  @@index([modelId])
+  @@index([isActive])
+  @@map("vehicles")
+}
+
+// The actual customer experience event (purchase + delivery). Customer and
+// Vehicle are immutable after creation.
+model PurchaseExperience {
+  id             Int          @id @default(autoincrement())
+  customerId     Int
+  customer       Customer     @relation(fields: [customerId], references: [id])
+  // A vehicle may back more than one experience — NOT unique.
+  vehicleId      Int
+  vehicle        Vehicle      @relation(fields: [vehicleId], references: [id])
+  branchId       Int
+  branch         Branch       @relation(fields: [branchId], references: [id])
+  salespersonId  Int?
+  salesperson    Salesperson? @relation(fields: [salespersonId], references: [id])
+  purchaseDate   DateTime?
+  deliveryDate   DateTime?
+  // External sale/order identifier — unique when present.
+  externalSaleId String?      @unique
+  // CX context for the sale (NOT a finance/insurance management domain). Simple
+  // optional free-text from ERP/import — a label, never a policy/contract entity.
+  financingType  String?
+  insuranceType  String?
+  salesChannel   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  callQueueItems CallCenterQueueItem[]
+  complaints     Complaint[]
+
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([branchId])
+  @@index([salespersonId])
+  @@index([purchaseDate])
+  @@index([deliveryDate])
+  @@map("purchase_experiences")
+}

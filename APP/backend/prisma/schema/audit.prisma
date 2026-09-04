@@ -1,0 +1,27 @@
+// ---------------------------------------------------------------------------
+// Audit log (generic, append-only). Written by the centralized audit writer.
+// before/after are optional — the architecture supports them but they are not
+// required for every action. Sensitive keys are sanitized before write.
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId Int?
+  actor       User?    @relation("audit_actor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  entityType  String?
+  entityId    String?
+  metadata    Json?
+  before      Json?
+  after       Json?
+  requestId   String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

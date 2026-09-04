@@ -1,0 +1,11 @@
+{
+  "Foundation": {
+    "title": "Diamond Rent Car Foundation",
+    "description": "The frontend foundation is ready for pages built against system contracts.",
+    "language": "English",
+    "architecture": "Page ← Hook ← Store ← API",
+    "checkBackend": "Check backend connection",
+    "checking": "Checking...",
+    "backend": "Backend: {status}"
+  }
+}

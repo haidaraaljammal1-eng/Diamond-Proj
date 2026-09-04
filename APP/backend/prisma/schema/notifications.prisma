@@ -1,0 +1,86 @@
+// ---------------------------------------------------------------------------
+// Notifications (generic pipeline).
+//   Event -> audience resolver -> authorized recipients -> preferences ->
+//   channel selection -> render -> deliver -> dedupe -> delivery log.
+// Audience != preferences: recipients are resolved by authorization, then
+// filtered by each recipient's own preferences.
+// ---------------------------------------------------------------------------
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+  SMS
+}
+
+enum DeliveryStatus {
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+// Registry of notification event types. `key` is stable; templates/audience are
+// resolved in code by key. Seeded, not user-created.
+model NotificationDefinition {
+  id              Int      @id @default(autoincrement())
+  key             String   @unique
+  name            String
+  description     String?
+  defaultChannels Json     @default("[\"IN_APP\"]")
+  createdAt       DateTime @default(now())
+
+  @@map("notification_definitions")
+}
+
+// A user's per-event channel preferences. Absence = definition defaults.
+model NotificationPreference {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventKey  String
+  enabled   Boolean  @default(true)
+  channels  Json     @default("[\"IN_APP\"]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, eventKey])
+  @@map("notification_preferences")
+}
+
+// In-app notification inbox row. A user only ever sees their own rows.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventKey  String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  deliveries NotificationDeliveryLog[]
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// One row per (recipient, event, channel) delivery attempt. `dedupeKey` gives
+// create-first idempotency: a unique-violation means the effect already fired.
+model NotificationDeliveryLog {
+  id             String              @id @default(uuid())
+  notificationId String?
+  notification   Notification?       @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+  userId         Int
+  eventKey       String
+  channel        NotificationChannel
+  status         DeliveryStatus
+  reason         String?
+  dedupeKey      String?             @unique
+  createdAt      DateTime            @default(now())
+
+  @@index([userId, eventKey])
+  @@index([status])
+  @@map("notification_delivery_logs")
+}

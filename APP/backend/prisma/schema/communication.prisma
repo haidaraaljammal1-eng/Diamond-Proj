@@ -1,0 +1,103 @@
+// ---------------------------------------------------------------------------
+// Communication template domain (product): logical MessageTemplate → immutable
+// published MessageTemplateVersion → per-language TemplateVariant → TemplateButton.
+// Versioning model: published versions are immutable; edits
+// create a new draft. A campaign step binds a SPECIFIC published template version
+// so historical sends never change when the template is later edited.
+//
+// Channels: EMAIL (subject + sanitized HTML + text fallback + CTA buttons),
+// WHATSAPP (text/provider-template + optional URL buttons), SMS (plain text).
+// Body HTML is ALWAYS server-side sanitized (allow-list) before persistence.
+// ---------------------------------------------------------------------------
+
+enum CommunicationChannel {
+  EMAIL
+  WHATSAPP
+  SMS
+}
+
+enum TemplateVersionStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
+}
+
+model MessageTemplate {
+  id               Int                     @id @default(autoincrement())
+  code             String                  @unique
+  name             String
+  channel          CommunicationChannel
+  description      String?
+  isActive         Boolean                 @default(true)
+  // Explicit source of truth for the current published version (not latest createdAt).
+  currentVersionId Int?                    @unique
+  currentVersion   MessageTemplateVersion? @relation("TemplateCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  createdById      Int
+  createdBy        User                    @relation(fields: [createdById], references: [id])
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  versions MessageTemplateVersion[] @relation("TemplateVersions")
+
+  @@index([channel])
+  @@index([isActive])
+  @@map("message_templates")
+}
+
+model MessageTemplateVersion {
+  id            Int                   @id @default(autoincrement())
+  templateId    Int
+  template      MessageTemplate       @relation("TemplateVersions", fields: [templateId], references: [id])
+  versionNumber Int
+  status        TemplateVersionStatus @default(DRAFT)
+  // Optimistic-concurrency token bumped on every draft content write.
+  revision      Int                   @default(0)
+  publishedAt   DateTime?
+  publishedById Int?
+  publishedBy   User?                 @relation(fields: [publishedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  currentOfTemplate MessageTemplate?  @relation("TemplateCurrentVersion")
+  variants          TemplateVariant[]
+
+  @@unique([templateId, versionNumber])
+  @@index([templateId])
+  @@index([status])
+  @@map("message_template_versions")
+}
+
+model TemplateVariant {
+  id                   Int                    @id @default(autoincrement())
+  versionId            Int
+  version              MessageTemplateVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  language             String
+  // EMAIL: subject + sanitized HTML + plain-text fallback. WHATSAPP/SMS use bodyText.
+  subject              String?
+  bodyHtml             String?
+  bodyText             String?
+  // WHATSAPP provider identity (kept separate from the internal editable content).
+  providerTemplateName String?
+  providerLanguageCode String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  buttons TemplateButton[]
+
+  @@unique([versionId, language])
+  @@index([versionId])
+  @@map("template_variants")
+}
+
+model TemplateButton {
+  id          Int             @id @default(autoincrement())
+  variantId   Int
+  variant     TemplateVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  label       String
+  // A safe absolute https/mailto URL or the {{action_link}} variable. Validated.
+  urlTemplate String
+  sortOrder   Int             @default(0)
+
+  @@index([variantId])
+  @@map("template_buttons")
+}

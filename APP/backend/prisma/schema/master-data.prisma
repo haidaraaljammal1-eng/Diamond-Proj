@@ -1,0 +1,177 @@
+// ---------------------------------------------------------------------------
+// Master data (product domain — operational reference data for a vehicle
+// dealership). Reference/lookup entities consumed later by sales import,
+// customers, filters and forms. See
+// docs/superpowers/specs/2026-07-16-master-data-lookup-apis-design.md
+//
+// Conventions (all entities):
+//   - `code` is the stable business key, stored NORMALIZED (trimmed + UPPERCASE).
+//     Uniqueness relies on this canonical value + the DB unique index, not only
+//     application checks.
+//   - `isActive` drives soft deactivation. There is NO hard delete: records will
+//     be referenced by future operational data.
+// ---------------------------------------------------------------------------
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cities City[]
+
+  @@index([isActive])
+  @@map("regions")
+}
+
+model City {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  // Required parent. Deleting a Region with cities is blocked (Restrict default).
+  regionId  Int
+  region    Region   @relation(fields: [regionId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches Branch[]
+
+  @@index([regionId])
+  @@index([isActive])
+  @@map("cities")
+}
+
+model Branch {
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  name           String
+  // Canonical match key derived from `name` (see normalizeName). Lets sales
+  // import resolve/de-duplicate a branch by its business name instead of `code`.
+  // Nullable: set by every real creation path (CRUD, seed, import); rows created
+  // without a name key stay NULL (nulls distinct), so it never collides.
+  normalizedName String?  @unique
+  isActive       Boolean  @default(true)
+  // Optional geo parent (enables region/city -> branch drill-down).
+  cityId         Int?
+  city           City?    @relation(fields: [cityId], references: [id])
+  // Optional branch manager (CX negative-response alert recipient). Never guessed.
+  managerUserId  Int?
+  manager        User?    @relation("BranchManager", fields: [managerUserId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  salespeople     Salesperson[]
+  experiences     PurchaseExperience[]
+  callQueueItems  CallCenterQueueItem[]
+  userAssignments UserBranchAssignment[]
+  complaints      Complaint[]
+  // Departments belonging to this branch (branch-scoped org unit; see Department).
+  departments     Department[]
+
+  @@index([cityId])
+  @@index([isActive])
+  @@index([managerUserId])
+  @@map("branches")
+}
+
+// Flat vehicle model — single-make deployment, so there is no Make entity.
+model VehicleModel {
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  name           String
+  // Canonical match key derived from `name` (see normalizeName). Single-make
+  // catalog, so a model name is globally unique after normalization — sales
+  // import resolves/creates a model by name instead of `code`. Nullable: set by
+  // every real creation path; NULL rows are distinct (see Branch.normalizedName).
+  normalizedName String?  @unique
+  modelYear      Int?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Operational back-relation (operational.prisma). No cascade — historical
+  // vehicles keep referencing a deactivated model.
+  vehicles Vehicle[]
+
+  @@index([isActive])
+  @@map("vehicle_models")
+}
+
+// Branch-scoped department. Each department belongs to ONE branch, so a user's
+// branch scope is DERIVED from their department memberships (Branch → Department →
+// User). `branchId` is nullable ONLY for legacy rows created before branch-scoping;
+// every NEW department requires a branch (enforced in departments.service), and the
+// user-assignment selector offers branch-scoped departments only. The same business
+// name may repeat across branches ("قسم الشكاوى — الرياض" vs "— جدة" are distinct
+// records), so logical uniqueness is (branchId, normalizedName), not the global name.
+model Department {
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  name           String
+  // Canonical match key derived from `name` (see normalizeName). Set by every new
+  // creation path; legacy NULL rows are distinct (Postgres nulls-distinct), so they
+  // never collide under the (branchId, normalizedName) unique index.
+  normalizedName String?
+  isActive       Boolean  @default(true)
+  // Owning branch. Nullable for legacy compat; required by the service on create and
+  // IMMUTABLE afterwards (moving a department between branches would silently rewrite
+  // the org scope of its users/complaints — only an explicit migration may do it).
+  branchId       Int?
+  branch         Branch?  @relation(fields: [branchId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Complaints domain (complaints.prisma) back-relations.
+  complaints            Complaint[]
+  complaintCategories   ComplaintCategory[]
+  complaintRoutingRules ComplaintRoutingRule[]
+  userAssignments       UserDepartmentAssignment[]
+  // Escalation history references a department as an origin/destination; the
+  // relation is SetNull so removing a department never erases past escalations.
+  escalationsFrom       ComplaintEscalation[]      @relation("EscalationFromDepartment")
+  escalationsTo         ComplaintEscalation[]      @relation("EscalationToDepartment")
+
+  // Per-branch logical uniqueness (branchId nullable => Postgres allows many
+  // null-branch legacy rows; new departments always set a branch).
+  @@unique([branchId, normalizedName])
+  @@index([branchId])
+  @@index([isActive])
+  @@map("departments")
+}
+
+// Business entity. A salesperson may exist in ERP data WITHOUT a login account,
+// so the User link is optional. `externalId` carries the ERP identity.
+model Salesperson {
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  name           String
+  // Canonical match key derived from `name` (see normalizeName). Logical identity
+  // is (branchId, normalizedName): the SAME name in two different branches is two
+  // people, so uniqueness is scoped per branch, not global. See @@unique below.
+  // Nullable: set by every real creation path; NULL rows are distinct.
+  normalizedName String?
+  // ERP identifier — unique when present (many rows may have none).
+  externalId     String?  @unique
+  isActive       Boolean  @default(true)
+  // Optional 1:1 link to a login account (unique; nullable => many null links ok).
+  userId         Int?     @unique
+  user           User?    @relation(fields: [userId], references: [id])
+  // Optional home branch.
+  branchId       Int?
+  branch         Branch?  @relation(fields: [branchId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  experiences PurchaseExperience[]
+
+  // Per-branch logical uniqueness (branchId is nullable => Postgres allows many
+  // null-branch rows; sales import always sets a branch, so import-created people
+  // are always constrained).
+  @@unique([branchId, normalizedName])
+  @@index([branchId])
+  @@index([isActive])
+  @@map("salespeople")
+}

@@ -1,0 +1,20 @@
+// ---------------------------------------------------------------------------
+// System-level generic infrastructure models.
+// IdempotencyKey backs the create-first idempotency helper: reserve a unique
+// key BEFORE performing a side effect; a unique-violation means "already done".
+// ---------------------------------------------------------------------------
+
+model IdempotencyKey {
+  id        String    @id @default(uuid())
+  // Caller-supplied stable key, namespaced by `scope`.
+  key       String
+  scope     String
+  // Optional reference to the produced result (e.g. an entity id) for replay.
+  resultRef String?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@unique([scope, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
