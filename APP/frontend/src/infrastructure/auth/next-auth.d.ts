@@ -5,7 +5,11 @@ declare module "next-auth" {
   interface Session {
     accessToken?: string;
     error?: "RefreshAccessTokenError";
-    user: DefaultSession["user"] & { id: string; roles: string[]; permissions: string[] };
+    user: DefaultSession["user"] & {
+      id: string;
+      roles: string[];
+      permissions: string[];
+    };
   }
 
   interface User {

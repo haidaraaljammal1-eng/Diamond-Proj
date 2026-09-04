@@ -1,8 +1,8 @@
-export type NavigationItemType = 'link' | 'section';
+export type NavigationItemType = "link" | "section";
 
 export interface NavigationItem {
   key: string;
-  type: 'link' | 'section';
+  type: "link" | "section";
   labelKey: string;
   href?: string;
   icon?: React.ReactNode;
@@ -12,7 +12,7 @@ export interface NavigationItem {
 
 export interface NavigationSection {
   key: string;
-  type: 'section';
+  type: "section";
   labelKey: string;
   items: NavigationItem[];
 }

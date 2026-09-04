@@ -1,17 +1,33 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import type { AuthUser, LoginResult, TokenPair } from "@/infrastructure/auth/auth.types";
+import type {
+  AuthUser,
+  LoginResult,
+  TokenPair,
+} from "@/infrastructure/auth/auth.types";
 import { env } from "@/config/env";
 
-async function backendRequest<T>(path: string, body?: unknown, accessToken?: string, method = "POST"): Promise<T> {
+async function backendRequest<T>(
+  path: string,
+  body?: unknown,
+  accessToken?: string,
+  method = "POST",
+): Promise<T> {
   const response = await fetch(`${env.apiUrl}${path}`, {
     method,
-    headers: { "Content-Type": "application/json", Accept: "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
-  ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     cache: "no-store",
   });
-  const payload = (await response.json().catch(() => undefined)) as { data?: T; error?: { code?: string; message?: string } } | undefined;
-  if (!response.ok || !payload?.data) throw new Error(payload?.error?.code ?? `HTTP_${response.status}`);
+  const payload = (await response.json().catch(() => undefined)) as
+    | { data?: T; error?: { code?: string; message?: string } }
+    | undefined;
+  if (!response.ok || !payload?.data)
+    throw new Error(payload?.error?.code ?? `HTTP_${response.status}`);
   return payload.data;
 }
 
@@ -31,7 +47,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           password: credentials.password,
         });
         if (result.requiresTwoFactor) throw new Error("TWO_FACTOR_REQUIRED");
-        const user = await backendRequest<AuthUser>("/auth/me", undefined, result.accessToken, "GET");
+        const user = await backendRequest<AuthUser>(
+          "/auth/me",
+          undefined,
+          result.accessToken,
+          "GET",
+        );
         return {
           id: String(user.id),
           name: user.name,
@@ -55,13 +76,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accessTokenExpiresAt = user.accessTokenExpiresAt;
         token.refreshToken = user.refreshToken;
       }
-      if (!token.accessToken || !token.accessTokenExpiresAt || Date.now() < token.accessTokenExpiresAt - 30_000) return token;
-      if (!token.refreshToken) return { ...token, error: "RefreshAccessTokenError" };
+      if (
+        !token.accessToken ||
+        !token.accessTokenExpiresAt ||
+        Date.now() < token.accessTokenExpiresAt - 30_000
+      )
+        return token;
+      if (!token.refreshToken)
+        return { ...token, error: "RefreshAccessTokenError" };
       try {
         const refreshed = await refreshToken(token.refreshToken);
-        return { ...token, accessToken: refreshed.accessToken, accessTokenExpiresAt: Date.now() + refreshed.expiresIn * 1000, refreshToken: refreshed.refreshToken };
+        return {
+          ...token,
+          accessToken: refreshed.accessToken,
+          accessTokenExpiresAt: Date.now() + refreshed.expiresIn * 1000,
+          refreshToken: refreshed.refreshToken,
+        };
       } catch {
-        return { ...token, error: "RefreshAccessTokenError", accessToken: undefined, refreshToken: undefined };
+        return {
+          ...token,
+          error: "RefreshAccessTokenError",
+          accessToken: undefined,
+          refreshToken: undefined,
+        };
       }
     },
     async session({ session, token }) {
@@ -79,7 +116,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   events: {
     async signOut(message) {
       if ("token" in message && message.token?.accessToken) {
-        await backendRequest<{ message: string }>("/auth/logout", undefined, message.token.accessToken).catch(() => undefined);
+        await backendRequest<{ message: string }>(
+          "/auth/logout",
+          undefined,
+          message.token.accessToken,
+        ).catch(() => undefined);
       }
     },
   },

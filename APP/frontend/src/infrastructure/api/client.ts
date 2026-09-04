@@ -8,13 +8,19 @@ async function getAccessToken(): Promise<string | undefined> {
   return (await getSession())?.accessToken;
 }
 
-async function requestWithToken(path: string, options: ApiRequestOptions, accessToken?: string): Promise<Response> {
+async function requestWithToken(
+  path: string,
+  options: ApiRequestOptions,
+  accessToken?: string,
+): Promise<Response> {
   return fetch(`${env.apiUrl}${path}`, {
     ...options,
     credentials: options.credentials ?? "include",
     headers: {
       Accept: "application/json",
-      ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...(options.body === undefined
+        ? {}
+        : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...options.headers,
     },
