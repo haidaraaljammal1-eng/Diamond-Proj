@@ -23,3 +23,10 @@
 - TypeScript strict mode is required for the frontend.
 - Lookup APIs, stores, and hooks remain separate when the Backend permission or API is separate.
 - Do not implement behavior outside the Diamond Demo.
+- Diamond Demo is the visual source of truth.
+- Reusable UI uses shared components, and standard forms use the shared FormBuilder.
+- FormBuilder is powered by React Hook Form and Zod and never performs API calls.
+- Pages and components use domain hooks rather than calling APIs or Zustand stores directly.
+- Form values are not duplicated in Zustand; lookup fields use dedicated lookup hooks/APIs when available.
+- Page-specific decorative layouts stay inside their feature.
+- No documentation file may exceed 500 lines.

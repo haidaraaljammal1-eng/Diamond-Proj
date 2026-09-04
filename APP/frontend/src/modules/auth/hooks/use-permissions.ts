@@ -1,9 +1,10 @@
 "use client";
 
-import { useAuthStore } from "../stores/auth.store";
+import { useSession } from "next-auth/react";
 
 export function usePermissions() {
-  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const { data: session } = useSession();
+  const permissions = session?.user.permissions ?? [];
 
   return {
     permissions,

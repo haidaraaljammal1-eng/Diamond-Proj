@@ -2,7 +2,7 @@ import { apiRequest } from "@/infrastructure/api/client";
 import type { ApiResponse } from "@/infrastructure/api/types";
 import type {
   AuthUser,
-  LoginResponse,
+  LoginResult,
   TokenPair,
 } from "@/infrastructure/auth/auth.types";
 
@@ -16,8 +16,8 @@ export interface RefreshPayload {
 }
 
 export const authApi = {
-  login(payload: LoginPayload): Promise<ApiResponse<LoginResponse>> {
-    return apiRequest<LoginResponse>("/auth/login", {
+  login(payload: LoginPayload): Promise<ApiResponse<LoginResult>> {
+    return apiRequest<LoginResult>("/auth/login", {
       method: "POST",
       body: payload,
     });

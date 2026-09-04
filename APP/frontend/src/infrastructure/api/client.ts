@@ -2,6 +2,26 @@ import { env } from "@/config/env";
 import { ApiRequestError } from "./errors";
 import type { ApiErrorResponse, ApiResponse } from "./types";
 
+async function getAccessToken(): Promise<string | undefined> {
+  if (typeof window === "undefined") return undefined;
+  const { getSession } = await import("next-auth/react");
+  return (await getSession())?.accessToken;
+}
+
+async function requestWithToken(path: string, options: ApiRequestOptions, accessToken?: string): Promise<Response> {
+  return fetch(`${env.apiUrl}${path}`, {
+    ...options,
+    credentials: options.credentials ?? "include",
+    headers: {
+      Accept: "application/json",
+      ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...options.headers,
+    },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+}
+
 export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
 }
@@ -33,18 +53,14 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<ApiResponse<T>> {
-  const response = await fetch(`${env.apiUrl}${path}`, {
-    ...options,
-    credentials: options.credentials ?? "include",
-    headers: {
-      Accept: "application/json",
-      ...(options.body === undefined
-        ? {}
-        : { "Content-Type": "application/json" }),
-      ...options.headers,
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  const accessToken = await getAccessToken();
+  let response = await requestWithToken(path, options, accessToken);
+  if (response.status === 401 && typeof window !== "undefined") {
+    const refreshedToken = await getAccessToken();
+    if (refreshedToken && refreshedToken !== accessToken) {
+      response = await requestWithToken(path, options, refreshedToken);
+    }
+  }
   const payload = await readJson(response);
 
   if (!response.ok) {

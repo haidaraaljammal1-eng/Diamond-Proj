@@ -1,0 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Marcellus&family=Tajawal:wght@400;500;700&display=swap");
+
+:root {
+  --diamond-noir: #0a0a0c;
+  --diamond-gold: #c9a15c;
+  --diamond-gold-hi: #ead1a2;
+  --diamond-gold-lo: #8a6630;
+  --diamond-champagne: #f2e8d2;
+  --diamond-ivory: #eae4d6;
+  --diamond-muted: #98907f;
+  --diamond-dim: #68625a;
+  --diamond-ink: #262015;
+  --diamond-danger: #df5b52;
+  --diamond-gold-gradient: linear-gradient(
+    100deg,
+    #8a6630,
+    #c9a15c 30%,
+    #f2e0b4 50%,
+    #c9a15c 72%,
+    #8a6630
+  );
+  --diamond-font-display: "Marcellus", Georgia, "Times New Roman", serif;
+  --diamond-font-body: "Tajawal", "Segoe UI", Tahoma, sans-serif;
+  --diamond-transition: 0.25s ease;
+  --diamond-br-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M29 1H11Q1 1 1 11V29' fill='none' stroke='rgba(201,161,92,0.55)' stroke-width='1.5'/%3E%3C/svg%3E");
+  --diamond-br-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M1 1H19Q29 1 29 11V29' fill='none' stroke='rgba(201,161,92,0.55)' stroke-width='1.5'/%3E%3C/svg%3E");
+  --diamond-br-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M29 29H11Q1 29 1 19V1' fill='none' stroke='rgba(201,161,92,0.55)' stroke-width='1.5'/%3E%3C/svg%3E");
+  --diamond-br-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M1 29H19Q29 29 29 19V1' fill='none' stroke='rgba(201,161,92,0.55)' stroke-width='1.5'/%3E%3C/svg%3E");
+}

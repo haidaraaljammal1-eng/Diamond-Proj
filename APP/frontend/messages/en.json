@@ -7,5 +7,19 @@
     "checkBackend": "Check backend connection",
     "checking": "Checking...",
     "backend": "Backend: {status}"
+  },
+  "Login": {
+    "title": "Welcome to Diamond Rent Car",
+    "email": "Email",
+    "password": "Password",
+    "submitButton": "Login",
+    "hint": "Login is available for Diamond office accounts only",
+    "error": {
+      "UNAUTHORIZED": "Invalid credentials",
+      "ACCOUNT_SUSPENDED": "Account is suspended",
+      "NETWORK_ERROR": "Network connection error",
+      "generic": "Login failed. Please try again."
+    },
+    "loading": "Logging in..."
   }
 }

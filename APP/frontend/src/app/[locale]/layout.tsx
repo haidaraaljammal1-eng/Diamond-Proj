@@ -4,6 +4,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { routing } from "@/infrastructure/i18n/routing";
+import { Providers } from "@/app/providers";
+import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "Diamond Rent Car",
@@ -33,7 +35,7 @@ export default async function LocaleLayout({
     <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <body>
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

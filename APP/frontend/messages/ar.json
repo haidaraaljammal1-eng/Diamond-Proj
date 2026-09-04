@@ -7,5 +7,19 @@
     "checkBackend": "فحص اتصال Backend",
     "checking": "جارٍ الفحص...",
     "backend": "Backend: {status}"
+  },
+  "Login": {
+    "title": "أهلاً وسهلاً في مكتب Diamond",
+    "email": "اسم المستخدم",
+    "password": "كلمة المرور",
+    "submitButton": "دخول",
+    "hint": "الدخول متاح لحسابات مكتب Diamond فقط",
+    "error": {
+      "UNAUTHORIZED": "بيانات الدخول غير صحيحة",
+      "ACCOUNT_SUSPENDED": "الحساب مُوقف",
+      "NETWORK_ERROR": "خطأ في الاتصال",
+      "generic": "حدث خطأ أثناء الدخول"
+    },
+    "loading": "جارٍ الدخول..."
   }
 }
