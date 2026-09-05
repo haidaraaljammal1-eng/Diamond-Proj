@@ -1,0 +1,63 @@
+/* Page header — the Demo `.vhead` / `.thread` block, shared by every
+   protected Diamond page so the title/breadcrumb pattern is written once. */
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.crumbs {
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+  letter-spacing: 0.14em;
+  margin-bottom: 5px;
+}
+
+.title {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--diamond-champagne);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--diamond-muted);
+  margin: 2px 0 0;
+}
+
+.thread {
+  height: 2px;
+  width: 64px;
+  margin-top: 10px;
+  border-radius: 2px;
+  opacity: 0.85;
+  /* A gradient direction is always physical — it does not flip with `dir`, so
+     the RTL counterpart is written explicitly (see the frontend CLAUDE.md). */
+  background: linear-gradient(
+    90deg,
+    var(--diamond-gold-lo),
+    var(--diamond-gold),
+    transparent
+  );
+}
+
+:global([dir="rtl"]) .thread {
+  background: linear-gradient(
+    270deg,
+    var(--diamond-gold-lo),
+    var(--diamond-gold),
+    transparent
+  );
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}

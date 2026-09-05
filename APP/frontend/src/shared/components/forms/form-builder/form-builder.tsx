@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   FormProvider,
   useForm,
@@ -9,6 +10,7 @@ import type { ZodType } from "zod";
 import { Button } from "@/shared/components/ui/button/button";
 import { FieldRenderer } from "./field-renderer";
 import type { FormField } from "./form-builder.types";
+import styles from "./form-builder.module.css";
 
 interface FormBuilderProps<T extends FieldValues> {
   fields: FormField<T>[];
@@ -18,6 +20,14 @@ interface FormBuilderProps<T extends FieldValues> {
   submitLabel: string;
   submittingLabel?: string;
   className?: string;
+  /** Submit button size — `md` is the Demo inline button used in dialogs. */
+  submitSize?: "lg" | "md";
+  /**
+   * Secondary control rendered beside the submit button — the Demo modal action
+   * row: a primary button that fills the row plus a ghost action (Cancel).
+   * Already translated; the builder never owns copy.
+   */
+  secondaryAction?: ReactNode;
 }
 
 export function FormBuilder<T extends FieldValues>({
@@ -28,11 +38,20 @@ export function FormBuilder<T extends FieldValues>({
   submitLabel,
   submittingLabel = "...",
   className,
+  submitSize = "lg",
+  secondaryAction,
 }: FormBuilderProps<T>) {
   const methods = useForm<T, unknown, T>({
     resolver: zodResolver(schema),
     defaultValues,
   });
+
+  const submitButton = (
+    <Button type="submit" size={submitSize} loading={methods.formState.isSubmitting}>
+      {methods.formState.isSubmitting ? submittingLabel : submitLabel}
+    </Button>
+  );
+
   return (
     <FormProvider {...methods}>
       <form
@@ -46,9 +65,14 @@ export function FormBuilder<T extends FieldValues>({
         {fields.map((field) => (
           <FieldRenderer key={String(field.name)} field={field} />
         ))}
-        <Button type="submit" loading={methods.formState.isSubmitting}>
-          {methods.formState.isSubmitting ? submittingLabel : submitLabel}
-        </Button>
+        {secondaryAction ? (
+          <div className={styles.actions}>
+            <div className={styles.submit}>{submitButton}</div>
+            {secondaryAction}
+          </div>
+        ) : (
+          submitButton
+        )}
       </form>
     </FormProvider>
   );

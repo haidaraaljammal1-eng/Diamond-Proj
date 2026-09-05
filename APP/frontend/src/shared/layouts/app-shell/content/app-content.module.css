@@ -16,9 +16,10 @@
   transition: inset-inline-start 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Full-width content area: the Demo capped this at 1180px, but Diamond pages
+   (starting with the permission matrix) use the whole viewport width. */
 .wrap {
-  max-width: 1180px;
-  margin: 0 auto;
+  width: 100%;
   position: relative;
   z-index: 1;
 }

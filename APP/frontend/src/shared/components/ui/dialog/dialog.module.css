@@ -1,0 +1,146 @@
+/* Dialog — the Demo modal, value for value (`.scrim` / `.modal` / `.mclose`
+   after the final Pearl Ivory cascade). No new visual vocabulary. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(70, 56, 32, 0.38);
+  -webkit-backdrop-filter: blur(6px) saturate(1.05);
+  backdrop-filter: blur(6px) saturate(1.05);
+  animation: dialog-fade 0.24s ease both;
+}
+
+.dialog {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 22px;
+  border: 1px solid rgba(201, 161, 92, 0.3);
+  border-radius: 6px;
+  background-image:
+    var(--diamond-br-tl), var(--diamond-br-tr), var(--diamond-br-bl),
+    var(--diamond-br-br), linear-gradient(180deg, #ffffff, #fbf6eb 70%);
+  background-position: top right, top left, bottom right, bottom left, center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px, 30px 30px, 30px 30px, 30px 30px, cover;
+  box-shadow: 0 40px 100px rgba(80, 60, 30, 0.24);
+  animation: dialog-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Demo hairline over the top edge of the modal. */
+.dialog::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  inset-inline: 18%;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 161, 92, 0.8),
+    transparent
+  );
+}
+
+/* The Demo floats the close button to the inline-end of the modal: left in
+   Arabic (the Demo default), right in English. `float` is physical, so the LTR
+   counterpart is written explicitly. */
+.close {
+  position: relative;
+  top: -4px;
+  float: left;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 0;
+  clip-path: polygon(
+    6px 0,
+    100% 0,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0 100%,
+    0 6px
+  );
+  background: rgba(201, 161, 92, 0.08);
+  color: var(--diamond-muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--diamond-transition);
+}
+
+:global([dir="ltr"]) .close {
+  float: right;
+}
+
+.close:hover {
+  color: #231a08;
+  background: var(--diamond-gold-gradient);
+}
+
+.title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.description {
+  margin: 0 0 16px;
+  font-size: 11.5px;
+  color: var(--diamond-muted);
+}
+
+@keyframes dialog-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dialog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .dialog {
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .scrim {
+    padding: 8px;
+  }
+
+  .dialog {
+    width: 100%;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+}

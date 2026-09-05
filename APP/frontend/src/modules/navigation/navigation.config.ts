@@ -1,3 +1,4 @@
+import { ROLES_PAGE_PERMISSIONS } from "@/modules/roles/roles.permissions";
 import type { NavigationConfig } from "./navigation.types";
 
 /**
@@ -5,9 +6,10 @@ import type { NavigationConfig } from "./navigation.types";
  * (order, labels, icons, admin-only owners, WhatsApp action, badge).
  *
  * Permission notes:
- * - Only `dashboard.read` maps to a permission that actually exists in the
- *   Backend catalog today. All other Demo pages have NO matching Backend
- *   permission yet, so they intentionally declare none (never invented).
+ * - `dashboard.read` and the Roles entry (`roles.read` + `permissions.read`)
+ *   map to permissions that actually exist in the Backend catalog.
+ * - Every other Demo page still has NO matching Backend permission, so it
+ *   intentionally declares none (never invented).
  * - `adminOnly` mirrors the Demo `adminonly` owner/employee behavior.
  */
 export const navigationConfig: NavigationConfig = [
@@ -103,6 +105,16 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "team",
         href: "/team",
         icon: "team",
+      },
+      {
+        // Permission-driven: the page reads `GET /roles` and `GET /permissions`,
+        // so both Backend permissions are required to see the entry.
+        key: "roles",
+        type: "link",
+        labelKey: "roles",
+        href: "/roles",
+        icon: "roles",
+        permissions: [...ROLES_PAGE_PERMISSIONS],
       },
     ],
   },

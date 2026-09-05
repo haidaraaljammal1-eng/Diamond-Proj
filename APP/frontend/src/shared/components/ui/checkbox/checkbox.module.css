@@ -1,0 +1,15 @@
+/* Demo `.consent input`: a native checkbox tinted with the Diamond gold. Native
+   keeps keyboard, focus and assistive-tech behavior for free. */
+.checkbox {
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--diamond-gold);
+  cursor: pointer;
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

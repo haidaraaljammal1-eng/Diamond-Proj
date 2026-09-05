@@ -45,3 +45,42 @@
   background: transparent;
   color: var(--diamond-ink);
 }
+
+/* Demo `.btn.ghost` — the secondary inline action, on the Demo base button
+   metrics. `primary` (above) stays the full-width login submit. */
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 18px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--diamond-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ghost:hover:not(:disabled) {
+  color: var(--diamond-ivory);
+  border-color: var(--diamond-line);
+}
+
+/* Demo base button metrics (`.btn` / `.btn.pri`, 38px). Applied on top of a
+   variant, so the full-width login submit stays the exception, not the rule. */
+.md {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  letter-spacing: 0;
+  filter: none;
+}

@@ -28,6 +28,9 @@
 - Every dropdown uses the shared Diamond Select (`src/shared/components/ui/select`); a native `<select>` is never used. In forms use `SelectField` or the FormBuilder `select` field type. See `DOCU/00-system-overview/ui-select.md` and the `diamond-select` skill.
 - FormBuilder is powered by React Hook Form and Zod and never performs API calls.
 - Pages and components use domain hooks rather than calling APIs or Zustand stores directly.
+- Roles and permissions always come from the Backend; RBAC data is never hardcoded in the frontend.
+- Permission matrix rows represent backend permissions and columns represent backend roles.
+- Frontend permission visibility is UX only; the Backend remains the authorization authority.
 - Form values are not duplicated in Zustand; lookup fields use dedicated lookup hooks/APIs when available.
 - Page-specific decorative layouts stay inside their feature.
 - No documentation file may exceed 500 lines.

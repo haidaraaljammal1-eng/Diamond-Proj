@@ -1,0 +1,12 @@
+.cell {
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--diamond-hair);
+  vertical-align: middle;
+  transition: opacity var(--diamond-transition);
+}
+
+/* While the write is in flight the cell stays readable but clearly inert. */
+.pending {
+  opacity: 0.5;
+}

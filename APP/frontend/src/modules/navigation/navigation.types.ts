@@ -29,7 +29,8 @@ export type NavigationTranslationKey =
   | "contracts"
   | "chats"
   | "admin"
-  | "team";
+  | "team"
+  | "roles";
 
 export type NavigationItemType = "link" | "action";
 
@@ -44,7 +45,8 @@ export type NavigationIconKey =
   | "invoices"
   | "contracts"
   | "chats"
-  | "team";
+  | "team"
+  | "roles";
 
 export interface NavigationItem {
   key: string;
@@ -55,6 +57,12 @@ export interface NavigationItem {
   icon: NavigationIconKey;
   /** Real Backend permission · optional when the Backend has none yet. */
   permission?: string;
+  /**
+   * Real Backend permissions the target page reads, ALL of which are required.
+   * Use it when a page consumes more than one endpoint (Roles reads both
+   * `roles.read` and `permissions.read`).
+   */
+  permissions?: string[];
   /** Demo `adminonly` behavior (owner only). */
   adminOnly?: boolean;
   /** Demo badge count (visible only when > 0). */

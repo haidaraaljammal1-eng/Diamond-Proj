@@ -112,6 +112,17 @@ function TeamIcon(props: IconProps) {
   );
 }
 
+/* Access control — a shield over a key line, in the Demo rail stroke style. */
+function RolesIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path d="M12 3.2 19 6v5.6c0 4-2.9 7.4-7 9.2-4.1-1.8-7-5.2-7-9.2V6z" />
+      <circle cx="12" cy="10.6" r="1.9" />
+      <path d="M12 12.5v3.6M12 14.6h1.7" />
+    </svg>
+  );
+}
+
 export const NAVIGATION_ICONS: Record<
   NavigationIconKey,
   ComponentType<SVGProps<SVGSVGElement>>
@@ -127,4 +138,5 @@ export const NAVIGATION_ICONS: Record<
   contracts: ContractsIcon,
   chats: ChatsIcon,
   team: TeamIcon,
+  roles: RolesIcon,
 };

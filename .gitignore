@@ -32,3 +32,5 @@ Thumbs.db
 # Backend generated files
 APP/backend/src/schemas/zod/
 APP/backend/prisma/generated/
+
+.playwright-mcp

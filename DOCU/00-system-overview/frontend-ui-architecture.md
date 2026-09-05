@@ -14,7 +14,28 @@ The Diamond HTML Demo is the visual source of truth. Its original HTML, complete
 - Every dropdown uses the shared Diamond Select; native `<select>` is not used
   anywhere in the system. See [Diamond Select](./ui-select.md).
 
+- `src/shared/components/ui/page-header` is the shared page title/breadcrumb
+  block (Demo `.vhead`); pages do not re-implement that CSS.
+
 Shared UI components do not know about APIs, Zustand, routing, or business permissions. Pages use domain hooks as their UI facade.
+
+## Tabular Data
+
+There is no shared DataGrid, and none is planned until a second page needs one.
+Genuinely tabular data uses a semantic `<table>` inside the feature (see the
+Roles permission matrix, `DOCU/05-pages/roles-permissions.md`), with sticky
+header/first column and scrolling contained in the table card so the page never
+scrolls horizontally. When a second page needs the same behavior, extract
+`Table`/`TableRow`/`TableCell` primitives instead of duplicating the CSS.
+
+## Frontend Tests
+
+Unit tests run on the Node test runner with native TypeScript type stripping
+(`npm test` in `APP/frontend`) — no test dependency is installed. Tests are
+colocated as `*.test.ts` next to the pure module they cover and import relative
+paths with the explicit `.ts` extension (required by the Node ESM resolver;
+`allowImportingTsExtensions` is enabled for that reason). React component and
+end-to-end testing infrastructure does not exist yet.
 
 ## Form Builder
 

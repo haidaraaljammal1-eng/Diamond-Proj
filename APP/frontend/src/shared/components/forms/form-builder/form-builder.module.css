@@ -1,0 +1,18 @@
+/* Demo modal action row: the primary submit fills the row and the secondary
+   action (usually Cancel) sits beside it. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+/* The Demo modal row: the primary button fills the row (`flex:1`) and the
+   secondary action keeps its own width. */
+.submit {
+  flex: 1;
+}
+
+.submit > button {
+  width: 100%;
+}
