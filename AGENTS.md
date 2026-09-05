@@ -31,6 +31,8 @@
 - Roles and permissions always come from the Backend; RBAC data is never hardcoded in the frontend.
 - Permission matrix rows represent backend permissions and columns represent backend roles.
 - Frontend permission visibility is UX only; the Backend remains the authorization authority.
+- Dialogs use the shared Dialog (`src/shared/components/ui/dialog`) with FormBuilder inside; overlays are portalled to `<body>`.
+- Every checkbox uses the shared Diamond Checkbox (`src/shared/components/ui/checkbox`).
 - Form values are not duplicated in Zustand; lookup fields use dedicated lookup hooks/APIs when available.
 - Page-specific decorative layouts stay inside their feature.
 - No documentation file may exceed 500 lines.

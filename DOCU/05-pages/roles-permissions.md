@@ -2,8 +2,9 @@
 
 The Backend RBAC as a matrix: **rows are permissions, columns are roles**. The
 Backend is the single authority — no RBAC data is defined, cached or invented in
-the frontend. The matrix itself is read-only; a role's name and description can
-be created and edited from the page when the session holds `roles.manage`.
+the frontend. With `roles.manage` the page also writes: each cell is a checkbox
+that grants or revokes that permission immediately, and roles can be created and
+renamed from the shared dialog.
 
 ## Route
 
@@ -41,6 +42,7 @@ still enforces every request.
 | `GET /permissions` (admin)             | `{ data: Permission[] }`       | Full seeded catalog, ordered by `category` then `key`    |
 | `POST /roles` (admin)                  | `{ data: Role }`               | Create — `roles.manage`; new role starts with no grants  |
 | `PUT /roles/:id` (admin)               | `{ data: Role }`               | Update name/description — `roles.manage`                 |
+| `PUT /roles/:id/permissions` (admin)    | `{ data: Role }`               | Replace grants — `roles.manage`; refuses system roles    |
 
 Both are loaded in parallel (`Promise.all`). A failure in either one surfaces as
 one error state — a partial matrix is never rendered.
@@ -79,10 +81,10 @@ render loop.
 - Sticky role header (vertical scroll) and sticky permission column
   (horizontal scroll); scrolling is contained in the matrix card, so the page
   itself never scrolls horizontally.
-- A cell shows a gold check (allowed) or a dim dash (not allowed), each with a
-  screen-reader label — state never depends on color alone.
-- Grant cells are read-only. An editable variant only adds an `onToggle` prop
-  on `PermissionCell`; the table, layout and semantics stay unchanged.
+- Every cell is the shared Diamond `Checkbox` carrying an accessible name
+  ("View vehicles — Branch manager"), so the state never rests on color alone.
+- Cells are disabled — visible but not editable — for a system role (the
+  Backend refuses to modify one) and for a session without `roles.manage`.
 - When the Backend returns fewer roles than fit, empty placeholder columns fill
   the leftover width so a role column keeps its own width. They are
   `aria-hidden` and carry no data; the count is measured with a
@@ -151,7 +153,21 @@ src/modules/roles/
 └── index.ts
 src/shared/components/ui/page-header/   (shared page header)
 src/shared/components/ui/dialog/        (shared Demo dialog)
+src/shared/components/ui/checkbox/      (shared Diamond checkbox)
 ```
+
+## Editing grants (auto-save)
+
+Toggling a cell calls `PUT /roles/:id/permissions` with the role's full,
+recomputed key list. There is no draft state and no save button:
+
+- the cell flips immediately (optimistic) and is marked pending while in flight,
+- the Backend response replaces the role in the store,
+- a refusal rolls the whole role back to the previous grants and shows a
+  translated, dismissible error next to the matrix.
+
+Pending cells live in the store as `{ "<roleId>:<permissionKey>": true }` —
+serializable, no `Set`/`Map` in state.
 
 ## Create / edit dialogs
 
@@ -336,9 +352,10 @@ name. Editing changes name/description only; grants stay Backend-owned.
 
 ## Scope and known limitations
 
-- Create and edit cover a role's name and description only. No delete, clone,
-  permission editing or user assignment, even though the Backend exposes
-  `DELETE /roles/:id` and `PUT /roles/:id/permissions`.
+- No delete, clone or user assignment, even though the Backend exposes
+  `DELETE /roles/:id`.
+- A system role is never editable from the page: the Backend rejects both
+  permission changes and deletion for one.
 - A user holding `roles.read` but not `permissions.read` is shown the no-access
   panel rather than a matrix derived from role grants only, which would hide
   permissions no role holds.

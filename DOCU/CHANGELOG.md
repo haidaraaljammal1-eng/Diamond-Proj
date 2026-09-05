@@ -17,3 +17,7 @@
   Demo `adminonly` heuristic.
 - Added frontend unit tests on the Node test runner (`npm test`, no new
   dependency).
+- Roles page: permission grants are editable checkboxes with auto-save, plus
+  create/edit role dialogs built on a new shared Dialog and Checkbox.
+- Restored the glass effect on the shell header and rail: the CSS pipeline was
+  dropping `backdrop-filter` written before its `-webkit-` counterpart.

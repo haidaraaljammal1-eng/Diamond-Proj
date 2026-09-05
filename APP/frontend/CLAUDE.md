@@ -30,6 +30,15 @@ Every direction bug in this app so far has been a CSS bug, not an i18n bug.
 5. Directional box-shadow offsets (`30px 0 ...`) break in one of the two
    directions. Use a symmetric shadow or a per-`dir` rule.
 
+## backdrop-filter
+
+Write `-webkit-backdrop-filter` **before** the unprefixed `backdrop-filter`.
+The CSS pipeline keeps only one of the pair, and with the unprefixed property
+first it is the one dropped — the glass effect then silently disappears in
+Chrome. It had already been lost on the shell header and the rail this way.
+Verify with `getComputedStyle(el).backdropFilter` in the browser, not by
+reading the source.
+
 **Check before claiming a direction fix is done:** open both `/ar` and `/en`
 and confirm the rail and the content sit on the *same* edge, with no gap on the
 opposite edge.
