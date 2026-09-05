@@ -21,5 +21,49 @@
       "generic": "حدث خطأ أثناء الدخول"
     },
     "loading": "جارٍ الدخول..."
+  },
+  "navigation": {
+    "home": "الرئيسية",
+    "admin": "الإدارة",
+    "dashboard": "لوحة التحكم",
+    "operations": "مركز العمليات",
+    "cars": "السيارات",
+    "gps": "تتبع GPS",
+    "maintenance": "مركز الصيانة",
+    "violations": "المخالفات وسالك",
+    "finance": "المالية",
+    "invoices": "الفواتير",
+    "contracts": "العقود",
+    "chats": "واتساب المكتب",
+    "team": "الموظفون"
+  },
+  "Shell": {
+    "brand": "DIAMOND ELITE",
+    "brandSub": "RENT CAR · DUBAI",
+    "roleOwner": "صاحب المكتب",
+    "roleOwnerShort": "المدير",
+    "roleEmployee": "موظف",
+    "roleEmployeeShort": "موظف",
+    "userRoleOwner": "المالك · أدمن",
+    "userRoleEmployee": "موظف",
+    "langNext": "EN",
+    "langTitle": "Language / اللغة",
+    "openMenu": "القائمة — فتح التنقل",
+    "closeMenu": "القائمة — إغلاق التنقل",
+    "railLabel": "التنقل الرئيسي",
+    "railClose": "إغلاق القائمة",
+    "roleSwitch": "تبديل الدور",
+    "railFooterVersion": "Diamond OS · v1.0",
+    "railFooterCopy": "© 2026 Diamond Rent Car L.L.C<br/>Dubai · United Arab Emirates",
+    "avatarLabel": "حساب المستخدم",
+    "navigationActionNote": "ستُفعَّل في مرحلة لاحقة"
+  },
+  "Dashboard": {
+    "placeholder": "لوحة التحكم تُنفَّذ في مرحلة لاحقة",
+    "logout": "تسجيل الخروج",
+    "logoutBusy": "جارٍ تسجيل الخروج..."
+  },
+  "validation": {
+    "required": "هذا الحقل مطلوب"
   }
 }

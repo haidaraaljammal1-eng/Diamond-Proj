@@ -1,16 +1,33 @@
-@import url("https://fonts.googleapis.com/css2?family=Marcellus&family=Tajawal:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Marcellus&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap");
 
+/* ════════════════════════════════════════════════════════════════════════
+   DIAMOND RENT CAR · DESIGN TOKENS
+   Extracted from the Diamond HTML Demo “PEARL IVORY” final visual layer.
+   The Demo cascade ends in a warm pearl-white theme over champagne gold.
+   ════════════════════════════════════════════════════════════════════════ */
 :root {
-  --diamond-noir: #0a0a0c;
+  /* Palette — final effective Demo values */
+  --diamond-noir: #faf8f2; /* page base */
+  --diamond-onyx: #ffffff; /* elevated surfaces */
+  --diamond-onyx2: #fffdf8; /* raised surfaces */
+  --diamond-raise: #fffdf8;
   --diamond-gold: #c9a15c;
-  --diamond-gold-hi: #ead1a2;
+  --diamond-gold-hi: #8a6630;
   --diamond-gold-lo: #8a6630;
-  --diamond-champagne: #f2e8d2;
-  --diamond-ivory: #eae4d6;
-  --diamond-muted: #98907f;
-  --diamond-dim: #68625a;
-  --diamond-ink: #262015;
-  --diamond-danger: #df5b52;
+  --diamond-champagne: #2b2417; /* headings / strong text */
+  --diamond-ivory: #262015; /* body text */
+  --diamond-muted: #756b57;
+  --diamond-dim: #9a8f78;
+  --diamond-ink: #2b2417;
+  --diamond-ok: #2e9e63;
+  --diamond-warn: #b27a17;
+  --diamond-danger: #c2453c;
+
+  /* Lines & hairline separators — Demo ivory values */
+  --diamond-line: rgba(201, 161, 92, 0.32);
+  --diamond-hair: rgba(133, 100, 45, 0.14);
+
+  /* Gold gradient (shared everywhere; never duplicated) */
   --diamond-gold-gradient: linear-gradient(
     100deg,
     #8a6630,
@@ -19,9 +36,44 @@
     #c9a15c 72%,
     #8a6630
   );
+
+  /* Shadows — Demo ivory */
+  --diamond-shadow-near: 0 4px 16px rgba(122, 96, 48, 0.1);
+  --diamond-shadow-far: 0 24px 64px rgba(122, 96, 48, 0.2);
+
+  /* Typography — Demo: Marcellus (display) + IBM Plex Sans Arabic (UI) */
   --diamond-font-display: "Marcellus", Georgia, "Times New Roman", serif;
-  --diamond-font-body: "Tajawal", "Segoe UI", Tahoma, sans-serif;
+  --diamond-font-body: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
   --diamond-transition: 0.25s ease;
+
+  /* Shell stage — final Demo body background composition */
+  --diamond-page-bg:
+    radial-gradient(
+      1100px 760px at 88% -12%,
+      rgba(201, 161, 92, 0.15),
+      transparent 58%
+    ),
+    radial-gradient(
+      900px 660px at -6% 110%,
+      rgba(201, 161, 92, 0.11),
+      transparent 58%
+    ),
+    linear-gradient(180deg, #fdfcf8, #f8f4ec);
+
+  /* Shell surfaces — final Demo glass values */
+  --diamond-topbar-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(253, 250, 243, 0.9)
+  );
+  --diamond-rail-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.97),
+    rgba(252, 248, 240, 0.94)
+  );
+  --diamond-scrim-bg: rgba(88, 70, 40, 0.32);
+
+  /* Art-deco corner brackets (prefetched Demo assets) */
   --diamond-br-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M29 1H11Q1 1 1 11V29' fill='none' stroke='rgba(201,161,92,0.55)' stroke-width='1.5'/%3E%3C/svg%3E");
   --diamond-br-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M1 1H19Q29 1 29 11V29' fill='none' stroke='rgba(201,161,92,0.55)' stroke-width='1.5'/%3E%3C/svg%3E");
   --diamond-br-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M29 29H11Q1 29 1 19V1' fill='none' stroke='rgba(201,161,92,0.55)' stroke-width='1.5'/%3E%3C/svg%3E");

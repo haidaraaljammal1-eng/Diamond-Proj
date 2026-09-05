@@ -1,43 +1,109 @@
 import type { NavigationConfig } from "./navigation.types";
 
 /**
- * Central navigation configuration for Diamond Rent Car
- * Based on Demo visual design - this is the source of truth for navigation structure
+ * Central navigation configuration — mirrors the Diamond Demo rail exactly
+ * (order, labels, icons, admin-only owners, WhatsApp action, badge).
+ *
+ * Permission notes:
+ * - Only `dashboard.read` maps to a permission that actually exists in the
+ *   Backend catalog today. All other Demo pages have NO matching Backend
+ *   permission yet, so they intentionally declare none (never invented).
+ * - `adminOnly` mirrors the Demo `adminonly` owner/employee behavior.
  */
 export const navigationConfig: NavigationConfig = [
   {
-    key: "dashboard",
-    type: "link",
-    labelKey: "navigation.dashboard",
-    href: "/dashboard",
-    permission: "dashboard.read",
+    key: "main",
+    labelKey: "home",
+    items: [
+      {
+        key: "dashboard",
+        type: "link",
+        labelKey: "dashboard",
+        href: "/dashboard",
+        icon: "dashboard",
+        permission: "dashboard.read",
+      },
+      {
+        key: "operations",
+        type: "link",
+        labelKey: "operations",
+        href: "/operations",
+        icon: "operations",
+        adminOnly: true,
+      },
+      {
+        key: "cars",
+        type: "link",
+        labelKey: "cars",
+        href: "/cars",
+        icon: "cars",
+      },
+      {
+        key: "gps",
+        type: "link",
+        labelKey: "gps",
+        href: "/gps",
+        icon: "gps",
+      },
+      {
+        key: "maintenance",
+        type: "link",
+        labelKey: "maintenance",
+        href: "/maintenance",
+        icon: "maintenance",
+      },
+      {
+        key: "violations",
+        type: "link",
+        labelKey: "violations",
+        href: "/violations",
+        icon: "violations",
+        adminOnly: true,
+      },
+      {
+        key: "finance",
+        type: "link",
+        labelKey: "finance",
+        href: "/finance",
+        icon: "finance",
+        adminOnly: true,
+      },
+      {
+        key: "invoices",
+        type: "link",
+        labelKey: "invoices",
+        href: "/invoices",
+        icon: "invoices",
+        adminOnly: true,
+      },
+      {
+        key: "contracts",
+        type: "link",
+        labelKey: "contracts",
+        href: "/contracts",
+        icon: "contracts",
+      },
+      {
+        key: "chats",
+        type: "action",
+        labelKey: "chats",
+        icon: "chats",
+        badge: 3,
+      },
+    ],
   },
   {
-    key: "cars",
-    type: "link",
-    labelKey: "navigation.cars",
-    href: "/cars",
-    permission: "cars.read",
-  },
-  {
-    key: "contracts",
-    type: "link",
-    labelKey: "navigation.contracts",
-    href: "/contracts",
-    permission: "contracts.read",
-  },
-  {
-    key: "operations",
-    type: "link",
-    labelKey: "navigation.operations",
-    href: "/operations",
-    permission: "operations.read",
-  },
-  {
-    key: "finance",
-    type: "link",
-    labelKey: "navigation.finance",
-    href: "/finance",
-    permission: "finance.read",
+    key: "admin",
+    labelKey: "admin",
+    adminOnly: true,
+    items: [
+      {
+        key: "team",
+        type: "link",
+        labelKey: "team",
+        href: "/team",
+        icon: "team",
+      },
+    ],
   },
 ];

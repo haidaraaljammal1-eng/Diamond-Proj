@@ -21,5 +21,49 @@
       "generic": "Login failed. Please try again."
     },
     "loading": "Logging in..."
+  },
+  "navigation": {
+    "home": "Home",
+    "admin": "Administration",
+    "dashboard": "Dashboard",
+    "operations": "Operations Center",
+    "cars": "Vehicles",
+    "gps": "GPS Tracking",
+    "maintenance": "Maintenance Center",
+    "violations": "Violations & Salik",
+    "finance": "Finance",
+    "invoices": "Invoices",
+    "contracts": "Contracts",
+    "chats": "Office WhatsApp",
+    "team": "Staff"
+  },
+  "Shell": {
+    "brand": "DIAMOND ELITE",
+    "brandSub": "RENT CAR · DUBAI",
+    "roleOwner": "Owner",
+    "roleOwnerShort": "Manager",
+    "roleEmployee": "Employee",
+    "roleEmployeeShort": "Employee",
+    "userRoleOwner": "Owner · Admin",
+    "userRoleEmployee": "Employee",
+    "langNext": "عربي",
+    "langTitle": "Language / اللغة",
+    "openMenu": "Menu — open navigation",
+    "closeMenu": "Menu — close navigation",
+    "railLabel": "Main navigation",
+    "railClose": "Close menu",
+    "roleSwitch": "Switch role",
+    "railFooterVersion": "Diamond OS · v1.0",
+    "railFooterCopy": "© 2026 Diamond Rent Car L.L.C<br/>Dubai · United Arab Emirates",
+    "avatarLabel": "User account",
+    "navigationActionNote": "Will be enabled in a later phase"
+  },
+  "Dashboard": {
+    "placeholder": "The dashboard will be implemented in a later phase",
+    "logout": "Log out",
+    "logoutBusy": "Logging out..."
+  },
+  "validation": {
+    "required": "This field is required"
   }
 }

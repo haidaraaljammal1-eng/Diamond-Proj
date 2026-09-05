@@ -1,0 +1,22 @@
+/* AppShell stage — sits above the Demo body background composition
+   (body::before / body::after are z-index 0; the shell is z-index 1). */
+.shell {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Mobile drawer backdrop (Demo `#scrimR`) */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: var(--diamond-scrim-bg);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.scrimHidden {
+  display: none;
+}

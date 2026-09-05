@@ -11,10 +11,16 @@ export function useAuth() {
   const isLoading = status === "loading";
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const error = useAuthStore((state) => state.error);
+  const setLoggingOut = useAuthStore((state) => state.setLoggingOut);
   const loadCurrentUser = async () => undefined;
   const logout = async () => {
-    await signOut({ redirect: false });
-    router.refresh();
+    setLoggingOut(true);
+    try {
+      await signOut({ redirect: false });
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
   };
   const clearError = useAuthStore((state) => state.clearError);
 

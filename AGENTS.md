@@ -30,3 +30,26 @@
 - Form values are not duplicated in Zustand; lookup fields use dedicated lookup hooks/APIs when available.
 - Page-specific decorative layouts stay inside their feature.
 - No documentation file may exceed 500 lines.
+
+## Frontend i18n Rules
+
+- `next-intl` is the single source of truth for all user-facing text.
+- No raw translation key may be rendered to the user.
+- Navigation config stores namespace-local keys (e.g. `dashboard`), not already-prefixed keys (e.g. `navigation.dashboard`), when `useTranslations("navigation")` is used.
+- `useNavigation()` is responsible for translating labels; the Sidebar receives final text.
+- Zod schemas must use stable validation message keys, never raw Zod defaults.
+- Shared `FormError` translates validation keys through the `validation` namespace.
+- Stores must not contain translated UI strings or translator functions.
+- Backend errors should be translated from stable error codes, not raw backend messages.
+- `ar.json` and `en.json` must remain structurally aligned.
+
+## AppShell / Protected Shell Rules
+
+- All protected Diamond pages must use the shared AppShell (`src/shared/layouts/app-shell`).
+- Pages must not recreate the Sidebar or the App Header.
+- Navigation definitions must be centralized and typed (`src/modules/navigation`).
+- Active navigation state must come from routing, not duplicated Zustand state.
+- AppShell Zustand state is UI-only (mobile drawer).
+- Authentication and permissions must not be duplicated in AppShell state.
+- Diamond Demo is the visual source of truth for AppShell.
+- Do not implement page content while working on the Shell unless explicitly requested.
