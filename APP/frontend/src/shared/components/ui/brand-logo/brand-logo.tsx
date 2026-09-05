@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import { useId, type SVGProps } from "react";
 import styles from "./brand-logo.module.css";
 
 /**
@@ -6,8 +6,15 @@ import styles from "./brand-logo.module.css";
  *
  * Geometry intentionally matches `public/diamond-logo.svg` so page and shell
  * presentations always use the same asset, never a second logo.
+ *
+ * The gradient id is per-instance (`useId`): the shell now renders this
+ * component twice on the same page (rail head + header mobile mark), and a
+ * shared literal id would collide — SVG resolves a duplicate id to whichever
+ * element happens to come first in the DOM, so the second instance's fill
+ * would depend on the other one's `<defs>` still being present.
  */
 export function BrandLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
+  const gradientId = `diamondBrandGradient-${useId()}`;
   return (
     <svg
       viewBox="0 0 100 100"
@@ -17,20 +24,14 @@ export function BrandLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
       {...props}
     >
       <defs>
-        <linearGradient
-          id="diamondBrandGradient"
-          x1="0%"
-          y1="0%"
-          x2="100%"
-          y2="100%"
-        >
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#d4a76a" />
           <stop offset="100%" stopColor="#e8c88e" />
         </linearGradient>
       </defs>
       <path
         d="M 50 10 L 90 50 L 50 90 L 10 50 Z"
-        fill="url(#diamondBrandGradient)"
+        fill={`url(#${gradientId})`}
         stroke="#b8926e"
         strokeWidth="1"
       />

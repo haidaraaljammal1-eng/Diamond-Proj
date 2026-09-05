@@ -1,17 +1,30 @@
 /* ────────────────────────────────────────────────────────────────────────────
    AppHeader — Demo `#topbar` final cascade.
    Pearl Ivory glass capsule: floating, rounded, champagne-gold hairline.
+
+   The bar is content-width, not full-width: the rail carries the brand and
+   spans the full stage height, so the header starts where the content starts.
+   Its inline offsets come from the shell (`--main-inset-start` /
+   `--main-inset-end`), the same variables the main content reads — never
+   hardcode a side here, or the bar and the rail end up on opposite edges
+   in RTL.
+
+   Search sits in a centered middle column: the start and end groups are two
+   equal `1fr` tracks either side of it, so it centers in the bar itself and
+   stays centered as the breadcrumb or the end group change length — see the
+   component doc comment for how the tracks stay balanced.
    ──────────────────────────────────────────────────────────────────────────── */
 .topbar {
   position: fixed;
-  top: 12px;
-  inset-inline: 16px;
+  top: var(--shell-pad-block);
+  inset-inline: var(--main-inset-start) var(--main-inset-end);
   height: 54px;
   z-index: 70;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 14px;
-  padding: 0 14px;
+  gap: 12px;
+  padding: 0 12px;
   border-radius: 16px;
   border: 1px solid rgba(201, 161, 92, 0.26);
   background: var(--diamond-topbar-bg);
@@ -20,6 +33,22 @@
   box-shadow:
     0 14px 38px rgba(122, 96, 48, 0.14),
     inset 0 1px 0 #fff;
+  transition: inset-inline-start 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Both side groups must be able to shrink below their content size — without
+   `min-width: 0` a `1fr` grid track grows to fit its content instead, which
+   would push the tracks uneven and pull the search column off-center. */
+.startGroup,
+.endGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.endGroup {
+  justify-content: flex-end;
 }
 
 .topbar::before {
@@ -37,100 +66,198 @@
   pointer-events: none;
 }
 
-/* ─── Brand ─── */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 11px;
+/* ─── Rail control (desktop) ───
+   Fixed at the inline-start corner of the bar, so expanding the rail never
+   moves it — unlike its previous home inside the rail head, which slid 146px
+   on every toggle. */
+.railToggle {
+  display: grid;
+  place-items: center;
   flex: none;
-}
-
-.brandMark {
   width: 34px;
   height: 34px;
-  filter: drop-shadow(0 3px 14px rgba(122, 96, 48, 0.18));
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(201, 161, 92, 0.26);
+  background: rgba(201, 161, 92, 0.08);
+  color: #8a6630;
+  cursor: pointer;
+  font-family: inherit;
+  transition: 0.18s;
 }
 
-.wordmark b {
-  display: block;
-  font-family: var(--diamond-font-display);
-  font-weight: 400;
-  font-size: 15px;
-  letter-spacing: 0.14em;
-  line-height: 1.3;
-  background: linear-gradient(160deg, #6b4e22, #c9a15c 55%, #8a6630);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.railToggle:hover {
+  background: rgba(201, 161, 92, 0.18);
+  border-color: rgba(201, 161, 92, 0.5);
 }
 
-.wordmark span {
-  display: block;
-  font-size: 9.5px;
-  letter-spacing: 0.05em;
-  color: #a79b83;
+.railToggle:focus-visible,
+.burger:focus-visible {
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 2px;
+}
+
+.railToggleIcon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The panel glyph draws its strip on the left, which reads correctly while the
+   rail sits on the physical left (LTR). In RTL the inline-start edge is the
+   right one, so mirror the glyph. */
+:global([dir="rtl"]) .railToggleIcon {
+  transform: scaleX(-1);
 }
 
 .separator {
   width: 1px;
-  height: 26px;
+  height: 24px;
   background: rgba(201, 161, 92, 0.2);
   flex: none;
 }
 
-/* ─── Role segment (display-only, bound to session) ─── */
-.roleSeg {
-  display: flex;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(201, 161, 92, 0.22);
-  border-radius: 12px;
-  padding: 3px;
-  gap: 3px;
+/* ─── Mobile brand mark ───
+   The brand lives in the rail, but the rail is an off-screen drawer below
+   900px, so the mark reappears here to keep the identity always visible. */
+.mobileMark {
+  display: none;
+  width: 28px;
+  height: 28px;
   flex: none;
-  box-shadow: inset 0 1px 3px rgba(122, 96, 48, 0.08);
+  filter: drop-shadow(0 3px 14px rgba(122, 96, 48, 0.18));
 }
 
-.roleBtn {
-  border: 0;
-  background: transparent;
-  color: #7a7060;
-  padding: 6px 14px;
-  border-radius: 9px;
-  cursor: default;
-  font-size: 12.5px;
-  font-family: inherit;
+/* ─── Breadcrumb ─── */
+.crumbs {
   display: flex;
   align-items: center;
   gap: 7px;
+  min-width: 0;
+  flex: 0 1 auto;
+  font-size: 12.5px;
+  color: var(--diamond-dim);
+}
+
+.crumbLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: 0.18s;
+}
+
+.crumbLink:hover {
+  background: rgba(201, 161, 92, 0.12);
+  color: #8a6630;
+}
+
+.crumbLink:focus-visible {
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 1px;
+}
+
+.crumbIcon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* The chevron follows the reading direction, so it mirrors with `dir`. */
+.crumbSep {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-top: 1.5px solid rgba(201, 161, 92, 0.55);
+  border-right: 1.5px solid rgba(201, 161, 92, 0.55);
+  transform: rotate(45deg);
+}
+
+:global([dir="rtl"]) .crumbSep {
+  transform: rotate(-135deg);
+}
+
+.crumbCurrent {
+  min-width: 0;
+  padding-inline: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--diamond-ivory);
+}
+
+/* ─── Global search ───
+   The grid's centered middle column (see `.topbar`) — width is intrinsic to
+   this rule, not to the grid track, so it does not stretch to fill space. */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: min(360px, 30vw);
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 161, 92, 0.22);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 3px rgba(122, 96, 48, 0.08);
   transition: 0.2s;
 }
 
-.roleBtnOn {
-  background: linear-gradient(
-    150deg,
-    rgba(201, 161, 92, 0.2),
-    rgba(201, 161, 92, 0.08)
-  );
-  color: #8a6630;
-  box-shadow: inset 0 0 0 1px rgba(201, 161, 92, 0.45);
+.search:focus-within {
+  border-color: rgba(201, 161, 92, 0.5);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 1px 3px rgba(122, 96, 48, 0.06),
+    0 0 0 3px rgba(201, 161, 92, 0.14);
 }
 
-.rdot {
-  width: 7px;
-  height: 7px;
-  transform: rotate(45deg);
-  background: currentColor;
-  border-radius: 1px;
-  opacity: 0.9;
-  display: inline-block;
+.searchIcon {
+  position: absolute;
+  inset-inline-start: 11px;
+  width: 15px;
+  height: 15px;
+  stroke: #b09a6d;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
 }
 
-.roleTxtMobile {
-  display: none;
+.searchInput {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  padding-inline: 33px 12px;
+  border-radius: inherit;
+  color: var(--diamond-ivory);
+  font-family: inherit;
+  font-size: 12.5px;
 }
 
-.spacer {
-  flex: 1;
+.searchInput::placeholder {
+  color: #a79b83;
+}
+
+.searchInput::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* ─── User chip ─── */
@@ -139,7 +266,8 @@
   align-items: center;
   gap: 9px;
   flex: none;
-  padding: 4px 5px 4px 12px;
+  padding-block: 4px;
+  padding-inline: 12px 5px;
   border-radius: 12px;
   border: 1px solid rgba(201, 161, 92, 0.2);
   background: rgba(255, 255, 255, 0.8);
@@ -182,40 +310,180 @@
   flex: none;
 }
 
-/* ─── Language toggle (Demo `btn ghost sm`, warped height 36px) ─── */
-.langBtn {
+/* ─── Notifications (design-only mock — see `notifications-bell.tsx`) ─── */
+.notifications {
+  position: relative;
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 9px;
-  border: 1px solid rgba(133, 100, 45, 0.18);
-  background: rgba(201, 161, 92, 0.09);
+}
+
+.notifBell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(201, 161, 92, 0.2);
+  background: rgba(255, 255, 255, 0.8);
   color: #8a6630;
-  font-size: 12.5px;
-  font-weight: 600;
-  font-family: inherit;
   cursor: pointer;
-  text-decoration: none;
-  transition: 0.2s;
+  font-family: inherit;
+  transition: 0.18s;
 }
 
-.langBtn:hover {
-  background: rgba(201, 161, 92, 0.18);
-  color: #2b2417;
-  border-color: rgba(201, 161, 92, 0.38);
+.notifBell:hover {
+  background: rgba(201, 161, 92, 0.14);
+  border-color: rgba(201, 161, 92, 0.4);
 }
 
-.langIcon {
-  width: 15px;
-  height: 15px;
-  stroke: currentColor;
+.notifBell:focus-visible {
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 2px;
+}
+
+.notifBellIcon {
+  width: 17px;
+  height: 17px;
   fill: none;
+  stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.notifBadge {
+  position: absolute;
+  top: -4px;
+  inset-inline-end: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: linear-gradient(140deg, #e86a60, #df5b52);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 2px var(--diamond-onyx);
+}
+
+.notifPanel {
+  position: absolute;
+  top: calc(100% + 10px);
+  inset-inline-end: 0;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  border-radius: 14px;
+  border: 1px solid rgba(201, 161, 92, 0.26);
+  background: var(--diamond-onyx2);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  box-shadow: var(--diamond-shadow-far);
+  overflow: hidden;
+  z-index: 80;
+  animation: notifPanelIn 0.16s ease-out;
+}
+
+@keyframes notifPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notifPanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(201, 161, 92, 0.18);
+}
+
+.notifPanelHead b {
+  font-size: 13px;
+  color: var(--diamond-ivory);
+}
+
+.notifMarkRead {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #8a6630;
+  cursor: default;
+}
+
+.notifList {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notifEmpty {
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--diamond-dim);
+}
+
+.notifRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 14px;
+  cursor: default;
+  transition: 0.15s;
+}
+
+.notifRow:hover {
+  background: rgba(201, 161, 92, 0.08);
+}
+
+.notifRow + .notifRow {
+  border-top: 1px solid rgba(201, 161, 92, 0.12);
+}
+
+.notifDot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--diamond-gold);
+}
+
+.notifRowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.notifRowTitle {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--diamond-ivory);
+}
+
+.notifRowTime {
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+}
+
+/* On a phone-width bar the panel anchors to the viewport edge rather than the
+   bell, which can sit anywhere along the scrollable strip. */
+@media (max-width: 900px) {
+  .notifPanel {
+    position: fixed;
+    top: 66px;
+    inset-inline: 12px;
+    width: auto;
+    max-width: none;
+  }
 }
 
 /* ─── Burger (mobile only) ─── */
@@ -237,64 +505,64 @@
 
 /* ─── Mobile ─── */
 @media (max-width: 900px) {
+  /* The 3-column centering grid only pays off at desktop widths; below the
+     drawer breakpoint the bar is a single scrollable row instead, in the same
+     start → search → end order. */
   .topbar {
+    display: flex;
     top: 10px;
-    left: 10px;
-    right: 10px;
     padding: 0 10px;
+    gap: 10px;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    gap: 10px;
   }
 
   .topbar::-webkit-scrollbar {
     display: none;
   }
 
-  .topbar > * {
+  .topbar > *,
+  .startGroup,
+  .endGroup {
     flex: 0 0 auto;
+  }
+
+  .search {
+    width: 160px;
   }
 
   .burger {
     display: inline-flex;
   }
 
-  .separator {
-    display: none;
+  .mobileMark {
+    display: block;
   }
 
-  .wordmark {
-    display: none;
-  }
-
+  /* The drawer burger replaces the rail toggle below the drawer breakpoint. */
+  .railToggle,
+  .separator,
   .meName {
     display: none;
   }
 
-  .roleTxt {
+  /* Only the current page survives on a phone-width bar: the trail itself
+     would push the identity controls out of reach. */
+  .crumbLink,
+  .crumbSep {
     display: none;
-  }
-
-  .roleTxtMobile {
-    display: inline;
-  }
-
-  .roleBtn {
-    padding: 6px 11px;
-  }
-}
-
-@media (max-width: 400px) {
-  .wordmark b {
-    font-size: 12px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .topbar {
+    transition: none;
+  }
+
   .topbar::before,
-  .brandMark {
+  .notifPanel {
     animation: none;
   }
 }

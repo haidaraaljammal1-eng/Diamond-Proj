@@ -79,6 +79,7 @@ export function SidebarItem({
       data-nav={item.key}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
+      title={label}
     >
       {content}
     </Link>

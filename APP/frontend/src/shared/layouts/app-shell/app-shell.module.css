@@ -1,10 +1,68 @@
 /* AppShell stage — sits above the Demo body background composition
-   (body::before / body::after are z-index 0; the shell is z-index 1). */
+   (body::before / body::after are z-index 0; the shell is z-index 1).
+
+   SINGLE SOURCE OF TRUTH for the shell geometry.
+
+   The rail is docked to the INLINE-START edge (right in Arabic, left in
+   English) and both the header and the main content reserve that same edge.
+   All three read the variables below instead of writing their own
+   `inset-inline-*`, so they can never drift onto opposite sides — a bug that
+   leaves an empty gutter on one edge while the rail overlaps the content on
+   the other.
+
+   The rail spans the full stage height (brand at its head), so the header is
+   a content-width bar beside it, not a full-width strip above it.
+
+   To move the dock to the other edge, swap `--rail-inset-start` /
+   `--rail-inset-end` AND `--main-inset-start` / `--main-inset-end` here.
+   Never hardcode a side in sidebar.module.css, app-header.module.css or
+   app-content.module.css. */
 .shell {
   position: fixed;
   inset: 0;
   z-index: 1;
   overflow: hidden;
+
+  /* Demo icon dock */
+  --rail-w: 98px;
+  /* rail inline margin (16px) + breathing gap (14px) */
+  --rail-gap: 30px;
+
+  /* Shared vertical rhythm: every island starts and ends on the same line. */
+  --shell-pad-block: 12px;
+
+  /* Rail island: pinned to the inline-start edge, floats free at the end. */
+  --rail-inset-start: 16px;
+  --rail-inset-end: auto;
+
+  /* Header + main content: reserve the rail on the same (start) edge. */
+  --main-inset-start: calc(var(--rail-w) + var(--rail-gap));
+  --main-inset-end: 16px;
+}
+
+/* Expanded rail — labelled navigation, same island, same identity. */
+.shell[data-sidebar="expanded"] {
+  --rail-w: 244px;
+}
+
+@media (max-width: 1080px) {
+  .shell {
+    --rail-gap: 24px;
+    --main-inset-end: 12px;
+  }
+}
+
+/* ≤ 900px the rail becomes an overlay drawer: content spans the viewport. */
+@media (max-width: 900px) {
+  .shell,
+  .shell[data-sidebar="expanded"] {
+    --rail-w: 0px;
+    --rail-gap: 10px;
+    --shell-pad-block: 10px;
+    --rail-inset-start: 10px;
+    --main-inset-start: 10px;
+    --main-inset-end: 10px;
+  }
 }
 
 /* Mobile drawer backdrop (Demo `#scrimR`) */
@@ -15,8 +73,17 @@
   background: var(--diamond-scrim-bg);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
+  opacity: 1;
+  transition: opacity 0.24s ease;
 }
 
 .scrimHidden {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim {
+    transition: none;
+  }
 }

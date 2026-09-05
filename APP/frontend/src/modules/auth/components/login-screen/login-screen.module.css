@@ -66,10 +66,10 @@
     var(--diamond-br-tl), var(--diamond-br-tr), var(--diamond-br-bl),
     var(--diamond-br-br);
   background-position:
-    top right,
     top left,
-    bottom right,
-    bottom left;
+    top right,
+    bottom left,
+    bottom right;
   background-repeat: no-repeat;
   background-size: 34px 34px;
   content: "";
@@ -133,7 +133,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  text-align: right;
+  text-align: start;
 }
 
 .logfields > div {

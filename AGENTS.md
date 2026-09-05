@@ -25,6 +25,7 @@
 - Do not implement behavior outside the Diamond Demo.
 - Diamond Demo is the visual source of truth.
 - Reusable UI uses shared components, and standard forms use the shared FormBuilder.
+- Every dropdown uses the shared Diamond Select (`src/shared/components/ui/select`); a native `<select>` is never used. In forms use `SelectField` or the FormBuilder `select` field type. See `DOCU/00-system-overview/ui-select.md` and the `diamond-select` skill.
 - FormBuilder is powered by React Hook Form and Zod and never performs API calls.
 - Pages and components use domain hooks rather than calling APIs or Zustand stores directly.
 - Form values are not duplicated in Zustand; lookup fields use dedicated lookup hooks/APIs when available.

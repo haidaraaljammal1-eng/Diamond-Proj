@@ -1,0 +1,364 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   Select — Diamond listbox.
+   Pearl Ivory surfaces, champagne-gold hairlines, art-deco diamond marker.
+   `field`  → form control, mirrors the shared Input underline.
+   `ghost`  → chrome capsule, mirrors the shell topbar chips.
+   ──────────────────────────────────────────────────────────────────────────── */
+.root {
+  position: relative;
+  display: inline-flex;
+  font-family: var(--diamond-font-body);
+}
+
+.field {
+  display: flex;
+  width: 100%;
+}
+
+/* ─── Trigger ─── */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: start;
+  transition:
+    border-color var(--diamond-transition),
+    background-color var(--diamond-transition),
+    box-shadow var(--diamond-transition);
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.placeholder {
+  color: #b3a78d;
+}
+
+.icon,
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  color: var(--diamond-gold-hi);
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.clear {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--diamond-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--diamond-transition);
+}
+
+.clear:hover {
+  background: rgba(201, 161, 92, 0.18);
+  color: var(--diamond-gold-hi);
+}
+
+/* Physical on purpose: a dropdown caret always points down, never mirrors. */
+.caret {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.root[data-open] .caret {
+  transform: translateY(1px) rotate(225deg);
+}
+
+/* ─── Variant: field (forms) ─── */
+.field .trigger {
+  height: 46px;
+  padding: 0 6px;
+  border: 0;
+  border-bottom: 1px solid rgb(201 161 92 / 30%);
+  border-radius: 0;
+  background: transparent;
+  color: var(--diamond-ink);
+  font-size: 14px;
+}
+
+.field .trigger:hover:not(:disabled) {
+  border-bottom-color: rgb(201 161 92 / 50%);
+}
+
+.field .trigger:focus-visible,
+.root[data-open].field .trigger {
+  outline: 0;
+  border-bottom-color: var(--diamond-gold-hi);
+  background: linear-gradient(0deg, rgb(201 161 92 / 10%), transparent 75%);
+}
+
+.field .trigger[aria-invalid="true"] {
+  border-bottom-color: var(--diamond-danger);
+}
+
+/* ─── Variant: ghost (shell chrome) ─── */
+.ghost .trigger {
+  height: 36px;
+  padding-inline: 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(133, 100, 45, 0.18);
+  background: rgba(201, 161, 92, 0.09);
+  color: var(--diamond-gold-hi);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.ghost .trigger:hover:not(:disabled) {
+  background: rgba(201, 161, 92, 0.18);
+  border-color: rgba(201, 161, 92, 0.38);
+}
+
+.ghost .trigger:focus-visible,
+.root[data-open].ghost .trigger {
+  outline: 0;
+  border-color: rgba(201, 161, 92, 0.5);
+  box-shadow: 0 0 0 3px rgba(201, 161, 92, 0.14);
+}
+
+.ghost .placeholder {
+  color: rgba(138, 102, 48, 0.6);
+}
+
+/* ─── Sizes ─── */
+.sm .trigger {
+  height: 36px;
+  font-size: 12.5px;
+}
+
+.sm .icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* ─── Panel (body portal) ─── */
+.panel {
+  position: fixed;
+  z-index: 200;
+  overflow: hidden auto;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(201, 161, 92, 0.26);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(253, 250, 243, 0.96)
+  );
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  box-shadow:
+    0 18px 48px rgba(122, 96, 48, 0.18),
+    inset 0 1px 0 #fff;
+  animation: panel-in 0.16s ease-out;
+}
+
+/* Opens upward when the viewport has no room below the trigger. */
+.flipped {
+  transform: translateY(-100%);
+  animation-name: panel-in-flipped;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes panel-in-flipped {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% + 4px));
+  }
+}
+
+.panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(201, 161, 92, 0.35);
+  background-clip: content-box;
+}
+
+/* ─── In-panel search ─── */
+.search {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  margin: -6px -6px 6px;
+  padding: 8px;
+  border-bottom: 1px solid rgba(133, 100, 45, 0.14);
+  background: inherit;
+}
+
+.searchInput {
+  width: 100%;
+  height: 32px;
+  padding-inline: 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(201, 161, 92, 0.22);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--diamond-ivory);
+  font-family: inherit;
+  font-size: 12.5px;
+  outline: none;
+  transition: var(--diamond-transition);
+}
+
+.searchInput::placeholder {
+  color: #a79b83;
+}
+
+.searchInput:focus {
+  border-color: rgba(201, 161, 92, 0.5);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(201, 161, 92, 0.14);
+}
+
+/* ─── Options ─── */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: var(--diamond-ivory);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.option[aria-disabled="true"] {
+  color: var(--diamond-dim);
+  cursor: not-allowed;
+}
+
+.active:not([aria-disabled="true"]) {
+  background: linear-gradient(
+    100deg,
+    rgba(201, 161, 92, 0.16),
+    rgba(201, 161, 92, 0.07)
+  );
+}
+
+.selected {
+  color: var(--diamond-gold-hi);
+  font-weight: 600;
+}
+
+.optionIcon {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--diamond-gold-hi);
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.optionLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.optionHint {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--diamond-dim);
+}
+
+/* Art-deco marker: the Diamond rhombus, gold-gradient filled when selected. */
+.mark {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  border: 1px solid rgba(201, 161, 92, 0.35);
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.active .mark {
+  opacity: 0.5;
+}
+
+.selected .mark {
+  opacity: 1;
+  border-color: transparent;
+  background: var(--diamond-gold-gradient);
+  box-shadow: 0 0 8px rgba(201, 161, 92, 0.5);
+}
+
+.empty {
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--diamond-muted);
+  font-size: 12.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+
+  .caret {
+    transition: none;
+  }
+}

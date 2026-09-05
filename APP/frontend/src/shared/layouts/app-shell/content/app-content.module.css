@@ -1,15 +1,19 @@
 /* Main content — extracted from the Demo final (#main) cascade.
-   Desktop (icon rail): start edge reserves the 98px rail + gap, end edge floats
-   at the viewport margin. Logical properties keep RTL/LTR correct. */
+
+   The inline offsets come from the shell (`--main-inset-start` /
+   `--main-inset-end` in app-shell.module.css), which is the single source of
+   truth for which edge the rail is docked to. Do NOT write `inset-inline-start`
+   / `inset-inline-end` values here: that is exactly how the content and the
+   rail end up on opposite sides in RTL. */
 .main {
   position: absolute;
-  inset-block: 80px 8px;
-  inset-inline-start: 128px;
-  inset-inline-end: 16px;
+  inset-block: 80px var(--shell-pad-block);
+  inset-inline: var(--main-inset-start) var(--main-inset-end);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 26px 26px 60px;
   scrollbar-color: rgba(201, 161, 92, 0.4) transparent;
+  transition: inset-inline-start 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .wrap {
@@ -19,17 +23,9 @@
   z-index: 1;
 }
 
-@media (max-width: 1080px) {
-  .main {
-    inset-inline-start: 122px;
-    inset-inline-end: 12px;
-  }
-}
-
 @media (max-width: 900px) {
   .main {
-    inset-block: 76px 8px;
-    inset-inline: 10px;
+    inset-block: 76px var(--shell-pad-block);
     padding: 20px 14px 92px;
   }
 }
@@ -43,5 +39,11 @@
 @media (max-width: 400px) {
   .main {
     padding: 13px 10px 86px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main {
+    transition: none;
   }
 }

@@ -3,7 +3,7 @@ import { AppHeader } from "./header/app-header";
 import { Sidebar } from "./sidebar/sidebar";
 import { AppContent } from "./content/app-content";
 import { DrawerScrim } from "./drawer-scrim";
-import styles from "./app-shell.module.css";
+import { ShellFrame } from "./shell-frame";
 
 /**
  * AppShell — the single protected application shell for every Diamond page.
@@ -14,15 +14,16 @@ import styles from "./app-shell.module.css";
  * It owns no API, no business logic, no page data. Pages receive everything
  * through {children}; auth/pages protection is handled by the Protected
  * Layout one level up. RTL/LTR placement is driven by logical CSS properties
- * together with the `dir` set on <html> by the locale layout.
+ * together with the `dir` set on <html> by the locale layout. Shell interaction
+ * state (drawer / rail expansion) lives in ShellFrame.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className={styles.shell}>
+    <ShellFrame>
       <AppHeader />
       <Sidebar />
       <DrawerScrim />
       <AppContent>{children}</AppContent>
-    </div>
+    </ShellFrame>
   );
 }

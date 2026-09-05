@@ -11,6 +11,8 @@ The Diamond HTML Demo is the visual source of truth. Its original HTML, complete
 - `src/styles/globals.css` imports the tokens and reset and owns body defaults.
 - Reusable controls live under `src/shared/components/ui`.
 - Standard forms use `src/shared/components/forms`.
+- Every dropdown uses the shared Diamond Select; native `<select>` is not used
+  anywhere in the system. See [Diamond Select](./ui-select.md).
 
 Shared UI components do not know about APIs, Zustand, routing, or business permissions. Pages use domain hooks as their UI facade.
 

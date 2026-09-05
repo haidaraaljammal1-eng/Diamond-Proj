@@ -1,13 +1,29 @@
 /* ────────────────────────────────────────────────────────────────────────────
    Sidebar — Demo `#rail` final cascade.
-   Pearl Ivory icon dock: floating rounded island on the inline-end edge,
-   gold hairline, glass blur, top notch, vertical icon navigation.
+   Pearl Ivory icon dock: floating rounded island on the INLINE-START edge
+   (right in Arabic, left in English), gold hairline, glass blur, brand head,
+   primary quick action, vertical icon navigation.
+
+   The rail spans the full stage height: it carries the brand, so the header is
+   a content-width bar beside it rather than a full-width strip above it. The
+   expand/collapse control lives in the header, where it holds one screen
+   position instead of sliding with the rail edge.
+
+   The dock edge is owned by app-shell.module.css (`--rail-inset-start` /
+   `--rail-inset-end`) because the main content must reserve the SAME edge.
+   Never hardcode `inset-inline-start` / `inset-inline-end` on `.rail` here.
+
+   Two states, one island:
+   - collapsed (default) → the Demo icon dock, untouched.
+   - expanded            → the same island widened to a labelled rail.
+   Width comes from `--rail-w`, published by the shell so the main content
+   reflows together with the rail.
    ──────────────────────────────────────────────────────────────────────────── */
 .rail {
   position: fixed;
-  inset-block: 80px 14px;
-  inset-inline-end: 16px;
-  width: 98px;
+  inset-block: var(--shell-pad-block) var(--shell-pad-block);
+  inset-inline: var(--rail-inset-start) var(--rail-inset-end);
+  width: var(--rail-w, 98px);
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -23,19 +39,137 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  transition: transform 0.28s;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 161, 92, 0.35) transparent;
+  transition:
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.28s;
 }
 
-.notch {
-  position: relative;
+/* ─── Head: brand ───
+   The wordmark only exists in the expanded rail — 98px cannot hold it — so the
+   collapsed dock keeps the crystal mark alone, centered. The mark itself never
+   disappears, which is what makes the brand safe to move out of the header. */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 2px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  flex: none;
+}
+
+.head:focus-visible {
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 2px;
+}
+
+.brandMark {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 3px 14px rgba(122, 96, 48, 0.18));
+  flex: none;
+}
+
+/* Collapsed dock: mark only. */
+.wordmark {
+  display: none;
+  min-width: 0;
+}
+
+.wordmark b {
   display: block;
-  margin: 0 auto 6px;
-  width: 26px;
-  height: 3px;
-  border-radius: 0;
+  font-family: var(--diamond-font-display);
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  white-space: nowrap;
+  background: linear-gradient(160deg, #6b4e22, #c9a15c 55%, #8a6630);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.wordmark span {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: #a79b83;
+  white-space: nowrap;
+}
+
+/* ─── Primary quick action ───
+   Collapsed it is a square icon button on the same 98px grid as the nav icons;
+   expanded it becomes the full-width primary button. */
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  height: 38px;
+  margin: 8px 2px 4px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 161, 92, 0.5);
   background: var(--diamond-gold-gradient);
-  opacity: 0.85;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  color: #231a08;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  box-shadow:
+    0 8px 20px rgba(201, 161, 92, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: 0.18s;
+}
+
+.cta:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    0 10px 26px rgba(201, 161, 92, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.cta:focus-visible {
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 2px;
+}
+
+.ctaIcon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* Collapsed dock: icon only — the label would not fit in 98px. */
+.ctaLabel {
+  display: none;
+}
+
+.headDivider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 161, 92, 0.3),
+    transparent
+  );
+  margin: 4px 6px 0;
   flex: none;
 }
 
@@ -55,6 +189,7 @@
   font-size: 8px;
   letter-spacing: 0.3em;
   color: #b3a78d;
+  white-space: nowrap;
 }
 
 .label::after {
@@ -114,6 +249,15 @@
   background: rgba(201, 161, 92, 0.12);
 }
 
+.item:focus-visible {
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 2px;
+}
+
+.item[aria-disabled="true"] {
+  cursor: default;
+}
+
 .itemActive {
   color: #8a6630;
   background: linear-gradient(
@@ -143,6 +287,7 @@
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
+  flex: none;
   transition: 0.24s;
 }
 
@@ -204,9 +349,69 @@
   box-shadow: 0 0 11px rgba(223, 91, 82, 0.55);
 }
 
+/* ─── Bottom group ───
+   Holds the admin version footer (when present) and the account row, pinned
+   together to the rail's bottom edge. Only this wrapper carries the auto
+   margin, so the group moves as one block regardless of which children are
+   present. */
+.bottomGroup {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: none;
+}
+
+/* ─── Fleet stat (mock values — see `sidebar-fleet-stat.tsx`) ───
+   Two rows: the headline count, then a two-item breakdown for weight. The
+   breakdown collapses away below the drawer/rail width that can hold labels;
+   the headline stays down to the narrowest (98px) collapsed dock. */
+.fleetStat {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: none;
+  padding: 9px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 161, 92, 0.22);
+  background: linear-gradient(
+    200deg,
+    rgba(201, 161, 92, 0.14),
+    rgba(201, 161, 92, 0.04) 75%
+  );
+}
+
+.fleetStatHead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.fleetStatDot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: #3fb27f;
+  box-shadow: 0 0 6px rgba(63, 178, 127, 0.6);
+}
+
+.fleetStatValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: #8a6630;
+  line-height: 1;
+}
+
+/* Collapsed dock: headline only, centered like the nav icon column. */
+.fleetStatLabel,
+.fleetStatBreakdown {
+  display: none;
+}
+
 /* ─── Footer (Demo `.railfoot`, admin only) ─── */
 .footer {
-  margin-top: auto;
   padding: 12px 6px;
   border: 1px solid rgba(201, 161, 92, 0.2);
   border-radius: 12px;
@@ -227,13 +432,370 @@
   line-height: 1.8;
 }
 
+/* ─── Account row ───
+   Real session data only — name, role, live auth status. The logout control
+   is revealed on hover/focus instead of sitting there at rest, which is what
+   gives the row its motion: a slide + fade on the icon rather than a static
+   button always competing with the avatar for attention. */
+.account {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  flex: none;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 161, 92, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+  transition: 0.2s;
+}
+
+.account:hover,
+.account:focus-within {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(201, 161, 92, 0.4);
+}
+
+.accountAvatar {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 0;
+  clip-path: polygon(
+    28% 0,
+    72% 0,
+    100% 28%,
+    100% 72%,
+    72% 100%,
+    28% 100%,
+    0 72%,
+    0 28%
+  );
+  background: var(--diamond-gold-gradient);
+  display: grid;
+  place-items: center;
+  color: #231a08;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* A quiet pulse, not a blink — it should read as "alive", not as an alert. */
+.accountStatus {
+  position: absolute;
+  bottom: -1px;
+  inset-inline-end: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #3fb27f;
+  /* Solid, not the rail's gradient token: `border-color` cannot take a
+     gradient value — the whole declaration would be dropped. */
+  border: 2px solid var(--diamond-onyx);
+  box-shadow: 0 0 0 0 rgba(63, 178, 127, 0.55);
+  animation: accountPulse 2.4s ease-out infinite;
+}
+
+@keyframes accountPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(63, 178, 127, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(63, 178, 127, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(63, 178, 127, 0);
+  }
+}
+
+/* Collapsed dock: avatar only, centered — matches the nav icon column. */
+.accountName {
+  display: none;
+}
+
+.accountLogout {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Expanded rail — same island, labels beside the icons.
+   ════════════════════════════════════════════════════════════════════════ */
+.rail[data-expanded="true"] {
+  padding: 14px 12px;
+}
+
+.rail[data-expanded="true"] .head {
+  justify-content: flex-start;
+  padding-inline: 6px;
+}
+
+.rail[data-expanded="true"] .wordmark {
+  display: block;
+}
+
+.rail[data-expanded="true"] .cta {
+  justify-content: center;
+  margin-inline: 6px;
+}
+
+.rail[data-expanded="true"] .ctaLabel {
+  display: inline;
+}
+
+.rail[data-expanded="true"] .headDivider {
+  margin-inline: 8px;
+}
+
+.rail[data-expanded="true"] .label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: start;
+  gap: 8px;
+  margin: 14px 8px 8px;
+  font-size: 8.5px;
+}
+
+.rail[data-expanded="true"] .label::after {
+  flex: 1;
+  width: auto;
+}
+
+.rail[data-expanded="true"] .divider {
+  margin: 10px 8px;
+}
+
+.rail[data-expanded="true"] .item {
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  text-align: start;
+  gap: 10px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  margin-block: 1px;
+}
+
+.rail[data-expanded="true"] .itemIcon {
+  width: 17px;
+  height: 17px;
+  padding: 7px;
+  margin: 0;
+}
+
+.rail[data-expanded="true"] .itemLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The Demo corner diamond becomes the active edge marker. */
+.rail[data-expanded="true"] .dia {
+  top: 50%;
+  inset-inline-start: -6px;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  border-radius: 3px;
+  box-shadow: none;
+  transition: height 0.2s ease;
+}
+
+.rail[data-expanded="true"] .diaActive {
+  height: 22px;
+  box-shadow: 0 0 10px rgba(201, 161, 92, 0.8);
+}
+
+.rail[data-expanded="true"] .badge {
+  position: static;
+  margin-inline-start: auto;
+}
+
+.rail[data-expanded="true"] .footer {
+  padding: 12px 10px;
+}
+
+.rail[data-expanded="true"] .fleetStat {
+  padding-inline: 10px;
+}
+
+.rail[data-expanded="true"] .fleetStatHead {
+  justify-content: flex-start;
+}
+
+.rail[data-expanded="true"] .fleetStatLabel {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The breakdown row: two metrics separated by a hairline, each icon + count
+   + a small caption — this is what gives the card its "full" size once the
+   rail is wide enough to hold it. */
+.rail[data-expanded="true"] .fleetStatBreakdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(201, 161, 92, 0.18);
+}
+
+.fleetStatMetric {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--diamond-ink, #2b2417);
+}
+
+.fleetStatMetricIcon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  fill: none;
+  stroke: #8a6630;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fleetStatMetricLabel {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--diamond-dim);
+}
+
+.fleetStatDivider {
+  width: 1px;
+  height: 18px;
+  flex: none;
+  background: rgba(201, 161, 92, 0.25);
+}
+
+.rail[data-expanded="true"] .account {
+  justify-content: flex-start;
+}
+
+.rail[data-expanded="true"] .accountName {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.rail[data-expanded="true"] .accountName b {
+  display: block;
+  font-size: 11.5px;
+  color: var(--diamond-ink, #2b2417);
+  line-height: 1.3;
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rail[data-expanded="true"] .accountName span {
+  display: block;
+  font-size: 9px;
+  color: var(--diamond-dim);
+}
+
+.rail[data-expanded="true"] .accountLogout {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8a6630;
+  cursor: pointer;
+  font-family: inherit;
+  opacity: 0;
+  transform: translateX(4px);
+  transition:
+    opacity 0.2s,
+    transform 0.2s,
+    background 0.18s,
+    border-color 0.18s;
+}
+
+:global([dir="rtl"]) .rail[data-expanded="true"] .accountLogout {
+  transform: translateX(-4px);
+}
+
+/* The reveal: hidden at rest, slides in on hover/focus of the row — the
+   motion is what keeps a rarely-used action from competing with the avatar
+   and name for attention the rest of the time. */
+.account:hover .accountLogout,
+.account:focus-within .accountLogout {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.accountLogout:hover:not(:disabled) {
+  background: rgba(201, 161, 92, 0.16);
+  border-color: rgba(201, 161, 92, 0.4);
+}
+
+.accountLogout:focus-visible {
+  opacity: 1;
+  transform: translateX(0);
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 2px;
+}
+
+.accountLogout:disabled {
+  cursor: wait;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.accountLogoutIcon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The exit arrow follows reading direction, like the rail toggle glyph. */
+:global([dir="rtl"]) .accountLogoutIcon {
+  transform: scaleX(-1);
+}
+
 /* ─── Mobile drawer (≤ 900px) ─── */
 @media (max-width: 900px) {
   .rail {
-    top: 76px;
-    bottom: 10px;
-    inset-inline-end: 10px;
+    /* The drawer opens under the header capsule, so the brand stays in the
+       header on mobile and is not duplicated here. */
+    inset-block: 76px 10px;
+    /* The shell zeroes `--rail-w` on mobile (content spans the viewport);
+       the overlay drawer keeps its own width. */
+    --rail-w: 98px;
     transform: translateX(calc(100% + 30px));
+  }
+
+  .rail[data-expanded="true"] {
+    --rail-w: min(74vw, 244px);
   }
 
   :global([dir="ltr"]) .rail {
@@ -244,15 +806,30 @@
     flex: none;
   }
 
+  .rail .head,
+  .rail .headDivider {
+    display: none;
+  }
+
   /* Later in the cascade so `none` wins for both directions */
   .rail.railOpen {
     transform: none;
-    box-shadow: 30px 0 80px rgba(0, 0, 0, 0.6);
+    /* Symmetric: the drawer slides in from the right in RTL and from the left
+       in LTR, so a directional offset would fall off-screen in one of them. */
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.6);
   }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rail {
+  .rail,
+  .rail[data-expanded="true"] .dia,
+  .account,
+  .rail[data-expanded="true"] .accountLogout {
     transition: none;
+  }
+
+  .accountStatus {
+    animation: none;
   }
 }
