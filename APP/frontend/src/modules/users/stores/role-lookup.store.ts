@@ -1,13 +1,12 @@
 "use client";
 
 import { create } from "zustand";
-import { listAllRoles } from "@/modules/roles/api/roles.api";
-import type { RoleDto } from "@/modules/roles/types/role.types";
+import { lookupRoles, type RoleLookupItem } from "../api/role-lookup.api";
 
 type RoleLookupStatus = "idle" | "loading" | "ready";
 
 interface RoleLookupState {
-  roles: RoleDto[];
+  roles: RoleLookupItem[];
   status: RoleLookupStatus;
   load: () => Promise<void>;
 }
@@ -25,7 +24,7 @@ export const useRoleLookupStore = create<RoleLookupState>((set, get) => ({
 
     if (!inFlight) {
       set({ status: "loading" });
-      inFlight = listAllRoles()
+      inFlight = lookupRoles()
         .then((roles) => {
           set({ roles, status: "ready" });
         })

@@ -19,7 +19,7 @@ Navigation key: `team` (Demo label: Staff / الموظفون).
 | `users.read`    | `GET /users` — page access and list           |
 | `users.create`  | `POST /users` — “New employee” dialog         |
 | `users.update`  | `PATCH /users/:id/status` — card status switch |
-| `roles.read`    | `GET /roles` — optional role picker on create |
+| `roles.read`    | `GET /lookups/roles` — role picker (accepted any-of with `users.create` / `users.update`) |
 
 Frontend visibility is UX only; the Backend enforces every request.
 
@@ -33,6 +33,7 @@ Frontend visibility is UX only; the Backend enforces every request.
 | `PUT /users/:id/roles`          | Replace roles — `users.update`                |
 | `DELETE /users/:id`             | Delete user — `users.delete`                  |
 | `PATCH /users/:id/status`       | `ACTIVE` \| `SUSPENDED` only                  |
+| `GET /lookups/roles`            | Role picker options (id + label + key), capped at 50 |
 
 Card actions (permission-gated UX):
 
@@ -65,7 +66,7 @@ holds `users.update`. `PENDING` shows a badge only.
 ```text
 TeamPage → UsersScreen → useUsers() → users.store → users.api → API client
 UserFormDialog → useUserMutations() → users.store → users.api
-Role picker → useRoleLookup() → roles.api (when roles.read)
+Role picker → useRoleLookup() → role-lookup.api → GET /lookups/roles
 UserCard → Shared Card + Avatar + Badge + Switch (shared)
 ```
 
@@ -81,7 +82,8 @@ the primary gold ON palette.
 ## FormBuilder
 
 Create-user dialog: `email`, optional `name`, required `password` +
-`confirmPassword`, optional `roleId` (when `roles.read`). Password uses the
+`confirmPassword`, optional `roleId` (when the session may use the role
+lookup). Password uses the
 shared `PasswordInput` via FormBuilder field type `password`. Frontend rules:
 min 8 characters, at least one letter, at least one number, confirmation match.
 The Backend hashes the password (argon2id) and creates the account `ACTIVE`.

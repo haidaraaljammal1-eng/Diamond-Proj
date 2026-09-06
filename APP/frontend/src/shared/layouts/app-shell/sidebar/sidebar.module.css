@@ -36,15 +36,56 @@
   box-shadow:
     0 24px 60px rgba(122, 96, 48, 0.18),
     inset 0 1px 0 #fff;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(201, 161, 92, 0.35) transparent;
+  /* The rail itself never scrolls: the head and the bottom group are pinned
+     and only the .railScroll band moves. */
+  overflow: hidden;
   transition:
     width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
     padding 0.28s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.28s;
+}
+
+/* ─── Structure: pinned head, scrolling nav, pinned bottom ───
+   The rail is a three-band column. The head (brand + quick action) and the
+   bottom group (fleet stat, footer, account) hold their position; only the
+   navigation band between them scrolls, so the brand stays readable and the
+   account row stays reachable no matter how long the menu grows. */
+.railHead {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+}
+
+.railScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Room for the scrollbar so it never sits on top of the item edge. */
+  padding-inline-end: 2px;
+  margin-inline-end: -2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 161, 92, 0.35) transparent;
+}
+
+.railScroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.railScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.railScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(201, 161, 92, 0.32);
+}
+
+.railScroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(201, 161, 92, 0.5);
 }
 
 /* ─── Head: brand ───
@@ -410,28 +451,6 @@
   display: none;
 }
 
-/* ─── Footer (Demo `.railfoot`, admin only) ─── */
-.footer {
-  padding: 12px 6px;
-  border: 1px solid rgba(201, 161, 92, 0.2);
-  border-radius: 12px;
-  background: rgba(201, 161, 92, 0.06);
-  text-align: center;
-  flex: none;
-}
-
-.footer b {
-  font-size: 8.5px;
-  display: block;
-  color: #8a6630;
-}
-
-.footer p {
-  font-size: 10px;
-  color: var(--diamond-dim);
-  line-height: 1.8;
-}
-
 /* ─── Account row ───
    Real session data only — name, role, live auth status. The logout control
    is revealed on hover/focus instead of sitting there at rest, which is what
@@ -612,10 +631,6 @@
 .rail[data-expanded="true"] .badge {
   position: static;
   margin-inline-start: auto;
-}
-
-.rail[data-expanded="true"] .footer {
-  padding: 12px 10px;
 }
 
 .rail[data-expanded="true"] .fleetStat {
@@ -802,7 +817,9 @@
     transform: translateX(calc(-100% - 30px));
   }
 
-  .rail > * {
+  /* The scrolling band keeps its flex growth on mobile too — only the
+     pinned bands are locked. */
+  .rail > :not(.railScroll) {
     flex: none;
   }
 

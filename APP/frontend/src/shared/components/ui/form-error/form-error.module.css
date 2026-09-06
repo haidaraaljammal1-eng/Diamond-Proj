@@ -1,0 +1,8 @@
+/* Sits directly under the field it describes, inside the form grid cell, so it
+   must not carry the browser's default paragraph margins. */
+.error {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--diamond-danger);
+}

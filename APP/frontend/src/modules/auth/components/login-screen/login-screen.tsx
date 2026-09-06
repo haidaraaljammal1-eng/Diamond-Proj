@@ -11,6 +11,13 @@ import { loginSchema } from "@/modules/auth/forms/login/login.schema";
 import type { LoginFormValues } from "@/modules/auth/forms/login/login.types";
 import styles from "./login-screen.module.css";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+const devDefaultValues: LoginFormValues = {
+  email: isDev ? (process.env.NEXT_PUBLIC_DEV_ADMIN_EMAIL ?? "") : "",
+  password: isDev ? (process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD ?? "") : "",
+};
+
 export function LoginScreen() {
   const router = useRouter();
   const locale = useLocale();
@@ -66,7 +73,7 @@ export function LoginScreen() {
             placeholder: field.name === "email" ? t("email") : t("password"),
           }))}
           schema={loginSchema}
-          defaultValues={{ email: "", password: "" }}
+          defaultValues={devDefaultValues}
           onSubmit={handleSubmit}
           submitLabel={t("submitButton")}
           submittingLabel={t("loading")}

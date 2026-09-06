@@ -55,16 +55,23 @@ export function FormBuilder<T extends FieldValues>({
   return (
     <FormProvider {...methods}>
       <form
-        className={className}
+        className={[styles.root, className].filter(Boolean).join(" ")}
         onSubmit={(event) => {
           event.preventDefault();
           void methods.handleSubmit(onSubmit)(event);
         }}
         noValidate
       >
-        {fields.map((field) => (
-          <FieldRenderer key={String(field.name)} field={field} />
-        ))}
+        <div className={styles.fields}>
+          {fields.map((field) => (
+            <div
+              key={String(field.name)}
+              className={field.colSpan === 1 ? undefined : styles.full}
+            >
+              <FieldRenderer field={field} />
+            </div>
+          ))}
+        </div>
         {secondaryAction ? (
           <div className={styles.actions}>
             <div className={styles.submit}>{submitButton}</div>

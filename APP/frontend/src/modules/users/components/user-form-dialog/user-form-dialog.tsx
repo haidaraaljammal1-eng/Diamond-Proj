@@ -60,7 +60,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
   }, [target, clearCreateError, clearUpdateError]);
 
   const roleOptions = useMemo(
-    () => roles.map((role) => ({ value: String(role.id), label: role.name })),
+    () => roles.map((role) => ({ value: String(role.id), label: role.label })),
     [roles],
   );
 

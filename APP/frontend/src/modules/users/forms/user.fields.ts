@@ -22,12 +22,14 @@ function userIdentityFields<T extends EditUserValues>(
       name: "email" as FormField<T>["name"],
       placeholder: labels.email,
       autoComplete: "off",
+      colSpan: 1,
     },
     {
       type: "text",
       name: "name" as FormField<T>["name"],
       placeholder: labels.name,
       autoComplete: "off",
+      colSpan: 1,
     },
   ];
 

@@ -13,7 +13,6 @@ import {
   useAppShellStore,
 } from "../store/app-shell.store";
 import { SidebarItem } from "./sidebar-item";
-import { SidebarFooter } from "./sidebar-footer";
 import { SidebarFleetStat } from "./sidebar-fleet-stat";
 import { SidebarAccount } from "./sidebar-account";
 import { SidebarBrand } from "./sidebar-brand";
@@ -76,7 +75,6 @@ export function Sidebar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeMobileSidebar, isDrawer, toggleSidebar, toggleSidebarExpanded]);
 
-  const showAdminFooter = groups.length > 1;
   /* A closed drawer is translated off-screen — keep it out of the tab order. */
   const hidden = isDrawer && !mobileSidebarOpen;
 
@@ -88,38 +86,43 @@ export function Sidebar() {
       aria-label={t("railLabel")}
       inert={hidden}
     >
-      <SidebarBrand
-        href={hrefFor("/dashboard")}
-        onNavigate={closeMobileSidebar}
-      />
-      <SidebarQuickAction />
-      <div className={styles.headDivider} aria-hidden="true" />
+      {/* Head — pinned: never scrolls with the navigation below it. */}
+      <div className={styles.railHead}>
+        <SidebarBrand
+          href={hrefFor("/dashboard")}
+          onNavigate={closeMobileSidebar}
+        />
+        <SidebarQuickAction />
+        <div className={styles.headDivider} aria-hidden="true" />
+      </div>
 
-      {groups.map((group: TranslatedNavigationGroup, index) => {
-        const isFirstVisible = index === 0;
-        return (
-          <div key={group.key} className={styles.group}>
-            {!isFirstVisible && <div className={styles.divider} />}
-            <span className={styles.label}>{group.label}</span>
-            {group.items.map((item: TranslatedNavigationItem) => (
-              <SidebarItem
-                key={item.key}
-                item={item}
-                active={isActive(item.href)}
-                hrefFor={hrefFor(item.href)}
-                onNavigate={closeMobileSidebar}
-                label={item.label}
-              />
-            ))}
-          </div>
-        );
-      })}
+      {/* The only scrolling region of the rail. */}
+      <div className={styles.railScroll}>
+        {groups.map((group: TranslatedNavigationGroup, index) => {
+          const isFirstVisible = index === 0;
+          return (
+            <div key={group.key} className={styles.group}>
+              {!isFirstVisible && <div className={styles.divider} />}
+              <span className={styles.label}>{group.label}</span>
+              {group.items.map((item: TranslatedNavigationItem) => (
+                <SidebarItem
+                  key={item.key}
+                  item={item}
+                  active={isActive(item.href)}
+                  hrefFor={hrefFor(item.href)}
+                  onNavigate={closeMobileSidebar}
+                  label={item.label}
+                />
+              ))}
+            </div>
+          );
+        })}
+      </div>
 
       {/* Pinned to the rail's bottom edge together: the fleet KPI, then the
-          admin version footer (when present), then the account row last. */}
+          account row last. */}
       <div className={styles.bottomGroup}>
         <SidebarFleetStat />
-        {showAdminFooter && <SidebarFooter />}
         <SidebarAccount />
       </div>
     </nav>

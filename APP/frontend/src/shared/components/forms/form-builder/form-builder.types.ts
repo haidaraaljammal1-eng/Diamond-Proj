@@ -7,14 +7,16 @@ export type FormField<T extends FieldValues> =
       name: FieldPath<T>;
       placeholder?: string;
       autoComplete?: string;
-      colSpan?: number;
+      /** `1` = half row on wide containers; omitted (default) = full row. */
+      colSpan?: 1 | 2;
     }
   | {
       type: "password";
       name: FieldPath<T>;
       placeholder?: string;
       autoComplete?: string;
-      colSpan?: number;
+      /** `1` = half row on wide containers; omitted (default) = full row. */
+      colSpan?: 1 | 2;
     }
   | {
       type: "select";
@@ -25,5 +27,6 @@ export type FormField<T extends FieldValues> =
       searchable?: boolean;
       clearable?: boolean;
       disabled?: boolean;
-      colSpan?: number;
+      /** `1` = half row on wide containers; omitted (default) = full row. */
+      colSpan?: 1 | 2;
     };

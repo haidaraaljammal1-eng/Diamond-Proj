@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import styles from "./form-error.module.css";
 
 export type ValidationMessageKey =
   | "required"
@@ -30,7 +31,7 @@ export function FormError({ id, message }: FormErrorProps) {
   if (!message) return null;
 
   return (
-    <p id={id} role="alert">
+    <p id={id} className={styles.error} role="alert">
       {t(message)}
     </p>
   );
