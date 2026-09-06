@@ -15,6 +15,11 @@ export interface DialogProps {
   description?: string;
   /** Already-translated accessible name of the close button. */
   closeLabel: string;
+  /**
+   * `flush` — full-bleed detail chrome (Demo `.car-detail`): no title block,
+   * tighter padding, caller owns the hero/header inside children.
+   */
+  presentation?: "default" | "flush";
   children: ReactNode;
 }
 
@@ -31,6 +36,7 @@ export function Dialog({
   title,
   description,
   closeLabel,
+  presentation = "default",
   children,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -74,7 +80,12 @@ export function Dialog({
     >
       <div
         ref={dialogRef}
-        className={styles.dialog}
+        className={[
+          styles.dialog,
+          presentation === "flush" ? styles.flush : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -89,14 +100,20 @@ export function Dialog({
         >
           <span aria-hidden="true">✕</span>
         </button>
-        <h3 id={titleId} className={styles.title}>
-          {title}
-        </h3>
-        {description ? (
-          <p id={descriptionId} className={styles.description}>
-            {description}
-          </p>
-        ) : null}
+        {presentation === "default" ? (
+          <>
+            <h3 id={titleId} className={styles.title}>
+              {title}
+            </h3>
+            {description ? (
+              <p id={descriptionId} className={styles.description}>
+                {description}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <h3 id={titleId} className={styles.visuallyHidden}>{title}</h3>
+        )}
         {children}
       </div>
     </div>,

@@ -17,6 +17,8 @@ model Attachment {
   uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
+  vehiclePhotos VehiclePhoto[]
+
   @@index([uploadedById])
   @@map("attachments")
 }

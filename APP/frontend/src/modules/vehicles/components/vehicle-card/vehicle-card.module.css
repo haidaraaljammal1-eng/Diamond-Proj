@@ -1,0 +1,158 @@
+/* Fleet card layout — Demo `.car` internals composed on Shared Card. */
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.card:hover,
+.card:focus-within {
+  transform: translateY(-3px);
+}
+
+.photo {
+  height: 154px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(130% 160% at 20% 0%, rgba(201, 161, 92, 0.28), transparent 50%),
+    linear-gradient(160deg, #232228, #101013 60%);
+}
+
+.photo::after {
+  content: "";
+  position: absolute;
+  inset: auto 12% 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  filter: blur(8px);
+}
+
+.image {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0.96;
+}
+
+.image[data-empty="true"] {
+  opacity: 0;
+}
+
+.status {
+  position: absolute;
+  z-index: 3;
+  top: 9px;
+  inset-inline-start: 9px;
+  opacity: 1 !important;
+  background: rgba(12, 12, 15, 0.92);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.42);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.body {
+  padding: 12px 14px 0;
+  flex: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  color: var(--diamond-champagne);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.meta {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.metaItem {
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+  border: 1px solid var(--diamond-hair);
+  padding: 1px 8px;
+  border-radius: 7px;
+}
+
+.renter {
+  margin: 7px 0 0;
+  font-size: 10.5px;
+  color: var(--diamond-muted);
+}
+
+.rate {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 9px 14px 0;
+}
+
+.rate b {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--diamond-gold-hi);
+}
+
+.rate span {
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+}
+
+.monthly {
+  margin-inline-start: auto;
+}
+
+.note {
+  font-size: 10px;
+  color: var(--diamond-dim);
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  margin-top: 1px;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--diamond-gold-hi);
+  box-shadow: 0 0 6px rgba(201, 161, 92, 0.9);
+}
+
+.actions {
+  padding: 11px 14px 13px;
+  display: flex;
+  gap: 8px;
+}
+
+.primaryAction {
+  flex: 1;
+  height: auto;
+  min-height: 31px;
+  white-space: normal;
+  line-height: 1.15;
+  padding: 5px 8px;
+  text-align: center;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover,
+  .card:focus-within {
+    transform: none;
+  }
+}

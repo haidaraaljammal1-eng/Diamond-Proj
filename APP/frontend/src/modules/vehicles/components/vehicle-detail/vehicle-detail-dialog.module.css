@@ -1,0 +1,11 @@
+.loading,
+.error {
+  padding: 28px 22px;
+  text-align: center;
+  color: var(--diamond-muted);
+  font-size: 13px;
+}
+
+.error p {
+  margin: 0 0 12px;
+}

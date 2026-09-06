@@ -434,5 +434,101 @@
       "close": "Close",
       "cancel": "Cancel"
     }
+  },
+  "Vehicles": {
+    "crumbs": "Fleet",
+    "title": "Vehicles",
+    "subtitle": "Current office fleet",
+    "refresh": "Refresh",
+    "loading": "Loading fleet…",
+    "currency": "AED",
+    "dailyRateSuffix": "AED/day",
+    "monthlyRateSuffix": "monthly",
+    "priceNote": "Default rate · non-binding · final price confirmed at booking",
+    "statusAvailable": "Available",
+    "statusRented": "Rented",
+    "statusService": "Service",
+    "currentRenter": "Currently rented to {name}",
+    "timerLabel": "⏳ Rental time remaining",
+    "timerExpiredLabel": "⚠ Rental period ended",
+    "timerValue": "{days} days and {hours} hours and {minutes} minutes",
+    "timerExpiredValue": "0 days and 0 hours and 0 minutes",
+    "filters": {
+      "all": "All",
+      "available": "Available",
+      "rented": "Rented",
+      "service": "Service"
+    },
+    "actions": {
+      "generateLinkSetPrice": "💰 Generate link · Set price",
+      "generateReturnLink": "↩ Generate Return Link",
+      "setPrice": "✏️ Price",
+      "setPriceDetail": "✏️ Set price",
+      "setPriceTitle": "Set rental price manually",
+      "gps": "📍 GPS",
+      "gpsTitle": "Track vehicle live",
+      "gpsTrack": "📍 GPS tracking",
+      "more": "⋯",
+      "goMaintenance": "🛠 Go to maintenance"
+    },
+    "boundary": {
+      "noContract": "No contract is linked to this vehicle",
+      "gpsPending": "GPS tracking will be enabled when the GPS domain is built",
+      "noAlerts": "No new alerts for this vehicle"
+    },
+    "denied": {
+      "title": "You do not have access to this page",
+      "description": "Viewing the fleet requires the vehicles.read permission. Ask an administrator to grant it."
+    },
+    "error": {
+      "title": "Fleet could not be loaded",
+      "generic": "Something went wrong while loading the data. Please try again.",
+      "retry": "Try again",
+      "FORBIDDEN": "Your account is not allowed to read vehicles.",
+      "UNAUTHORIZED": "Your session has expired. Please sign in again."
+    },
+    "empty": {
+      "title": "No vehicles in the fleet",
+      "description": "The backend returned no vehicles yet.",
+      "filteredTitle": "No results",
+      "filteredDescription": "No vehicles match this filter."
+    },
+    "detail": {
+      "close": "Close",
+      "loading": "Loading vehicle details…",
+      "error": "Vehicle details could not be loaded.",
+      "specs": "Specifications",
+      "year": "Model year",
+      "color": "Color",
+      "plate": "Plate number",
+      "status": "Status",
+      "galleryEmpty": "No additional photos for this vehicle",
+      "galleryItem": "Photo of {name}",
+      "defaultRates": "Default rates",
+      "hourly": "Hourly",
+      "daily": "Daily · AED",
+      "monthly": "Monthly · AED",
+      "currentRental": "Current rental",
+      "renter": "Renter",
+      "contractId": "Contract ID",
+      "operationStatus": "Operational status",
+      "serviceStatus": "At workshop — maintenance follow-up"
+    },
+    "setPrice": {
+      "title": "💰 Set rental price — {name}",
+      "description": "Choose a rental period, then enter the amount for the customer. · {plate}",
+      "period": {
+        "day": "Daily",
+        "week": "Weekly",
+        "month": "Monthly"
+      },
+      "rentalPeriod": "Rental period",
+      "days": "{count} days",
+      "defaultPrice": "Default price",
+      "amountLabel": "Amount (AED)",
+      "submit": "🚀 Send link to customer",
+      "cancel": "Cancel",
+      "pendingContracts": "Sending the link requires the Contracts domain — UI is ready, integration is pending."
+    }
   }
 }

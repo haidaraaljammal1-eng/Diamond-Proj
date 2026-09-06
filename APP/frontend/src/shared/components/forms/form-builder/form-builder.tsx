@@ -22,6 +22,8 @@ interface FormBuilderProps<T extends FieldValues> {
   className?: string;
   /** Submit button size — `md` is the Demo inline button used in dialogs. */
   submitSize?: "lg" | "md";
+  /** When true, the submit control stays visible but cannot be activated. */
+  submitDisabled?: boolean;
   /**
    * Secondary control rendered beside the submit button — the Demo modal action
    * row: a primary button that fills the row plus a ghost action (Cancel).
@@ -39,6 +41,7 @@ export function FormBuilder<T extends FieldValues>({
   submittingLabel = "...",
   className,
   submitSize = "lg",
+  submitDisabled = false,
   secondaryAction,
 }: FormBuilderProps<T>) {
   const methods = useForm<T, unknown, T>({
@@ -47,7 +50,12 @@ export function FormBuilder<T extends FieldValues>({
   });
 
   const submitButton = (
-    <Button type="submit" size={submitSize} loading={methods.formState.isSubmitting}>
+    <Button
+      type="submit"
+      size={submitSize}
+      loading={methods.formState.isSubmitting}
+      disabled={submitDisabled}
+    >
       {methods.formState.isSubmitting ? submittingLabel : submitLabel}
     </Button>
   );

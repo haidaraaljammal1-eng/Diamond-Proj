@@ -22,6 +22,11 @@ export function normalizeVin(value: string): string {
   return value.replace(/\s+/g, "").toUpperCase();
 }
 
+/** Registration plate — trimmed, collapsed whitespace, UPPERCASE (Latin plates). */
+export function normalizePlateNumber(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toUpperCase();
+}
+
 /**
  * Canonical NAME key for logical de-duplication of master data matched by a
  * human-entered name instead of a `code` (sales import: branch, vehicle model,

@@ -1,0 +1,35 @@
+/* Demo `.rtimer` — rental remaining-time strip on fleet cards. */
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  margin: 0 14px 13px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(223, 169, 59, 0.1), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(223, 169, 59, 0.25);
+}
+
+.label {
+  font-size: 9.5px;
+  color: var(--diamond-warn);
+  letter-spacing: 0.02em;
+}
+
+.value {
+  font-size: 12px;
+  color: #b07f1f;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.expired {
+  border-color: rgba(223, 91, 82, 0.4);
+  background: rgba(223, 91, 82, 0.07);
+}
+
+.expired .label,
+.expired .value {
+  color: #c0524a;
+}

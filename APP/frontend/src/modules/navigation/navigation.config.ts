@@ -1,5 +1,6 @@
 import { ROLES_PAGE_PERMISSIONS } from "@/modules/roles/roles.permissions";
 import { USERS_PAGE_PERMISSIONS } from "@/modules/users/users.permissions";
+import { VEHICLES_PAGE_PERMISSIONS } from "@/modules/vehicles/vehicles.permissions";
 import type { NavigationConfig } from "./navigation.types";
 
 /**
@@ -39,8 +40,9 @@ export const navigationConfig: NavigationConfig = [
         key: "cars",
         type: "link",
         labelKey: "cars",
-        href: "/cars",
+        href: "/vehicles",
         icon: "cars",
+        permissions: [...VEHICLES_PAGE_PERMISSIONS],
       },
       {
         key: "gps",

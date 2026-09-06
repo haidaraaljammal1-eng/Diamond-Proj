@@ -66,3 +66,21 @@
 - Authentication and permissions must not be duplicated in AppShell state.
 - Diamond Demo is the visual source of truth for AppShell.
 - Do not implement page content while working on the Shell unless explicitly requested.
+
+## Vehicles backend (Diamond)
+
+- Extend the existing `vehicles` domain only — never create a duplicate Cars domain.
+- Vehicle backend scope must match the Demo Vehicles page only.
+- Vehicle default pricing (`dailyRate` / `monthlyRate`) and rental-offer pricing are different concepts.
+- Vehicles must not absorb Contract, GPS, or Maintenance workflows.
+- Demo mock `CARS` data must never become production backend data.
+- Vehicle list APIs should provide card-ready projections without N+1 frontend calls.
+
+## Vehicles frontend (Diamond)
+
+- Vehicles frontend must follow the Diamond Demo exactly and must not grow into generic fleet-management UI.
+- Vehicle data must come from Backend APIs, never Demo mock CARS.
+- VehicleCard must compose Shared Card.
+- Vehicle page/components consume hooks, never stores/APIs directly.
+- A rented vehicle may temporarily have `currentRental = null` until Contracts is implemented; never fake renter/timer data.
+- Vehicle page must not implement Contract, GPS, or Maintenance domains.

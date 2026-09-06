@@ -1,0 +1,218 @@
+/* Demo `.car-detail` presentation inside the shared Dialog flush mode. */
+.root {
+  margin: 0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.hero {
+  height: 190px;
+  position: relative;
+  background: #111;
+  overflow: hidden;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 35% 0 0;
+  background: linear-gradient(transparent, #111114);
+}
+
+.heroStatus {
+  position: absolute;
+  z-index: 2;
+  top: 13px;
+  inset-inline-start: 14px;
+}
+
+.heroTitle {
+  position: absolute;
+  z-index: 2;
+  inset-inline: 18px;
+  bottom: 15px;
+}
+
+.heroTitle h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #fff;
+}
+
+.heroTitle p {
+  font-size: 11px;
+  color: var(--diamond-gold-hi);
+  margin-top: 3px;
+}
+
+.body {
+  padding: 20px 22px 22px;
+}
+
+.section {
+  font-size: 10px;
+  color: var(--diamond-gold);
+  letter-spacing: 0.14em;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.spec {
+  padding: 9px 10px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.spec span {
+  display: block;
+  font-size: 10px;
+  color: var(--diamond-dim);
+}
+
+.spec b {
+  display: block;
+  font-size: 12px;
+  color: var(--diamond-ivory);
+  margin-top: 2px;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.galleryEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--diamond-dim);
+  font-size: 11.5px;
+  padding: 18px 12px;
+  border: 1.5px dashed var(--diamond-hair);
+  border-radius: 12px;
+  text-align: center;
+  line-height: 1.7;
+  margin: 4px 0 12px;
+}
+
+.galleryItem {
+  position: relative;
+  border: 1px solid var(--diamond-hair);
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 11px;
+  overflow: hidden;
+  aspect-ratio: 1;
+}
+
+.galleryImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rates {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.rate {
+  padding: 10px 6px;
+  text-align: center;
+  border: 1px solid var(--diamond-line);
+  border-radius: 10px;
+  background: rgba(201, 161, 92, 0.06);
+}
+
+.rate span {
+  display: block;
+  font-size: 9.5px;
+  color: var(--diamond-muted);
+}
+
+.rate b {
+  display: block;
+  font-size: 15px;
+  color: var(--diamond-gold-hi);
+  margin-top: 2px;
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11.5px;
+}
+
+.kv span {
+  color: var(--diamond-muted);
+}
+
+.kv b {
+  color: var(--diamond-ivory);
+  text-align: end;
+}
+
+.contractId {
+  letter-spacing: 0.06em;
+  color: var(--diamond-gold-hi);
+  font-size: 12px;
+}
+
+.serviceStatus {
+  color: var(--diamond-warn);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.actions :global(button) {
+  flex: 1;
+  justify-content: center;
+  min-width: 145px;
+}
+
+@media (max-width: 520px) {
+  .hero {
+    height: 165px;
+  }
+
+  .heroTitle h3 {
+    font-size: 18px;
+  }
+
+  .rates {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rate:last-child {
+    grid-column: 1 / -1;
+  }
+}

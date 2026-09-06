@@ -1,0 +1,59 @@
+.periods {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.periodChip {
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--diamond-muted);
+  cursor: pointer;
+  border: 1px solid var(--diamond-hair);
+  background: var(--diamond-onyx);
+  transition: 0.18s;
+}
+
+.periodChip:hover {
+  color: var(--diamond-ivory);
+}
+
+.periodActive {
+  color: var(--diamond-gold-hi);
+  border-color: rgba(201, 161, 92, 0.4);
+  background: rgba(201, 161, 92, 0.1);
+  font-weight: 600;
+}
+
+.summary {
+  margin-bottom: 12px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.summaryRow span {
+  color: var(--diamond-muted);
+}
+
+.summaryRow b {
+  color: var(--diamond-ivory);
+}
+
+.pending {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--diamond-warn);
+  line-height: 1.5;
+}

@@ -18,6 +18,14 @@ enum CustomerType {
   COMPANY
 }
 
+// Fleet operational status for the Vehicles page (available / rented / service).
+// Distinct from Vehicle.isActive (master-data lifecycle) and from contract status.
+enum VehicleOperationalStatus {
+  AVAILABLE
+  RENTED
+  SERVICE
+}
+
 model Customer {
   id             Int          @id @default(autoincrement())
   name           String
@@ -57,16 +65,40 @@ model Vehicle {
   // CX display context only (not a colour taxonomy). Free-text from ERP/import;
   // trimmed, nullable. Belongs to the vehicle itself, not the sale.
   color      String?
+  // Registration plate for fleet display. Stored normalized (trim + collapsed spaces + UPPER).
+  plateNumber       String?                  @unique
+  // Default rental rates in whole AED (Diamond demo). Not the rental-offer final amount.
+  dailyRate         Int?
+  monthlyRate       Int?
+  operationalStatus VehicleOperationalStatus @default(AVAILABLE)
   externalId String?      @unique
   isActive   Boolean      @default(true)
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
   experiences PurchaseExperience[]
+  photos      VehiclePhoto[]
 
   @@index([modelId])
   @@index([isActive])
+  @@index([operationalStatus])
   @@map("vehicles")
+}
+
+/// Vehicle gallery image linked to the shared Attachment store.
+model VehiclePhoto {
+  id           String     @id @default(uuid())
+  vehicleId    Int
+  vehicle      Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  sortOrder    Int        @default(0)
+  isPrimary    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@unique([vehicleId, attachmentId])
+  @@index([vehicleId, sortOrder])
+  @@map("vehicle_photos")
 }
 
 // The actual customer experience event (purchase + delivery). Customer and

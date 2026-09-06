@@ -434,5 +434,101 @@
       "close": "إغلاق",
       "cancel": "إلغاء"
     }
+  },
+  "Vehicles": {
+    "crumbs": "الأسطول",
+    "title": "السيارات",
+    "subtitle": "أسطول المكتب الحالي",
+    "refresh": "تحديث",
+    "loading": "جارٍ تحميل الأسطول…",
+    "currency": "درهم",
+    "dailyRateSuffix": "درهم/يوم",
+    "monthlyRateSuffix": "شهرياً",
+    "priceNote": "السعر الافتراضي · غير ملزم · يحدَّد نهائياً عند تأكيد الحجز",
+    "statusAvailable": "متاحة",
+    "statusRented": "مؤجرة",
+    "statusService": "صيانة",
+    "currentRenter": "مؤجرة حالياً لـ {name}",
+    "timerLabel": "⏳ تبقّى من مدة الإيجار",
+    "timerExpiredLabel": "⚠ انتهت مدة الإيجار",
+    "timerValue": "{days} يوم و {hours} ساعة و {minutes} دقيقة",
+    "timerExpiredValue": "0 يوم و 0 ساعة و 0 دقيقة",
+    "filters": {
+      "all": "الكل",
+      "available": "متاحة",
+      "rented": "مؤجرة",
+      "service": "صيانة"
+    },
+    "actions": {
+      "generateLinkSetPrice": "💰 توليد رابط · تحديد السعر",
+      "generateReturnLink": "↩ Generate Return Link",
+      "setPrice": "✏️ السعر",
+      "setPriceDetail": "✏️ تحديد السعر",
+      "setPriceTitle": "تحديد سعر الإيجار يدويًا",
+      "gps": "📍 GPS",
+      "gpsTitle": "متابعة موقع السيارة لحظياً",
+      "gpsTrack": "📍 تتبع GPS",
+      "more": "⋯",
+      "goMaintenance": "🛠 الانتقال إلى قسم الصيانة"
+    },
+    "boundary": {
+      "noContract": "لا يوجد عقد مرتبط بهذه السيارة",
+      "gpsPending": "تتبع GPS سيُفعَّل عند بناء نطاق GPS",
+      "noAlerts": "لا توجد تنبيهات جديدة لهذه السيارة"
+    },
+    "denied": {
+      "title": "لا تملك صلاحية الوصول إلى هذه الصفحة",
+      "description": "عرض الأسطول يتطلب صلاحية vehicles.read. اطلب من المسؤول منحها."
+    },
+    "error": {
+      "title": "تعذّر تحميل الأسطول",
+      "generic": "حدث خطأ أثناء تحميل البيانات. حاول مرة أخرى.",
+      "retry": "إعادة المحاولة",
+      "FORBIDDEN": "حسابك غير مسموح له بقراءة المركبات.",
+      "UNAUTHORIZED": "انتهت جلستك. سجّل الدخول مرة أخرى."
+    },
+    "empty": {
+      "title": "لا توجد سيارات في الأسطول",
+      "description": "لم يُرجع الخادم مركبات بعد.",
+      "filteredTitle": "لا توجد نتائج",
+      "filteredDescription": "لا توجد سيارات تطابق هذا الفلتر."
+    },
+    "detail": {
+      "close": "إغلاق",
+      "loading": "جارٍ تحميل تفاصيل السيارة…",
+      "error": "تعذّر تحميل تفاصيل السيارة.",
+      "specs": "المواصفات",
+      "year": "سنة الصنع",
+      "color": "اللون",
+      "plate": "رقم اللوحة",
+      "status": "الحالة",
+      "galleryEmpty": "لا توجد صور إضافية لهذه السيارة",
+      "galleryItem": "صورة {name}",
+      "defaultRates": "التعرفة الافتراضية",
+      "hourly": "بالساعة",
+      "daily": "يوميًا · درهم",
+      "monthly": "شهريًا · درهم",
+      "currentRental": "الإيجار الحالي",
+      "renter": "المستأجر",
+      "contractId": "رقم العقد",
+      "operationStatus": "حالة التشغيل",
+      "serviceStatus": "في الورشة — متابعة الصيانة"
+    },
+    "setPrice": {
+      "title": "💰 تحديد سعر الإيجار — {name}",
+      "description": "اختر فترة الإيجار ثم أدخل المبلغ المطلوب من العميل. · {plate}",
+      "period": {
+        "day": "يومي",
+        "week": "أسبوعي",
+        "month": "شهري"
+      },
+      "rentalPeriod": "فترة الإيجار",
+      "days": "{count} يوم",
+      "defaultPrice": "السعر الافتراضي",
+      "amountLabel": "المبلغ (درهم)",
+      "submit": "🚀 إرسال الرابط للعميل",
+      "cancel": "إلغاء",
+      "pendingContracts": "إرسال الرابط يتطلب نطاق العقود — الواجهة جاهزة، التكامل قادم."
+    }
   }
 }
