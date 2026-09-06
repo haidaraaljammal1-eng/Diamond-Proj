@@ -1,8 +1,16 @@
+/** A role as the Backend returns it (GET /auth/me, GET /users). */
+export interface BackendRole {
+  id: number;
+  key: string;
+  name: string;
+}
+
+/** The Backend user payload — roles are objects, not role keys. */
 export interface AuthUser {
   id: number;
   email: string;
   name: string | null;
-  roles: string[];
+  roles: BackendRole[];
   permissions: string[];
 }
 

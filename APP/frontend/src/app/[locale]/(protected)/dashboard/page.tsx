@@ -1,12 +1,7 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { DashboardLogoutButton } from "./dashboard-logout-button";
-import styles from "./dashboard.module.css";
+import { setRequestLocale } from "next-intl/server";
+import { DashboardScreen } from "@/modules/dashboard";
 
-/**
- * Dashboard — minimal placeholder ONLY, to exercise the AppShell.
- * The real Dashboard (KPIs, fleet, contracts, finance, …) is a separate
- * phase built from the Demo. Delete this file's body when that phase lands.
- */
+/** Home dashboard — the Demo owner/employee overview. */
 export default async function DashboardPage({
   params,
 }: {
@@ -14,12 +9,6 @@ export default async function DashboardPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("Dashboard");
 
-  return (
-    <div className={styles.placeholder} data-testid="dashboard-placeholder">
-      <p>{t("placeholder")}</p>
-      <DashboardLogoutButton />
-    </div>
-  );
+  return <DashboardScreen />;
 }

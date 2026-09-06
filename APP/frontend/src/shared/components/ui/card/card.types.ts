@@ -16,3 +16,12 @@ export interface CardSectionProps {
   children: ReactNode;
   className?: string;
 }
+
+export interface CardTitleProps {
+  children: ReactNode;
+  /** Optional gold icon before the title (Demo `.card h3 svg`). */
+  icon?: ReactNode;
+  /** Optional end slot — a chip, count or small action. */
+  trailing?: ReactNode;
+  className?: string;
+}

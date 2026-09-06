@@ -84,3 +84,26 @@
   letter-spacing: 0;
   filter: none;
 }
+
+/* Demo `.btn.sm` (31px) — the compact action used inside cards and rows. */
+.sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  height: 31px;
+  min-height: 31px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  letter-spacing: 0;
+  filter: none;
+}
+
+@media (max-width: 560px) {
+  .sm {
+    height: 35px;
+    min-height: 35px;
+  }
+}

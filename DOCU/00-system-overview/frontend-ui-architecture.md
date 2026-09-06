@@ -23,6 +23,16 @@ The Diamond HTML Demo is the visual source of truth. Its original HTML, complete
 - `src/shared/components/ui/card` is the shared card surface (Demo `.emp` /
   art-deco brackets). Domain cards (UserCard, VehicleCard, …) compose it
   instead of duplicating borders, radius, shadows and hover.
+- `src/shared/components/ui/stat-card` is the shared KPI tile (Demo `.kpi`),
+  `list-row` the icon/title/meta row (Demo `.lrow`), `action-tile` the shortcut
+  row (Demo `.qa`), `chip` the status chip with the diamond dot (Demo `.chip`)
+  and `empty-state` the empty block (Demo `.ops-empty`). `Card.Title` is the
+  card heading (Demo `.card h3`). Pages compose these instead of re-styling
+  them; see `DOCU/05-pages/dashboard.md`.
+- `Badge` remains the rounded role pill; the Demo status chip is `Chip`.
+- Charts use `recharts` through `src/shared/components/charts` (`TrendChart`,
+  `DonutChart`) with the validated Diamond chart palette in `chart-theme.ts`.
+  Feature code never picks chart colors itself.
 - `src/shared/components/ui/switch` is the shared toggle switch (Demo
   `.switch`). Use it for every on/off control; the ON state uses the primary
   gold palette — feature modules must not recreate switch styling.

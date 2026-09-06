@@ -57,7 +57,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: String(user.id),
           name: user.name,
           email: user.email,
-          roles: user.roles,
+          // The session carries role KEYS: the Backend sends role objects and
+          // every consumer (navigation, dashboard) matches on `system_admin`.
+          roles: user.roles.map((role) => role.key),
           permissions: user.permissions,
           accessToken: result.accessToken,
           accessTokenExpiresAt: Date.now() + result.expiresIn * 1000,

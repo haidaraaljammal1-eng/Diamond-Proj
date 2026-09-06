@@ -16,6 +16,7 @@ export function Button({
         styles.button,
         styles[variant],
         size === "md" ? styles.md : "",
+        size === "sm" ? styles.sm : "",
         props.className ?? "",
       ]
         .filter(Boolean)

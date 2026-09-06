@@ -1,0 +1,85 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.plot {
+  position: relative;
+  flex: none;
+  direction: ltr;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.centerValue {
+  display: block;
+  font-family: var(--diamond-font-display);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--diamond-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.centerLabel {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--diamond-dim);
+}
+
+.legend {
+  flex: 1;
+  min-width: 190px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(133, 100, 45, 0.08);
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+.legendRow:last-child {
+  border-bottom: none;
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 2px;
+}
+
+.legendLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.legendValue {
+  font-weight: 600;
+  color: var(--diamond-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.legendShare {
+  width: 34px;
+  text-align: end;
+  color: var(--diamond-dim);
+  font-variant-numeric: tabular-nums;
+}

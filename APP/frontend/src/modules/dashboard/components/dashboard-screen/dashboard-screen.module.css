@@ -1,0 +1,74 @@
+/* Demo `.kpis` — three counters, two up on tablets, one on small phones. */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+/* Demo `.dashg` — the contracts list beside Quick Access. */
+.grid {
+  display: grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 15px;
+  align-items: stretch;
+}
+
+/* Wider first column — the hand-over list needs the room, the fleet split
+   does not. */
+.gridWide {
+  grid-template-columns: 2.15fr 1fr;
+}
+
+/* The second operational row sits under the first. */
+.grid + .grid {
+  margin-top: 15px;
+}
+
+@media (max-width: 1080px) {
+  .gridWide {
+    grid-template-columns: 1fr;
+  }
+
+  .kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .kpis {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Permission notice — same treatment as the Users screen panel. */
+.panel {
+  padding: 22px;
+  border: 1px dashed var(--diamond-hair);
+  border-radius: 12px;
+  background: rgba(201, 161, 92, 0.03);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.panelText {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--diamond-muted);
+}

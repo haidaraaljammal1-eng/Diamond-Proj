@@ -1,0 +1,36 @@
+/* Shared empty block — Demo `.ops-empty`. */
+.empty {
+  text-align: center;
+}
+
+.dashed {
+  padding: 24px 14px;
+  border: 1px dashed var(--diamond-hair);
+  border-radius: 12px;
+  background: rgba(201, 161, 92, 0.02);
+}
+
+.inline {
+  padding: 28px 12px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(201, 161, 92, 0.04);
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  color: var(--diamond-champagne);
+}
+
+.description {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--diamond-dim);
+}
+
+.action {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+}

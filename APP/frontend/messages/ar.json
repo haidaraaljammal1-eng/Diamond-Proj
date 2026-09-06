@@ -75,9 +75,98 @@
     "notificationItem3Time": "أمس"
   },
   "Dashboard": {
-    "placeholder": "لوحة التحكم تُنفَّذ في مرحلة لاحقة",
-    "logout": "تسجيل الخروج",
-    "logoutBusy": "جارٍ تسجيل الخروج..."
+    "crumbsOwner": "DIAMOND OS · لوحة المالك",
+    "crumbsEmployee": "مساحة الموظف",
+    "greetingOwner": "مساء الخير، {name}",
+    "greetingEmployee": "أهلاً {name}",
+    "greetingFallback": "مساء الخير",
+    "subtitleOwner": "نظرة اليوم على المكتب",
+    "subtitleEmployee": "عقودك وسياراتك في هذه الجلسة",
+    "generateNewLink": "+ توليد رابط جديد",
+    "generateLink": "+ توليد رابط",
+    "latestContracts": "أحدث العقود",
+    "fromAllStaff": "من كل الموظفين",
+    "issuedBy": "بواسطة {name}",
+    "quickAccess": "وصول سريع",
+    "kpi": {
+      "activeContracts": "عقود نشطة",
+      "activeContractsNote": "▲ {count} إيجار جارٍ",
+      "fleet": "الأسطول",
+      "fleetNote": "سيارة مؤجرة الآن",
+      "pendingLinks": "روابط بانتظار",
+      "pendingLinksNote": "لم يُكملها العميل بعد",
+      "deliveriesToday": "تسليمات اليوم",
+      "deliveriesTodayNote": "{count} جاهزة للتسليم الآن"
+    },
+    "status": {
+      "awaiting": "بانتظار العميل",
+      "form": "فتح النموذج",
+      "signed": "موقّع",
+      "paid": "مدفوع",
+      "active": "نشط",
+      "retout": "قيد الإرجاع",
+      "review": "Reconciliation & Contract Closure",
+      "closed": "مغلق"
+    },
+    "quick": {
+      "carsMeta": "الأسطول · توليد رابط",
+      "contractsMeta": "{count} عقد · عرض الكل",
+      "messagesUnread": "{count} رسائل جديدة",
+      "messagesEmpty": "لا رسائل جديدة",
+      "gpsMeta": "{count} سيارة على الخريطة الآن",
+      "maintenanceMeta": "{count} سيارة داخل الورشة"
+    },
+    "empty": {
+      "title": "لا توجد عقود بعد",
+      "description": "أنشئ أول رابط تأجير لبدء التشغيل"
+    },
+    "denied": {
+      "title": "لا تملك صلاحية عرض لوحة التحكم",
+      "description": "تحتاج صلاحية dashboard.read — راجع مدير النظام."
+    },
+    "deliveries": {
+      "title": "تسليمات اليوم",
+      "ready": "{count} جاهزة للتسليم",
+      "empty": "لا توجد تسليمات مجدولة اليوم"
+    },
+    "fleet": {
+      "title": "حالة الأسطول",
+      "utilization": "الإشغال {percent}%",
+      "count": "{count} سيارة",
+      "rented": "مؤجّرة",
+      "rentedNote": "مع العملاء الآن",
+      "available": "متاحة",
+      "availableNote": "جاهزة للتأجير فوراً",
+      "service": "في الصيانة",
+      "serviceNote": "خارج الخدمة حتى الاستلام"
+    },
+    "weekly": {
+      "title": "حركة الأسبوع",
+      "subtitle": "الإيرادات مقابل المصروفات خلال آخر 7 أيام",
+      "revenue": "إيراد",
+      "expense": "مصروف",
+      "net": "الصافي"
+    },
+    "week": {
+      "day1": "الاثنين",
+      "day2": "الثلاثاء",
+      "day3": "الأربعاء",
+      "day4": "الخميس",
+      "day5": "الجمعة",
+      "yesterday": "أمس",
+      "today": "اليوم"
+    },
+    "expenses": {
+      "title": "بنية المصروفات",
+      "subtitle": "توزيع مصروفات آخر 7 أيام على الفئات التشغيلية",
+      "centerLabel": "مصروفات 7 أيام"
+    },
+    "expenseCategory": {
+      "maintenance": "صيانة وتصليح",
+      "operations": "تشغيل وتنظيف",
+      "administrative": "إداري",
+      "fuel": "وقود"
+    }
   },
   "Select": {
     "placeholder": "اختر…",

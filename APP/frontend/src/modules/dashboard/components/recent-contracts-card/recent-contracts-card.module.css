@@ -1,0 +1,12 @@
+/* Demo `.list` inside the Dashboard contracts card. */
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Demo `.tid` — the contract number, always read left-to-right. */
+.contractId {
+  color: var(--diamond-gold-hi);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}

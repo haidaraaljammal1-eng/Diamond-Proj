@@ -65,3 +65,41 @@
     transform: none;
   }
 }
+
+/* Card title — Demo `.card h3`. */
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.titleIcon {
+  display: inline-flex;
+  flex: none;
+}
+
+.titleIcon svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--diamond-gold);
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(201, 161, 92, 0.5));
+}
+
+.titleText {
+  min-width: 0;
+}
+
+.titleTrailing {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

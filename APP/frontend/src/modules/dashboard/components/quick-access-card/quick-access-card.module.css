@@ -1,0 +1,14 @@
+/* The card fills its grid track so it ends level with the contracts list. */
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Demo `.qa-grid` — equal-height shortcut rows. */
+.grid {
+  display: grid;
+  grid-auto-rows: 1fr;
+  flex: 1;
+  gap: 10px;
+  margin-top: 12px;
+}

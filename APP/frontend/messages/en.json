@@ -75,9 +75,98 @@
     "notificationItem3Time": "Yesterday"
   },
   "Dashboard": {
-    "placeholder": "The dashboard will be implemented in a later phase",
-    "logout": "Log out",
-    "logoutBusy": "Logging out..."
+    "crumbsOwner": "DIAMOND OS · Owner Dashboard",
+    "crumbsEmployee": "Employee Space",
+    "greetingOwner": "Good evening, {name}",
+    "greetingEmployee": "Welcome, {name}",
+    "greetingFallback": "Good evening",
+    "subtitleOwner": "Today's view of the office",
+    "subtitleEmployee": "Your contracts and vehicles this session",
+    "generateNewLink": "+ Generate New Link",
+    "generateLink": "+ Generate Link",
+    "latestContracts": "Latest Contracts",
+    "fromAllStaff": "From all staff",
+    "issuedBy": "by {name}",
+    "quickAccess": "Quick Access",
+    "kpi": {
+      "activeContracts": "Active Contracts",
+      "activeContractsNote": "▲ {count} rental in progress",
+      "fleet": "Fleet",
+      "fleetNote": "Cars rented now",
+      "pendingLinks": "Pending Links",
+      "pendingLinksNote": "Not completed by the customer yet",
+      "deliveriesToday": "Deliveries Today",
+      "deliveriesTodayNote": "{count} ready to hand over"
+    },
+    "status": {
+      "awaiting": "Awaiting customer",
+      "form": "Form opened",
+      "signed": "Signed",
+      "paid": "Paid",
+      "active": "Active",
+      "retout": "Being returned",
+      "review": "Reconciliation & Contract Closure",
+      "closed": "Closed"
+    },
+    "quick": {
+      "carsMeta": "Fleet · Generate link",
+      "contractsMeta": "{count} contracts · View all",
+      "messagesUnread": "{count} new messages",
+      "messagesEmpty": "No new messages",
+      "gpsMeta": "{count} cars on the map now",
+      "maintenanceMeta": "{count} cars in the workshop"
+    },
+    "empty": {
+      "title": "No contracts yet",
+      "description": "Create your first rental link to get started"
+    },
+    "denied": {
+      "title": "You cannot view the dashboard",
+      "description": "The dashboard.read permission is required — contact your system administrator."
+    },
+    "deliveries": {
+      "title": "Deliveries Today",
+      "ready": "{count} ready to hand over",
+      "empty": "No hand-overs scheduled today"
+    },
+    "fleet": {
+      "title": "Fleet Status",
+      "utilization": "{percent}% utilization",
+      "count": "{count} cars",
+      "rented": "Rented",
+      "rentedNote": "With customers now",
+      "available": "Available",
+      "availableNote": "Ready to rent immediately",
+      "service": "In maintenance",
+      "serviceNote": "Out of service until pick-up"
+    },
+    "weekly": {
+      "title": "This Week",
+      "subtitle": "Revenue against expenses over the last 7 days",
+      "revenue": "Revenue",
+      "expense": "Expense",
+      "net": "Net"
+    },
+    "week": {
+      "day1": "Monday",
+      "day2": "Tuesday",
+      "day3": "Wednesday",
+      "day4": "Thursday",
+      "day5": "Friday",
+      "yesterday": "Yesterday",
+      "today": "Today"
+    },
+    "expenses": {
+      "title": "Expense Structure",
+      "subtitle": "Last 7 days of spending across operational categories",
+      "centerLabel": "7-day expenses"
+    },
+    "expenseCategory": {
+      "maintenance": "Maintenance & repair",
+      "operations": "Operations & cleaning",
+      "administrative": "Administrative",
+      "fuel": "Fuel"
+    }
   },
   "Select": {
     "placeholder": "Select…",

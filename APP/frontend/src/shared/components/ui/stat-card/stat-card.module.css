@@ -1,0 +1,167 @@
+/* Shared KPI tile — the Demo `.kpi` surface after the final Pearl Ivory layer:
+   white ground, art-deco brackets (top-left / bottom-right), champagne halo,
+   Marcellus numeral and the bottom gold thread. */
+.kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px 16px;
+  border: 1px solid rgba(201, 161, 92, 0.17);
+  border-radius: 6px;
+  background-color: var(--diamond-onyx);
+  background-image: var(--diamond-br-tl), var(--diamond-br-br),
+    linear-gradient(180deg, rgba(201, 161, 92, 0.05), transparent 44%);
+  background-position: top left, bottom right, center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px, 30px 30px, cover;
+  box-shadow:
+    0 14px 38px rgba(122, 96, 48, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    transform 0.34s cubic-bezier(0.2, 0.8, 0.25, 1),
+    border-color 0.3s,
+    box-shadow 0.34s,
+    background-color 0.3s;
+}
+
+/* Champagne halos + the Diamond lattice tile (Demo `.kpi::before`). */
+.kpi::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.35s;
+  background:
+    radial-gradient(
+      300px 190px at 109% -22%,
+      rgba(201, 161, 92, 0.16),
+      transparent 70%
+    ),
+    radial-gradient(
+      200px 150px at -12% 118%,
+      rgba(201, 161, 92, 0.08),
+      transparent 70%
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cpath d='M32 4 60 32 32 60 4 32Z' fill='none' stroke='rgba(201,161,92,0.09)'/%3E%3Cpath d='M32 16 48 32 32 48 16 32Z' fill='none' stroke='rgba(201,161,92,0.055)'/%3E%3C/svg%3E");
+  background-position: 0 0, 0 0, left -24px top -24px;
+  background-repeat: no-repeat;
+}
+
+/* Bottom gold thread (Demo `.kpi::after`). */
+.kpi::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(201, 161, 92, 0.32),
+    rgba(238, 214, 168, 0.85) 50%,
+    rgba(201, 161, 92, 0.32)
+  );
+  transition: 0.35s;
+}
+
+.kpi:hover {
+  transform: translateY(-4px);
+  border-color: rgba(201, 161, 92, 0.46);
+  box-shadow:
+    0 30px 70px rgba(122, 96, 48, 0.2),
+    0 0 0 1px rgba(201, 161, 92, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.kpi:hover::after {
+  box-shadow: 0 0 16px rgba(234, 209, 162, 0.45);
+}
+
+.kpi:hover::before {
+  opacity: 1;
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: #8c8170;
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--diamond-gold);
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(201, 161, 92, 0.55));
+}
+
+.value {
+  position: relative;
+  z-index: 1;
+  margin: 4px 0 0;
+  line-height: 1.25;
+}
+
+.number {
+  font-family: var(--diamond-font-display);
+  font-weight: 400;
+  font-size: 39px;
+  letter-spacing: 0.02em;
+  color: #3a2e1b;
+  font-feature-settings: "tnum" 1;
+}
+
+.suffix {
+  font-family: var(--diamond-font-body);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #8c8678;
+}
+
+.note {
+  position: relative;
+  z-index: 1;
+  margin: 1px 0 0;
+  font-size: 10.5px;
+  color: #8c8678;
+}
+
+.up {
+  color: var(--diamond-ok);
+}
+
+.down {
+  color: var(--diamond-danger);
+}
+
+@media (max-width: 560px) {
+  .kpi {
+    padding: 13px 14px 12px;
+  }
+
+  .number {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi {
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .kpi:hover {
+    transform: none;
+  }
+}

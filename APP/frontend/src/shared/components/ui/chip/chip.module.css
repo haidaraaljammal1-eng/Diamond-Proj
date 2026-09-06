@@ -1,0 +1,75 @@
+/* Shared status chip — Demo `.chip` after the Pearl Ivory layer. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(133, 100, 45, 0.18);
+  background: rgba(133, 100, 45, 0.07);
+  color: #6e6553;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  backdrop-filter: blur(5px);
+  transition: transform 0.18s;
+}
+
+.chip:active {
+  transform: scale(0.97);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: #b3a78d;
+}
+
+.ok {
+  color: #2e9e63;
+  border-color: rgba(70, 191, 127, 0.4);
+  background: rgba(70, 191, 127, 0.13);
+}
+
+.ok .dot {
+  background: var(--diamond-ok);
+}
+
+.warn {
+  color: #b07f1f;
+  border-color: rgba(223, 169, 59, 0.45);
+  background: rgba(223, 169, 59, 0.14);
+}
+
+.warn .dot {
+  background: var(--diamond-warn);
+}
+
+.bad {
+  color: #c0524a;
+  border-color: rgba(223, 91, 82, 0.4);
+  background: rgba(223, 91, 82, 0.13);
+}
+
+.bad .dot {
+  background: var(--diamond-danger);
+}
+
+.gold {
+  color: var(--diamond-gold-hi);
+  border-color: rgba(201, 161, 92, 0.4);
+  background: rgba(201, 161, 92, 0.13);
+}
+
+.gold .dot {
+  background: var(--diamond-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition: none;
+  }
+}
