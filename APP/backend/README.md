@@ -39,7 +39,7 @@ Startup **fails fast** if a required variable is missing or invalid (`src/config
 
 - `DATABASE_URL` — PostgreSQL connection string
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_SECRET` — min 32 chars each
-- `ACCESS_TOKEN_TTL` (default 900s), `REFRESH_TOKEN_TTL` (default 30d)
+- `ACCESS_TOKEN_TTL` (default 7d), `REFRESH_TOKEN_TTL` (default 30d)
 - `CORS_ORIGINS` — comma-separated allow-list (no `*` in production)
 - `SEED_DEV_ADMIN` + `DEV_ADMIN_PASSWORD` — env-gated development admin
 

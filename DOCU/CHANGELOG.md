@@ -1,11 +1,10 @@
 # Changelog
 
-## 2026-09-04
+## 2026-09-06
 
-- Created the unified `DIAMOND-SYSTEM` workspace.
-- Moved the existing backend project to `APP/backend` without changing its internal structure.
-- Added the reserved `APP/frontend` directory.
-- Added the central `DOCU` documentation structure.
+- Staff create dialog now requires an initial password and confirmation.
+  Password uses the shared `PasswordInput` / FormBuilder `password` field,
+  with min-length, letter, number, and match rules. See `DOCU/05-pages/users.md`.
 
 ## 2026-09-05
 
@@ -21,3 +20,10 @@
   create/edit role dialogs built on a new shared Dialog and Checkbox.
 - Restored the glass effect on the shell header and rail: the CSS pipeline was
   dropping `backdrop-filter` written before its `-webkit-` counterpart.
+
+## 2026-09-04
+
+- Created the unified `DIAMOND-SYSTEM` workspace.
+- Moved the existing backend project to `APP/backend` without changing its internal structure.
+- Added the reserved `APP/frontend` directory.
+- Added the central `DOCU` documentation structure.

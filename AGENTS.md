@@ -35,6 +35,13 @@
 - Every checkbox uses the shared Diamond Checkbox (`src/shared/components/ui/checkbox`).
 - Form values are not duplicated in Zustand; lookup fields use dedicated lookup hooks/APIs when available.
 - Page-specific decorative layouts stay inside their feature.
+- Reusable card surfaces must use the shared Card component (`src/shared/components/ui/card`).
+- Domain cards compose Shared Card instead of recreating generic card CSS.
+- Every toggle switch uses the shared Switch (`src/shared/components/ui/switch`); do not recreate switch CSS in feature modules.
+- Users data must come from Backend APIs; never from Demo mock EMP data.
+- Current authenticated user comes from Auth infrastructure, not Users Store.
+- User forms must use the shared FormBuilder.
+- Do not invent User fields that are absent from Backend contracts.
 - No documentation file may exceed 500 lines.
 
 ## Frontend i18n Rules

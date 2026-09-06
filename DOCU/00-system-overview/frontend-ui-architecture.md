@@ -13,9 +13,19 @@ The Diamond HTML Demo is the visual source of truth. Its original HTML, complete
 - Standard forms use `src/shared/components/forms`.
 - Every dropdown uses the shared Diamond Select; native `<select>` is not used
   anywhere in the system. See [Diamond Select](./ui-select.md).
+- Password fields use the shared `PasswordInput`
+  (`src/shared/components/ui/password-input`). Inside a form, use `PasswordField`
+  or the FormBuilder field type `password`. New-password rules live in
+  `src/shared/validation/password.ts` (stable `validation.*` keys).
 
 - `src/shared/components/ui/page-header` is the shared page title/breadcrumb
   block (Demo `.vhead`); pages do not re-implement that CSS.
+- `src/shared/components/ui/card` is the shared card surface (Demo `.emp` /
+  art-deco brackets). Domain cards (UserCard, VehicleCard, …) compose it
+  instead of duplicating borders, radius, shadows and hover.
+- `src/shared/components/ui/switch` is the shared toggle switch (Demo
+  `.switch`). Use it for every on/off control; the ON state uses the primary
+  gold palette — feature modules must not recreate switch styling.
 
 Shared UI components do not know about APIs, Zustand, routing, or business permissions. Pages use domain hooks as their UI facade.
 
@@ -31,15 +41,19 @@ scrolls horizontally. When a second page needs the same behavior, extract
 ## Frontend Tests
 
 Unit tests run on the Node test runner with native TypeScript type stripping
-(`npm test` in `APP/frontend`) — no test dependency is installed. Tests are
-colocated as `*.test.ts` next to the pure module they cover and import relative
-paths with the explicit `.ts` extension (required by the Node ESM resolver;
-`allowImportingTsExtensions` is enabled for that reason). React component and
-end-to-end testing infrastructure does not exist yet.
+(`npm test` in `APP/frontend`). Tests are colocated as `*.test.ts` next to the
+pure module they cover and import relative paths with the explicit `.ts` extension
+(required by the Node ESM resolver; `allowImportingTsExtensions` is enabled for
+that reason). React component tests are not wired yet.
+
+Playwright visual regression for protected pages lives under `APP/frontend/e2e/`
+(`npm run test:e2e`). Set `PLAYWRIGHT_LOGIN_EMAIL`, `PLAYWRIGHT_LOGIN_PASSWORD`,
+and optionally `PLAYWRIGHT_BASE_URL` before running; without credentials the
+Users screenshot spec is skipped.
 
 ## Form Builder
 
-`FormBuilder<T>` is a typed developer abstraction over React Hook Form. A feature supplies a discriminated field configuration, a Zod schema, default values, translated submit labels, and an `onSubmit` callback. `FormProvider` exposes the form context to field components. Fields use `Controller` where they need to bind shared controls.
+`FormBuilder<T>` is a typed developer abstraction over React Hook Form. A feature supplies a discriminated field configuration, a Zod schema, default values, translated submit labels, and an `onSubmit` callback. `FormProvider` exposes the form context to field components. Fields use `Controller` where they need to bind shared controls. Field types: `text`, `email`, `password`, `select`.
 
 The builder owns form setup, schema resolution, field rendering, submit state, and layout order. It does not call APIs, interpret backend errors, show toasts, or perform routing. Form state is transient and is never copied into Zustand.
 

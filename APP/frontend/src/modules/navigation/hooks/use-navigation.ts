@@ -43,9 +43,9 @@ export function useNavigation(): UseNavigationResult {
     const currentPath = pathname.replace(LOCALE_PATTERN, "") || "/";
 
     /**
-     * A real Backend permission always wins over the Demo `adminonly`
-     * heuristic: an item that declares one is permission-driven, even inside an
-     * `adminOnly` group. Items that declare none keep the Demo behavior.
+     * Visibility: Backend permission when declared and held; otherwise the Demo
+     * `adminonly` heuristic (`system_admin` role) for items/groups without a
+     * matching permission in the session.
      */
     const isItemVisible = (
       item: NavigationItem,
@@ -55,7 +55,7 @@ export function useNavigation(): UseNavigationResult {
         ...(item.permission ? [item.permission] : []),
         ...(item.permissions ?? []),
       ];
-      if (required.length > 0) return required.every(hasPermission);
+      if (required.length > 0 && required.every(hasPermission)) return true;
       return (!item.adminOnly && !group.adminOnly) || isAdmin;
     };
 

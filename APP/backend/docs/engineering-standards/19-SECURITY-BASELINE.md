@@ -7,7 +7,7 @@
 
 ## Tokens & sessions
 
-- **Access token:** short-lived JWT (`ACCESS_TOKEN_TTL`, default 15 min), signed with `JWT_ACCESS_SECRET`.
+- **Access token:** JWT (`ACCESS_TOKEN_TTL`, default 7 days), signed with `JWT_ACCESS_SECRET`.
 - **Refresh token:** opaque random value, stored **hashed** in `AuthSession`, revocable, **rotated** on every use, with **reuse detection** (revokes the token family).
 - Password change/reset revokes all sessions. Suspending a user blocks login and revokes sessions.
 - Reading identity on the hot path is read-only; `lastSeen` updates are throttled and fire-and-forget.

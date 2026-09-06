@@ -87,10 +87,19 @@
     "noResults": "No results",
     "clear": "Clear selection"
   },
+  "Password": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
   "validation": {
     "required": "This field is required",
     "tooLong": "This value is too long",
-    "roleKey": "Use lowercase letters, numbers and underscores, starting with a letter"
+    "invalidEmail": "Enter a valid email address",
+    "roleKey": "Use lowercase letters, numbers and underscores, starting with a letter",
+    "passwordMin": "Password must be at least 8 characters",
+    "passwordLetter": "Password must include a letter",
+    "passwordNumber": "Password must include a number",
+    "passwordMismatch": "Passwords do not match"
   },
   "Roles": {
     "crumbs": "Administration · Access control",
@@ -266,5 +275,77 @@
       "cancel": "Cancel"
     },
     "cellLabel": "{permission} — {role}"
+  },
+  "Users": {
+    "crumbs": "Administration",
+    "title": "Staff",
+    "subtitle": "Manage staff accounts and their permissions",
+    "addUser": "+ New employee",
+    "refresh": "Refresh",
+    "loading": "Loading staff…",
+    "searchPlaceholder": "Search by name or email…",
+    "searchLabel": "Search staff",
+    "searchAction": "Search",
+    "statusFilterLabel": "Filter by status",
+    "allStatuses": "All statuses",
+    "statusActive": "Active",
+    "statusPending": "Pending",
+    "statusSuspended": "Suspended",
+    "lastActivity": "Last activity",
+    "lastActivityNever": "No activity yet",
+    "statusToggleLabel": "Toggle account status for {name}",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "delete": {
+      "title": "Delete employee",
+      "description": "This permanently removes {name}'s account. This action cannot be undone.",
+      "confirm": "Delete account"
+    },
+    "denied": {
+      "title": "You do not have access to this page",
+      "description": "Viewing staff requires the users.read permission. Ask an administrator to grant it."
+    },
+    "error": {
+      "title": "Staff could not be loaded",
+      "generic": "Something went wrong while loading the data. Please try again.",
+      "retry": "Try again",
+      "FORBIDDEN": "Your account is not allowed to read users.",
+      "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "RATE_LIMITED": "Too many requests. Please wait a moment and try again.",
+      "NETWORK_ERROR": "Could not reach the server. Check your connection and try again.",
+      "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
+      "TOKEN_INVALID": "Your session is no longer valid. Please sign in again.",
+      "CONFLICT": "A user with this email already exists.",
+      "lastAdmin": "Cannot remove the last administrator account. Assign another administrator first, then try again.",
+      "VALIDATION_ERROR": "Some values are not valid. Check the fields and try again."
+    },
+    "empty": {
+      "title": "No staff members yet",
+      "description": "The backend returned no users for the current filters."
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {totalPages}"
+    },
+    "form": {
+      "createTitle": "Add new employee",
+      "createDescription": "Set an initial password so the employee can sign in immediately.",
+      "editTitle": "Edit employee",
+      "editDescription": "Update the employee profile and role assignment.",
+      "emailPlaceholder": "Work email",
+      "namePlaceholder": "Full name (optional)",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "roleLabel": "Role",
+      "rolePlaceholder": "Assign a role (optional)",
+      "create": "Create account",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "close": "Close",
+      "cancel": "Cancel"
+    }
   }
 }

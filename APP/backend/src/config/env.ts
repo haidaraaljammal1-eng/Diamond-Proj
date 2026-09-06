@@ -42,7 +42,7 @@ const EnvSchema = z
       .string()
       .min(32, "TWO_FACTOR_ENCRYPTION_KEY must be at least 32 chars"),
 
-    ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(900),
+    ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(604800),
     REFRESH_TOKEN_TTL: z.coerce.number().int().positive().default(2592000),
     ACCOUNT_SETUP_TOKEN_TTL: z.coerce.number().int().positive().default(86400),
     PASSWORD_RESET_TOKEN_TTL: z.coerce.number().int().positive().default(3600),

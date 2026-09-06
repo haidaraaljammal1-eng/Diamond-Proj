@@ -32,6 +32,9 @@ Current namespaces:
 | `Shell` | AppShell header/footer/controls |
 | `Dashboard` | Dashboard placeholder |
 | `validation` | Stable Zod validation message keys |
+| `Password` | Password input reveal/hide labels |
+| `Select` | Shared Select placeholders and empty state |
+| `Users` | Staff page copy and user form labels |
 
 ## Navigation Translation Rule
 

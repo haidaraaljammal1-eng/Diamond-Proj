@@ -2,7 +2,15 @@
 
 import { useTranslations } from "next-intl";
 
-export type ValidationMessageKey = "required";
+export type ValidationMessageKey =
+  | "required"
+  | "tooLong"
+  | "invalidEmail"
+  | "roleKey"
+  | "passwordMin"
+  | "passwordLetter"
+  | "passwordNumber"
+  | "passwordMismatch";
 
 interface FormErrorProps {
   id?: string;

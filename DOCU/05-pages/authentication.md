@@ -8,6 +8,8 @@ Fastify at `APP/backend` is the authentication authority. The frontend uses Auth
 
 Auth.js refreshes the rotating Backend token when its access token is near expiry. A failed refresh invalidates the token and the session. Logout calls Fastify `POST /auth/logout` through the Auth.js sign-out event, then removes the frontend session. Fastify `403` remains an authorization error; it is not logout.
 
+The authenticated session lasts 7 days (`ACCESS_TOKEN_TTL=604800` and Auth.js `session.maxAge`). The refresh token remains longer-lived so a session that is still in use can rotate before expiry.
+
 The Backend's `requiresTwoFactor` login response creates no Auth.js session. The challenge must be completed at `POST /auth/two-factor/verify` or `/auth/two-factor/recovery` before a session can exist. The current frontend exposes the architecture for this flow but does not invent a 2FA page.
 
 ## Route guards
