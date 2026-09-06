@@ -22,7 +22,8 @@
     "test": "node --import tsx --test tests/unit/*.test.ts tests/integration/*.test.ts",
     "test:unit": "node --import tsx --test tests/unit/*.test.ts",
     "test:integration": "node --import tsx --test-concurrency=1 --test tests/integration/*.test.ts",
-    "verify:reports": "tsx scripts/verify-reports.ts"
+    "verify:reports": "tsx scripts/verify-reports.ts",
+    "db:seed:demo": "tsx prisma/seed/demo-fleet.ts"
   },
   "prisma": {
     "seed": "node prisma/seed.cjs"

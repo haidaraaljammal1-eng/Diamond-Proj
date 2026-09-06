@@ -23,3 +23,25 @@ The single `src/proxy.ts` combines next-intl and Auth.js. Authenticated users ar
 - `APP/frontend/src/app/api/auth/[...nextauth]/route.ts`: Auth.js App Router handler.
 - `APP/frontend/src/modules/auth/hooks/`: UI authentication facades.
 - `APP/frontend/src/infrastructure/api/client.ts`: central access-token injection.
+
+## Token refresh (single-use rotation)
+
+The Backend ROTATES refresh tokens: `POST /auth/refresh` returns a new pair and
+answers any reuse of the old one with `TOKEN_INVALID`.
+
+The NextAuth `jwt` callback runs once per request, so a page that fires several
+requests at once (a list plus a lookup) used to refresh the same stored token
+several times in parallel: the first rotation succeeded, the rest came back 401,
+and the session was marked `RefreshAccessTokenError` — which surfaced on every
+page as a data-loading error ("could not load the fleet") roughly 15 minutes
+after login, fixable only by signing in again.
+
+Two pieces prevent that:
+
+- `src/infrastructure/auth/refresh-coordinator.ts` — keys in-flight requests and
+  their results by the OLD token, so concurrent callbacks share one rotation and
+  a straggler still receives usable tokens (60s window). Failures are never
+  cached. Unit-tested in `refresh-coordinator.test.ts`.
+- `src/shared/layouts/app-shell/session-guard.tsx` — when a session really can no
+  longer be refreshed, it signs out and sends the user to the login screen
+  instead of leaving an authenticated-looking shell whose every request 401s.

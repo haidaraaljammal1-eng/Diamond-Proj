@@ -5,14 +5,16 @@ import type { VehicleOperationalStatus } from "../../types/vehicle.types";
 
 export interface VehicleStatusProps {
   status: VehicleOperationalStatus;
+  /** Opaque surface — pass it whenever the chip sits on a vehicle photo. */
+  solid?: boolean;
   className?: string;
 }
 
-export function VehicleStatus({ status, className }: VehicleStatusProps) {
+export function VehicleStatus({ status, solid = false, className }: VehicleStatusProps) {
   const t = useTranslations("Vehicles");
   const presentation = getVehicleStatusPresentation(status);
   return (
-    <Chip tone={presentation.tone} dot className={className}>
+    <Chip tone={presentation.tone} dot solid={solid} className={className}>
       {t(presentation.translationKey)}
     </Chip>
   );

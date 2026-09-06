@@ -9,16 +9,16 @@ import { VEHICLES_MAX_PAGE_SIZE } from "../api/vehicles.api.types";
 import type {
   VehicleCardDto,
   VehicleDetailDto,
-  VehicleStatusFilter,
+  VehicleFiltersState,
 } from "../types/vehicle.types";
+import { DEFAULT_VEHICLE_FILTERS } from "../utils/vehicle-filters";
 
 export type VehiclesLoadStatus = "idle" | "loading" | "ready" | "error";
 export type VehicleDetailLoadStatus = "idle" | "loading" | "ready" | "error";
 
-export interface VehiclesQuery {
+export interface VehiclesQuery extends VehicleFiltersState {
   page: number;
   pageSize: number;
-  status: VehicleStatusFilter;
 }
 
 interface VehiclesState {
@@ -34,6 +34,7 @@ interface VehiclesState {
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   setQuery: (partial: Partial<VehiclesQuery>) => void;
+  resetFilters: () => void;
   fetchVehicle: (id: number) => Promise<void>;
   clearDetail: () => void;
 }
@@ -46,11 +47,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     const { query } = get();
     set({ status: "loading", error: null });
     try {
-      const result = await getVehicles({
-        page: query.page,
-        pageSize: query.pageSize,
-        status: query.status,
-      });
+      const result = await getVehicles(query);
       set({
         vehicles: result.data,
         meta: result.meta,
@@ -73,7 +70,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
   return {
     vehicles: [],
     meta: null,
-    query: { page: 1, pageSize: VEHICLES_MAX_PAGE_SIZE, status: "all" },
+    query: { ...DEFAULT_VEHICLE_FILTERS, page: 1, pageSize: VEHICLES_MAX_PAGE_SIZE },
     status: "idle",
     error: null,
     detail: null,
@@ -93,6 +90,13 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     setQuery(partial) {
       set((state) => ({
         query: { ...state.query, ...partial },
+        status: "idle",
+      }));
+      void runList();
+    },
+    resetFilters() {
+      set((state) => ({
+        query: { ...state.query, ...DEFAULT_VEHICLE_FILTERS, page: 1 },
         status: "idle",
       }));
       void runList();

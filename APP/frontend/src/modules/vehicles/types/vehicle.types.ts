@@ -50,8 +50,27 @@ export interface VehicleDetailDto extends VehicleCardDto {
   gallery: VehicleImageDto[];
 }
 
-export interface VehiclesListQuery {
+/** Fleet ordering presets (mapped to the Backend `sort` param). */
+export type VehicleSortKey =
+  | "newest"
+  | "priceAsc"
+  | "priceDesc"
+  | "yearDesc"
+  | "plate";
+
+/** Everything the fleet toolbar can narrow by. */
+export interface VehicleFiltersState {
+  status: VehicleStatusFilter;
+  /** Free text — Backend matches plate, VIN, external id and model name. */
+  search: string;
+  /** Vehicle model id, or `null` for every model. */
+  modelId: number | null;
+  /** Include vehicles retired from the fleet (`isActive = false`). */
+  includeInactive: boolean;
+  sort: VehicleSortKey;
+}
+
+export interface VehiclesListQuery extends Partial<VehicleFiltersState> {
   page?: number;
   pageSize?: number;
-  status?: VehicleStatusFilter;
 }

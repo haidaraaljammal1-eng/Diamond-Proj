@@ -30,6 +30,13 @@ The Diamond HTML Demo is the visual source of truth. Its original HTML, complete
   card heading (Demo `.card h3`). Pages compose these instead of re-styling
   them; see `DOCU/05-pages/dashboard.md`.
 - `Badge` remains the rounded role pill; the Demo status chip is `Chip`.
+- UI glyphs come from Iconify through `src/shared/components/ui/icon` (`<Icon name="mdi:…" />`).
+  Feature code never inlines an SVG and never puts an emoji in a translation string.
+  The Demo rail artwork in `modules/navigation/navigation.icons.tsx` is the one
+  deliberate exception. Icon data is fetched from the Iconify API at runtime and
+  cached in the browser; an offline bundle can replace it if the deployment forbids that.
+- `Chip` takes `solid` for chips over photography — an opaque tinted surface
+  instead of the translucent default.
 - Charts use `recharts` through `src/shared/components/charts` (`TrendChart`,
   `DonutChart`) with the validated Diamond chart palette in `chart-theme.ts`.
   Feature code never picks chart colors itself.

@@ -457,19 +457,40 @@
       "all": "الكل",
       "available": "متاحة",
       "rented": "مؤجرة",
-      "service": "صيانة"
+      "service": "صيانة",
+      "statusGroup": "حالة السيارة",
+      "searchLabel": "بحث في الأسطول",
+      "searchPlaceholder": "ابحث بلوحة أو موديل أو رقم هيكل…",
+      "modelLabel": "الموديل",
+      "modelAll": "كل الموديلات",
+      "modelsLoading": "جارٍ تحميل الموديلات…",
+      "sortLabel": "الترتيب",
+      "includeInactive": "إظهار المسحوبة من الخدمة",
+      "clear": "مسح الفلاتر",
+      "activeCount": "{count} فلتر نشط",
+      "results": "{count} سيارة",
+      "sort": {
+        "newest": "الأحدث إضافة",
+        "priceAsc": "السعر اليومي · الأقل",
+        "priceDesc": "السعر اليومي · الأعلى",
+        "yearDesc": "سنة الصنع · الأحدث",
+        "plate": "رقم اللوحة"
+      }
     },
     "actions": {
-      "generateLinkSetPrice": "💰 توليد رابط · تحديد السعر",
-      "generateReturnLink": "↩ Generate Return Link",
-      "setPrice": "✏️ السعر",
-      "setPriceDetail": "✏️ تحديد السعر",
+      "generateLinkSetPrice": "توليد رابط · تحديد السعر",
+      "generateReturnLink": "توليد رابط إرجاع",
+      "setPrice": "السعر",
+      "setPriceDetail": "تحديد السعر",
       "setPriceTitle": "تحديد سعر الإيجار يدويًا",
-      "gps": "📍 GPS",
+      "gps": "GPS",
       "gpsTitle": "متابعة موقع السيارة لحظياً",
-      "gpsTrack": "📍 تتبع GPS",
-      "more": "⋯",
-      "goMaintenance": "🛠 الانتقال إلى قسم الصيانة"
+      "gpsTrack": "تتبع GPS",
+      "more": "المزيد",
+      "goMaintenance": "الانتقال إلى قسم الصيانة",
+      "generateLinkSetPriceShort": "توليد رابط",
+      "generateReturnLinkShort": "رابط إرجاع",
+      "goMaintenanceShort": "الصيانة"
     },
     "boundary": {
       "noContract": "لا يوجد عقد مرتبط بهذه السيارة",
@@ -515,7 +536,7 @@
       "serviceStatus": "في الورشة — متابعة الصيانة"
     },
     "setPrice": {
-      "title": "💰 تحديد سعر الإيجار — {name}",
+      "title": "تحديد سعر الإيجار — {name}",
       "description": "اختر فترة الإيجار ثم أدخل المبلغ المطلوب من العميل. · {plate}",
       "period": {
         "day": "يومي",

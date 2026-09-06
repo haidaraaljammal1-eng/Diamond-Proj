@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { PageHeader } from "@/shared/components/ui/page-header";
+import { useModelLookup } from "../../hooks/use-model-lookup";
 import { useVehicles } from "../../hooks/use-vehicles";
 import type { VehicleCardDto } from "../../types/vehicle.types";
 import { VehicleDetailDialog } from "../vehicle-detail/vehicle-detail-dialog";
@@ -20,14 +21,22 @@ export function VehiclesScreen() {
   const router = useRouter();
   const {
     vehicles,
-    statusFilter,
+    meta,
+    filters,
+    activeFilterCount,
     isAllowed,
     isLoading,
     isReady,
     error,
     refreshVehicles,
     setStatusFilter,
+    setSearch,
+    setModelId,
+    setIncludeInactive,
+    setSort,
+    clearFilters,
   } = useVehicles();
+  const { models, isLoading: modelsLoading } = useModelLookup();
 
   const [detailVehicle, setDetailVehicle] = useState<VehicleCardDto | null>(null);
   const [priceVehicle, setPriceVehicle] = useState<VehicleCardDto | null>(null);
@@ -35,12 +44,36 @@ export function VehiclesScreen() {
 
   const filterLabels = useMemo(
     () => ({
-      all: t("filters.all"),
-      available: t("filters.available"),
-      rented: t("filters.rented"),
-      service: t("filters.service"),
+      statusGroup: t("filters.statusGroup"),
+      status: {
+        all: t("filters.all"),
+        available: t("filters.available"),
+        rented: t("filters.rented"),
+        service: t("filters.service"),
+      },
+      sort: {
+        newest: t("filters.sort.newest"),
+        priceAsc: t("filters.sort.priceAsc"),
+        priceDesc: t("filters.sort.priceDesc"),
+        yearDesc: t("filters.sort.yearDesc"),
+        plate: t("filters.sort.plate"),
+      },
+      searchLabel: t("filters.searchLabel"),
+      searchPlaceholder: t("filters.searchPlaceholder"),
+      modelLabel: t("filters.modelLabel"),
+      modelAll: t("filters.modelAll"),
+      modelsLoading: t("filters.modelsLoading"),
+      sortLabel: t("filters.sortLabel"),
+      includeInactive: t("filters.includeInactive"),
+      clear: t("filters.clear"),
+      activeCount: t("filters.activeCount", { count: activeFilterCount }),
     }),
-    [t],
+    [t, activeFilterCount],
+  );
+
+  const modelOptions = useMemo(
+    () => models.map((model) => ({ id: model.id, label: model.label })),
+    [models],
   );
 
   const showNotice = useCallback((message: string) => {
@@ -142,16 +175,34 @@ export function VehiclesScreen() {
       ) : null}
 
       <VehicleFilters
-        value={statusFilter}
-        onChange={setStatusFilter}
+        filters={filters}
+        activeFilterCount={activeFilterCount}
+        models={modelOptions}
+        modelsLoading={modelsLoading}
+        resultsLabel={t("filters.results", { count: meta?.total ?? vehicles.length })}
         labels={filterLabels}
+        onStatusChange={setStatusFilter}
+        onSearchChange={setSearch}
+        onModelChange={setModelId}
+        onIncludeInactiveChange={setIncludeInactive}
+        onSortChange={setSort}
+        onClear={clearFilters}
       />
 
       {vehicles.length === 0 ? (
         <EmptyState
-          title={statusFilter === "all" ? t("empty.title") : t("empty.filteredTitle")}
+          title={activeFilterCount === 0 ? t("empty.title") : t("empty.filteredTitle")}
           description={
-            statusFilter === "all" ? t("empty.description") : t("empty.filteredDescription")
+            activeFilterCount === 0
+              ? t("empty.description")
+              : t("empty.filteredDescription")
+          }
+          action={
+            activeFilterCount > 0 ? (
+              <Button type="button" size="sm" onClick={clearFilters}>
+                {t("filters.clear")}
+              </Button>
+            ) : null
           }
         />
       ) : (

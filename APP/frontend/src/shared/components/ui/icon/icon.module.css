@@ -1,0 +1,7 @@
+/* Shared Iconify glyph — inherits the current text color and stays inline. */
+.icon {
+  display: inline-block;
+  flex: none;
+  color: currentColor;
+  vertical-align: -0.15em;
+}

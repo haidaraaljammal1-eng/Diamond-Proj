@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3100",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3100",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\"",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
+    "@iconify/react": "^6.0.2",
     "next": "16.3.4",
     "next-auth": "^5.0.0-beta.32",
     "next-intl": "^4.3.0",

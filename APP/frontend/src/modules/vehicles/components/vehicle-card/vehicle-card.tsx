@@ -4,6 +4,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
+import { Icon } from "@/shared/components/ui/icon";
 import type { VehicleCardDto } from "../../types/vehicle.types";
 import {
   shouldShowCurrentRental,
@@ -46,7 +47,16 @@ export function VehicleCard({
     vehicle.currentRental,
   );
 
+  // The card footer shows the short label and keeps the full one as the
+  // tooltip/accessible name, so a long action never wraps the footer.
   const primaryLabel =
+    vehicle.operationalStatus === "service"
+      ? t("actions.goMaintenanceShort")
+      : vehicle.operationalStatus === "rented"
+        ? t("actions.generateReturnLinkShort")
+        : t("actions.generateLinkSetPriceShort");
+
+  const primaryTitle =
     vehicle.operationalStatus === "service"
       ? t("actions.goMaintenance")
       : vehicle.operationalStatus === "rented"
@@ -76,7 +86,11 @@ export function VehicleCard({
           alt={vehicle.displayName}
           className={styles.image}
         />
-        <VehicleStatus status={vehicle.operationalStatus} className={styles.status} />
+        <VehicleStatus
+          status={vehicle.operationalStatus}
+          solid
+          className={styles.status}
+        />
       </div>
 
       <div className={styles.body}>
@@ -98,8 +112,8 @@ export function VehicleCard({
       </div>
 
       <div className={styles.rate}>
-        <b>{format.number(vehicle.dailyRate ?? 0)}</b>
-        <span>{t("dailyRateSuffix")}</span>
+        <b className={styles.rateValue}>{format.number(vehicle.dailyRate ?? 0)}</b>
+        <span className={styles.rateUnit}>{t("dailyRateSuffix")}</span>
         <span className={styles.monthly}>
           {format.number(vehicle.monthlyRate ?? 0)} {t("monthlyRateSuffix")}
         </span>
@@ -115,11 +129,22 @@ export function VehicleCard({
           type="button"
           size="sm"
           className={styles.primaryAction}
+          title={primaryTitle}
+          aria-label={primaryTitle}
           onClick={(event) => {
             stopOpen(event);
             onPrimaryAction(vehicle);
           }}
         >
+          <Icon
+            name={
+              vehicle.operationalStatus === "service"
+                ? "mdi:wrench-outline"
+                : vehicle.operationalStatus === "rented"
+                  ? "mdi:keyboard-return"
+                  : "mdi:link-variant"
+            }
+          />
           {primaryLabel}
         </Button>
         {vehicle.operationalStatus !== "rented" ? (
@@ -127,13 +152,15 @@ export function VehicleCard({
             type="button"
             variant="ghost"
             size="sm"
+            className={styles.iconAction}
             title={t("actions.setPriceTitle")}
+            aria-label={t("actions.setPriceDetail")}
             onClick={(event) => {
               stopOpen(event);
               onSetPrice(vehicle);
             }}
           >
-            {t("actions.setPrice")}
+            <Icon name="mdi:pencil-outline" size={17} />
           </Button>
         ) : null}
         {vehicle.operationalStatus === "rented" ? (
@@ -141,25 +168,30 @@ export function VehicleCard({
             type="button"
             variant="ghost"
             size="sm"
+            className={styles.iconAction}
             title={t("actions.gpsTitle")}
+            aria-label={t("actions.gpsTrack")}
             onClick={(event) => {
               stopOpen(event);
               onGps(vehicle);
             }}
           >
-            {t("actions.gps")}
+            <Icon name="mdi:map-marker-outline" size={17} />
           </Button>
         ) : null}
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          className={styles.iconAction}
           onClick={(event) => {
             stopOpen(event);
             onMore(vehicle);
           }}
+          title={t("actions.more")}
+          aria-label={t("actions.more")}
         >
-          {t("actions.more")}
+          <Icon name="mdi:dots-horizontal" size={17} />
         </Button>
       </div>
 

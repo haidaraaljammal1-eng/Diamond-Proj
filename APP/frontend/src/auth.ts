@@ -5,6 +5,7 @@ import type {
   LoginResult,
   TokenPair,
 } from "@/infrastructure/auth/auth.types";
+import { createRefreshCoordinator } from "@/infrastructure/auth/refresh-coordinator";
 import { env } from "@/config/env";
 
 async function backendRequest<T>(
@@ -31,9 +32,14 @@ async function backendRequest<T>(
   return payload.data;
 }
 
-async function refreshToken(refreshToken: string): Promise<TokenPair> {
-  return backendRequest<TokenPair>("/auth/refresh", { refreshToken });
-}
+/**
+ * Refresh tokens are SINGLE-USE: the Backend rotates them and rejects a reuse
+ * with `TOKEN_INVALID`. The coordinator makes concurrent callbacks share one
+ * rotation instead of poisoning the session — see refresh-coordinator.ts.
+ */
+const refreshToken = createRefreshCoordinator<TokenPair>((token) =>
+  backendRequest<TokenPair>("/auth/refresh", { refreshToken: token }),
+);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },

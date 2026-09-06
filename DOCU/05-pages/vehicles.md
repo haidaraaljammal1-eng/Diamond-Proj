@@ -41,11 +41,37 @@ UI state (detail modal open, price dialog, boundary notices) stays in screen/com
 
 ## Filters
 
-Server-side `status` query: `all | available | rented | service`. Demo chip styling only — no extra filters.
+Every filter is server-side; the toolbar never filters an already-fetched page.
+
+| Control | Query param | Notes |
+|---|---|---|
+| Status chips | `status` | `all` is omitted from the request |
+| Search box | `search` | Backend matches plate, VIN, external id, model name; 350 ms debounce, trimmed |
+| Model picker | `modelId` | Options from `GET /lookups/vehicle-models` (any-of `reference_data.lookup` / `vehicle_models.read`); a failed lookup leaves the picker empty and the page working |
+| Sort | `sort` | `newest` (default, omitted), `priceAsc`, `priceDesc`, `yearDesc`, `plate` — mapped to the Backend `field:direction` whitelist |
+| Show retired | `active` | Off sends `active=true`; on omits the param so both scopes return |
+
+Changing any filter resets to page 1. The toolbar shows the result count, an
+active-filter badge and a Clear action; the empty state offers the same Clear
+when filters are what emptied the list.
+
+Query building and the active-filter count are pure functions in
+`utils/vehicle-filters.ts` (unit-tested) — the store and the API client both go
+through them.
 
 ## VehicleCard
 
 Composes shared `Card` (`padding="none"`, `interactive`) with Demo `.car` internal layout. Images via `VehicleImage` (authenticated stream). Status via shared `Chip` through `VehicleStatus`.
+
+Demo-parity details worth keeping:
+
+- The photo ground is the Demo Pearl Ivory stage (champagne, not a dark panel).
+- The status chip uses `Chip solid` — an opaque tinted surface, because a
+  translucent chip over a photo is unreadable.
+- The rate line is the Demo boxed strip: bordered champagne box, gradient daily
+  rate, monthly figure at the end.
+- Action glyphs come from Iconify through the shared `Icon` — never emoji in a
+  translation string.
 
 ## Status mapping
 

@@ -3,6 +3,7 @@ import { AppHeader } from "./header/app-header";
 import { Sidebar } from "./sidebar/sidebar";
 import { AppContent } from "./content/app-content";
 import { DrawerScrim } from "./drawer-scrim";
+import { SessionGuard } from "./session-guard";
 import { ShellFrame } from "./shell-frame";
 
 /**
@@ -20,6 +21,7 @@ import { ShellFrame } from "./shell-frame";
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <ShellFrame>
+      <SessionGuard />
       <AppHeader />
       <Sidebar />
       <DrawerScrim />

@@ -1,5 +1,6 @@
 /* Shared status chip — Demo `.chip` after the Pearl Ivory layer. */
 .chip {
+  --chip-tint: #85642d;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -29,6 +30,7 @@
 }
 
 .ok {
+  --chip-tint: #2e9e63;
   color: #2e9e63;
   border-color: rgba(70, 191, 127, 0.4);
   background: rgba(70, 191, 127, 0.13);
@@ -39,6 +41,7 @@
 }
 
 .warn {
+  --chip-tint: #b27a17;
   color: #b07f1f;
   border-color: rgba(223, 169, 59, 0.45);
   background: rgba(223, 169, 59, 0.14);
@@ -49,6 +52,7 @@
 }
 
 .bad {
+  --chip-tint: #c2453c;
   color: #c0524a;
   border-color: rgba(223, 91, 82, 0.4);
   background: rgba(223, 91, 82, 0.13);
@@ -59,6 +63,7 @@
 }
 
 .gold {
+  --chip-tint: var(--diamond-gold);
   color: var(--diamond-gold-hi);
   border-color: rgba(201, 161, 92, 0.4);
   background: rgba(201, 161, 92, 0.13);
@@ -72,4 +77,13 @@
   .chip {
     transition: none;
   }
+}
+
+/* Opaque tinted surface — for chips sitting on photos, where the translucent
+   version loses its contrast against the image behind it. */
+.solid {
+  background: color-mix(in srgb, var(--chip-tint) 20%, #ffffff);
+  border-color: color-mix(in srgb, var(--chip-tint) 45%, transparent);
+  box-shadow: 0 5px 16px rgba(122, 96, 48, 0.24);
+  backdrop-filter: none;
 }

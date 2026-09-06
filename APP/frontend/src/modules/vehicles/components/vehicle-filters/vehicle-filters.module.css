@@ -1,9 +1,23 @@
-/* Demo `.filters` / `.fchip` for the fleet page. */
-.filters {
+/* Fleet toolbar — the Demo `.filters` / `.fchip` row plus the search, model,
+   ordering and scope controls the page needs at fleet size. */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chips {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 
 .chip {
@@ -26,4 +40,92 @@
   border-color: rgba(201, 161, 92, 0.4);
   background: rgba(201, 161, 92, 0.1);
   font-weight: 600;
+}
+
+.statusEnd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.results {
+  margin: 0;
+  font-size: 11px;
+  color: var(--diamond-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* One grid, so the controls share the width instead of leaving a hole where
+   the search box stretches. Columns shrink together, then fold. */
+.controls {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(115px, 0.85fr) minmax(115px, 0.85fr) auto;
+}
+
+.search,
+.control {
+  min-width: 0;
+}
+
+/* The shared Input is a 46px underline field; inside this chrome row it wears
+   the same 36px capsule as the ghost Selects so it reads as a control, not a gap. */
+.searchInput {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 10px;
+  background: var(--diamond-onyx);
+  font-size: 12px;
+}
+
+.searchInput:hover {
+  border-color: rgba(201, 161, 92, 0.4);
+}
+
+.searchInput:focus {
+  border-color: var(--diamond-gold-hi);
+  background: rgba(201, 161, 92, 0.06);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--diamond-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+
+.badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 161, 92, 0.35);
+  background: rgba(201, 161, 92, 0.12);
+  color: var(--diamond-gold-hi);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The four controls stay on ONE row for as long as they fit; only a genuinely
+   narrow screen folds them. */
+@media (max-width: 640px) {
+  .controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 430px) {
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .statusEnd {
+    margin-inline-start: 0;
+  }
 }

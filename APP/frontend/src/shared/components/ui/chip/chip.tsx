@@ -9,6 +9,11 @@ export interface ChipProps {
   tone?: ChipTone;
   /** The Demo diamond dot (`.chip .d`). */
   dot?: boolean;
+  /**
+   * Opaque tinted surface instead of the translucent one. Use whenever the
+   * chip sits on imagery or a photo, where a see-through chip is unreadable.
+   */
+  solid?: boolean;
   className?: string;
 }
 
@@ -17,9 +22,19 @@ export interface ChipProps {
  * palette). It is the status/state marker used across contracts, fleet, ops
  * and maintenance. The rounded role pill stays `Badge`.
  */
-export function Chip({ children, tone = "neutral", dot = false, className }: ChipProps) {
+export function Chip({
+  children,
+  tone = "neutral",
+  dot = false,
+  solid = false,
+  className,
+}: ChipProps) {
   return (
-    <span className={[styles.chip, styles[tone], className].filter(Boolean).join(" ")}>
+    <span
+      className={[styles.chip, styles[tone], solid ? styles.solid : "", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {dot ? <span className={styles.dot} aria-hidden="true" /> : null}
       {children}
     </span>

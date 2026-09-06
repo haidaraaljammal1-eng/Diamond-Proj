@@ -457,19 +457,40 @@
       "all": "All",
       "available": "Available",
       "rented": "Rented",
-      "service": "Service"
+      "service": "Service",
+      "statusGroup": "Vehicle status",
+      "searchLabel": "Search the fleet",
+      "searchPlaceholder": "Search by plate, model or VIN…",
+      "modelLabel": "Model",
+      "modelAll": "All models",
+      "modelsLoading": "Loading models…",
+      "sortLabel": "Sort",
+      "includeInactive": "Show retired vehicles",
+      "clear": "Clear filters",
+      "activeCount": "{count} active",
+      "results": "{count} vehicles",
+      "sort": {
+        "newest": "Newest first",
+        "priceAsc": "Daily rate · lowest",
+        "priceDesc": "Daily rate · highest",
+        "yearDesc": "Model year · newest",
+        "plate": "Plate number"
+      }
     },
     "actions": {
-      "generateLinkSetPrice": "💰 Generate link · Set price",
-      "generateReturnLink": "↩ Generate Return Link",
-      "setPrice": "✏️ Price",
-      "setPriceDetail": "✏️ Set price",
+      "generateLinkSetPrice": "Generate link · Set price",
+      "generateReturnLink": "Generate return link",
+      "setPrice": "Price",
+      "setPriceDetail": "Set price",
       "setPriceTitle": "Set rental price manually",
-      "gps": "📍 GPS",
+      "gps": "GPS",
       "gpsTitle": "Track vehicle live",
-      "gpsTrack": "📍 GPS tracking",
-      "more": "⋯",
-      "goMaintenance": "🛠 Go to maintenance"
+      "gpsTrack": "GPS tracking",
+      "more": "More",
+      "goMaintenance": "Go to maintenance",
+      "generateLinkSetPriceShort": "Generate link",
+      "generateReturnLinkShort": "Return link",
+      "goMaintenanceShort": "Maintenance"
     },
     "boundary": {
       "noContract": "No contract is linked to this vehicle",
@@ -515,7 +536,7 @@
       "serviceStatus": "At workshop — maintenance follow-up"
     },
     "setPrice": {
-      "title": "💰 Set rental price — {name}",
+      "title": "Set rental price — {name}",
       "description": "Choose a rental period, then enter the amount for the customer. · {plate}",
       "period": {
         "day": "Daily",
