@@ -14,7 +14,12 @@ import {
   VehiclePublicSchema,
 } from "src/modules/vehicles/vehicles.schema";
 import { NumericIdParam } from "src/lib/http/common-schemas";
-import { commonErrorResponses, dataResponse, listResponse, MessageResponseSchema } from "src/lib/http/response";
+import {
+  commonErrorResponses,
+  dataResponse,
+  listResponse,
+  MessageResponseSchema,
+} from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { AppError } from "src/lib/errors/app-error";
 import { requireAuth } from "src/lib/context/auth-context";

@@ -4,16 +4,16 @@ Diamond HTML Demo (`demo.html` → Fleet / Vehicles) drives the scope. This docu
 
 ## Demo requirements (summary)
 
-| Demo concept | Backend |
-|---|---|
-| Vehicle card (name, year, plate, color, status, rates) | `VehicleCard` projection on `GET /vehicles` |
-| Filters: all / available / rented / service | `status` query param |
-| Primary card image | `primaryImage` (first `isPrimary`, else lowest `sortOrder`) |
-| Detail modal specs + gallery | `GET /vehicles/:id` → `VehicleDetail` |
-| Current renter + rental timer | `currentRental` (blocked — see below) |
-| Set Rental Price / Generate Link | **Out of scope** — Contracts/Rental domain |
-| GPS button | **Out of scope** — GPS domain |
-| Service workshop details | **Out of scope** — Maintenance domain |
+| Demo concept                                           | Backend                                                     |
+| ------------------------------------------------------ | ----------------------------------------------------------- |
+| Vehicle card (name, year, plate, color, status, rates) | `VehicleCard` projection on `GET /vehicles`                 |
+| Filters: all / available / rented / service            | `status` query param                                        |
+| Primary card image                                     | `primaryImage` (first `isPrimary`, else lowest `sortOrder`) |
+| Detail modal specs + gallery                           | `GET /vehicles/:id` → `VehicleDetail`                       |
+| Current renter + rental timer                          | `currentRental` (blocked — see below)                       |
+| Set Rental Price / Generate Link                       | **Out of scope** — Contracts/Rental domain                  |
+| GPS button                                             | **Out of scope** — GPS domain                               |
+| Service workshop details                               | **Out of scope** — Maintenance domain                       |
 
 ## Models
 
@@ -54,11 +54,11 @@ Used by `GET /vehicles/filter-options` and `vehicleType` list filtering.
 
 ## Status semantics
 
-| API value | DB enum | Demo label (frontend i18n) |
-|---|---|---|
-| `available` | `AVAILABLE` | متاحة |
-| `rented` | `RENTED` | مؤجرة |
-| `service` | `SERVICE` | صيانة |
+| API value   | DB enum     | Demo label (frontend i18n) |
+| ----------- | ----------- | -------------------------- |
+| `available` | `AVAILABLE` | متاحة                      |
+| `rented`    | `RENTED`    | مؤجرة                      |
+| `service`   | `SERVICE`   | صيانة                      |
 
 `isActive` remains master-data lifecycle (deactivate/reactivate). It is **not** the fleet operational status.
 
@@ -77,18 +77,18 @@ Based on `operationalStatus` only — no Contracts lookup, no fake rental data.
 
 All under `/vehicles` (admin route access), permission-gated:
 
-| Method | Path | Permission | Purpose |
-|---|---|---|---|
-| GET | `/vehicles` | `vehicles.read` | Paginated card list |
-| GET | `/vehicles/filter-options` | `vehicles.read` | Distinct active-fleet vehicle type options |
-| GET | `/vehicles/:id` | `vehicles.read` | Detail + full gallery |
-| POST | `/vehicles` | `vehicles.manage` | Create vehicle |
-| PUT | `/vehicles/:id` | `vehicles.manage` | Partial update (incl. default rates) |
-| POST | `/vehicles/:id/deactivate` | `vehicles.manage` | Fleet delete → soft deactivate |
-| POST | `/vehicles/:id/reactivate` | `vehicles.manage` | Restore deactivated vehicle |
-| POST | `/vehicles/:id/photos` | `vehicles.manage` | Upload gallery image |
-| DELETE | `/vehicles/:id/photos/:photoId` | `vehicles.manage` | Remove gallery image |
-| GET | `/vehicles/:id/photos/:photoId/stream` | `vehicles.read` | Inline photo stream |
+| Method | Path                                   | Permission        | Purpose                                    |
+| ------ | -------------------------------------- | ----------------- | ------------------------------------------ |
+| GET    | `/vehicles`                            | `vehicles.read`   | Paginated card list                        |
+| GET    | `/vehicles/filter-options`             | `vehicles.read`   | Distinct active-fleet vehicle type options |
+| GET    | `/vehicles/:id`                        | `vehicles.read`   | Detail + full gallery                      |
+| POST   | `/vehicles`                            | `vehicles.manage` | Create vehicle                             |
+| PUT    | `/vehicles/:id`                        | `vehicles.manage` | Partial update (incl. default rates)       |
+| POST   | `/vehicles/:id/deactivate`             | `vehicles.manage` | Fleet delete → soft deactivate             |
+| POST   | `/vehicles/:id/reactivate`             | `vehicles.manage` | Restore deactivated vehicle                |
+| POST   | `/vehicles/:id/photos`                 | `vehicles.manage` | Upload gallery image                       |
+| DELETE | `/vehicles/:id/photos/:photoId`        | `vehicles.manage` | Remove gallery image                       |
+| GET    | `/vehicles/:id/photos/:photoId/stream` | `vehicles.read`   | Inline photo stream                        |
 
 ### Create semantics
 
@@ -112,6 +112,10 @@ All under `/vehicles` (admin route access), permission-gated:
 - No VehicleModel is auto-created.
 
 Optional create fields: `vin`, `modelYear`, `color`, `plateNumber`, `dailyRate`, `monthlyRate`, `externalId`.
+
+**Optional photo (frontend only in current scope):** binary is **not** sent on `POST /vehicles`. After create, the client may upload one image via `POST /vehicles/:id/photos`. The first photo is marked `isPrimary` and surfaces as `primaryImage` on list/detail. No seed or bulk photo backfill for existing fleet rows.
+
+**Development fleet baseline:** `npm run db:cleanup:dev-fleet` (development only — refuses production/non-local DB) removes non-`DEMO-FLEET-*` vehicles and ensures exactly `DEMO-FLEET-01..20` with zero photos, then re-runs `db:seed:demo` idempotently.
 
 ### Default pricing
 
@@ -143,9 +147,7 @@ Fleet **Delete** maps to safe deactivate:
 
 ```json
 {
-  "data": [
-    { "value": "Toyota Land Cruiser", "label": "Toyota Land Cruiser" }
-  ]
+  "data": [{ "value": "Toyota Land Cruiser", "label": "Toyota Land Cruiser" }]
 }
 ```
 
@@ -160,14 +162,14 @@ Fleet **Delete** maps to safe deactivate:
 GET /vehicles?status=all|available|rented|service&page=1&pageSize=20&active=true
 ```
 
-| Param | Purpose |
-|---|---|
-| `search` | Matches `vehicleName`, `plateNumber`, `vin`, `externalId`, legacy `model.name` |
-| `vehicleType` | Exact fleet type match on `vehicleName` or legacy `model.name` when `vehicleName` is null |
-| `modelId` | Legacy/model-linked filter (retained for compatibility) |
-| `active` | `true` → active fleet only; omit for active + inactive (Fleet UI always sends `true`) |
-| `sort` | Whitelist: `vin`, `plateNumber`, `modelYear`, `dailyRate`, `monthlyRate`, `operationalStatus`, `createdAt`, `isActive` (e.g. `dailyRate:asc`, default `createdAt:desc`) |
-| `page`, `pageSize` | Pagination |
+| Param              | Purpose                                                                                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search`           | Matches `vehicleName`, `plateNumber`, `vin`, `externalId`, legacy `model.name`                                                                                          |
+| `vehicleType`      | Exact fleet type match on `vehicleName` or legacy `model.name` when `vehicleName` is null                                                                               |
+| `modelId`          | Legacy/model-linked filter (retained for compatibility)                                                                                                                 |
+| `active`           | `true` → active fleet only; omit for active + inactive (Fleet UI always sends `true`)                                                                                   |
+| `sort`             | Whitelist: `vin`, `plateNumber`, `modelYear`, `dailyRate`, `monthlyRate`, `operationalStatus`, `createdAt`, `isActive` (e.g. `dailyRate:asc`, default `createdAt:desc`) |
+| `page`, `pageSize` | Pagination                                                                                                                                                              |
 
 ### Sort behavior
 
@@ -208,9 +210,9 @@ File: `APP/backend/prisma/seed/demo-fleet.ts`
 
 ## Permissions
 
-| Action | Permission |
-|---|---|
-| List / detail / filter options / photo stream | `vehicles.read` |
+| Action                                             | Permission        |
+| -------------------------------------------------- | ----------------- |
+| List / detail / filter options / photo stream      | `vehicles.read`   |
 | Create / update / deactivate / reactivate / photos | `vehicles.manage` |
 
 Access is permission-based only — no role-name branching.

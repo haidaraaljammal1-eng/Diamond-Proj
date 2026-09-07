@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
+import { VehiclePhotoButton } from "../../forms/add-vehicle/vehicle-photo-button";
 import type { VehicleDetailDto } from "../../types/vehicle.types";
 import {
   deriveHourlyRate,
@@ -14,6 +15,11 @@ import styles from "./vehicle-detail.module.css";
 
 export interface VehicleDetailProps {
   vehicle: VehicleDetailDto;
+  canManage: boolean;
+  isPhotoActionPending: boolean;
+  photoActionErrorMessage: string | null;
+  onUploadPhoto: (file: File) => void;
+  onReplacePhoto: (file: File) => void;
   onSetPrice: () => void;
   onPrimaryAction: () => void;
   onGps: () => void;
@@ -22,6 +28,11 @@ export interface VehicleDetailProps {
 
 export function VehicleDetail({
   vehicle,
+  canManage,
+  isPhotoActionPending,
+  photoActionErrorMessage,
+  onUploadPhoto,
+  onReplacePhoto,
   onSetPrice,
   onPrimaryAction,
   onGps,
@@ -32,29 +43,70 @@ export function VehicleDetail({
   const statusPresentation = getVehicleStatusPresentation(vehicle.operationalStatus);
   const rental = vehicle.currentRental;
   const hasRental = rental != null && vehicle.operationalStatus === "rented";
+  const primaryImage = vehicle.primaryImage;
 
   return (
     <div className={styles.root} data-testid="vehicle-detail">
       <div className={styles.hero}>
-        <VehicleImage
-          path={vehicle.primaryImage?.url}
-          alt={vehicle.displayName}
-          className={styles.heroImage}
-        />
+        <div className={styles.heroImageWrap}>
+          <VehicleImage
+            path={primaryImage?.url}
+            alt={vehicle.displayName}
+            className={styles.heroImage}
+          />
+        </div>
         <VehicleStatus status={vehicle.operationalStatus} className={styles.heroStatus} />
-        <div className={styles.heroTitle}>
-          <h3>{vehicle.displayName}</h3>
-          <p>
-            {vehicle.plateNumber ? (
-              <span dir="ltr">{vehicle.plateNumber}</span>
-            ) : null}
-            {vehicle.plateNumber && vehicle.modelYear != null ? " · " : null}
-            {vehicle.modelYear != null ? format.number(vehicle.modelYear) : null}
-          </p>
+        <div className={styles.heroFooter}>
+          <div className={styles.heroTitle}>
+            <h3>{vehicle.displayName}</h3>
+            <p>
+              {vehicle.plateNumber ? (
+                <span dir="ltr">{vehicle.plateNumber}</span>
+              ) : null}
+              {vehicle.plateNumber && vehicle.modelYear != null ? " · " : null}
+              {vehicle.modelYear != null ? format.number(vehicle.modelYear) : null}
+            </p>
+          </div>
+          {canManage && primaryImage ? (
+            <div className={styles.heroPhotoAction}>
+              <VehiclePhotoButton
+                label={t("detail.replacePhoto")}
+                ariaLabel={t("detail.replacePhoto")}
+                variant="secondaryStrong"
+                size="sm"
+                disabled={isPhotoActionPending}
+                loading={isPhotoActionPending}
+                iconName="mdi:image-edit-outline"
+                onFileSelected={onReplacePhoto}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 
       <div className={styles.body}>
+        {photoActionErrorMessage ? (
+          <p className={styles.photoError} role="alert">{photoActionErrorMessage}</p>
+        ) : null}
+
+        {!primaryImage ? (
+          <div className={styles.photoEmpty}>
+            <span>{t("detail.noPhoto")}</span>
+            {canManage ? (
+              <VehiclePhotoButton
+                label={t("form.uploadPhoto")}
+                ariaLabel={t("form.uploadPhoto")}
+                variant="secondaryStrong"
+                size="sm"
+                disabled={isPhotoActionPending}
+                loading={isPhotoActionPending}
+                iconName="mdi:image-plus"
+                onFileSelected={onUploadPhoto}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
         <p className={styles.section}>{t("detail.specs")}</p>
         <div className={styles.specs}>
           <div className={styles.spec}>
@@ -74,23 +126,6 @@ export function VehicleDetail({
             <b>{t(statusPresentation.translationKey)}</b>
           </div>
         </div>
-
-        {vehicle.gallery.length > 0 ? (
-          <div className={styles.gallery}>
-            {vehicle.gallery.map((image) => (
-              <button
-                key={image.id}
-                type="button"
-                className={styles.galleryItem}
-                aria-label={t("detail.galleryItem", { name: vehicle.displayName })}
-              >
-                <VehicleImage path={image.url} alt={vehicle.displayName} className={styles.galleryImage} />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className={styles.galleryEmpty}>{t("detail.galleryEmpty")}</div>
-        )}
 
         {vehicle.operationalStatus === "available" ? (
           <>

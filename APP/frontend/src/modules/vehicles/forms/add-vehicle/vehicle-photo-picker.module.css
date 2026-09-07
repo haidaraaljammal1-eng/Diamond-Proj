@@ -1,0 +1,51 @@
+.root {
+  margin-bottom: 4px;
+}
+
+.label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--diamond-muted);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(133, 100, 45, 0.22);
+  flex-shrink: 0;
+}
+
+.previewFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  border: 1px dashed rgba(133, 100, 45, 0.28);
+  color: var(--diamond-muted);
+  font-size: 10px;
+  text-align: center;
+  padding: 4px;
+  flex-shrink: 0;
+}

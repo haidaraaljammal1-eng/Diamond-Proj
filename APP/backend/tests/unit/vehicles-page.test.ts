@@ -122,7 +122,9 @@ test("CreateVehicleSchema accepts vehicleName without modelId property", () => {
 
 test("CreateVehicleSchema rejects empty vehicle identity", () => {
   assert.throws(() => CreateVehicleSchema.parse({ vin: "VIN-ONLY" }));
-  assert.throws(() => CreateVehicleSchema.parse({ modelId: null, vin: "VIN-NULL-MODEL" }));
+  assert.throws(() =>
+    CreateVehicleSchema.parse({ modelId: null, vin: "VIN-NULL-MODEL" }),
+  );
 });
 
 test("CreateVehicleSchema accepts legacy modelId without vehicleName", () => {
@@ -149,10 +151,7 @@ test("demo fleet seed fixture has diverse realistic distribution", () => {
 });
 
 test("fleetVehicleTypeLabel prefers direct vehicleName over legacy model", () => {
-  assert.equal(
-    fleetVehicleTypeLabel("Toyota Supra", "Legacy"),
-    "Toyota Supra",
-  );
+  assert.equal(fleetVehicleTypeLabel("Toyota Supra", "Legacy"), "Toyota Supra");
   assert.equal(fleetVehicleTypeLabel(null, "Nissan Patrol"), "Nissan Patrol");
   assert.equal(fleetVehicleTypeLabel(null, null), null);
 });

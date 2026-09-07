@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { usePermissions } from "@/modules/auth";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useVehiclesStore } from "../stores/vehicles.store";
+import type { CreateVehicleResult } from "../stores/vehicles.store";
 import type { PageMeta } from "../api/vehicles.api.types";
 import type {
   CreateVehiclePayload,
@@ -39,7 +40,10 @@ export interface UseVehiclesResult {
   deactivateError: ApiRequestError | null;
   loadVehicles: () => Promise<void>;
   refreshVehicles: () => Promise<void>;
-  addVehicle: (payload: CreateVehiclePayload) => Promise<boolean>;
+  addVehicle: (
+    payload: CreateVehiclePayload,
+    photo?: File,
+  ) => Promise<CreateVehicleResult>;
   updateDefaultRates: (id: number, payload: UpdateVehicleRatesPayload) => Promise<boolean>;
   deactivateVehicle: (id: number) => Promise<boolean>;
   clearCreateError: () => void;

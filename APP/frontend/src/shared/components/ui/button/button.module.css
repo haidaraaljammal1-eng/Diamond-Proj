@@ -80,6 +80,41 @@
   transform: translateY(1px);
 }
 
+/* Secondary Strong — champagne/ivory fill over photos or strong backgrounds.
+   Stronger than `secondary`, never a primary gold fill, never a pill. */
+.secondaryStrong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px solid rgba(201, 161, 92, 0.55);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #fffdf8, #f4e6c8);
+  color: var(--diamond-gold-hi);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(122, 96, 48, 0.14);
+}
+
+.secondaryStrong:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fffdf8, #efe0bc);
+  border-color: rgba(201, 161, 92, 0.72);
+  color: var(--diamond-gold-hi);
+}
+
+.secondaryStrong:focus-visible {
+  outline: 0;
+  border-color: rgba(201, 161, 92, 0.8);
+  box-shadow:
+    0 2px 8px rgba(122, 96, 48, 0.14),
+    0 0 0 3px rgba(201, 161, 92, 0.16);
+}
+
+.secondaryStrong:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 /* Legacy alias — prefer `secondary` for toolbar/utility actions. */
 .ghost {
   display: inline-flex;

@@ -3,7 +3,15 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
-import { createVehicle as createVehicleRequest, deactivateVehicle as deactivateVehicleRequest, getVehicle, getVehicles, updateVehicleRates as updateVehicleRatesRequest } from "../api/vehicles.api";
+import {
+  createVehicle as createVehicleRequest,
+  deactivateVehicle as deactivateVehicleRequest,
+  deleteVehiclePhoto as deleteVehiclePhotoRequest,
+  getVehicle,
+  getVehicles,
+  updateVehicleRates as updateVehicleRatesRequest,
+  uploadVehiclePhoto,
+} from "../api/vehicles.api";
 import type { PageMeta } from "../api/vehicles.api.types";
 import { VEHICLES_MAX_PAGE_SIZE } from "../api/vehicles.api.types";
 import type {
@@ -18,6 +26,18 @@ import { useFleetTypeLookupStore } from "./fleet-type-lookup.store";
 
 export type VehiclesLoadStatus = "idle" | "loading" | "ready" | "error";
 export type VehicleDetailLoadStatus = "idle" | "loading" | "ready" | "error";
+
+export type CreateVehicleResult =
+  | { ok: true; photoUploadFailed?: boolean }
+  | { ok: false };
+
+export type ReplaceVehiclePhotoResult =
+  | { ok: true; deleteFailed?: boolean }
+  | { ok: false; stage: "upload" };
+
+export type UploadVehiclePhotoResult =
+  | { ok: true }
+  | { ok: false };
 
 export interface VehiclesQuery extends VehicleFiltersState {
   page: number;
@@ -40,18 +60,36 @@ interface VehiclesState {
   updateRatesError: ApiRequestError | null;
   isDeactivating: boolean;
   deactivateError: ApiRequestError | null;
+  isPhotoActionPending: boolean;
+  photoActionError: ApiRequestError | null;
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   setQuery: (partial: Partial<VehiclesQuery>) => void;
   resetFilters: () => void;
   fetchVehicle: (id: number) => Promise<void>;
   clearDetail: () => void;
-  createVehicle: (payload: CreateVehiclePayload) => Promise<boolean>;
+  createVehicle: (
+    payload: CreateVehiclePayload,
+    photo?: File,
+  ) => Promise<CreateVehicleResult>;
   clearCreateError: () => void;
-  updateVehicleRates: (id: number, payload: UpdateVehicleRatesPayload) => Promise<boolean>;
+  updateVehicleRates: (
+    id: number,
+    payload: UpdateVehicleRatesPayload,
+  ) => Promise<boolean>;
   clearUpdateRatesError: () => void;
   deactivateVehicle: (id: number) => Promise<boolean>;
   clearDeactivateError: () => void;
+  uploadVehiclePhotoForVehicle: (
+    vehicleId: number,
+    file: File,
+  ) => Promise<UploadVehiclePhotoResult>;
+  replaceVehiclePhotoForVehicle: (
+    vehicleId: number,
+    oldPhotoId: string,
+    file: File,
+  ) => Promise<ReplaceVehiclePhotoResult>;
+  clearPhotoActionError: () => void;
 }
 
 let listInFlight: Promise<void> | null = null;
@@ -89,7 +127,11 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
   return {
     vehicles: [],
     meta: null,
-    query: { ...DEFAULT_VEHICLE_FILTERS, page: 1, pageSize: VEHICLES_MAX_PAGE_SIZE },
+    query: {
+      ...DEFAULT_VEHICLE_FILTERS,
+      page: 1,
+      pageSize: VEHICLES_MAX_PAGE_SIZE,
+    },
     status: "idle",
     error: null,
     detail: null,
@@ -102,6 +144,8 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     updateRatesError: null,
     isDeactivating: false,
     deactivateError: null,
+    isPhotoActionPending: false,
+    photoActionError: null,
     load() {
       const status = get().status;
       if (status === "ready" || status === "loading") {
@@ -164,16 +208,26 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     clearCreateError() {
       set({ createError: null });
     },
-    async createVehicle(payload) {
+    async createVehicle(payload, photo) {
       set({ isCreating: true, createError: null });
       try {
-        await createVehicleRequest(payload);
+        const created = await createVehicleRequest(payload);
+        let photoUploadFailed = false;
+        if (photo) {
+          try {
+            await uploadVehiclePhoto(created.id, photo);
+          } catch {
+            photoUploadFailed = true;
+          }
+        }
         await Promise.all([runList(), refreshFleetTypeOptions()]);
         set({ isCreating: false });
-        return true;
+        return photoUploadFailed
+          ? { ok: true, photoUploadFailed: true }
+          : { ok: true };
       } catch (error) {
         set({ isCreating: false, createError: normalizeApiError(error) });
-        return false;
+        return { ok: false };
       }
     },
     async updateVehicleRates(id, payload) {
@@ -188,7 +242,10 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         set({ isUpdatingRates: false });
         return true;
       } catch (error) {
-        set({ isUpdatingRates: false, updateRatesError: normalizeApiError(error) });
+        set({
+          isUpdatingRates: false,
+          updateRatesError: normalizeApiError(error),
+        });
         return false;
       }
     },
@@ -208,12 +265,63 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         set({ isDeactivating: false });
         return true;
       } catch (error) {
-        set({ isDeactivating: false, deactivateError: normalizeApiError(error) });
+        set({
+          isDeactivating: false,
+          deactivateError: normalizeApiError(error),
+        });
         return false;
       }
     },
     clearDeactivateError() {
       set({ deactivateError: null });
+    },
+    clearPhotoActionError() {
+      set({ photoActionError: null });
+    },
+    async uploadVehiclePhotoForVehicle(vehicleId, file) {
+      set({ isPhotoActionPending: true, photoActionError: null });
+      try {
+        await uploadVehiclePhoto(vehicleId, file);
+        await get().fetchVehicle(vehicleId);
+        await runList();
+        set({ isPhotoActionPending: false });
+        return { ok: true };
+      } catch (error) {
+        set({
+          isPhotoActionPending: false,
+          photoActionError: normalizeApiError(error),
+        });
+        return { ok: false };
+      }
+    },
+    async replaceVehiclePhotoForVehicle(vehicleId, oldPhotoId, file) {
+      set({ isPhotoActionPending: true, photoActionError: null });
+      try {
+        await uploadVehiclePhoto(vehicleId, file);
+      } catch (error) {
+        set({
+          isPhotoActionPending: false,
+          photoActionError: normalizeApiError(error),
+        });
+        return { ok: false, stage: "upload" };
+      }
+
+      try {
+        await deleteVehiclePhotoRequest(vehicleId, oldPhotoId);
+      } catch (error) {
+        await get().fetchVehicle(vehicleId);
+        await runList();
+        set({
+          isPhotoActionPending: false,
+          photoActionError: normalizeApiError(error),
+        });
+        return { ok: true, deleteFailed: true };
+      }
+
+      await get().fetchVehicle(vehicleId);
+      await runList();
+      set({ isPhotoActionPending: false });
+      return { ok: true };
     },
   };
 });

@@ -10,15 +10,24 @@ import type { PrismaClient } from "@prisma/client";
 const RUN = process.env.RUN_INTEGRATION === "true";
 
 if (!RUN) {
-  test("vehicles page integration skipped (set RUN_INTEGRATION=true + a test DATABASE_URL)", {
-    skip: true,
-  });
+  test(
+    "vehicles page integration skipped (set RUN_INTEGRATION=true + a test DATABASE_URL)",
+    {
+      skip: true,
+    },
+  );
 } else {
   let app: FastifyInstance;
   let prisma: PrismaClient;
   const run = Date.now().toString(36).toUpperCase();
-  const admin = { email: `veh-admin-${run}@example.test`, password: "veh-admin-pass-123" };
-  const reader = { email: `veh-reader-${run}@example.test`, password: "veh-reader-pass-123" };
+  const admin = {
+    email: `veh-admin-${run}@example.test`,
+    password: "veh-admin-pass-123",
+  };
+  const reader = {
+    email: `veh-reader-${run}@example.test`,
+    password: "veh-reader-pass-123",
+  };
   let adminToken = "";
   let readerToken = "";
   let modelId = 0;
@@ -32,7 +41,12 @@ if (!RUN) {
 
   const ADMIN_PERMS = ["vehicles.read", "vehicles.manage", "vehicle_models.read"];
 
-  async function seedUser(email: string, password: string, roleKey: string, perms: string[]) {
+  async function seedUser(
+    email: string,
+    password: string,
+    roleKey: string,
+    perms: string[],
+  ) {
     const { hashPassword } = await import("src/lib/security/password");
     const { normalizeEmail } = await import("src/lib/security/normalize");
     const canonicalEmail = normalizeEmail(email);
@@ -59,7 +73,9 @@ if (!RUN) {
       update: { status: "ACTIVE", passwordHash },
       create: { email: canonicalEmail, name: roleKey, status: "ACTIVE", passwordHash },
     });
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: canonicalEmail } });
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email: canonicalEmail },
+    });
     await prisma.userRole.upsert({
       where: { userId_roleId: { userId: user.id, roleId: role.id } },
       update: {},
@@ -210,7 +226,12 @@ if (!RUN) {
     assert.equal(res.statusCode, 200);
     const json = res.json();
     assert.ok(Array.isArray(json.data));
-    assert.deepEqual(Object.keys(json.meta).sort(), ["page", "pageSize", "total", "totalPages"]);
+    assert.deepEqual(Object.keys(json.meta).sort(), [
+      "page",
+      "pageSize",
+      "total",
+      "totalPages",
+    ]);
     const row = json.data.find((v: { id: number }) => v.id === availableId);
     assert.ok(row);
     assert.equal(row.displayName, "Toyota Land Cruiser");
@@ -254,7 +275,13 @@ if (!RUN) {
       headers: auth(adminToken),
     });
     assert.equal(available.statusCode, 200);
-    assert.ok(available.json().data.every((v: { operationalStatus: string }) => v.operationalStatus === "available"));
+    assert.ok(
+      available
+        .json()
+        .data.every(
+          (v: { operationalStatus: string }) => v.operationalStatus === "available",
+        ),
+    );
 
     const rented = await app.inject({
       method: "GET",
@@ -522,7 +549,11 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(adminToken),
-      payload: { vehicleName: "Duplicate Plate", vin: `VIN-${run}-DUP1`, plateNumber: `D ${run}01` },
+      payload: {
+        vehicleName: "Duplicate Plate",
+        vin: `VIN-${run}-DUP1`,
+        plateNumber: `D ${run}01`,
+      },
     });
     assert.equal(duplicate.statusCode, 409);
     assert.equal(duplicate.json().error.code, "CONFLICT");
@@ -530,7 +561,11 @@ if (!RUN) {
 
   test("POST /vehicles rejects inactive model reference", async () => {
     const inactiveModel = await prisma.vehicleModel.create({
-      data: { code: `VEH-INACTIVE-${run}`, name: `Inactive Model ${run}`, isActive: false },
+      data: {
+        code: `VEH-INACTIVE-${run}`,
+        name: `Inactive Model ${run}`,
+        isActive: false,
+      },
     });
     const res = await app.inject({
       method: "POST",
@@ -612,7 +647,13 @@ if (!RUN) {
       headers: auth(adminToken),
     });
     assert.equal(res.statusCode, 200);
-    assert.ok(res.json().data.every((v: { vehicleName: string | null }) => v.vehicleName === "Toyota Land Cruiser"));
+    assert.ok(
+      res
+        .json()
+        .data.every(
+          (v: { vehicleName: string | null }) => v.vehicleName === "Toyota Land Cruiser",
+        ),
+    );
     assert.ok(res.json().data.some((v: { id: number }) => v.id === directNameId));
   });
 
@@ -742,7 +783,9 @@ if (!RUN) {
       headers: auth(adminToken),
     });
     assert.equal(retiredList.statusCode, 200);
-    assert.ok(retiredList.json().data.some((v: { id: number }) => v.id === deactivateTargetId));
+    assert.ok(
+      retiredList.json().data.some((v: { id: number }) => v.id === deactivateTargetId),
+    );
 
     const stillThere = await app.inject({
       method: "GET",

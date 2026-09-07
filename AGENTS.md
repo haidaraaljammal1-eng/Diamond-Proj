@@ -38,7 +38,7 @@
 - Reusable card surfaces must use the shared Card component (`src/shared/components/ui/card`).
 - Domain cards compose Shared Card instead of recreating generic card CSS.
 - Every toggle switch uses the shared Switch (`src/shared/components/ui/switch`); do not recreate switch CSS in feature modules.
-- Diamond button hierarchy uses Shared Button (`src/shared/components/ui/button`) variants only: `primary` (dark-gold filled) for the main CTA; `secondary` (ivory/light surface, gold border, gold text/icons) for search, utility, and secondary actions. Pages must not add page-specific button CSS when a Shared variant covers the design.
+- Diamond button hierarchy uses Shared Button (`src/shared/components/ui/button`) variants only: `primary` (dark-gold filled) for the main CTA; `secondary` (ivory/light surface, gold border, gold text/icons) for search, utility, and secondary actions; `secondaryStrong` (stronger champagne/ivory, dark-gold text/icon, clearer border/shadow) for important secondary actions over photos or strong backgrounds. Pages must not add page-specific button CSS when a Shared variant covers the design.
 - Users data must come from Backend APIs; never from Demo mock EMP data.
 - Current authenticated user comes from Auth infrastructure, not Users Store.
 - User forms must use the shared FormBuilder.

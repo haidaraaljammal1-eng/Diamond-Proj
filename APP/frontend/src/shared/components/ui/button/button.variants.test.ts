@@ -12,15 +12,24 @@ function readSource(relativePath: string): string {
 }
 
 describe("Shared Button variants", () => {
-  it("exposes primary and secondary in the public variant list", () => {
+  it("exposes primary, secondary, and secondaryStrong in the public variant list", () => {
     assert.ok(BUTTON_VARIANTS.includes("primary"));
     assert.ok(BUTTON_VARIANTS.includes("secondary"));
+    assert.ok(BUTTON_VARIANTS.includes("secondaryStrong"));
   });
 
   it("styles secondary with gold text on an ivory surface", () => {
     const css = readSource("shared/components/ui/button/button.module.css");
     assert.match(css, /\.secondary\s*\{[\s\S]*color:\s*var\(--diamond-gold-hi\)/);
     assert.match(css, /\.secondary\s*\{[\s\S]*background:\s*rgba\(201,\s*161,\s*92,\s*0\.09\)/);
+  });
+
+  it("styles secondaryStrong with champagne ivory fill and dark gold text", () => {
+    const css = readSource("shared/components/ui/button/button.module.css");
+    assert.match(css, /\.secondaryStrong\s*\{[\s\S]*color:\s*var\(--diamond-gold-hi\)/);
+    assert.match(css, /\.secondaryStrong\s*\{[\s\S]*background:\s*linear-gradient\(180deg,\s*#fffdf8,\s*#f4e6c8\)/);
+    assert.match(css, /\.secondaryStrong\s*\{[\s\S]*box-shadow:\s*0 2px 8px rgba\(122,\s*96,\s*48,\s*0\.14\)/);
+    assert.match(css, /\.secondaryStrong\s*\{[\s\S]*border:\s*1\.5px solid rgba\(201,\s*161,\s*92,\s*0\.55\)/);
   });
 
   it("styles primary with the dark gold gradient fill", () => {
@@ -50,5 +59,14 @@ describe("Vehicles button hierarchy", () => {
     assert.doesNotMatch(filters, /<Button[^>]*variant="ghost"/);
     assert.equal((card.match(/variant="secondary"/g) ?? []).length, 3);
     assert.match(card, /variant="primary"[\s\S]*primaryAction/);
+  });
+
+  it("uses secondaryStrong for Vehicle Detail photo actions", () => {
+    const detail = readSource(
+      "modules/vehicles/components/vehicle-detail/vehicle-detail.tsx",
+    );
+    assert.equal((detail.match(/variant="secondaryStrong"/g) ?? []).length, 2);
+    assert.match(detail, /iconName="mdi:image-edit-outline"/);
+    assert.doesNotMatch(detail, /variant="primary"[\s\S]*replacePhoto/);
   });
 });

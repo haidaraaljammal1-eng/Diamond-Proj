@@ -241,11 +241,13 @@ export function VehiclesScreen() {
 
       <VehicleDetailDialog
         vehicle={detailVehicle}
+        canManage={canManage}
         onClose={() => setDetailVehicle(null)}
         onSetPrice={setPriceVehicle}
         onPrimaryAction={handlePrimaryAction}
         onGps={() => showNotice(t("boundary.gpsPending"))}
         onMaintenance={() => router.push(`/${locale}/maintenance`)}
+        onPhotoNotice={showNotice}
       />
 
       <SetRentalPriceDialog
@@ -268,7 +270,13 @@ export function VehiclesScreen() {
       <AddVehicleDialog
         open={addVehicleOpen}
         onClose={() => setAddVehicleOpen(false)}
-        onSuccess={() => showNotice(t("form.createSuccess"))}
+        onSuccess={(result) => {
+          showNotice(
+            result?.photoUploadFailed
+              ? t("form.createPhotoUploadFailed")
+              : t("form.createSuccess"),
+          );
+        }}
       />
     </>
   );

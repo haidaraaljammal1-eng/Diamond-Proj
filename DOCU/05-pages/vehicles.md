@@ -27,22 +27,22 @@ UI state (detail modal, add/edit/delete dialogs, boundary notices) stays in scre
 
 `APP/frontend/src/modules/vehicles/`
 
-| Area | Files |
-|---|---|
-| API | `api/vehicles.api.ts`, `api/fleet-type-lookup.api.ts` |
-| Store | `stores/vehicles.store.ts`, `stores/fleet-type-lookup.store.ts` |
-| Hooks | `hooks/use-vehicles.ts`, `hooks/use-vehicle.ts`, `hooks/use-fleet-type-lookup.ts` |
-| Screen | `components/vehicles-screen/` |
-| Grid / card | `components/vehicles-grid/`, `components/vehicle-card/` |
-| Status / timer | `components/vehicle-status/`, `components/vehicle-rental-timer/` |
-| Detail | `components/vehicle-detail/` (flush `Dialog`) |
-| Filters | `components/vehicle-filters/` (approved data toolbar) |
-| Search | `shared/components/data-search/` (explicit submit pattern) |
-| Add vehicle | `forms/add-vehicle/add-vehicle-dialog.tsx` |
-| Edit default rates | `forms/edit-rates/edit-default-rate-dialog.tsx` |
-| Fleet delete | `forms/deactivate/vehicle-deactivate-dialog.tsx` |
-| Set rental price UI | `forms/rental-price/set-rental-price-dialog.tsx` (Contracts boundary) |
-| Query / actions | `utils/vehicle-filters.ts`, `utils/vehicle-card-actions.ts` |
+| Area                | Files                                                                             |
+| ------------------- | --------------------------------------------------------------------------------- |
+| API                 | `api/vehicles.api.ts`, `api/fleet-type-lookup.api.ts`                             |
+| Store               | `stores/vehicles.store.ts`, `stores/fleet-type-lookup.store.ts`                   |
+| Hooks               | `hooks/use-vehicles.ts`, `hooks/use-vehicle.ts`, `hooks/use-fleet-type-lookup.ts` |
+| Screen              | `components/vehicles-screen/`                                                     |
+| Grid / card         | `components/vehicles-grid/`, `components/vehicle-card/`                           |
+| Status / timer      | `components/vehicle-status/`, `components/vehicle-rental-timer/`                  |
+| Detail              | `components/vehicle-detail/` (flush `Dialog`)                                     |
+| Filters             | `components/vehicle-filters/` (approved data toolbar)                             |
+| Search              | `shared/components/data-search/` (explicit submit pattern)                        |
+| Add vehicle         | `forms/add-vehicle/add-vehicle-dialog.tsx`                                        |
+| Edit default rates  | `forms/edit-rates/edit-default-rate-dialog.tsx`                                   |
+| Fleet delete        | `forms/deactivate/vehicle-deactivate-dialog.tsx`                                  |
+| Set rental price UI | `forms/rental-price/set-rental-price-dialog.tsx` (Contracts boundary)             |
+| Query / actions     | `utils/vehicle-filters.ts`, `utils/vehicle-card-actions.ts`                       |
 
 ## Fleet scope
 
@@ -52,15 +52,15 @@ The Fleet page shows **active vehicles only**. `active=true` is always sent inte
 
 Every filter is server-side; changing any filter resets to page 1.
 
-| Control | Query param | Notes |
-|---|---|---|
-| Status chips | `status` | `all` omitted from request |
-| Search | `search` | Explicit submit via Shared `DataSearch` — server-side; trimmed on apply |
-| Vehicle type | `vehicleType` | Options from `GET /vehicles/filter-options` (active fleet only) |
-| Sort | `sort` | UX presets mapped to Backend `field:direction` (see below) |
-| Result count | — | `meta.total` from Backend pagination |
-| Active filter badge | — | `countActiveFilters()` pure helper (user filters only) |
-| Clear filters | — | Resets to `DEFAULT_VEHICLE_FILTERS`, page 1 |
+| Control             | Query param   | Notes                                                                   |
+| ------------------- | ------------- | ----------------------------------------------------------------------- |
+| Status chips        | `status`      | `all` omitted from request                                              |
+| Search              | `search`      | Explicit submit via Shared `DataSearch` — server-side; trimmed on apply |
+| Vehicle type        | `vehicleType` | Options from `GET /vehicles/filter-options` (active fleet only)         |
+| Sort                | `sort`        | UX presets mapped to Backend `field:direction` (see below)              |
+| Result count        | —             | `meta.total` from Backend pagination                                    |
+| Active filter badge | —             | `countActiveFilters()` pure helper (user filters only)                  |
+| Clear filters       | —             | Resets to `DEFAULT_VEHICLE_FILTERS`, page 1                             |
 
 ## Search behavior
 
@@ -76,11 +76,11 @@ Every filter is server-side; changing any filter resets to page 1.
 
 Central policy: `utils/vehicle-card-actions.ts` → `getVehicleCardActions(vehicle, canManage)`.
 
-| Status | Visible actions |
-|---|---|
+| Status                 | Visible actions                                  |
+| ---------------------- | ------------------------------------------------ |
 | **AVAILABLE** (active) | Set Rental Price · Edit Default Rates* · Delete* |
-| **RENTED** (active) | Return Link · GPS only |
-| **SERVICE** (active) | Go to Maintenance only |
+| **RENTED** (active)    | Return Link · GPS only                           |
+| **SERVICE** (active)   | Go to Maintenance only                           |
 
 \* Requires `vehicles.manage`. Inner buttons use `stopPropagation()`.
 
@@ -88,13 +88,13 @@ Central policy: `utils/vehicle-card-actions.ts` → `getVehicleCardActions(vehic
 
 ## Sort mapping
 
-| UX preset | Backend `sort` |
-|---|---|
-| `newest` | `createdAt:desc` (default — omitted) |
-| `priceAsc` | `dailyRate:asc` |
-| `priceDesc` | `dailyRate:desc` |
-| `yearDesc` | `modelYear:desc` |
-| `plate` | `plateNumber:asc` |
+| UX preset   | Backend `sort`                       |
+| ----------- | ------------------------------------ |
+| `newest`    | `createdAt:desc` (default — omitted) |
+| `priceAsc`  | `dailyRate:asc`                      |
+| `priceDesc` | `dailyRate:desc`                     |
+| `yearDesc`  | `modelYear:desc`                     |
+| `plate`     | `plateNumber:asc`                    |
 
 All sorting is server-side on the full filtered dataset before pagination. Backend applies deterministic tie-breaking (`createdAt:desc`, `id:desc`) and explicit null placement for rate sorts (`0` first on ASC, `0`/null last on DESC).
 
@@ -111,7 +111,20 @@ Composes shared `Card` (`padding="none"`, `interactive`) with Demo `.car` intern
 
 ## Add Vehicle
 
-Free-text `vehicleName` via Shared `Dialog` + `FormBuilder`. No `modelId`, `operationalStatus`, or `isActive` in the form. Backend starts `AVAILABLE`. On success: list + type filter options refresh.
+Free-text `vehicleName` via Shared `Dialog` + `FormBuilder`. No `modelId`, `operationalStatus`, or `isActive` in the form. Backend starts `AVAILABLE`.
+
+### Vehicle photo UX (current scope)
+
+- **One optional photo** per vehicle in the UI — no gallery management.
+- Add Vehicle uses a **single** photo picker control: `Upload photo` → after selection `Change photo` + one preview (JPEG/PNG).
+- Create flow: `POST /vehicles` then optional `POST /vehicles/:id/photos` (first image becomes `primaryImage`).
+- Partial upload failure keeps the vehicle and shows a notice; photo can be added later from Detail.
+- Fleet Card and Vehicle Detail header both use `vehicle.primaryImage` (authenticated stream).
+- Detail with no photo: **لم يتم رفع صورة** / **No photo uploaded** + `Upload photo` (manage permission), Shared `secondaryStrong`.
+- Detail with photo: hero shows the same image + overlay **Replace Photo** at the bottom-end of the header (does not cover name, status, or plate). Shared `secondaryStrong`, always visible (not hover-only). Behavior unchanged: upload new → delete old → refetch.
+- **Development demo fleet** (`DEMO-FLEET-01..20`) has **no seeded photos** — cards use the existing placeholder.
+
+On success: list + type filter options refresh.
 
 ## Edit Default Rates
 
@@ -139,21 +152,22 @@ Namespace `Vehicles` in `messages/ar.json` and `messages/en.json`. Plate/VIN sta
 
 ## Permissions summary
 
-| Action | Permission |
-|---|---|
-| View page / detail / photo stream / filter options | `vehicles.read` |
-| Add / edit rates / deactivate | `vehicles.manage` |
+| Action                                             | Permission        |
+| -------------------------------------------------- | ----------------- |
+| View page / detail / photo stream / filter options | `vehicles.read`   |
+| Add / edit rates / deactivate                      | `vehicles.manage` |
 
 Access is permission-based only — no role-name branching.
 
 ## Button hierarchy
 
-Shared `Button` (`src/shared/components/ui/button/`) — two emphasis levels only:
+Shared `Button` (`src/shared/components/ui/button/`) — three emphasis levels:
 
-| Variant | Use on Fleet | Visual |
-|---|---|---|
-| `primary` | Add Vehicle, card primary CTA (Set Rental Price / Return Link / Maintenance) | Dark-gold gradient fill, high-contrast label |
-| `secondary` | Search, Clear filters, Refresh, card icon actions (edit / delete / GPS) | Ivory/light surface, champagne border, gold text and icons |
+| Variant           | Use on Fleet                                                                 | Visual                                                                  |
+| ----------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `primary`         | Add Vehicle, card primary CTA (Set Rental Price / Return Link / Maintenance) | Dark-gold gradient fill, high-contrast label                            |
+| `secondary`       | Search, Clear filters, Refresh, card icon actions (edit / delete / GPS)      | Ivory/light surface, champagne border, gold text and icons              |
+| `secondaryStrong` | Vehicle Detail overlay **Replace Photo** / empty-state **Upload photo**      | Stronger champagne/ivory fill, dark-gold text/icon, clearer border/shadow |
 
 Vehicle Type and Sort triggers use Shared `Select` `variant="ghost"` — same ivory + gold chrome as `Button` `secondary`. Status chips stay on the FilterChip pattern, not Shared Button.
 

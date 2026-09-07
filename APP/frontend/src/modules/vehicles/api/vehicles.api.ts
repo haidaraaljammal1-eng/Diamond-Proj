@@ -1,9 +1,13 @@
+import { env } from "@/config/env";
 import { apiRequest } from "@/infrastructure/api/client";
+import { ApiRequestError } from "@/infrastructure/api/errors";
+import type { ApiErrorResponse, ApiResponse } from "@/infrastructure/api/types";
 import type {
   CreateVehiclePayload,
   UpdateVehicleRatesPayload,
   VehicleCardDto,
   VehicleDetailDto,
+  VehicleImageDto,
   VehiclePublicDto,
   VehiclesListQuery,
 } from "../types/vehicle.types";
@@ -12,6 +16,36 @@ import type { PageMeta } from "./vehicles.api.types";
 import { buildVehiclesQuery } from "../utils/vehicle-filters";
 
 const VEHICLES_PATH = "/vehicles";
+
+export { VEHICLE_PHOTO_ACCEPT } from "../forms/add-vehicle/vehicle-photo-picker.utils";
+
+async function getAccessToken(): Promise<string | undefined> {
+  if (typeof window === "undefined") return undefined;
+  const { getSession } = await import("next-auth/react");
+  return (await getSession())?.accessToken;
+}
+
+function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
+  if (typeof value !== "object" || value === null || !("error" in value))
+    return false;
+  const error = value.error;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    "message" in error
+  );
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined;
+  }
+}
 
 /** `GET /vehicles` (Backend permission: `vehicles.read`). */
 export async function getVehicles(
@@ -44,15 +78,73 @@ export async function createVehicle(
   return response.data;
 }
 
+/** `POST /vehicles/:id/photos` (Backend permission: `vehicles.manage`). */
+export async function uploadVehiclePhoto(
+  vehicleId: number,
+  file: File,
+): Promise<VehicleImageDto> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const accessToken = await getAccessToken();
+  const response = await fetch(
+    `${env.apiUrl}${VEHICLES_PATH}/${vehicleId}/photos`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: formData,
+    },
+  );
+
+  const payload = await readJson(response);
+  if (!response.ok) {
+    if (isApiErrorResponse(payload))
+      throw new ApiRequestError(payload.error, response.status);
+    throw new ApiRequestError(
+      {
+        code: `HTTP_${response.status}`,
+        message: response.statusText || "Request failed",
+      },
+      response.status,
+    );
+  }
+
+  if (typeof payload !== "object" || payload === null || !("data" in payload)) {
+    throw new ApiRequestError(
+      { code: "INVALID_RESPONSE", message: "Invalid API response" },
+      response.status,
+    );
+  }
+
+  return (payload as ApiResponse<VehicleImageDto>).data;
+}
+
+/** `DELETE /vehicles/:id/photos/:photoId` (Backend permission: `vehicles.manage`). */
+export async function deleteVehiclePhoto(
+  vehicleId: number,
+  photoId: string,
+): Promise<void> {
+  await apiRequest(`${VEHICLES_PATH}/${vehicleId}/photos/${photoId}`, {
+    method: "DELETE",
+  });
+}
+
 /** `PUT /vehicles/:id` — partial default-rate update (`vehicles.manage`). */
 export async function updateVehicleRates(
   id: number,
   payload: UpdateVehicleRatesPayload,
 ): Promise<VehiclePublicDto> {
-  const response = await apiRequest<VehiclePublicDto>(`${VEHICLES_PATH}/${id}`, {
-    method: "PUT",
-    body: payload,
-  });
+  const response = await apiRequest<VehiclePublicDto>(
+    `${VEHICLES_PATH}/${id}`,
+    {
+      method: "PUT",
+      body: payload,
+    },
+  );
   return response.data;
 }
 

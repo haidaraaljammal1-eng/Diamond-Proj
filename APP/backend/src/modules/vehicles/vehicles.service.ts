@@ -47,7 +47,11 @@ const VEHICLE_SORTABLE = [
 const VEHICLE_CARD_INCLUDE = {
   model: { select: { id: true, code: true, name: true } },
   photos: {
-    orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { createdAt: "asc" as const }],
+    orderBy: [
+      { isPrimary: "desc" as const },
+      { sortOrder: "asc" as const },
+      { createdAt: "asc" as const },
+    ],
     include: { attachment: { select: { mimeType: true } } },
   },
 } satisfies Prisma.VehicleInclude;
@@ -58,10 +62,18 @@ function vinConflict(): AppError {
   return conflictError("vehicle", "vin", "A vehicle with this VIN already exists");
 }
 function externalIdConflict(): AppError {
-  return conflictError("vehicle", "externalId", "This external identifier is already in use");
+  return conflictError(
+    "vehicle",
+    "externalId",
+    "This external identifier is already in use",
+  );
 }
 function plateConflict(): AppError {
-  return conflictError("vehicle", "plateNumber", "A vehicle with this plate number already exists");
+  return conflictError(
+    "vehicle",
+    "plateNumber",
+    "A vehicle with this plate number already exists",
+  );
 }
 
 function rentedVehicleLocked(): AppError {
@@ -166,7 +178,8 @@ export function createVehiclesService(fastify: FastifyInstance) {
           ? [target]
           : [];
       if (fields.some((f) => f.toLowerCase().includes("vin"))) throw vinConflict();
-      if (fields.some((f) => f.toLowerCase().includes("platenumber"))) throw plateConflict();
+      if (fields.some((f) => f.toLowerCase().includes("platenumber")))
+        throw plateConflict();
       throw externalIdConflict();
     }
     throw err;
@@ -179,7 +192,9 @@ export function createVehiclesService(fastify: FastifyInstance) {
             { vehicleName: { equals: query.vehicleType, mode: "insensitive" as const } },
             {
               vehicleName: null,
-              model: { name: { equals: query.vehicleType, mode: "insensitive" as const } },
+              model: {
+                name: { equals: query.vehicleType, mode: "insensitive" as const },
+              },
             },
           ],
         }
@@ -250,14 +265,18 @@ export function createVehiclesService(fastify: FastifyInstance) {
     return toVehicleDetail(await loadOrThrow(id));
   }
 
-  async function create(input: z.infer<typeof CreateVehicleSchema>): Promise<VehiclePublic> {
+  async function create(
+    input: z.infer<typeof CreateVehicleSchema>,
+  ): Promise<VehiclePublic> {
     if (input.modelId != null) await assertActiveModel(input.modelId);
     const vehicleName = input.vehicleName ?? null;
     const vin = input.vin ? normalizeVin(input.vin) : null;
     if (vin) await assertVinFree(vin);
     const externalId = input.externalId ? normalizeExternalId(input.externalId) : null;
     if (externalId) await assertExternalIdFree(externalId);
-    const plateNumber = input.plateNumber ? normalizePlateNumber(input.plateNumber) : null;
+    const plateNumber = input.plateNumber
+      ? normalizePlateNumber(input.plateNumber)
+      : null;
     if (plateNumber) await assertPlateFree(plateNumber);
     try {
       const row = await prisma.vehicle.create({
@@ -281,7 +300,10 @@ export function createVehiclesService(fastify: FastifyInstance) {
     }
   }
 
-  async function update(id: number, input: z.infer<typeof UpdateVehicleSchema>): Promise<VehiclePublic> {
+  async function update(
+    id: number,
+    input: z.infer<typeof UpdateVehicleSchema>,
+  ): Promise<VehiclePublic> {
     const existing = await loadOrThrow(id);
     assertVehicleMutableForFleetOps(existing.operationalStatus);
     const data: Prisma.VehicleUncheckedUpdateInput = {};
