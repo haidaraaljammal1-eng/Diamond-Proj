@@ -44,7 +44,7 @@ const ENTITY_LABEL_RESOLVERS: Record<string, EntityLabelResolver> = {
   department: async (p, ids) => labelMap(await p.department.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }), (r) => r.name),
   salesperson: async (p, ids) => labelMap(await p.salesperson.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }), (r) => r.name),
   vehicle_model: async (p, ids) => labelMap(await p.vehicleModel.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }), (r) => r.name),
-  vehicle: async (p, ids) => labelMap(await p.vehicle.findMany({ where: { id: { in: ids } }, select: { id: true, vin: true, modelYear: true, model: { select: { name: true } } } }), (r) => r.vin ?? [r.model.name, r.modelYear].filter(Boolean).join(" ")),
+  vehicle: async (p, ids) => labelMap(await p.vehicle.findMany({ where: { id: { in: ids } }, select: { id: true, vin: true, vehicleName: true, modelYear: true, model: { select: { name: true } } } }), (r) => r.vin ?? r.vehicleName ?? [r.model?.name, r.modelYear].filter(Boolean).join(" ")),
   communication_template: async (p, ids) => labelMap(await p.messageTemplate.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }), (r) => r.name),
   import_job: async (p, ids) => labelMap(await p.importJob.findMany({ where: { id: { in: ids } }, select: { id: true, originalFileName: true } }), (r) => r.originalFileName),
   api_key: async (p, ids) => labelMap(await p.apiKey.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }), (r) => r.name),

@@ -5,6 +5,7 @@ import { createVehiclesService } from "src/modules/vehicles/vehicles.service";
 import { createVehiclePhotosService } from "src/modules/vehicles/vehicle-photos.service";
 import {
   CreateVehicleSchema,
+  FleetVehicleTypeOptionSchema,
   ListVehiclesQuerySchema,
   UpdateVehicleSchema,
   VehicleCardSchema,
@@ -39,6 +40,23 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => vehicles.list(request.query),
+  );
+
+  app.get(
+    "/filter-options",
+    {
+      schema: {
+        summary: "List fleet vehicle type filter options",
+        operationId: "listVehicleFilterOptions",
+        tags: ["Vehicles"],
+        permissions: [PERMISSIONS.VEHICLES_READ],
+        response: {
+          200: dataResponse(z.array(FleetVehicleTypeOptionSchema)),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async () => ({ data: await vehicles.listFilterOptions() }),
   );
 
   app.get(

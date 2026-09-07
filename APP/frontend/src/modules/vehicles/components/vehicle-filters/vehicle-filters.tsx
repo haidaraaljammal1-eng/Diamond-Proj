@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
+import { DataSearch } from "@/shared/components/data-search";
 import { Select } from "@/shared/components/ui/select";
 import type { SelectOption } from "@/shared/components/ui/select";
-import { Switch } from "@/shared/components/ui/switch";
 import type {
   VehicleFiltersState,
   VehicleSortKey,
@@ -21,13 +19,10 @@ const STATUS_FILTERS: VehicleStatusFilter[] = [
   "service",
 ];
 
-const ALL_MODELS = "__all__";
+const ALL_TYPES = "__all__";
 
-/** One request per keystroke is wasteful — let the term settle first. */
-const SEARCH_DEBOUNCE_MS = 350;
-
-export interface VehicleModelOption {
-  id: number;
+export interface FleetVehicleTypeOption {
+  value: string;
   label: string;
 }
 
@@ -35,13 +30,14 @@ export interface VehicleFiltersLabels {
   status: Record<VehicleStatusFilter, string>;
   sort: Record<VehicleSortKey, string>;
   statusGroup: string;
-  searchLabel: string;
+  searchInputLabel: string;
   searchPlaceholder: string;
-  modelLabel: string;
-  modelAll: string;
-  modelsLoading: string;
+  searchButton: string;
+  searchClear: string;
+  typeLabel: string;
+  typeAll: string;
+  typesLoading: string;
   sortLabel: string;
-  includeInactive: string;
   clear: string;
   activeCount: string;
 }
@@ -49,56 +45,39 @@ export interface VehicleFiltersLabels {
 export interface VehicleFiltersProps {
   filters: VehicleFiltersState;
   activeFilterCount: number;
-  models: VehicleModelOption[];
-  modelsLoading: boolean;
+  types: FleetVehicleTypeOption[];
+  typesLoading: boolean;
+  searchLoading: boolean;
   /** Already-translated result counter shown at the end of the status row. */
   resultsLabel: string;
   labels: VehicleFiltersLabels;
   onStatusChange: (status: VehicleStatusFilter) => void;
-  onSearchChange: (search: string) => void;
-  onModelChange: (modelId: number | null) => void;
-  onIncludeInactiveChange: (includeInactive: boolean) => void;
+  onSearchSubmit: (search: string) => void;
+  onSearchClear: () => void;
+  onTypeChange: (vehicleType: string | null) => void;
   onSortChange: (sort: VehicleSortKey) => void;
   onClear: () => void;
 }
 
-/** Fleet toolbar — status chips, search, model, ordering and fleet scope. */
+/** Fleet toolbar — status chips, search, vehicle type, ordering. */
 export function VehicleFilters({
   filters,
   activeFilterCount,
-  models,
-  modelsLoading,
+  types,
+  typesLoading,
+  searchLoading,
   resultsLabel,
   labels,
   onStatusChange,
-  onSearchChange,
-  onModelChange,
-  onIncludeInactiveChange,
+  onSearchSubmit,
+  onSearchClear,
+  onTypeChange,
   onSortChange,
   onClear,
 }: VehicleFiltersProps) {
-  const [searchDraft, setSearchDraft] = useState(filters.search);
-  const [syncedSearch, setSyncedSearch] = useState(filters.search);
-
-  // The store stays the source of truth: a reset (Clear) must reach the box.
-  // Adjusted during render — the documented alternative to a sync effect.
-  if (filters.search !== syncedSearch) {
-    setSyncedSearch(filters.search);
-    setSearchDraft(filters.search);
-  }
-
-  useEffect(() => {
-    if (searchDraft === filters.search) return;
-    const timer = window.setTimeout(
-      () => onSearchChange(searchDraft),
-      SEARCH_DEBOUNCE_MS,
-    );
-    return () => window.clearTimeout(timer);
-  }, [searchDraft, filters.search, onSearchChange]);
-
-  const modelOptions: SelectOption[] = [
-    { value: ALL_MODELS, label: labels.modelAll },
-    ...models.map((model) => ({ value: String(model.id), label: model.label })),
+  const typeOptions: SelectOption[] = [
+    { value: ALL_TYPES, label: labels.typeAll },
+    ...types.map((type) => ({ value: type.value, label: type.label })),
   ];
 
   const sortOptions: SelectOption[] = VEHICLE_SORT_KEYS.map((key) => ({
@@ -135,7 +114,7 @@ export function VehicleFilters({
           {activeFilterCount > 0 ? (
             <>
               <span className={styles.badge}>{labels.activeCount}</span>
-              <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+              <Button type="button" variant="secondary" size="sm" onClick={onClear}>
                 {labels.clear}
               </Button>
             </>
@@ -145,14 +124,16 @@ export function VehicleFilters({
 
       <div className={styles.controls}>
         <div className={styles.search}>
-          <Input
-            type="search"
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            className={styles.searchInput}
+          <DataSearch
+            appliedValue={filters.search}
+            onSearch={onSearchSubmit}
+            onClear={onSearchClear}
             placeholder={labels.searchPlaceholder}
-            aria-label={labels.searchLabel}
-            data-testid="vehicle-search"
+            inputLabel={labels.searchInputLabel}
+            searchButtonLabel={labels.searchButton}
+            clearButtonLabel={labels.searchClear}
+            loading={searchLoading}
+            inputTestId="vehicle-search"
           />
         </div>
 
@@ -161,14 +142,14 @@ export function VehicleFilters({
             variant="ghost"
             size="sm"
             searchable
-            options={modelOptions}
-            value={filters.modelId === null ? ALL_MODELS : String(filters.modelId)}
+            options={typeOptions}
+            value={filters.vehicleType ?? ALL_TYPES}
             onChange={(value) =>
-              onModelChange(value === ALL_MODELS ? null : Number(value))
+              onTypeChange(value === ALL_TYPES ? null : value)
             }
-            placeholder={modelsLoading ? labels.modelsLoading : labels.modelAll}
-            disabled={modelsLoading && models.length === 0}
-            aria-label={labels.modelLabel}
+            placeholder={typesLoading ? labels.typesLoading : labels.typeAll}
+            disabled={typesLoading && types.length === 0}
+            aria-label={labels.typeLabel}
           />
         </div>
 
@@ -182,16 +163,6 @@ export function VehicleFilters({
             aria-label={labels.sortLabel}
           />
         </div>
-
-        <label className={styles.toggle}>
-          <Switch
-            checked={filters.includeInactive}
-            onChange={onIncludeInactiveChange}
-            label={labels.includeInactive}
-          />
-          <span>{labels.includeInactive}</span>
-        </label>
-
       </div>
     </section>
   );

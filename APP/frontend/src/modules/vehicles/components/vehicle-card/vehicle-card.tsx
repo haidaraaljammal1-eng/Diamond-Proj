@@ -10,6 +10,7 @@ import {
   shouldShowCurrentRental,
   shouldShowRentalTimer,
 } from "../../utils/rental-timer";
+import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
 import { VehicleImage } from "../vehicle-image/vehicle-image";
 import { VehicleRentalTimer } from "../vehicle-rental-timer/vehicle-rental-timer";
 import { VehicleStatus } from "../vehicle-status/vehicle-status";
@@ -17,11 +18,12 @@ import styles from "./vehicle-card.module.css";
 
 export interface VehicleCardProps {
   vehicle: VehicleCardDto;
+  canManage: boolean;
   onOpen: (vehicle: VehicleCardDto) => void;
-  onSetPrice: (vehicle: VehicleCardDto) => void;
   onPrimaryAction: (vehicle: VehicleCardDto) => void;
+  onEditRates: (vehicle: VehicleCardDto) => void;
+  onDelete: (vehicle: VehicleCardDto) => void;
   onGps: (vehicle: VehicleCardDto) => void;
-  onMore: (vehicle: VehicleCardDto) => void;
 }
 
 function stopOpen(event: MouseEvent | KeyboardEvent) {
@@ -30,14 +32,16 @@ function stopOpen(event: MouseEvent | KeyboardEvent) {
 
 export function VehicleCard({
   vehicle,
+  canManage,
   onOpen,
-  onSetPrice,
   onPrimaryAction,
+  onEditRates,
+  onDelete,
   onGps,
-  onMore,
 }: VehicleCardProps) {
   const t = useTranslations("Vehicles");
   const format = useFormatter();
+  const actions = getVehicleCardActions(vehicle, canManage);
   const showRenter = shouldShowCurrentRental(
     vehicle.operationalStatus,
     vehicle.currentRental,
@@ -47,21 +51,20 @@ export function VehicleCard({
     vehicle.currentRental,
   );
 
-  // The card footer shows the short label and keeps the full one as the
-  // tooltip/accessible name, so a long action never wraps the footer.
-  const primaryLabel =
-    vehicle.operationalStatus === "service"
-      ? t("actions.goMaintenanceShort")
-      : vehicle.operationalStatus === "rented"
-        ? t("actions.generateReturnLinkShort")
-        : t("actions.generateLinkSetPriceShort");
+  const primaryLabel = actions.showMaintenance
+    ? t("actions.goMaintenanceShort")
+    : actions.showReturnLink
+      ? t("actions.generateReturnLinkShort")
+      : t("actions.generateLinkSetPriceShort");
 
-  const primaryTitle =
-    vehicle.operationalStatus === "service"
-      ? t("actions.goMaintenance")
-      : vehicle.operationalStatus === "rented"
-        ? t("actions.generateReturnLink")
-        : t("actions.generateLinkSetPrice");
+  const primaryTitle = actions.showMaintenance
+    ? t("actions.goMaintenance")
+    : actions.showReturnLink
+      ? t("actions.generateReturnLink")
+      : t("actions.generateLinkSetPrice");
+
+  const showPrimary =
+    actions.showSetRentalPrice || actions.showReturnLink || actions.showMaintenance;
 
   return (
     <Card
@@ -124,76 +127,83 @@ export function VehicleCard({
         <span>{t("priceNote")}</span>
       </div>
 
-      <div className={styles.actions}>
-        <Button
-          type="button"
-          size="sm"
-          className={styles.primaryAction}
-          title={primaryTitle}
-          aria-label={primaryTitle}
-          onClick={(event) => {
-            stopOpen(event);
-            onPrimaryAction(vehicle);
-          }}
-        >
-          <Icon
-            name={
-              vehicle.operationalStatus === "service"
-                ? "mdi:wrench-outline"
-                : vehicle.operationalStatus === "rented"
-                  ? "mdi:keyboard-return"
-                  : "mdi:link-variant"
-            }
-          />
-          {primaryLabel}
-        </Button>
-        {vehicle.operationalStatus !== "rented" ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={styles.iconAction}
-            title={t("actions.setPriceTitle")}
-            aria-label={t("actions.setPriceDetail")}
-            onClick={(event) => {
-              stopOpen(event);
-              onSetPrice(vehicle);
-            }}
-          >
-            <Icon name="mdi:pencil-outline" size={17} />
-          </Button>
-        ) : null}
-        {vehicle.operationalStatus === "rented" ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={styles.iconAction}
-            title={t("actions.gpsTitle")}
-            aria-label={t("actions.gpsTrack")}
-            onClick={(event) => {
-              stopOpen(event);
-              onGps(vehicle);
-            }}
-          >
-            <Icon name="mdi:map-marker-outline" size={17} />
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={styles.iconAction}
-          onClick={(event) => {
-            stopOpen(event);
-            onMore(vehicle);
-          }}
-          title={t("actions.more")}
-          aria-label={t("actions.more")}
-        >
-          <Icon name="mdi:dots-horizontal" size={17} />
-        </Button>
-      </div>
+      {showPrimary || actions.showEditRates || actions.showDelete || actions.showGps ? (
+        <div className={styles.actions}>
+          {showPrimary ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={styles.primaryAction}
+              title={primaryTitle}
+              aria-label={primaryTitle}
+              onClick={(event) => {
+                stopOpen(event);
+                onPrimaryAction(vehicle);
+              }}
+            >
+              <Icon
+                name={
+                  actions.showMaintenance
+                    ? "mdi:wrench-outline"
+                    : actions.showReturnLink
+                      ? "mdi:keyboard-return"
+                      : "mdi:link-variant"
+                }
+              />
+              {primaryLabel}
+            </Button>
+          ) : null}
+          {actions.showEditRates ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className={styles.iconAction}
+              title={t("actions.editRatesTitle")}
+              aria-label={t("actions.editRates")}
+              onClick={(event) => {
+                stopOpen(event);
+                onEditRates(vehicle);
+              }}
+            >
+              <Icon name="mdi:pencil-outline" size={17} />
+            </Button>
+          ) : null}
+          {actions.showDelete ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className={styles.iconAction}
+              title={t("actions.deleteTitle")}
+              aria-label={t("actions.delete")}
+              onClick={(event) => {
+                stopOpen(event);
+                onDelete(vehicle);
+              }}
+            >
+              <Icon name="mdi:trash-can-outline" size={17} />
+            </Button>
+          ) : null}
+          {actions.showGps ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className={styles.iconAction}
+              title={t("actions.gpsTitle")}
+              aria-label={t("actions.gpsTrack")}
+              onClick={(event) => {
+                stopOpen(event);
+                onGps(vehicle);
+              }}
+            >
+              <Icon name="mdi:map-marker-outline" size={17} />
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       {showTimer ? (
         <VehicleRentalTimer endAt={vehicle.currentRental!.endAt} />

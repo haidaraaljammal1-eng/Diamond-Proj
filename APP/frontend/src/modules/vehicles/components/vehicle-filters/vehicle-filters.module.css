@@ -70,26 +70,6 @@
   min-width: 0;
 }
 
-/* The shared Input is a 46px underline field; inside this chrome row it wears
-   the same 36px capsule as the ghost Selects so it reads as a control, not a gap. */
-.searchInput {
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--diamond-hair);
-  border-radius: 10px;
-  background: var(--diamond-onyx);
-  font-size: 12px;
-}
-
-.searchInput:hover {
-  border-color: rgba(201, 161, 92, 0.4);
-}
-
-.searchInput:focus {
-  border-color: var(--diamond-gold-hi);
-  background: rgba(201, 161, 92, 0.06);
-}
-
 .toggle {
   display: inline-flex;
   align-items: center;

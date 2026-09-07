@@ -179,7 +179,7 @@ export const Customer360Schema = z.object({
         vin: z.string().nullable(),
         modelYear: z.number().int().nullable(),
         color: z.string().nullable(),
-        model: Ref,
+        model: Ref.nullable(),
       }),
       branch: Ref,
       salesperson: Ref.nullable(),

@@ -59,8 +59,13 @@ model Vehicle {
   // Strongest vehicle identifier where available. Stored normalized (UPPER+trim);
   // unique when present (nullable => many null VINs allowed).
   vin        String?      @unique
-  modelId    Int
-  model      VehicleModel @relation(fields: [modelId], references: [id])
+  // Free-text fleet name (Diamond Add Vehicle). When set, this is the primary
+  // display label; legacy/import rows may rely on `model` instead.
+  vehicleName String?
+  // Optional catalog link — legacy/import vehicles may reference VehicleModel;
+  // new Diamond fleet vehicles are created with vehicleName only.
+  modelId    Int?
+  model      VehicleModel? @relation(fields: [modelId], references: [id])
   modelYear  Int?
   // CX display context only (not a colour taxonomy). Free-text from ERP/import;
   // trimmed, nullable. Belongs to the vehicle itself, not the sale.

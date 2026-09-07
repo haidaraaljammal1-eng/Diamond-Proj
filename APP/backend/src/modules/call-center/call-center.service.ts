@@ -84,15 +84,26 @@ export function createCallCenterService(fastify: FastifyInstance, deps: Deps = {
   function customerSummary(c: { id: number; name: string; mobile: string | null; type: "INDIVIDUAL" | "COMPANY" }, includePhone: boolean) {
     return { id: c.id, name: c.name, maskedPhone: maskPhone(c.mobile), phone: includePhone ? c.mobile : null, type: c.type };
   }
-  function vehicleSummary(exp: { vehicle: { model: { name: string }; modelYear: number | null; vin: string | null } } | null, includeVin: boolean) {
+  function vehicleSummary(
+    exp: {
+      vehicle: {
+        vehicleName: string | null;
+        model: { name: string } | null;
+        modelYear: number | null;
+        vin: string | null;
+      };
+    } | null,
+    includeVin: boolean,
+  ) {
     if (!exp) return null;
-    return { model: exp.vehicle.model.name, year: exp.vehicle.modelYear, vin: includeVin ? exp.vehicle.vin : null };
+    const model = exp.vehicle.vehicleName ?? exp.vehicle.model?.name ?? null;
+    return { model, year: exp.vehicle.modelYear, vin: includeVin ? exp.vehicle.vin : null };
   }
   const QUEUE_ORDER: Prisma.CallCenterQueueItemOrderByWithRelationInput[] = [{ priorityRank: "asc" }, { dueAt: "asc" }, { createdAt: "asc" }];
   const QUEUE_INCLUDE = {
     customer: { select: { id: true, name: true, mobile: true, type: true } },
     branch: { select: { id: true, name: true } },
-    purchaseExperience: { include: { vehicle: { include: { model: { select: { name: true } } } } } },
+    purchaseExperience: { include: { vehicle: { select: { vehicleName: true, modelYear: true, vin: true, model: { select: { name: true } } } } } },
   } satisfies Prisma.CallCenterQueueItemInclude;
 
   function queueWhere(query: z.infer<typeof ListQueueQuerySchema>, scope: Scope): Prisma.CallCenterQueueItemWhereInput {
@@ -151,7 +162,7 @@ export function createCallCenterService(fastify: FastifyInstance, deps: Deps = {
       include: {
         customer: { select: { id: true, name: true, mobile: true, type: true } },
         branch: { select: { id: true, name: true } },
-        purchaseExperience: { include: { vehicle: { include: { model: { select: { name: true } } } }, salesperson: { select: { id: true, name: true } } } },
+        purchaseExperience: { include: { vehicle: { select: { vehicleName: true, modelYear: true, vin: true, model: { select: { name: true } } } }, salesperson: { select: { id: true, name: true } } } },
       },
     });
     if (!item) throw callItemNotFoundError();
@@ -661,7 +672,7 @@ export function createCallCenterService(fastify: FastifyInstance, deps: Deps = {
           include: {
             customer: { select: { id: true, name: true, mobile: true, type: true } },
             branch: { select: { id: true, name: true } },
-            purchaseExperience: { include: { vehicle: { include: { model: { select: { name: true } } } } } },
+            purchaseExperience: { include: { vehicle: { select: { vehicleName: true, modelYear: true, vin: true, model: { select: { name: true } } } } } },
           },
         },
       },

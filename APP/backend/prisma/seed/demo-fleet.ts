@@ -1,13 +1,9 @@
 /**
- * prisma/seed/demo-fleet.ts — Diamond DEMO fleet, not foundation data.
+ * prisma/seed/demo-fleet.ts — Diamond fleet development seed.
  *
- * Seeds the 12 vehicles of the Diamond Demo (`demo.html` `CARS`) with their
- * models, plates, rates and operational status, so the Vehicles page has real
- * rows to render before the rental domain is imported from anywhere else.
- *
- * Idempotent: every row is upserted by its stable `externalId` (vehicles) or
- * `code` (models), so re-running never duplicates and never overwrites a plate
- * an operator has since corrected — it only re-asserts the demo values.
+ * Seeds 20 realistic fleet vehicles with direct `vehicleName` text (no VehicleModel
+ * master-data creation). Idempotent via stable `externalId` upserts; stale
+ * `DEMO-FLEET-*` rows not in the current fixture are removed on each run.
  *
  * Run with `npm run db:seed:demo`. Refuses to run against NODE_ENV=production.
  */
@@ -18,33 +14,47 @@ import { env } from "src/config/env";
 import { normalizedNameExtension } from "src/lib/db/prisma-extensions";
 import { normalizePlateNumber } from "src/lib/master-data/code";
 
-interface DemoCar {
-  /** Stable key for re-runs (Demo `CARS[].id`). */
+/** Stable prefix for all demo fleet rows — used for safe cleanup only. */
+export const DEMO_FLEET_EXTERNAL_ID_PREFIX = "DEMO-FLEET-";
+
+interface FleetSeedRow {
+  /** Stable key for re-runs. */
   externalId: string;
-  modelCode: string;
-  modelName: string;
+  vehicleName: string;
   modelYear: number;
   plateNumber: string;
   color: string;
   dailyRate: number;
   monthlyRate: number;
   status: VehicleOperationalStatus;
+  isActive: boolean;
 }
 
-const DEMO_FLEET: DemoCar[] = [
-  { externalId: "DEMO-C1", modelCode: "NISSAN-PATROL-PLATINUM", modelName: "Nissan Patrol Platinum", modelYear: 2024, plateNumber: "D 56041", color: "أسود لامع", dailyRate: 1200, monthlyRate: 24000, status: "RENTED" },
-  { externalId: "DEMO-C2", modelCode: "MERCEDES-GLE-450", modelName: "Mercedes GLE 450", modelYear: 2024, plateNumber: "K 21883", color: "أبيض لؤلؤي", dailyRate: 1100, monthlyRate: 22000, status: "AVAILABLE" },
-  { externalId: "DEMO-C3", modelCode: "TOYOTA-LAND-CRUISER-VXR", modelName: "Toyota Land Cruiser VXR", modelYear: 2023, plateNumber: "F 90215", color: "رمادي تيتانيوم", dailyRate: 1000, monthlyRate: 20000, status: "RENTED" },
-  { externalId: "DEMO-C4", modelCode: "RANGE-ROVER-SPORT-HSE", modelName: "Range Rover Sport HSE", modelYear: 2024, plateNumber: "J 47720", color: "أسود", dailyRate: 1300, monthlyRate: 26000, status: "AVAILABLE" },
-  { externalId: "DEMO-C5", modelCode: "BMW-530I-M-SPORT", modelName: "BMW 530i M-Sport", modelYear: 2023, plateNumber: "H 33907", color: "أزرق مظلم", dailyRate: 650, monthlyRate: 12500, status: "AVAILABLE" },
-  { externalId: "DEMO-C6", modelCode: "LEXUS-LX600-SIGNATURE", modelName: "Lexus LX600 Signature", modelYear: 2024, plateNumber: "A 71004", color: "بيج صحراوي", dailyRate: 1400, monthlyRate: 28000, status: "SERVICE" },
-  { externalId: "DEMO-C7", modelCode: "PORSCHE-CAYENNE-S", modelName: "Porsche Cayenne S", modelYear: 2023, plateNumber: "L 58449", color: "أحمر كارمن", dailyRate: 1500, monthlyRate: 30000, status: "AVAILABLE" },
-  { externalId: "DEMO-C8", modelCode: "TOYOTA-CAMRY-GLE", modelName: "Toyota Camry GLE", modelYear: 2024, plateNumber: "P 12076", color: "أبيض", dailyRate: 280, monthlyRate: 5200, status: "RENTED" },
-  { externalId: "DEMO-C9", modelCode: "NISSAN-KICKS-SV", modelName: "Nissan Kicks SV", modelYear: 2023, plateNumber: "R 66431", color: "فضي", dailyRate: 190, monthlyRate: 3500, status: "AVAILABLE" },
-  { externalId: "DEMO-C10", modelCode: "GMC-YUKON-DENALI", modelName: "GMC Yukon Denali", modelYear: 2023, plateNumber: "B 80552", color: "أسود", dailyRate: 1150, monthlyRate: 23000, status: "RENTED" },
-  { externalId: "DEMO-C11", modelCode: "MITSUBISHI-PAJERO-GLS", modelName: "Mitsubishi Pajero GLS", modelYear: 2022, plateNumber: "E 24618", color: "أبيض لؤلؤي", dailyRate: 450, monthlyRate: 8500, status: "AVAILABLE" },
-  { externalId: "DEMO-C12", modelCode: "FORD-EXPLORER-XLT", modelName: "Ford Explorer XLT", modelYear: 2023, plateNumber: "N 99284", color: "أزرق", dailyRate: 700, monthlyRate: 13500, status: "SERVICE" },
+/** Exported for unit tests — distribution: 9 AVAILABLE, 7 RENTED, 4 SERVICE. */
+export const DEMO_FLEET: FleetSeedRow[] = [
+  { externalId: "DEMO-FLEET-01", vehicleName: "Toyota Land Cruiser", modelYear: 2025, plateNumber: "Dubai A 47291", color: "White", dailyRate: 750, monthlyRate: 14500, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-02", vehicleName: "Nissan Patrol", modelYear: 2024, plateNumber: "Dubai B 31842", color: "Black", dailyRate: 650, monthlyRate: 12500, status: "RENTED", isActive: true },
+  { externalId: "DEMO-FLEET-03", vehicleName: "Toyota Camry", modelYear: 2024, plateNumber: "Dubai C 12076", color: "Pearl White", dailyRate: 250, monthlyRate: 5200, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-04", vehicleName: "Nissan Kicks", modelYear: 2023, plateNumber: "Dubai D 66431", color: "Silver", dailyRate: 220, monthlyRate: 4500, status: "RENTED", isActive: true },
+  { externalId: "DEMO-FLEET-05", vehicleName: "GMC Yukon", modelYear: 2023, plateNumber: "Dubai E 80552", color: "Black", dailyRate: 1150, monthlyRate: 23000, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-06", vehicleName: "Mitsubishi Pajero", modelYear: 2022, plateNumber: "Dubai F 24618", color: "Grey", dailyRate: 450, monthlyRate: 8500, status: "RENTED", isActive: true },
+  { externalId: "DEMO-FLEET-07", vehicleName: "Ford Explorer", modelYear: 2023, plateNumber: "Dubai G 99284", color: "Blue", dailyRate: 700, monthlyRate: 13500, status: "SERVICE", isActive: true },
+  { externalId: "DEMO-FLEET-08", vehicleName: "Range Rover Sport", modelYear: 2024, plateNumber: "Dubai H 47720", color: "Black", dailyRate: 1100, monthlyRate: 21000, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-09", vehicleName: "BMW 530i", modelYear: 2023, plateNumber: "Dubai J 33907", color: "Dark Blue", dailyRate: 650, monthlyRate: 12500, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-10", vehicleName: "Lexus LX600", modelYear: 2024, plateNumber: "Dubai K 71004", color: "Pearl White", dailyRate: 1400, monthlyRate: 28000, status: "RENTED", isActive: true },
+  { externalId: "DEMO-FLEET-11", vehicleName: "Porsche Cayenne", modelYear: 2023, plateNumber: "Dubai L 58449", color: "Grey", dailyRate: 1200, monthlyRate: 24000, status: "SERVICE", isActive: true },
+  { externalId: "DEMO-FLEET-12", vehicleName: "Mercedes GLC", modelYear: 2021, plateNumber: "Dubai M 21883", color: "Silver", dailyRate: 0, monthlyRate: 0, status: "SERVICE", isActive: true },
+  { externalId: "DEMO-FLEET-13", vehicleName: "Mercedes C-Class", modelYear: 2022, plateNumber: "Dubai N 63105", color: "White", dailyRate: 380, monthlyRate: 7800, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-14", vehicleName: "BMW X5", modelYear: 2024, plateNumber: "Dubai P 55217", color: "Black", dailyRate: 980, monthlyRate: 19500, status: "RENTED", isActive: true },
+  { externalId: "DEMO-FLEET-15", vehicleName: "Audi Q7", modelYear: 2025, plateNumber: "Dubai Q 88462", color: "Dark Blue", dailyRate: 1050, monthlyRate: 20500, status: "SERVICE", isActive: true },
+  { externalId: "DEMO-FLEET-16", vehicleName: "Toyota Corolla", modelYear: 2021, plateNumber: "Dubai R 10739", color: "Red", dailyRate: 180, monthlyRate: 3600, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-17", vehicleName: "Nissan Altima", modelYear: 2022, plateNumber: "Dubai S 74920", color: "Blue", dailyRate: 210, monthlyRate: 4200, status: "RENTED", isActive: true },
+  { externalId: "DEMO-FLEET-18", vehicleName: "Kia Sportage", modelYear: 2023, plateNumber: "Dubai T 33658", color: "Grey", dailyRate: 275, monthlyRate: 5400, status: "AVAILABLE", isActive: true },
+  { externalId: "DEMO-FLEET-19", vehicleName: "Hyundai Tucson", modelYear: 2024, plateNumber: "Dubai U 90114", color: "Pearl White", dailyRate: 0, monthlyRate: 5500, status: "RENTED", isActive: true },
+  { externalId: "DEMO-FLEET-20", vehicleName: "Chevrolet Tahoe", modelYear: 2026, plateNumber: "Dubai V 44503", color: "Silver", dailyRate: 890, monthlyRate: 17200, status: "AVAILABLE", isActive: true },
 ];
+
+const KNOWN_DEMO_EXTERNAL_IDS = DEMO_FLEET.map((car) => car.externalId);
 
 export async function runDemoFleetSeed(): Promise<void> {
   if (env.NODE_ENV === "production") {
@@ -55,41 +65,52 @@ export async function runDemoFleetSeed(): Promise<void> {
   const prisma = new PrismaClient({ adapter }).$extends(normalizedNameExtension);
 
   try {
-    for (const car of DEMO_FLEET) {
-      const model = await prisma.vehicleModel.upsert({
-        where: { code: car.modelCode },
-        update: { name: car.modelName, isActive: true },
-        create: { code: car.modelCode, name: car.modelName, isActive: true },
-      });
+    const stale = await prisma.vehicle.deleteMany({
+      where: {
+        externalId: { startsWith: DEMO_FLEET_EXTERNAL_ID_PREFIX },
+        NOT: { externalId: { in: KNOWN_DEMO_EXTERNAL_IDS } },
+      },
+    });
 
+    if (stale.count > 0) {
+      console.log(`[seed:demo] removed ${stale.count} stale demo fleet vehicle(s).`);
+    }
+
+    for (const car of DEMO_FLEET) {
       const plateNumber = normalizePlateNumber(car.plateNumber);
 
       await prisma.vehicle.upsert({
         where: { externalId: car.externalId },
         update: {
-          modelId: model.id,
+          vehicleName: car.vehicleName,
+          modelId: null,
           modelYear: car.modelYear,
           color: car.color,
           plateNumber,
           dailyRate: car.dailyRate,
           monthlyRate: car.monthlyRate,
           operationalStatus: car.status,
-          isActive: true,
+          isActive: car.isActive,
         },
         create: {
           externalId: car.externalId,
-          modelId: model.id,
+          vehicleName: car.vehicleName,
           modelYear: car.modelYear,
           color: car.color,
           plateNumber,
           dailyRate: car.dailyRate,
           monthlyRate: car.monthlyRate,
           operationalStatus: car.status,
+          isActive: car.isActive,
         },
       });
     }
 
-    console.log(`[seed:demo] fleet ready: ${DEMO_FLEET.length} vehicles.`);
+    const demoCount = await prisma.vehicle.count({
+      where: { externalId: { startsWith: DEMO_FLEET_EXTERNAL_ID_PREFIX } },
+    });
+
+    console.log(`[seed:demo] fleet ready: ${demoCount} vehicles (${DEMO_FLEET.length} fixture rows).`);
   } finally {
     await prisma.$disconnect();
   }

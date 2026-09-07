@@ -29,7 +29,7 @@ const VehicleRef = z.object({
   vin: z.string().nullable(),
   modelYear: z.number().int().nullable(),
   color: z.string().nullable(),
-  model: MasterRef,
+  model: MasterRef.nullable(),
 });
 
 /**

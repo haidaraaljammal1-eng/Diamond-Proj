@@ -1,0 +1,9 @@
+.form {
+  margin-top: 4px;
+}
+
+.error {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--diamond-danger, #c0392b);
+}

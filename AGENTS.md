@@ -38,6 +38,7 @@
 - Reusable card surfaces must use the shared Card component (`src/shared/components/ui/card`).
 - Domain cards compose Shared Card instead of recreating generic card CSS.
 - Every toggle switch uses the shared Switch (`src/shared/components/ui/switch`); do not recreate switch CSS in feature modules.
+- Diamond button hierarchy uses Shared Button (`src/shared/components/ui/button`) variants only: `primary` (dark-gold filled) for the main CTA; `secondary` (ivory/light surface, gold border, gold text/icons) for search, utility, and secondary actions. Pages must not add page-specific button CSS when a Shared variant covers the design.
 - Users data must come from Backend APIs; never from Demo mock EMP data.
 - Current authenticated user comes from Auth infrastructure, not Users Store.
 - User forms must use the shared FormBuilder.
@@ -84,3 +85,20 @@
 - Vehicle page/components consume hooks, never stores/APIs directly.
 - A rented vehicle may temporarily have `currentRental = null` until Contracts is implemented; never fake renter/timer data.
 - Vehicle page must not implement Contract, GPS, or Maintenance domains.
+
+### Vehicle creation (Add Vehicle)
+
+- Diamond Add Vehicle uses direct free-text `vehicleName`, not a required VehicleModel lookup.
+- New Diamond vehicles always start with operational status **AVAILABLE**.
+- Vehicle creation forms must not expose operational-status selection or `modelId`.
+- Backend, not the Frontend, enforces the initial AVAILABLE status (`CreateVehicleSchema` omits `operationalStatus`; service sets `AVAILABLE`).
+- Add Vehicle must use Shared Button, Shared Dialog, and Shared FormBuilder.
+- Creating a vehicle must not create Rental, Contract, GPS, or Maintenance records.
+
+### Vehicle card actions
+
+- VehicleCard visual reference is the latest approved Fleet screenshot.
+- VehicleCard edit (pencil) changes default `dailyRate` / `monthlyRate` only — not rental-offer pricing.
+- VehicleCard delete maps to `POST /vehicles/:id/deactivate` (fleet soft-remove), not hard delete.
+- The approved Vehicles data toolbar pattern (search, status, model, sort, show retired, count, clear) is reusable for other data-heavy pages.
+- Data-heavy explicit searches should use the Shared `DataSearch` pattern: draft locally → Search/Enter → server-side applied query (`src/shared/components/data-search/`).

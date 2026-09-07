@@ -5,10 +5,29 @@
   transition:
     transform var(--diamond-transition),
     box-shadow var(--diamond-transition),
+    border-color var(--diamond-transition),
+    background-color var(--diamond-transition),
+    color var(--diamond-transition),
+    filter var(--diamond-transition),
     opacity var(--diamond-transition);
 }
 
+.button:focus-visible {
+  outline: 2px solid var(--diamond-gold-lo);
+  outline-offset: 3px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ─── Primary — dark gold filled CTA ─── */
 .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   height: 50px;
   min-height: 50px;
@@ -24,57 +43,72 @@
 }
 
 .primary:hover:not(:disabled) {
-  filter: brightness(1.1);
+  filter: brightness(1.1) drop-shadow(0 6px 18px rgb(201 161 92 / 28%));
 }
 
 .primary:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-.button:focus-visible {
-  outline: 2px solid var(--diamond-gold-lo);
-  outline-offset: 3px;
+/* ─── Secondary — ivory surface + gold text/icons/border ─── */
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(133, 100, 45, 0.18);
+  border-radius: 9px;
+  background: rgba(201, 161, 92, 0.09);
+  color: var(--diamond-gold-hi);
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
-.button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
+.secondary:hover:not(:disabled) {
+  background: rgba(201, 161, 92, 0.18);
+  border-color: rgba(201, 161, 92, 0.38);
+  color: var(--diamond-gold-hi);
 }
 
-.ghost {
-  background: transparent;
-  color: var(--diamond-ink);
+.secondary:focus-visible {
+  outline: 0;
+  border-color: rgba(201, 161, 92, 0.5);
+  box-shadow: 0 0 0 3px rgba(201, 161, 92, 0.14);
 }
 
-/* Demo `.btn.ghost` — the secondary inline action, on the Demo base button
-   metrics. `primary` (above) stays the full-width login submit. */
+.secondary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Legacy alias — prefer `secondary` for toolbar/utility actions. */
 .ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 18px;
-  border: 1px solid var(--diamond-hair);
-  border-radius: 12px;
-  background: transparent;
-  color: var(--diamond-muted);
-  font-size: 13px;
+  border: 1px solid rgba(133, 100, 45, 0.18);
+  border-radius: 9px;
+  background: rgba(201, 161, 92, 0.09);
+  color: var(--diamond-gold-hi);
+  font-size: 12.5px;
   font-weight: 600;
 }
 
 .ghost:hover:not(:disabled) {
-  color: var(--diamond-ivory);
-  border-color: var(--diamond-line);
+  background: rgba(201, 161, 92, 0.18);
+  border-color: rgba(201, 161, 92, 0.38);
+  color: var(--diamond-gold-hi);
+}
+
+.ghost:focus-visible {
+  outline: 0;
+  border-color: rgba(201, 161, 92, 0.5);
+  box-shadow: 0 0 0 3px rgba(201, 161, 92, 0.14);
 }
 
 /* Demo base button metrics (`.btn` / `.btn.pri`, 38px). Applied on top of a
    variant, so the full-width login submit stays the exception, not the rule. */
 .md {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
   width: auto;
   height: 38px;
   min-height: 38px;
@@ -85,25 +119,37 @@
   filter: none;
 }
 
-/* Demo `.btn.sm` (31px) — the compact action used inside cards and rows. */
+.primary.md {
+  filter: drop-shadow(0 4px 12px rgb(201 161 92 / 22%));
+}
+
+.primary.md:hover:not(:disabled) {
+  filter: brightness(1.08) drop-shadow(0 4px 12px rgb(201 161 92 / 22%));
+}
+
+/* Demo `.btn.sm` — toolbar + card compact actions (36px, matches Select ghost). */
 .sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
   width: auto;
-  height: 31px;
-  min-height: 31px;
+  height: 36px;
+  min-height: 36px;
   padding: 0 12px;
   border-radius: 9px;
-  font-size: 11.5px;
+  font-size: 12.5px;
   letter-spacing: 0;
   filter: none;
 }
 
+.primary.sm {
+  filter: drop-shadow(0 3px 10px rgb(201 161 92 / 20%));
+}
+
+.primary.sm:hover:not(:disabled) {
+  filter: brightness(1.08) drop-shadow(0 3px 10px rgb(201 161 92 / 20%));
+}
+
 @media (max-width: 560px) {
   .sm {
-    height: 35px;
-    min-height: 35px;
+    height: 36px;
+    min-height: 36px;
   }
 }

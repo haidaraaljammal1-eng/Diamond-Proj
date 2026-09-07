@@ -10,6 +10,7 @@ function fixture(partial: Partial<VehicleCardDto> & Pick<VehicleCardDto, "operat
   return {
     id: 1,
     vin: null,
+    vehicleName: "Range Rover",
     modelId: 1,
     modelYear: 2024,
     color: "White",

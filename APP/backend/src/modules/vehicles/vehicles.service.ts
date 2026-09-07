@@ -15,13 +15,17 @@ import {
 import {
   operationalStatusFromDto,
   operationalStatusToDto,
+  fleetVehicleTypeLabel,
+  normalizeFleetTypeKey,
   resolveCurrentRental,
   resolvePrimaryImage,
   toVehicleImage,
   vehicleDisplayName,
 } from "src/modules/vehicles/vehicles.mapper";
+import { buildVehicleListOrderBy } from "src/modules/vehicles/vehicles-sort";
 import type {
   CreateVehicleSchema,
+  FleetVehicleTypeOption,
   ListVehiclesQuerySchema,
   UpdateVehicleSchema,
   VehicleCard,
@@ -60,10 +64,25 @@ function plateConflict(): AppError {
   return conflictError("vehicle", "plateNumber", "A vehicle with this plate number already exists");
 }
 
+function rentedVehicleLocked(): AppError {
+  return AppError.conflict("Vehicle is rented and cannot be modified", [
+    {
+      resource: "vehicle",
+      field: "operationalStatus",
+      message: "Vehicle is rented",
+    },
+  ]);
+}
+
+function assertVehicleMutableForFleetOps(operationalStatus: string): void {
+  if (operationalStatus === "RENTED") throw rentedVehicleLocked();
+}
+
 function toVehiclePublic(row: VehicleCardRow): VehiclePublic {
   return {
     id: row.id,
     vin: row.vin,
+    vehicleName: row.vehicleName,
     modelId: row.modelId,
     modelYear: row.modelYear,
     color: row.color,
@@ -81,7 +100,12 @@ function toVehiclePublic(row: VehicleCardRow): VehiclePublic {
 function toVehicleCard(row: VehicleCardRow): VehicleCard {
   return {
     ...toVehiclePublic(row),
-    displayName: vehicleDisplayName(row.model.name, row.modelYear),
+    displayName: vehicleDisplayName({
+      vehicleName: row.vehicleName,
+      modelName: row.model?.name ?? null,
+      modelYear: row.modelYear,
+      plateNumber: row.plateNumber,
+    }),
     model: row.model,
     primaryImage: resolvePrimaryImage(row.id, row.photos),
     currentRental: resolveCurrentRental(row.id),
@@ -123,7 +147,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
     if (existing && existing.id !== exceptId) throw plateConflict();
   }
 
-  /** A NEW vehicle may only reference an EXISTING, ACTIVE vehicle model. */
+  /** A vehicle may only reference an EXISTING, ACTIVE vehicle model when modelId is set. */
   async function assertActiveModel(modelId: number) {
     const model = await prisma.vehicleModel.findUnique({
       where: { id: modelId },
@@ -149,15 +173,29 @@ export function createVehiclesService(fastify: FastifyInstance) {
   }
 
   async function list(query: z.infer<typeof ListVehiclesQuerySchema>) {
+    const vehicleTypeFilter = query.vehicleType
+      ? {
+          OR: [
+            { vehicleName: { equals: query.vehicleType, mode: "insensitive" as const } },
+            {
+              vehicleName: null,
+              model: { name: { equals: query.vehicleType, mode: "insensitive" as const } },
+            },
+          ],
+        }
+      : {};
+
     const where: Prisma.VehicleWhereInput = {
       ...(query.active !== undefined ? { isActive: query.active } : {}),
       ...(query.modelId !== undefined ? { modelId: query.modelId } : {}),
+      ...vehicleTypeFilter,
       ...(query.status && query.status !== "all"
         ? { operationalStatus: operationalStatusFromDto(query.status) }
         : {}),
       ...(query.search
         ? {
             OR: [
+              { vehicleName: { contains: query.search, mode: "insensitive" } },
               { vin: { contains: query.search, mode: "insensitive" } },
               { externalId: { contains: query.search, mode: "insensitive" } },
               { plateNumber: { contains: query.search, mode: "insensitive" } },
@@ -170,6 +208,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
       field: "createdAt",
       direction: "desc",
     });
+    const orderBy = buildVehicleListOrderBy(field, direction);
     return paginate({
       page: query.page,
       pageSize: query.pageSize,
@@ -178,7 +217,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
         const rows = await prisma.vehicle.findMany({
           where,
           include: VEHICLE_CARD_INCLUDE,
-          orderBy: { [field]: direction } as Prisma.VehicleOrderByWithRelationInput,
+          orderBy,
           skip,
           take,
         });
@@ -187,12 +226,33 @@ export function createVehiclesService(fastify: FastifyInstance) {
     });
   }
 
+  async function listFilterOptions(): Promise<FleetVehicleTypeOption[]> {
+    const rows = await prisma.vehicle.findMany({
+      where: { isActive: true },
+      select: {
+        vehicleName: true,
+        model: { select: { name: true } },
+      },
+    });
+    const byKey = new Map<string, string>();
+    for (const row of rows) {
+      const label = fleetVehicleTypeLabel(row.vehicleName, row.model?.name ?? null);
+      if (!label) continue;
+      const key = normalizeFleetTypeKey(label);
+      if (!byKey.has(key)) byKey.set(key, label);
+    }
+    return [...byKey.values()]
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+      .map((label) => ({ value: label, label }));
+  }
+
   async function get(id: number): Promise<VehicleDetail> {
     return toVehicleDetail(await loadOrThrow(id));
   }
 
   async function create(input: z.infer<typeof CreateVehicleSchema>): Promise<VehiclePublic> {
-    await assertActiveModel(input.modelId);
+    if (input.modelId != null) await assertActiveModel(input.modelId);
+    const vehicleName = input.vehicleName ?? null;
     const vin = input.vin ? normalizeVin(input.vin) : null;
     if (vin) await assertVinFree(vin);
     const externalId = input.externalId ? normalizeExternalId(input.externalId) : null;
@@ -202,16 +262,15 @@ export function createVehiclesService(fastify: FastifyInstance) {
     try {
       const row = await prisma.vehicle.create({
         data: {
+          vehicleName,
           vin,
-          modelId: input.modelId,
+          modelId: input.modelId ?? null,
           modelYear: input.modelYear ?? null,
           color: input.color ?? null,
           plateNumber,
           dailyRate: input.dailyRate ?? null,
           monthlyRate: input.monthlyRate ?? null,
-          operationalStatus: input.operationalStatus
-            ? operationalStatusFromDto(input.operationalStatus)
-            : undefined,
+          operationalStatus: "AVAILABLE",
           externalId,
         },
         include: VEHICLE_CARD_INCLUDE,
@@ -224,6 +283,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
 
   async function update(id: number, input: z.infer<typeof UpdateVehicleSchema>): Promise<VehiclePublic> {
     const existing = await loadOrThrow(id);
+    assertVehicleMutableForFleetOps(existing.operationalStatus);
     const data: Prisma.VehicleUncheckedUpdateInput = {};
 
     if (input.vin !== undefined) {
@@ -232,8 +292,9 @@ export function createVehiclesService(fastify: FastifyInstance) {
       if (vin && vin !== existing.vin) await assertVinFree(vin, id);
       data.vin = vin;
     }
+    if (input.vehicleName !== undefined) data.vehicleName = input.vehicleName;
     if (input.modelId !== undefined) {
-      await assertActiveModel(input.modelId);
+      if (input.modelId !== null) await assertActiveModel(input.modelId);
       data.modelId = input.modelId;
     }
     if (input.modelYear !== undefined) data.modelYear = input.modelYear;
@@ -274,7 +335,8 @@ export function createVehiclesService(fastify: FastifyInstance) {
   }
 
   async function setActive(id: number, isActive: boolean): Promise<VehiclePublic> {
-    await loadOrThrow(id);
+    const existing = await loadOrThrow(id);
+    if (!isActive) assertVehicleMutableForFleetOps(existing.operationalStatus);
     const row = await prisma.vehicle.update({
       where: { id },
       data: { isActive },
@@ -283,5 +345,5 @@ export function createVehiclesService(fastify: FastifyInstance) {
     return toVehiclePublic(row);
   }
 
-  return { list, get, create, update, setActive };
+  return { list, listFilterOptions, get, create, update, setActive };
 }

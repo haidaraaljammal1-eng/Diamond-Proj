@@ -186,7 +186,9 @@
     "passwordMin": "كلمة المرور يجب ألا تقل عن 8 أحرف",
     "passwordLetter": "كلمة المرور يجب أن تتضمن حرفًا",
     "passwordNumber": "كلمة المرور يجب أن تتضمن رقمًا",
-    "passwordMismatch": "كلمتا المرور غير متطابقتين"
+    "passwordMismatch": "كلمتا المرور غير متطابقتين",
+    "invalidYear": "أدخل سنة صنع صالحة",
+    "invalidRate": "أدخل مبلغًا صالحًا (0 أو أكثر)"
   },
   "Roles": {
     "crumbs": "الإدارة · التحكم في الوصول",
@@ -439,6 +441,7 @@
     "crumbs": "الأسطول",
     "title": "السيارات",
     "subtitle": "أسطول المكتب الحالي",
+    "addVehicle": "+ إضافة سيارة",
     "refresh": "تحديث",
     "loading": "جارٍ تحميل الأسطول…",
     "currency": "درهم",
@@ -453,6 +456,12 @@
     "timerExpiredLabel": "⚠ انتهت مدة الإيجار",
     "timerValue": "{days} يوم و {hours} ساعة و {minutes} دقيقة",
     "timerExpiredValue": "0 يوم و 0 ساعة و 0 دقيقة",
+    "search": {
+      "inputLabel": "بحث في الأسطول",
+      "placeholder": "ابحث باسم السيارة أو رقم اللوحة…",
+      "button": "بحث",
+      "clear": "مسح البحث"
+    },
     "filters": {
       "all": "الكل",
       "available": "متاحة",
@@ -460,12 +469,11 @@
       "service": "صيانة",
       "statusGroup": "حالة السيارة",
       "searchLabel": "بحث في الأسطول",
-      "searchPlaceholder": "ابحث بلوحة أو موديل أو رقم هيكل…",
-      "modelLabel": "الموديل",
-      "modelAll": "كل الموديلات",
-      "modelsLoading": "جارٍ تحميل الموديلات…",
+      "searchPlaceholder": "ابحث بلوحة أو نوع أو رقم هيكل…",
+      "typeLabel": "نوع السيارة",
+      "typeAll": "كل أنواع السيارات",
+      "typesLoading": "جارٍ تحميل الأنواع…",
       "sortLabel": "الترتيب",
-      "includeInactive": "إظهار المسحوبة من الخدمة",
       "clear": "مسح الفلاتر",
       "activeCount": "{count} فلتر نشط",
       "results": "{count} سيارة",
@@ -490,7 +498,11 @@
       "goMaintenance": "الانتقال إلى قسم الصيانة",
       "generateLinkSetPriceShort": "توليد رابط",
       "generateReturnLinkShort": "رابط إرجاع",
-      "goMaintenanceShort": "الصيانة"
+      "goMaintenanceShort": "الصيانة",
+      "editRates": "تعديل التعرفة الافتراضية",
+      "editRatesTitle": "تعديل السعر اليومي والشهري الافتراضي للسيارة",
+      "delete": "إزالة من الأسطول",
+      "deleteTitle": "إزالة هذه السيارة من الأسطول النشط"
     },
     "boundary": {
       "noContract": "لا يوجد عقد مرتبط بهذه السيارة",
@@ -550,6 +562,45 @@
       "submit": "🚀 إرسال الرابط للعميل",
       "cancel": "إلغاء",
       "pendingContracts": "إرسال الرابط يتطلب نطاق العقود — الواجهة جاهزة، التكامل قادم."
+    },
+    "form": {
+      "createTitle": "إضافة سيارة",
+      "createDescription": "سجّل مركبة جديدة في الأسطول. تبدأ متاحة حتى يغيّرها عقد إيجار أو صيانة.",
+      "createSuccess": "تمت إضافة السيارة بنجاح.",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "close": "إغلاق",
+      "saving": "جارٍ الحفظ…",
+      "vehicleNameLabel": "اسم / نوع السيارة",
+      "vehicleNamePlaceholder": "Toyota Land Cruiser",
+      "modelYearLabel": "السنة",
+      "plateNumberLabel": "رقم اللوحة",
+      "colorLabel": "اللون",
+      "dailyRateLabel": "السعر اليومي (درهم)",
+      "monthlyRateLabel": "السعر الشهري (درهم)",
+      "vinLabel": "رقم الهيكل (اختياري)",
+      "error": {
+        "duplicatePlate": "يوجد بالفعل مركبة بهذا رقم اللوحة.",
+        "duplicateVin": "يوجد بالفعل مركبة بهذا رقم الهيكل.",
+        "CONFLICT": "هذه المركبة تتعارض مع سجل موجود.",
+        "VALIDATION_ERROR": "بعض القيم غير صالحة. راجع الحقول وحاول مرة أخرى.",
+        "FORBIDDEN": "حسابك غير مسموح له بإدارة المركبات.",
+        "rentedLocked": "هذه السيارة مؤجرة ولا يمكن تعديلها من صفحة الأسطول."
+      }
+    },
+    "editRates": {
+      "title": "تعديل التعرفة الافتراضية — {name}",
+      "description": "حدّث السعر اليومي والشهري الافتراضي للسيارة. تسعير عروض الإيجار يُحدَّد لاحقًا ضمن العقود.",
+      "dailyRateLabel": "السعر اليومي (درهم)",
+      "monthlyRateLabel": "السعر الشهري (درهم)",
+      "success": "تم تحديث التعرفة الافتراضية."
+    },
+    "deactivate": {
+      "title": "حذف السيارة من الأسطول؟",
+      "description": "هل تريد حذف {name} من الأسطول؟ سيتم إخفاؤها من السيارات النشطة مع الاحتفاظ بسجلها.",
+      "descriptionGeneric": "هل تريد حذف هذه السيارة من الأسطول؟ سيتم إخفاؤها من السيارات النشطة مع الاحتفاظ بسجلها.",
+      "confirm": "حذف من الأسطول",
+      "success": "تمت إزالة السيارة من الأسطول النشط."
     }
   }
 }

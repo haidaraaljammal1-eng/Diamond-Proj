@@ -75,6 +75,37 @@ export function resolveCurrentRental(_vehicleId: number): CurrentRental {
   return null;
 }
 
-export function vehicleDisplayName(modelName: string, modelYear: number | null): string {
-  return modelYear ? `${modelName} ${modelYear}` : modelName;
+type DisplayNameInput = {
+  vehicleName: string | null;
+  modelName: string | null;
+  modelYear: number | null;
+  plateNumber: string | null;
+};
+
+/**
+ * Stable card/detail label: direct fleet name wins; legacy catalog model is the
+ * fallback; plate number is the last resort when neither name source exists.
+ */
+export function vehicleDisplayName(input: DisplayNameInput): string {
+  if (input.vehicleName) return input.vehicleName;
+  if (input.modelName) {
+    return input.modelYear ? `${input.modelName} ${input.modelYear}` : input.modelName;
+  }
+  if (input.plateNumber) return input.plateNumber;
+  return "Vehicle";
+}
+
+/** Fleet type/name used for toolbar filtering (not the card displayName). */
+export function fleetVehicleTypeLabel(
+  vehicleName: string | null,
+  modelName: string | null,
+): string | null {
+  const direct = vehicleName?.trim();
+  if (direct) return direct;
+  const legacy = modelName?.trim();
+  return legacy || null;
+}
+
+export function normalizeFleetTypeKey(label: string): string {
+  return label.trim().toLowerCase();
 }

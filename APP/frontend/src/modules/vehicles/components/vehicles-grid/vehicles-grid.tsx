@@ -4,20 +4,22 @@ import styles from "./vehicles-grid.module.css";
 
 export interface VehiclesGridProps {
   vehicles: VehicleCardDto[];
+  canManage: boolean;
   onOpen: (vehicle: VehicleCardDto) => void;
-  onSetPrice: (vehicle: VehicleCardDto) => void;
   onPrimaryAction: (vehicle: VehicleCardDto) => void;
+  onEditRates: (vehicle: VehicleCardDto) => void;
+  onDelete: (vehicle: VehicleCardDto) => void;
   onGps: (vehicle: VehicleCardDto) => void;
-  onMore: (vehicle: VehicleCardDto) => void;
 }
 
 export function VehiclesGrid({
   vehicles,
+  canManage,
   onOpen,
-  onSetPrice,
   onPrimaryAction,
+  onEditRates,
+  onDelete,
   onGps,
-  onMore,
 }: VehiclesGridProps) {
   return (
     <div className={styles.grid} data-testid="vehicles-grid">
@@ -25,11 +27,12 @@ export function VehiclesGrid({
         <VehicleCard
           key={vehicle.id}
           vehicle={vehicle}
+          canManage={canManage}
           onOpen={onOpen}
-          onSetPrice={onSetPrice}
           onPrimaryAction={onPrimaryAction}
+          onEditRates={onEditRates}
+          onDelete={onDelete}
           onGps={onGps}
-          onMore={onMore}
         />
       ))}
     </div>

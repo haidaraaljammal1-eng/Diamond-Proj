@@ -596,7 +596,7 @@ export function createComplaintsService(fastify: FastifyInstance, deps: Deps = {
     const previewActors = await resolveUserRefs(c.timeline.map((t) => t.actorUserId));
     return {
       ...toListItem(c, includePhone),
-      purchaseExperience: c.purchaseExperience ? { id: c.purchaseExperience.id, deliveryDate: c.purchaseExperience.deliveryDate, vehicleModel: c.purchaseExperience.vehicle.model.name, vehicleYear: c.purchaseExperience.vehicle.modelYear, vin: c.purchaseExperience.vehicle.vin, salespersonName: c.purchaseExperience.salesperson?.name ?? null } : null,
+      purchaseExperience: c.purchaseExperience ? { id: c.purchaseExperience.id, deliveryDate: c.purchaseExperience.deliveryDate, vehicleModel: c.purchaseExperience.vehicle.vehicleName ?? c.purchaseExperience.vehicle.model?.name ?? null, vehicleYear: c.purchaseExperience.vehicle.modelYear, vin: c.purchaseExperience.vehicle.vin, salespersonName: c.purchaseExperience.salesperson?.name ?? null } : null,
       sourceId: c.sourceId, description: c.description, systemSummary: c.systemSummary, summaryStatus: c.summaryStatus,
       customerComment, firstRespondedAt: c.firstRespondedAt, resolvedAt: c.resolvedAt, resolutionSummary: c.resolutionSummary,
       solutionProposed: c.solutionProposed, closedAt: c.closedAt, reopenedCount: c.reopenedCount, escalatedAt: c.escalatedAt,

@@ -186,7 +186,9 @@
     "passwordMin": "Password must be at least 8 characters",
     "passwordLetter": "Password must include a letter",
     "passwordNumber": "Password must include a number",
-    "passwordMismatch": "Passwords do not match"
+    "passwordMismatch": "Passwords do not match",
+    "invalidYear": "Enter a valid model year",
+    "invalidRate": "Enter a valid non-negative amount"
   },
   "Roles": {
     "crumbs": "Administration · Access control",
@@ -439,6 +441,7 @@
     "crumbs": "Fleet",
     "title": "Vehicles",
     "subtitle": "Current office fleet",
+    "addVehicle": "+ Add vehicle",
     "refresh": "Refresh",
     "loading": "Loading fleet…",
     "currency": "AED",
@@ -453,6 +456,12 @@
     "timerExpiredLabel": "⚠ Rental period ended",
     "timerValue": "{days} days and {hours} hours and {minutes} minutes",
     "timerExpiredValue": "0 days and 0 hours and 0 minutes",
+    "search": {
+      "inputLabel": "Search the fleet",
+      "placeholder": "Search by vehicle name or plate…",
+      "button": "Search",
+      "clear": "Clear search"
+    },
     "filters": {
       "all": "All",
       "available": "Available",
@@ -460,12 +469,11 @@
       "service": "Service",
       "statusGroup": "Vehicle status",
       "searchLabel": "Search the fleet",
-      "searchPlaceholder": "Search by plate, model or VIN…",
-      "modelLabel": "Model",
-      "modelAll": "All models",
-      "modelsLoading": "Loading models…",
+      "searchPlaceholder": "Search by plate, type or VIN…",
+      "typeLabel": "Vehicle type",
+      "typeAll": "All vehicle types",
+      "typesLoading": "Loading types…",
       "sortLabel": "Sort",
-      "includeInactive": "Show retired vehicles",
       "clear": "Clear filters",
       "activeCount": "{count} active",
       "results": "{count} vehicles",
@@ -490,7 +498,11 @@
       "goMaintenance": "Go to maintenance",
       "generateLinkSetPriceShort": "Generate link",
       "generateReturnLinkShort": "Return link",
-      "goMaintenanceShort": "Maintenance"
+      "goMaintenanceShort": "Maintenance",
+      "editRates": "Edit default rates",
+      "editRatesTitle": "Edit vehicle default daily and monthly rates",
+      "delete": "Remove from fleet",
+      "deleteTitle": "Remove this vehicle from the active fleet"
     },
     "boundary": {
       "noContract": "No contract is linked to this vehicle",
@@ -550,6 +562,45 @@
       "submit": "🚀 Send link to customer",
       "cancel": "Cancel",
       "pendingContracts": "Sending the link requires the Contracts domain — UI is ready, integration is pending."
+    },
+    "form": {
+      "createTitle": "Add vehicle",
+      "createDescription": "Register a new fleet vehicle. It starts as available until a rental or maintenance flow changes its status.",
+      "createSuccess": "Vehicle added successfully.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "close": "Close",
+      "saving": "Saving…",
+      "vehicleNameLabel": "Vehicle name / type",
+      "vehicleNamePlaceholder": "Toyota Land Cruiser",
+      "modelYearLabel": "Model year",
+      "plateNumberLabel": "Plate number",
+      "colorLabel": "Color",
+      "dailyRateLabel": "Daily rate (AED)",
+      "monthlyRateLabel": "Monthly rate (AED)",
+      "vinLabel": "VIN (optional)",
+      "error": {
+        "duplicatePlate": "A vehicle with this plate number already exists.",
+        "duplicateVin": "A vehicle with this VIN already exists.",
+        "CONFLICT": "This vehicle conflicts with an existing record.",
+        "VALIDATION_ERROR": "Some values are not valid. Check the fields and try again.",
+        "FORBIDDEN": "Your account is not allowed to manage vehicles.",
+        "rentedLocked": "This vehicle is rented and cannot be modified from the fleet page."
+      }
+    },
+    "editRates": {
+      "title": "Edit default rates — {name}",
+      "description": "Update the vehicle's default daily and monthly rates. Rental-offer pricing is set separately in Contracts.",
+      "dailyRateLabel": "Daily rate (AED)",
+      "monthlyRateLabel": "Monthly rate (AED)",
+      "success": "Default rates updated."
+    },
+    "deactivate": {
+      "title": "Remove vehicle from fleet?",
+      "description": "Remove {name} from the active fleet? It will be hidden from active vehicles while its record is kept.",
+      "descriptionGeneric": "Remove this vehicle from the active fleet? It will be hidden from active vehicles while its record is kept.",
+      "confirm": "Remove from fleet",
+      "success": "Vehicle removed from the active fleet."
     }
   }
 }

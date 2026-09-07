@@ -9,7 +9,8 @@ export type VehicleOperationalStatusDto = z.infer<typeof VehicleOperationalStatu
 export const VehiclePublicSchema = z.object({
   id: z.number().int(),
   vin: z.string().nullable(),
-  modelId: z.number().int(),
+  vehicleName: z.string().nullable(),
+  modelId: z.number().int().nullable(),
   modelYear: z.number().int().nullable(),
   // CX display context only (free-text ERP/import label, e.g. "Pearl White").
   color: z.string().nullable(),
@@ -56,7 +57,7 @@ export const VehicleCurrentRentalSchema = z
 
 export const VehicleCardSchema = VehiclePublicSchema.extend({
   displayName: z.string(),
-  model: ModelRefSchema,
+  model: ModelRefSchema.nullable(),
   primaryImage: VehicleImageSchema.nullable(),
   currentRental: VehicleCurrentRentalSchema,
 });
@@ -70,6 +71,8 @@ export type VehicleDetail = z.infer<typeof VehicleDetailSchema>;
 export const ListVehiclesQuerySchema = PaginationQuerySchema.extend({
   search: z.string().trim().min(1).optional(),
   modelId: z.coerce.number().int().positive().optional(),
+  /** Active fleet type/name filter (direct vehicleName or legacy model name). */
+  vehicleType: z.string().trim().min(1).optional(),
   active: BooleanQueryParam,
   /** Fleet page filter — omit or `all` for every operational status. */
   status: z
@@ -79,29 +82,52 @@ export const ListVehiclesQuerySchema = PaginationQuerySchema.extend({
   sort: z.string().optional(),
 });
 
+export const FleetVehicleTypeOptionSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+});
+export type FleetVehicleTypeOption = z.infer<typeof FleetVehicleTypeOptionSchema>;
+
 const Vin = z.string().trim().min(1).max(64);
 const ModelYear = z.number().int().min(1900).max(2100);
 const ExternalId = z.string().trim().min(1).max(100);
 const Color = z.string().trim().min(1).max(60);
 const PlateNumber = z.string().trim().min(1).max(20);
+const VehicleName = z.string().trim().min(1).max(120);
 const Rate = z.number().int().nonnegative();
 
-export const CreateVehicleSchema = z.object({
-  vin: Vin.optional(),
-  modelId: z.number().int().positive(),
-  modelYear: ModelYear.optional(),
-  color: Color.optional(),
-  plateNumber: PlateNumber.optional(),
-  dailyRate: Rate.optional(),
-  monthlyRate: Rate.optional(),
-  operationalStatus: VehicleOperationalStatusDtoSchema.optional(),
-  externalId: ExternalId.optional(),
-});
+function hasCreateVehicleIdentity(body: {
+  vehicleName?: string;
+  modelId?: number | null;
+}): boolean {
+  if (body.vehicleName !== undefined) return true;
+  return typeof body.modelId === "number" && body.modelId > 0;
+}
+
+/** Create accepts fleet fields only — operational status is always initialized server-side. */
+export const CreateVehicleSchema = z
+  .object({
+    vehicleName: VehicleName.optional(),
+    vin: Vin.optional(),
+    /** Optional legacy catalog link — omit entirely for direct-name Diamond fleet vehicles. */
+    modelId: z.number().int().positive().nullable().optional(),
+    modelYear: ModelYear.optional(),
+    color: Color.optional(),
+    plateNumber: PlateNumber.optional(),
+    dailyRate: Rate.optional(),
+    monthlyRate: Rate.optional(),
+    externalId: ExternalId.optional(),
+  })
+  .refine(hasCreateVehicleIdentity, {
+    message: "Either vehicleName or modelId is required",
+    path: ["vehicleName"],
+  });
 
 export const UpdateVehicleSchema = z
   .object({
     vin: Vin.nullable(),
-    modelId: z.number().int().positive(),
+    vehicleName: VehicleName.nullable(),
+    modelId: z.number().int().positive().nullable(),
     modelYear: ModelYear.nullable(),
     color: Color.nullable(),
     plateNumber: PlateNumber.nullable(),

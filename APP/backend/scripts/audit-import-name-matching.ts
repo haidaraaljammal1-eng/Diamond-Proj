@@ -184,7 +184,7 @@ async function main() {
   check("5 purchase experiences created", exps.length === 5, `got ${exps.length}`);
   const e1 = exps.find((e) => e.customer.name === cust("Cust One"));
   check("Cust One → existing branch + existing salesperson + existing model",
-    e1?.branch.name === existBranch && e1?.salesperson?.name === existSp && e1?.vehicle.model.name === existModel);
+    e1?.branch.name === existBranch && e1?.salesperson?.name === existSp && e1?.vehicle.model?.name === existModel);
   const e4 = exps.find((e) => e.customer.name === cust("Cust Four"));
   const e5 = exps.find((e) => e.customer.name === cust("Cust Five"));
   check("Cust Four salesperson.branch = Alpha", e4?.branch.name === alpha && e4?.salesperson?.branchId === alphaRec?.id);

@@ -467,7 +467,7 @@ export function createCommunicationService(fastify: FastifyInstance) {
       ctx = buildRenderContext({
         customerName: exp.customer.name,
         customerExternalId: exp.customer.externalId,
-        vehicleModel: exp.vehicle.model.name,
+        vehicleModel: exp.vehicle.vehicleName ?? exp.vehicle.model?.name ?? null,
         vehicleYear: exp.vehicle.modelYear,
         vehicleVin: exp.vehicle.vin,
         branchName: exp.branch.name,

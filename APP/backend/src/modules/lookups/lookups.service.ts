@@ -158,9 +158,9 @@ export function createLookupsService(fastify: FastifyInstance) {
       where,
       orderBy: { createdAt: "desc" },
       take: query.limit,
-      select: { id: true, vin: true, model: { select: { name: true } } },
+      select: { id: true, vin: true, vehicleName: true, model: { select: { name: true } } },
     });
-    return rows.map((r) => ({ id: r.id, label: r.vin ?? r.model.name, vin: r.vin }));
+    return rows.map((r) => ({ id: r.id, label: r.vin ?? r.vehicleName ?? r.model?.name ?? String(r.id), vin: r.vin }));
   }
 
   async function users(query: z.infer<typeof UserLookupQuery>) {
@@ -256,11 +256,11 @@ export function createLookupsService(fastify: FastifyInstance) {
         id: true,
         purchaseDate: true,
         externalSaleId: true,
-        vehicle: { select: { model: { select: { name: true } } } },
+        vehicle: { select: { vehicleName: true, model: { select: { name: true } } } },
       },
     });
     return rows.map((r) => {
-      const modelName = r.vehicle.model.name;
+      const modelName = r.vehicle.vehicleName ?? r.vehicle.model?.name ?? "Vehicle";
       const date = r.purchaseDate ? r.purchaseDate.toISOString().slice(0, 10) : null;
       const label = date ? `${modelName} — ${date}` : (r.externalSaleId ?? modelName);
       return { id: r.id, label };

@@ -1,0 +1,18 @@
+.form {
+  margin-top: 14px;
+}
+
+.error {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(194, 69, 60, 0.28);
+  background: rgba(194, 69, 60, 0.07);
+  color: var(--diamond-danger);
+  font-size: 12px;
+}
+
+.ltrField {
+  direction: ltr;
+  text-align: start;
+}

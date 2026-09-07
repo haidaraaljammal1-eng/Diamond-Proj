@@ -6,13 +6,16 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { PageHeader } from "@/shared/components/ui/page-header";
-import { useModelLookup } from "../../hooks/use-model-lookup";
+import { useFleetTypeLookup } from "../../hooks/use-fleet-type-lookup";
 import { useVehicles } from "../../hooks/use-vehicles";
 import type { VehicleCardDto } from "../../types/vehicle.types";
 import { VehicleDetailDialog } from "../vehicle-detail/vehicle-detail-dialog";
 import { VehicleFilters } from "../vehicle-filters/vehicle-filters";
 import { VehiclesGrid } from "../vehicles-grid/vehicles-grid";
 import { SetRentalPriceDialog } from "../../forms/rental-price/set-rental-price-dialog";
+import { AddVehicleDialog } from "../../forms/add-vehicle/add-vehicle-dialog";
+import { EditDefaultRateDialog } from "../../forms/edit-rates/edit-default-rate-dialog";
+import { VehicleDeactivateDialog } from "../../forms/deactivate/vehicle-deactivate-dialog";
 import styles from "./vehicles-screen.module.css";
 
 export function VehiclesScreen() {
@@ -29,17 +32,22 @@ export function VehiclesScreen() {
     isReady,
     error,
     refreshVehicles,
+    canManage,
+    canCreate,
     setStatusFilter,
-    setSearch,
-    setModelId,
-    setIncludeInactive,
+    applySearch,
+    clearSearch,
+    setVehicleType,
     setSort,
     clearFilters,
   } = useVehicles();
-  const { models, isLoading: modelsLoading } = useModelLookup();
+  const { types, isLoading: typesLoading } = useFleetTypeLookup();
 
   const [detailVehicle, setDetailVehicle] = useState<VehicleCardDto | null>(null);
   const [priceVehicle, setPriceVehicle] = useState<VehicleCardDto | null>(null);
+  const [editRatesVehicle, setEditRatesVehicle] = useState<VehicleCardDto | null>(null);
+  const [deactivateVehicle, setDeactivateVehicle] = useState<VehicleCardDto | null>(null);
+  const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const filterLabels = useMemo(
@@ -58,22 +66,18 @@ export function VehiclesScreen() {
         yearDesc: t("filters.sort.yearDesc"),
         plate: t("filters.sort.plate"),
       },
-      searchLabel: t("filters.searchLabel"),
-      searchPlaceholder: t("filters.searchPlaceholder"),
-      modelLabel: t("filters.modelLabel"),
-      modelAll: t("filters.modelAll"),
-      modelsLoading: t("filters.modelsLoading"),
+      searchInputLabel: t("search.inputLabel"),
+      searchPlaceholder: t("search.placeholder"),
+      searchButton: t("search.button"),
+      searchClear: t("search.clear"),
+      typeLabel: t("filters.typeLabel"),
+      typeAll: t("filters.typeAll"),
+      typesLoading: t("filters.typesLoading"),
       sortLabel: t("filters.sortLabel"),
-      includeInactive: t("filters.includeInactive"),
       clear: t("filters.clear"),
       activeCount: t("filters.activeCount", { count: activeFilterCount }),
     }),
     [t, activeFilterCount],
-  );
-
-  const modelOptions = useMemo(
-    () => models.map((model) => ({ id: model.id, label: model.label })),
-    [models],
   );
 
   const showNotice = useCallback((message: string) => {
@@ -103,14 +107,27 @@ export function VehiclesScreen() {
       subtitle={t("subtitle")}
       actions={
         isReady ? (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => void refreshVehicles()}
-            disabled={isLoading}
-          >
-            {t("refresh")}
-          </Button>
+          <div className={styles.headerActions}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={() => void refreshVehicles()}
+              disabled={isLoading}
+            >
+              {t("refresh")}
+            </Button>
+            {canCreate ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => setAddVehicleOpen(true)}
+              >
+                {t("addVehicle")}
+              </Button>
+            ) : null}
+          </div>
         ) : null
       }
     />
@@ -148,7 +165,7 @@ export function VehiclesScreen() {
     );
   }
 
-  if (!isReady) {
+  if (!isReady && vehicles.length === 0) {
     return (
       <>
         {header}
@@ -177,14 +194,15 @@ export function VehiclesScreen() {
       <VehicleFilters
         filters={filters}
         activeFilterCount={activeFilterCount}
-        models={modelOptions}
-        modelsLoading={modelsLoading}
-        resultsLabel={t("filters.results", { count: meta?.total ?? vehicles.length })}
+        types={types}
+        typesLoading={typesLoading}
+        searchLoading={isLoading}
+        resultsLabel={t("filters.results", { count: meta?.total ?? 0 })}
         labels={filterLabels}
         onStatusChange={setStatusFilter}
-        onSearchChange={setSearch}
-        onModelChange={setModelId}
-        onIncludeInactiveChange={setIncludeInactive}
+        onSearchSubmit={applySearch}
+        onSearchClear={clearSearch}
+        onTypeChange={setVehicleType}
         onSortChange={setSort}
         onClear={clearFilters}
       />
@@ -199,8 +217,12 @@ export function VehiclesScreen() {
           }
           action={
             activeFilterCount > 0 ? (
-              <Button type="button" size="sm" onClick={clearFilters}>
+              <Button type="button" variant="secondary" size="sm" onClick={clearFilters}>
                 {t("filters.clear")}
+              </Button>
+            ) : canCreate ? (
+              <Button type="button" variant="primary" size="sm" onClick={() => setAddVehicleOpen(true)}>
+                {t("addVehicle")}
               </Button>
             ) : null
           }
@@ -208,11 +230,12 @@ export function VehiclesScreen() {
       ) : (
         <VehiclesGrid
           vehicles={vehicles}
+          canManage={canManage}
           onOpen={setDetailVehicle}
-          onSetPrice={setPriceVehicle}
           onPrimaryAction={handlePrimaryAction}
+          onEditRates={setEditRatesVehicle}
+          onDelete={setDeactivateVehicle}
           onGps={() => showNotice(t("boundary.gpsPending"))}
-          onMore={() => showNotice(t("boundary.noAlerts"))}
         />
       )}
 
@@ -228,6 +251,24 @@ export function VehiclesScreen() {
       <SetRentalPriceDialog
         vehicle={priceVehicle}
         onClose={() => setPriceVehicle(null)}
+      />
+
+      <EditDefaultRateDialog
+        vehicle={editRatesVehicle}
+        onClose={() => setEditRatesVehicle(null)}
+        onSuccess={() => showNotice(t("editRates.success"))}
+      />
+
+      <VehicleDeactivateDialog
+        vehicle={deactivateVehicle}
+        onClose={() => setDeactivateVehicle(null)}
+        onSuccess={() => showNotice(t("deactivate.success"))}
+      />
+
+      <AddVehicleDialog
+        open={addVehicleOpen}
+        onClose={() => setAddVehicleOpen(false)}
+        onSuccess={() => showNotice(t("form.createSuccess"))}
       />
     </>
   );

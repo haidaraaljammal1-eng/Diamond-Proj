@@ -29,7 +29,8 @@ export interface VehicleModelRefDto {
 export interface VehicleCardDto {
   id: number;
   vin: string | null;
-  modelId: number;
+  vehicleName: string | null;
+  modelId: number | null;
   modelYear: number | null;
   color: string | null;
   plateNumber: string | null;
@@ -41,7 +42,7 @@ export interface VehicleCardDto {
   createdAt: string;
   updatedAt: string;
   displayName: string;
-  model: VehicleModelRefDto;
+  model: VehicleModelRefDto | null;
   primaryImage: VehicleImageDto | null;
   currentRental: VehicleCurrentRentalDto | null;
 }
@@ -63,14 +64,46 @@ export interface VehicleFiltersState {
   status: VehicleStatusFilter;
   /** Free text — Backend matches plate, VIN, external id and model name. */
   search: string;
-  /** Vehicle model id, or `null` for every model. */
-  modelId: number | null;
-  /** Include vehicles retired from the fleet (`isActive = false`). */
-  includeInactive: boolean;
+  /** Fleet vehicle type/name from server filter options, or `null` for all. */
+  vehicleType: string | null;
   sort: VehicleSortKey;
 }
 
 export interface VehiclesListQuery extends Partial<VehicleFiltersState> {
   page?: number;
   pageSize?: number;
+}
+
+/** Payload for `POST /vehicles` (Backend permission: `vehicles.manage`). */
+export interface CreateVehiclePayload {
+  vehicleName: string;
+  vin?: string;
+  modelYear?: number;
+  color?: string;
+  plateNumber?: string;
+  dailyRate?: number;
+  monthlyRate?: number;
+}
+
+/** Partial payload for `PUT /vehicles/:id` default-rate updates. */
+export interface UpdateVehicleRatesPayload {
+  dailyRate: number;
+  monthlyRate: number;
+}
+
+export interface VehiclePublicDto {
+  id: number;
+  vin: string | null;
+  vehicleName: string | null;
+  modelId: number | null;
+  modelYear: number | null;
+  color: string | null;
+  plateNumber: string | null;
+  dailyRate: number | null;
+  monthlyRate: number | null;
+  operationalStatus: VehicleOperationalStatus;
+  externalId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
