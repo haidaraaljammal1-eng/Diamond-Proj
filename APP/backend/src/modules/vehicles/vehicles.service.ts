@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import type { z } from "zod";
 import { AppError } from "src/lib/errors/app-error";
 import { paginate, parseSort } from "src/lib/http/pagination";
@@ -17,11 +18,12 @@ import {
   operationalStatusToDto,
   fleetVehicleTypeLabel,
   normalizeFleetTypeKey,
-  resolveCurrentRental,
   resolvePrimaryImage,
   toVehicleImage,
   vehicleDisplayName,
 } from "src/modules/vehicles/vehicles.mapper";
+import { loadCurrentRentalsByVehicleIds } from "src/modules/contracts/current-rental";
+import { vehicleHasBlockingContract } from "src/modules/contracts/vehicle-rental-guard";
 import { buildVehicleListOrderBy } from "src/modules/vehicles/vehicles-sort";
 import type {
   CreateVehicleSchema,
@@ -86,8 +88,12 @@ function rentedVehicleLocked(): AppError {
   ]);
 }
 
-function assertVehicleMutableForFleetOps(operationalStatus: string): void {
-  if (operationalStatus === "RENTED") throw rentedVehicleLocked();
+async function assertVehicleMutableForFleetOps(
+  prisma: PrismaClient,
+  vehicle: { id: number; operationalStatus: string },
+): Promise<void> {
+  if (vehicle.operationalStatus === "RENTED") throw rentedVehicleLocked();
+  if (await vehicleHasBlockingContract(prisma, vehicle.id)) throw rentedVehicleLocked();
 }
 
 function toVehiclePublic(row: VehicleCardRow): VehiclePublic {
@@ -109,7 +115,10 @@ function toVehiclePublic(row: VehicleCardRow): VehiclePublic {
   };
 }
 
-function toVehicleCard(row: VehicleCardRow): VehicleCard {
+function toVehicleCard(
+  row: VehicleCardRow,
+  currentRental: VehicleCard["currentRental"],
+): VehicleCard {
   return {
     ...toVehiclePublic(row),
     displayName: vehicleDisplayName({
@@ -120,12 +129,15 @@ function toVehicleCard(row: VehicleCardRow): VehicleCard {
     }),
     model: row.model,
     primaryImage: resolvePrimaryImage(row.id, row.photos),
-    currentRental: resolveCurrentRental(row.id),
+    currentRental,
   };
 }
 
-function toVehicleDetail(row: VehicleCardRow): VehicleDetail {
-  const card = toVehicleCard(row);
+function toVehicleDetail(
+  row: VehicleCardRow,
+  currentRental: VehicleCard["currentRental"],
+): VehicleDetail {
+  const card = toVehicleCard(row, currentRental);
   return {
     ...card,
     gallery: row.photos.map((p) => toVehicleImage(row.id, p)),
@@ -236,7 +248,15 @@ export function createVehiclesService(fastify: FastifyInstance) {
           skip,
           take,
         });
-        return rows.map(toVehicleCard);
+        const rentals = await loadCurrentRentalsByVehicleIds(
+          prisma,
+          rows.map((row) => row.id),
+          {
+            onDuplicate: (info) =>
+              fastify.log.error(info, "multiple blocking contracts for vehicle"),
+          },
+        );
+        return rows.map((row) => toVehicleCard(row, rentals.get(row.id) ?? null));
       },
     });
   }
@@ -262,7 +282,12 @@ export function createVehiclesService(fastify: FastifyInstance) {
   }
 
   async function get(id: number): Promise<VehicleDetail> {
-    return toVehicleDetail(await loadOrThrow(id));
+    const row = await loadOrThrow(id);
+    const rentals = await loadCurrentRentalsByVehicleIds(prisma, [id], {
+      onDuplicate: (info) =>
+        fastify.log.error(info, "multiple blocking contracts for vehicle"),
+    });
+    return toVehicleDetail(row, rentals.get(id) ?? null);
   }
 
   async function create(
@@ -305,7 +330,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
     input: z.infer<typeof UpdateVehicleSchema>,
   ): Promise<VehiclePublic> {
     const existing = await loadOrThrow(id);
-    assertVehicleMutableForFleetOps(existing.operationalStatus);
+    await assertVehicleMutableForFleetOps(prisma, existing);
     const data: Prisma.VehicleUncheckedUpdateInput = {};
 
     if (input.vin !== undefined) {
@@ -358,7 +383,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
 
   async function setActive(id: number, isActive: boolean): Promise<VehiclePublic> {
     const existing = await loadOrThrow(id);
-    if (!isActive) assertVehicleMutableForFleetOps(existing.operationalStatus);
+    if (!isActive) await assertVehicleMutableForFleetOps(prisma, existing);
     const row = await prisma.vehicle.update({
       where: { id },
       data: { isActive },

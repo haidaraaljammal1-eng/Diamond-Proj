@@ -80,6 +80,16 @@ export const PERMISSIONS = {
   VEHICLES_READ: "vehicles.read",
   VEHICLES_MANAGE: "vehicles.manage",
 
+  // --- Diamond rental contracts ---
+  CONTRACTS_READ: "contracts.read",
+  CONTRACTS_MANAGE: "contracts.manage",
+  CONTRACTS_ACTIVATE: "contracts.activate",
+  CONTRACTS_CAR_OUT: "contracts.car_out",
+  CONTRACTS_RETURN: "contracts.return",
+  CONTRACTS_RECONCILE: "contracts.reconcile",
+  CONTRACTS_CLOSE: "contracts.close",
+  CONTRACTS_RENEW: "contracts.renew",
+
   PURCHASE_EXPERIENCES_READ: "purchase_experiences.read",
   PURCHASE_EXPERIENCES_MANAGE: "purchase_experiences.manage",
 
@@ -289,6 +299,42 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     key: PERMISSIONS.VEHICLES_MANAGE,
     category: "vehicles",
     description: "Create/update/(de)activate vehicles",
+  },
+  { key: PERMISSIONS.CONTRACTS_READ, category: "contracts", description: "View rental contracts" },
+  {
+    key: PERMISSIONS.CONTRACTS_MANAGE,
+    category: "contracts",
+    description: "Create contract offers, generate rental links, and confirm payments",
+  },
+  {
+    key: PERMISSIONS.CONTRACTS_ACTIVATE,
+    category: "contracts",
+    description: "Activate a paid contract (Car-Out)",
+  },
+  {
+    key: PERMISSIONS.CONTRACTS_CAR_OUT,
+    category: "contracts",
+    description: "Record Car-Out inspection and start the rental",
+  },
+  {
+    key: PERMISSIONS.CONTRACTS_RETURN,
+    category: "contracts",
+    description: "Generate a return link and start the return flow",
+  },
+  {
+    key: PERMISSIONS.CONTRACTS_RECONCILE,
+    category: "contracts",
+    description: "Create or update contract reconciliation",
+  },
+  {
+    key: PERMISSIONS.CONTRACTS_CLOSE,
+    category: "contracts",
+    description: "Close a reviewed contract and release the vehicle",
+  },
+  {
+    key: PERMISSIONS.CONTRACTS_RENEW,
+    category: "contracts",
+    description: "Renew an active contract",
   },
   {
     key: PERMISSIONS.PURCHASE_EXPERIENCES_READ,

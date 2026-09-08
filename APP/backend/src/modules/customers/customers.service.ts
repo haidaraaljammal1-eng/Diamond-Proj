@@ -206,6 +206,12 @@ export function createCustomersService(fastify: FastifyInstance) {
           optOutPhone: input.optOutPhone,
           optOutWhatsApp: input.optOutWhatsApp,
           externalId,
+          nationality: input.nationality ?? null,
+          identityNumber: input.identityNumber ?? null,
+          passportNumber: input.passportNumber ?? null,
+          drivingLicenseNumber: input.drivingLicenseNumber ?? null,
+          drivingLicenseExpiry: input.drivingLicenseExpiry ?? null,
+          address: input.address ?? null,
         },
       });
     } catch (err) {
@@ -236,6 +242,14 @@ export function createCustomersService(fastify: FastifyInstance) {
         data.externalId = null;
       }
     }
+    if (input.nationality !== undefined) data.nationality = input.nationality;
+    if (input.identityNumber !== undefined) data.identityNumber = input.identityNumber;
+    if (input.passportNumber !== undefined) data.passportNumber = input.passportNumber;
+    if (input.drivingLicenseNumber !== undefined)
+      data.drivingLicenseNumber = input.drivingLicenseNumber;
+    if (input.drivingLicenseExpiry !== undefined)
+      data.drivingLicenseExpiry = input.drivingLicenseExpiry;
+    if (input.address !== undefined) data.address = input.address;
     try {
       return await prisma.customer.update({ where: { id }, data });
     } catch (err) {

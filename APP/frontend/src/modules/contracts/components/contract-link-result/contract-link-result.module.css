@@ -1,0 +1,44 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--diamond-muted);
+}
+
+.linkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(201, 161, 92, 0.4);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.linkbox code {
+  flex: 1;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: var(--diamond-gold-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}

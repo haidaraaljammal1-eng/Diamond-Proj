@@ -43,15 +43,16 @@ export const VehicleImageSchema = z.object({
 export type VehicleImage = z.infer<typeof VehicleImageSchema>;
 
 /**
- * Current operational rental summary. Populated only when the Contracts domain
- * exposes an active/retout/review rental for the vehicle. Until then, always null.
+ * Current blocking rental context from Contracts (PAID / ACTIVE / RETOUT / REVIEW).
+ * PAID means reserved and ready for Car-Out while operationalStatus stays AVAILABLE.
+ * Never denormalized on Vehicle.
  */
 export const VehicleCurrentRentalSchema = z
   .object({
     contractId: z.string(),
     customerName: z.string(),
     endAt: z.date(),
-    status: z.enum(["active", "retout", "review"]),
+    status: z.enum(["paid", "active", "retout", "review"]),
   })
   .nullable();
 

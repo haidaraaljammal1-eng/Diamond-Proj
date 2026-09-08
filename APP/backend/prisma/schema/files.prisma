@@ -17,7 +17,11 @@ model Attachment {
   uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
-  vehiclePhotos VehiclePhoto[]
+  vehiclePhotos        VehiclePhoto[]
+  customerDocuments    CustomerDocument[]
+  contractCarOutPhotos ContractCarOutPhoto[]
+  contractCarInPhotos  ContractCarInPhoto[]  @relation("ContractCarInPhotoAttachment")
+  contractSignatures   ContractAcceptance[]  @relation("ContractSignatureAttachment")
 
   @@index([uploadedById])
   @@map("attachments")

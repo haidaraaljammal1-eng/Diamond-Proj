@@ -1,0 +1,9 @@
+.error {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--diamond-warn);
+}
+
+.linkRow {
+  margin-top: 10px;
+}

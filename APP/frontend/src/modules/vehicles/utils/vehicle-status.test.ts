@@ -23,4 +23,11 @@ describe("vehicle-status", () => {
       tone: "warn",
     });
   });
+
+  it("maps paid currentRental to Ready for Car-Out gold chip", () => {
+    assert.deepEqual(getVehicleStatusPresentation("available", "paid"), {
+      translationKey: "statusReadyForCarOut",
+      tone: "gold",
+    });
+  });
 });

@@ -55,16 +55,23 @@ export function VehicleCard({
     ? t("actions.goMaintenanceShort")
     : actions.showReturnLink
       ? t("actions.generateReturnLinkShort")
-      : t("actions.generateLinkSetPriceShort");
+      : actions.showCarOut
+        ? t("actions.carOutShort")
+        : t("actions.generateLinkSetPriceShort");
 
   const primaryTitle = actions.showMaintenance
     ? t("actions.goMaintenance")
     : actions.showReturnLink
       ? t("actions.generateReturnLink")
-      : t("actions.generateLinkSetPrice");
+      : actions.showCarOut
+        ? t("actions.carOut")
+        : t("actions.generateLinkSetPrice");
 
   const showPrimary =
-    actions.showSetRentalPrice || actions.showReturnLink || actions.showMaintenance;
+    actions.showSetRentalPrice ||
+    actions.showReturnLink ||
+    actions.showMaintenance ||
+    actions.showCarOut;
 
   return (
     <Card
@@ -91,6 +98,7 @@ export function VehicleCard({
         />
         <VehicleStatus
           status={vehicle.operationalStatus}
+          currentRentalStatus={vehicle.currentRental?.status ?? null}
           solid
           className={styles.status}
         />
@@ -148,7 +156,9 @@ export function VehicleCard({
                     ? "mdi:wrench-outline"
                     : actions.showReturnLink
                       ? "mdi:keyboard-return"
-                      : "mdi:link-variant"
+                      : actions.showCarOut
+                        ? "mdi:car-arrow-right"
+                        : "mdi:link-variant"
                 }
               />
               {primaryLabel}

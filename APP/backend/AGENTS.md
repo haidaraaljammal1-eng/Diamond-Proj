@@ -12,3 +12,8 @@ This repository's agent instructions live in **[CLAUDE.md](./CLAUDE.md)** — re
 - Multi-step writes use `withTransaction`; concurrency-sensitive sections use advisory locks; external side effects use `runIdempotent`.
 - Enforce uniqueness with DB constraints + normalized values. Audit sensitive changes via `request.setAudit`. Never log secrets.
 - Before claiming done: `npm run typecheck && npm run lint && npm run build && npm test`.
+
+## Diamond contracts (critical)
+
+- Contract is the rental aggregate. Canonical path: AWAITING → FORM → SIGNED → PAID → ACTIVE → RETOUT → REVIEW → CLOSED.
+- Car-In → REVIEW only. Vehicle becomes AVAILABLE only at CLOSE. Protect PAID/ACTIVE/renewal/CLOSE with `vehicle_rental` advisory locks.

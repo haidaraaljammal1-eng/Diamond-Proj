@@ -16,6 +16,12 @@ export const CustomerPublicSchema = z.object({
   optOutWhatsApp: z.boolean(),
   externalId: z.string().nullable(),
   isActive: z.boolean(),
+  nationality: z.string().nullable(),
+  identityNumber: z.string().nullable(),
+  passportNumber: z.string().nullable(),
+  drivingLicenseNumber: z.string().nullable(),
+  drivingLicenseExpiry: z.date().nullable(),
+  address: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -84,6 +90,12 @@ export const CreateCustomerSchema = z.object({
   optOutPhone: z.boolean().optional(),
   optOutWhatsApp: z.boolean().optional(),
   externalId: ExternalId.optional(),
+  nationality: z.string().trim().min(2).max(80).optional(),
+  identityNumber: z.string().trim().min(3).max(50).optional(),
+  passportNumber: z.string().trim().min(3).max(50).optional(),
+  drivingLicenseNumber: z.string().trim().min(3).max(50).optional(),
+  drivingLicenseExpiry: z.coerce.date().optional(),
+  address: z.string().trim().max(400).optional(),
 });
 
 export const UpdateCustomerSchema = z
@@ -97,6 +109,12 @@ export const UpdateCustomerSchema = z
     optOutPhone: z.boolean(),
     optOutWhatsApp: z.boolean(),
     externalId: ExternalId.nullable(),
+    nationality: z.string().trim().min(2).max(80).nullable(),
+    identityNumber: z.string().trim().min(3).max(50).nullable(),
+    passportNumber: z.string().trim().min(3).max(50).nullable(),
+    drivingLicenseNumber: z.string().trim().min(3).max(50).nullable(),
+    drivingLicenseExpiry: z.coerce.date().nullable(),
+    address: z.string().trim().max(400).nullable(),
   })
   .partial();
 

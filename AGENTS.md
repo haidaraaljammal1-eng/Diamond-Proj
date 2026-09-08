@@ -83,10 +83,21 @@
 - Vehicle data must come from Backend APIs, never Demo mock CARS.
 - VehicleCard must compose Shared Card.
 - Vehicle page/components consume hooks, never stores/APIs directly.
-- A rented vehicle may temporarily have `currentRental = null` until Contracts is implemented; never fake renter/timer data.
+- `currentRental` is a Contracts projection (`PAID` / `ACTIVE` / `RETOUT` / `REVIEW`). Never fake renter/timer data and never denormalize it onto Vehicle.
 - Vehicle page must not implement Contract, GPS, or Maintenance domains.
 
-### Vehicle creation (Add Vehicle)
+## Contracts backend (Diamond)
+
+- Contract is the only rental aggregate — do not add a parallel Rental/Client/Car model.
+- Canonical status path: AWAITING → FORM → SIGNED → PAID → ACTIVE → RETOUT → REVIEW → CLOSED. No generic status PUT.
+- PAID reserves the vehicle; ACTIVE begins only at Car-Out (`operationalStatus = RENTED`).
+- Car-In moves RETOUT → REVIEW only. It must never CLOSE the contract and must never set the vehicle AVAILABLE.
+- CLOSE (staff, REVIEW + Car-In + approved reconciliation) sets the vehicle AVAILABLE.
+- Double-booking: `withTransaction` + `acquireAdvisoryLock(tx, "vehicle_rental", vehicleId)` around PAID / ACTIVE / renewal / CLOSE.
+- Blocking statuses: PAID, ACTIVE, RETOUT, REVIEW. AWAITING / FORM / SIGNED do not lock the vehicle.
+- Public customer routes authenticate with hashed ContractLink tokens, not staff JWT. Persist hash only; never log raw tokens or PII.
+
+## Vehicle creation (Add Vehicle)
 
 - Diamond Add Vehicle uses direct free-text `vehicleName`, not a required VehicleModel lookup.
 - New Diamond vehicles always start with operational status **AVAILABLE**.

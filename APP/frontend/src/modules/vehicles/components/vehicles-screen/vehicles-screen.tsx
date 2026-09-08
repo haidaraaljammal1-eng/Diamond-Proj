@@ -16,6 +16,15 @@ import { SetRentalPriceDialog } from "../../forms/rental-price/set-rental-price-
 import { AddVehicleDialog } from "../../forms/add-vehicle/add-vehicle-dialog";
 import { EditDefaultRateDialog } from "../../forms/edit-rates/edit-default-rate-dialog";
 import { VehicleDeactivateDialog } from "../../forms/deactivate/vehicle-deactivate-dialog";
+import { useContract } from "@/modules/contracts/hooks/use-contract";
+import { resolveFleetPrimaryIntent } from "../../utils/resolve-fleet-contract-intent";
+import { CarOutDialog } from "@/modules/contracts/forms/car-out/car-out-dialog";
+import { PaymentConfirmDialog } from "@/modules/contracts/forms/payment/payment-confirm-dialog";
+import { RenewDialog } from "@/modules/contracts/forms/renew/renew-dialog";
+import { ContractLinkResultDialog } from "@/modules/contracts/components/contract-link-result/contract-link-result-dialog";
+import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
+import { ReconcileDialog } from "@/modules/contracts/forms/reconcile/reconcile-dialog";
+import { CloseContractDialog } from "@/modules/contracts/forms/close/close-contract-dialog";
 import styles from "./vehicles-screen.module.css";
 
 export function VehiclesScreen() {
@@ -42,6 +51,7 @@ export function VehiclesScreen() {
     clearFilters,
   } = useVehicles();
   const { types, isLoading: typesLoading } = useFleetTypeLookup();
+  const { generateReturnLink, generateRentalLink } = useContract();
 
   const [detailVehicle, setDetailVehicle] = useState<VehicleCardDto | null>(null);
   const [priceVehicle, setPriceVehicle] = useState<VehicleCardDto | null>(null);
@@ -49,6 +59,12 @@ export function VehiclesScreen() {
   const [deactivateVehicle, setDeactivateVehicle] = useState<VehicleCardDto | null>(null);
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [carOutId, setCarOutId] = useState<string | null>(null);
+  const [contractDrawerId, setContractDrawerId] = useState<string | null>(null);
+  const [reconcileId, setReconcileId] = useState<string | null>(null);
+  const [closeId, setCloseId] = useState<string | null>(null);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [renewId, setRenewId] = useState<string | null>(null);
 
   const filterLabels = useMemo(
     () => ({
@@ -87,17 +103,32 @@ export function VehiclesScreen() {
 
   const handlePrimaryAction = useCallback(
     (vehicle: VehicleCardDto) => {
-      if (vehicle.operationalStatus === "service") {
-        router.push(`/${locale}/maintenance`);
-        return;
+      const intent = resolveFleetPrimaryIntent(vehicle);
+      switch (intent.type) {
+        case "car-out":
+          setCarOutId(intent.contractId);
+          return;
+        case "maintenance":
+          router.push(`/${locale}/maintenance`);
+          return;
+        case "generate-return-link":
+          void generateReturnLink(intent.contractId);
+          return;
+        case "open-contract":
+          setContractDrawerId(intent.contractId);
+          return;
+        case "reconcile":
+          setReconcileId(intent.contractId);
+          return;
+        case "no-contract":
+          showNotice(t("boundary.noContract"));
+          return;
+        case "set-rental-price":
+          setPriceVehicle(vehicle);
+          return;
       }
-      if (vehicle.operationalStatus === "rented") {
-        showNotice(t("boundary.noContract"));
-        return;
-      }
-      setPriceVehicle(vehicle);
     },
-    [locale, router, showNotice, t],
+    [locale, router, showNotice, t, generateReturnLink],
   );
 
   const header = (
@@ -254,6 +285,35 @@ export function VehiclesScreen() {
         vehicle={priceVehicle}
         onClose={() => setPriceVehicle(null)}
       />
+
+      <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
+      <PaymentConfirmDialog
+        contractId={paymentId}
+        amount={0}
+        onClose={() => setPaymentId(null)}
+      />
+      <RenewDialog contractId={renewId} onClose={() => setRenewId(null)} />
+      <ContractLinkResultDialog />
+      <ContractDetailDrawer
+        contractId={contractDrawerId}
+        onClose={() => setContractDrawerId(null)}
+        onGenerateRentalLink={(id) => void generateRentalLink(id)}
+        onConfirmPayment={setPaymentId}
+        onCarOut={setCarOutId}
+        onReturnLink={(id) => void generateReturnLink(id)}
+        onRenew={setRenewId}
+        onReconcile={setReconcileId}
+        onCloseContract={setCloseId}
+      />
+      <ReconcileDialog
+        contractId={reconcileId}
+        onClose={() => setReconcileId(null)}
+        onRequestClose={(id) => {
+          setReconcileId(null);
+          setCloseId(id);
+        }}
+      />
+      <CloseContractDialog contractId={closeId} onClose={() => setCloseId(null)} />
 
       <EditDefaultRateDialog
         vehicle={editRatesVehicle}

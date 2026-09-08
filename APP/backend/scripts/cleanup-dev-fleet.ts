@@ -88,15 +88,16 @@ async function main(): Promise<void> {
       where: { externalId: { in: KNOWN_DEMO_EXTERNAL_IDS } },
       select: { id: true, externalId: true },
     });
+    const db = prisma as unknown as PrismaClient;
     for (const vehicle of demoVehicles) {
-      demoPhotosRemoved += await removeVehiclePhotos(prisma, vehicle.id);
+      demoPhotosRemoved += await removeVehiclePhotos(db, vehicle.id);
     }
 
     const removed: Array<{ id: number; externalId: string | null; vehicleName: string | null }> =
       [];
 
     for (const vehicle of nonDemoVehicles) {
-      await removeVehiclePhotos(prisma, vehicle.id);
+      await removeVehiclePhotos(db, vehicle.id);
       await prisma.purchaseExperience.deleteMany({ where: { vehicleId: vehicle.id } });
       await prisma.vehicle.delete({ where: { id: vehicle.id } });
       removed.push(vehicle);

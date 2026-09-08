@@ -44,9 +44,19 @@ model Customer {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  // Rental-flow identity (nullable so existing CRM customers stay valid).
+  nationality          String?
+  identityNumber       String?
+  passportNumber       String?
+  drivingLicenseNumber String?
+  drivingLicenseExpiry DateTime?
+  address              String?
+
   experiences    PurchaseExperience[]
   callQueueItems CallCenterQueueItem[]
   complaints     Complaint[]
+  contracts      Contract[]
+  documents      CustomerDocument[]
 
   @@index([mobile])
   @@index([email])
@@ -55,34 +65,35 @@ model Customer {
 }
 
 model Vehicle {
-  id         Int          @id @default(autoincrement())
+  id                Int                      @id @default(autoincrement())
   // Strongest vehicle identifier where available. Stored normalized (UPPER+trim);
   // unique when present (nullable => many null VINs allowed).
-  vin        String?      @unique
+  vin               String?                  @unique
   // Free-text fleet name (Diamond Add Vehicle). When set, this is the primary
   // display label; legacy/import rows may rely on `model` instead.
-  vehicleName String?
+  vehicleName       String?
   // Optional catalog link — legacy/import vehicles may reference VehicleModel;
   // new Diamond fleet vehicles are created with vehicleName only.
-  modelId    Int?
-  model      VehicleModel? @relation(fields: [modelId], references: [id])
-  modelYear  Int?
+  modelId           Int?
+  model             VehicleModel?            @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  modelYear         Int?
   // CX display context only (not a colour taxonomy). Free-text from ERP/import;
   // trimmed, nullable. Belongs to the vehicle itself, not the sale.
-  color      String?
+  color             String?
   // Registration plate for fleet display. Stored normalized (trim + collapsed spaces + UPPER).
   plateNumber       String?                  @unique
   // Default rental rates in whole AED (Diamond demo). Not the rental-offer final amount.
   dailyRate         Int?
   monthlyRate       Int?
   operationalStatus VehicleOperationalStatus @default(AVAILABLE)
-  externalId String?      @unique
-  isActive   Boolean      @default(true)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  externalId        String?                  @unique
+  isActive          Boolean                  @default(true)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
 
   experiences PurchaseExperience[]
   photos      VehiclePhoto[]
+  contracts   Contract[]
 
   @@index([modelId])
   @@index([isActive])

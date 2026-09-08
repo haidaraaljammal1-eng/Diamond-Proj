@@ -42,6 +42,7 @@ describe("getVehicleCardActions", () => {
     const actions = getVehicleCardActions(inactiveAvailable, true);
     assert.deepEqual(actions, {
       showSetRentalPrice: false,
+      showCarOut: false,
       showReturnLink: false,
       showGps: false,
       showEditRates: false,
@@ -50,11 +51,45 @@ describe("getVehicleCardActions", () => {
     });
   });
 
-  it("RENTED shows return link and GPS only even with manage", () => {
-    const actions = getVehicleCardActions(activeRented, true);
+  it("AVAILABLE + paid shows Car-Out only and hides rental/edit/delete", () => {
+    const actions = getVehicleCardActions(
+      {
+        operationalStatus: "available",
+        isActive: true,
+        currentRental: {
+          contractId: "ct-paid",
+          customerName: "Omar Test",
+          endAt: "2026-12-01T00:00:00.000Z",
+          status: "paid",
+        },
+      },
+      true,
+    );
+    assert.equal(actions.showCarOut, true);
+    assert.equal(actions.showSetRentalPrice, false);
+    assert.equal(actions.showEditRates, false);
+    assert.equal(actions.showDelete, false);
+    assert.equal(actions.showReturnLink, false);
+    assert.equal(actions.showGps, false);
+  });
+
+  it("RENTED + active shows return link and GPS only even with manage", () => {
+    const actions = getVehicleCardActions(
+      {
+        ...activeRented,
+        currentRental: {
+          contractId: "ct-active",
+          customerName: "Omar Test",
+          endAt: "2026-12-01T00:00:00.000Z",
+          status: "active",
+        },
+      },
+      true,
+    );
     assert.equal(actions.showReturnLink, true);
     assert.equal(actions.showGps, true);
     assert.equal(actions.showSetRentalPrice, false);
+    assert.equal(actions.showCarOut, false);
     assert.equal(actions.showEditRates, false);
     assert.equal(actions.showDelete, false);
   });

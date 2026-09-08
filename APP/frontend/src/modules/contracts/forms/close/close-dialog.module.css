@@ -1,0 +1,11 @@
+.error {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--diamond-warn);
+}
+
+.actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 8px;
+}

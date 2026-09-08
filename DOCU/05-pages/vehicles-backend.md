@@ -10,8 +10,8 @@ Diamond HTML Demo (`demo.html` → Fleet / Vehicles) drives the scope. This docu
 | Filters: all / available / rented / service            | `status` query param                                        |
 | Primary card image                                     | `primaryImage` (first `isPrimary`, else lowest `sortOrder`) |
 | Detail modal specs + gallery                           | `GET /vehicles/:id` → `VehicleDetail`                       |
-| Current renter + rental timer                          | `currentRental` (blocked — see below)                       |
-| Set Rental Price / Generate Link                       | **Out of scope** — Contracts/Rental domain                  |
+| Current renter + rental timer                          | `currentRental` from Contracts (`PAID` / `ACTIVE` / `RETOUT` / `REVIEW`) |
+| Set Rental Price / Generate Link                       | **Contracts** — `POST /contracts/offers` + rental-link      |
 | GPS button                                             | **Out of scope** — GPS domain                               |
 | Service workshop details                               | **Out of scope** — Maintenance domain                       |
 
@@ -62,7 +62,7 @@ Used by `GET /vehicles/filter-options` and `vehicleType` list filtering.
 
 `isActive` remains master-data lifecycle (deactivate/reactivate). It is **not** the fleet operational status.
 
-Source of truth for operational status today: `Vehicle.operationalStatus`. When the Contracts domain exists, rented status should be kept consistent with active contracts (future sync — not implemented here).
+Source of truth for operational status: `Vehicle.operationalStatus`, synchronized by Contracts. Car-Out sets `RENTED`; CLOSE sets `AVAILABLE`. Car-In must not set `AVAILABLE`. See `DOCU/05-pages/contracts-backend.md`.
 
 ## Rented vehicle mutation guard
 
@@ -71,7 +71,7 @@ Source of truth for operational status today: `Vehicle.operationalStatus`. When 
 - `PUT /vehicles/:id` (including default-rate updates) → `409 CONFLICT`
 - `POST /vehicles/:id/deactivate` → `409 CONFLICT`
 
-Based on `operationalStatus` only — no Contracts lookup, no fake rental data.
+Rejected when `operationalStatus = RENTED` **or** a blocking Contract exists (`PAID | ACTIVE | RETOUT | REVIEW`) via shared `vehicleHasBlockingContract`. Do not bypass Contract-owned rental state.
 
 ## Endpoints
 
@@ -190,9 +190,17 @@ Implemented in `vehicles-sort.ts` → `buildVehicleListOrderBy`:
 
 Weekly price in Demo (`daily × 7 × 0.88`) stays derived on the client; no `weeklyRate` column.
 
-## Current rental (dependency)
+## Current rental (Contracts)
 
-`currentRental` is always `null` until a **Contracts** domain provides authoritative active/retout/review rentals. No denormalized `currentCustomerName` or `rentalEndAt` on `Vehicle`. No fake customer, contract, or countdown in seed data.
+`currentRental` is resolved from Contracts — never denormalized onto `Vehicle`. List and detail batch-load with `loadCurrentRentalsByVehicleIds` (one query for the page, no N+1).
+
+It is the current **blocking rental context** (`PAID | ACTIVE | RETOUT | REVIEW`), not only a started rental:
+
+```json
+{ "contractId": "…", "customerName": "…", "endAt": "…", "status": "paid"|"active"|"retout"|"review" }
+```
+
+At PAID the vehicle stays `AVAILABLE` (Car-Out pending) but `currentRental.status` is `"paid"` and fleet mutations stay 409 via the Contract guard. Otherwise `null` (no blocking contract, including CLOSED). Customer name prefers the Contract snapshot. Seed fleet rows still have no fake renter data.
 
 ## Photos
 
@@ -206,7 +214,7 @@ File: `APP/backend/prisma/seed/demo-fleet.ts`
 - Idempotent via stable `externalId` upserts
 - Distribution: 5 AVAILABLE, 4 RENTED, 2 SERVICE, 1 inactive (`isActive = false`)
 - Varied plates, years, colors, and default rates for sort/filter testing
-- `currentRental` remains null on all seed rows
+- `currentRental` remains null on seed rows (no fake contract seed on the Development Fleet)
 
 ## Permissions
 
@@ -219,7 +227,9 @@ Access is permission-based only — no role-name branching.
 
 ## Out of scope (explicit)
 
-- Contracts lifecycle, rental links, Set Rental Price backend
 - GPS tracking / remote disable
 - Maintenance orders / workshop ETA
 - Demo `CARS` mock data in production services or frontend constants
+- White Contract PDF / payment gateways (Contracts Frontend / later domains)
+
+Rental offers, links, and lifecycle live in Contracts (`DOCU/05-pages/contracts-backend.md`).

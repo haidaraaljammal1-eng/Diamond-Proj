@@ -215,4 +215,23 @@ export const ar: Record<string, string> = {
   "Financing type": "نوع التمويل",
   "Insurance type": "نوع التأمين",
   "Sales channel": "قناة البيع",
+
+  "Contract not found": "العقد غير موجود",
+  "Contract status transition is not allowed": "انتقال حالة العقد غير مسموح",
+  "Vehicle is not available for rental": "المركبة غير متاحة للتأجير",
+  "Vehicle is already reserved or rented": "المركبة محجوزة أو مؤجرة بالفعل",
+  "Contract link is invalid": "رابط العقد غير صالح",
+  "Contract link has expired": "انتهت صلاحية رابط العقد",
+  "Contract link has already been used": "تم استخدام رابط العقد مسبقاً",
+  "A confirmed payment is required": "يلزم تأكيد الدفع",
+  "Car-Out is required before this action": "يلزم إتمام التسليم (Car-Out) قبل هذا الإجراء",
+  "Car-In is required before this action": "يلزم إتمام الاستلام (Car-In) قبل هذا الإجراء",
+  "Reconciliation must be approved before closing": "يجب اعتماد التسوية قبل إغلاق العقد",
+  "Contract is already closed": "العقد مغلق بالفعل",
+  "Idempotency key was reused with a different request":
+    "تم إعادة استخدام مفتاح التكرار مع طلب مختلف",
+  "Car inspection requires all 8 unique angles": "فحص المركبة يتطلب الزوايا الثماني كاملة",
+  "Identity number or passport number is required": "رقم الهوية أو جواز السفر مطلوب",
+  "Customer form must be completed first": "يجب إكمال نموذج العميل أولاً",
+  "Contract photo not found": "صورة العقد غير موجودة",
 };

@@ -1,6 +1,7 @@
 import { ROLES_PAGE_PERMISSIONS } from "@/modules/roles/roles.permissions";
 import { USERS_PAGE_PERMISSIONS } from "@/modules/users/users.permissions";
 import { VEHICLES_PAGE_PERMISSIONS } from "@/modules/vehicles/vehicles.permissions";
+import { CONTRACTS_PAGE_PERMISSIONS } from "@/modules/contracts/contracts.permissions";
 import type { NavigationConfig } from "./navigation.types";
 
 /**
@@ -8,9 +9,9 @@ import type { NavigationConfig } from "./navigation.types";
  * (order, labels, icons, admin-only owners, WhatsApp action, badge).
  *
  * Permission notes:
- * - `dashboard.read`, the Staff entry (`users.read`), and the Roles entry
- *   (`roles.read` + `permissions.read`) map to permissions that actually exist
- *   in the Backend catalog.
+ * - `dashboard.read`, the Staff entry (`users.read`), the Roles entry
+ *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`), and
+ *   Contracts (`contracts.read`) map to permissions that exist in the Backend catalog.
  * - Every other Demo page still has NO matching Backend permission, so it
  *   intentionally declares none (never invented).
  * - `adminOnly` mirrors the Demo `adminonly` owner/employee behavior.
@@ -88,6 +89,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "contracts",
         href: "/contracts",
         icon: "contracts",
+        permissions: [...CONTRACTS_PAGE_PERMISSIONS],
       },
       {
         key: "chats",

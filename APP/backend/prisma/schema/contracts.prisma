@@ -1,0 +1,308 @@
+// ---------------------------------------------------------------------------
+// Diamond rental contracts. Contract is the single rental aggregate — there is
+// no parallel Rental model. Vehicle.operationalStatus is synchronized from
+// this domain (RENTED at Car-Out, AVAILABLE at CLOSE only).
+// ---------------------------------------------------------------------------
+
+enum ContractStatus {
+  AWAITING
+  FORM
+  SIGNED
+  PAID
+  ACTIVE
+  RETOUT
+  REVIEW
+  CLOSED
+}
+
+enum ContractPriceType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum ContractLinkType {
+  RENTAL
+  RETURN
+  RENEWAL
+}
+
+enum ContractPaymentMethod {
+  BANK_TRANSFER
+  CARD
+  MANUAL
+}
+
+enum ContractPaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
+enum CustomerDocumentType {
+  IDENTITY
+  PASSPORT
+  DRIVING_LICENSE
+}
+
+enum ContractReconciliationLineType {
+  DAMAGE
+  FUEL
+  LATE
+  SALIK
+  VIOLATION
+  OTHER
+}
+
+/// Demo 8-angle inspection set (Car-Out / Car-In). Evidence, not VehiclePhoto.
+enum ContractInspectionAngle {
+  FRONT
+  REAR
+  RIGHT_SIDE
+  LEFT_SIDE
+  FRONT_PLATE
+  REAR_PLATE
+  INTERIOR_ODOMETER
+  TIRES
+}
+
+/// Year-scoped monotonic allocator for DE-{year}-{nnnnnn}. Locked in-process
+/// via advisory lock `contract_number` + year — never derived from row count.
+model ContractNumberSequence {
+  year      Int @id
+  lastValue Int @default(0)
+
+  @@map("contract_number_sequences")
+}
+
+model Contract {
+  id                     String         @id @default(uuid())
+  contractNumber         String         @unique
+  status                 ContractStatus @default(AWAITING)
+  vehicleId              Int
+  vehicle                Vehicle        @relation(fields: [vehicleId], references: [id])
+  customerId             Int?
+  customer               Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdByUserId        Int
+  createdBy              User           @relation("ContractCreatedBy", fields: [createdByUserId], references: [id])
+  assignedEmployeeUserId Int?
+  assignedEmployee       User?          @relation("ContractAssignedEmployee", fields: [assignedEmployeeUserId], references: [id], onDelete: SetNull)
+
+  priceType     ContractPriceType
+  rentalDays    Int
+  /// Contractual amount in whole AED. Vehicle dailyRate/monthlyRate are defaults only.
+  agreedAmount  Int
+  currency      String            @default("AED")
+  startAt       DateTime?
+  endAt         DateTime?
+  depositAmount Int?
+
+  /// Frozen legal facts. Written no later than SIGNED; never rewritten after that.
+  snapshot Json?
+
+  termsVersion String @default("diamond-rental-terms-v1")
+
+  activatedAt DateTime?
+  closedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  revision    Int       @default(0)
+
+  links          ContractLink[]
+  acceptance     ContractAcceptance?
+  payments       ContractPayment[]
+  carOut         ContractCarOut?
+  carIn          ContractCarIn?
+  reconciliation ContractReconciliation?
+  renewals       ContractRenewal[]
+
+  @@index([vehicleId, status])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("contracts")
+}
+
+model ContractLink {
+  id              String           @id @default(uuid())
+  contractId      String
+  contract        Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  type            ContractLinkType
+  /// SHA-256 hex of the opaque token. Raw token is returned once and never persisted.
+  tokenHash       String           @unique
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  createdByUserId Int?
+  createdBy       User?            @relation("ContractLinkCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([contractId, type])
+  @@index([expiresAt])
+  @@map("contract_links")
+}
+
+model ContractAcceptance {
+  id                    String      @id @default(uuid())
+  contractId            String      @unique
+  contract              Contract    @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  acceptedAt            DateTime
+  ip                    String?
+  userAgent             String?
+  termsVersion          String
+  signatureAttachmentId String?
+  signatureAttachment   Attachment? @relation("ContractSignatureAttachment", fields: [signatureAttachmentId], references: [id], onDelete: SetNull)
+  createdAt             DateTime    @default(now())
+
+  @@map("contract_acceptances")
+}
+
+model ContractPayment {
+  id                String                @id @default(uuid())
+  contractId        String
+  contract          Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  amount            Int
+  currency          String                @default("AED")
+  method            ContractPaymentMethod
+  status            ContractPaymentStatus @default(PENDING)
+  externalReference String?
+  confirmedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  createdByUserId   Int?
+  createdBy         User?                 @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([contractId, status])
+  @@map("contract_payments")
+}
+
+model ContractCarOut {
+  id                String   @id @default(uuid())
+  contractId        String   @unique
+  contract          Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  performedByUserId Int
+  performedBy       User     @relation("ContractCarOutPerformedBy", fields: [performedByUserId], references: [id])
+  occurredAt        DateTime
+  mileageOut        Int
+  fuelOut           String
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  photos ContractCarOutPhoto[]
+
+  @@map("contract_car_outs")
+}
+
+model ContractCarOutPhoto {
+  id           String                  @id @default(uuid())
+  carOutId     String
+  carOut       ContractCarOut          @relation(fields: [carOutId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment              @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  angle        ContractInspectionAngle
+  sortOrder    Int                     @default(0)
+  createdAt    DateTime                @default(now())
+
+  @@unique([carOutId, angle])
+  @@unique([carOutId, attachmentId])
+  @@index([carOutId, sortOrder])
+  @@map("contract_car_out_photos")
+}
+
+model ContractCarIn {
+  id         String   @id @default(uuid())
+  contractId String   @unique
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  occurredAt DateTime
+  mileageIn  Int
+  fuelIn     String
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  photos ContractCarInPhoto[]
+
+  @@map("contract_car_ins")
+}
+
+model ContractCarInPhoto {
+  id           String                  @id @default(uuid())
+  carInId      String
+  carIn        ContractCarIn           @relation(fields: [carInId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment              @relation("ContractCarInPhotoAttachment", fields: [attachmentId], references: [id], onDelete: Restrict)
+  angle        ContractInspectionAngle
+  sortOrder    Int                     @default(0)
+  createdAt    DateTime                @default(now())
+
+  @@unique([carInId, angle])
+  @@unique([carInId, attachmentId])
+  @@index([carInId, sortOrder])
+  @@map("contract_car_in_photos")
+}
+
+model ContractReconciliation {
+  id               String    @id @default(uuid())
+  contractId       String    @unique
+  contract         Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  chargesTotal     Int
+  depositAmount    Int       @default(0)
+  deductions       Int       @default(0)
+  finalAmount      Int
+  approvedAt       DateTime?
+  approvedByUserId Int?
+  approvedBy       User?     @relation("ContractReconciliationApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  lines ContractReconciliationLine[]
+
+  @@map("contract_reconciliations")
+}
+
+model ContractReconciliationLine {
+  id                String                         @id @default(uuid())
+  reconciliationId  String
+  reconciliation    ContractReconciliation         @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  type              ContractReconciliationLineType
+  description       String
+  amount            Int
+  /// Opaque reference into Salik/Violations/Finance — no engine lives here.
+  externalReference String?
+  sourceDomain      String?
+  createdAt         DateTime                       @default(now())
+
+  @@index([reconciliationId])
+  @@map("contract_reconciliation_lines")
+}
+
+model ContractRenewal {
+  id               String    @id @default(uuid())
+  contractId       String
+  contract         Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  additionalDays   Int
+  additionalAmount Int
+  previousEndAt    DateTime
+  newEndAt         DateTime
+  createdAt        DateTime  @default(now())
+  approvedAt       DateTime?
+  createdByUserId  Int?
+  createdBy        User?     @relation("ContractRenewalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([contractId, createdAt])
+  @@map("contract_renewals")
+}
+
+model CustomerDocument {
+  id           String               @id @default(uuid())
+  customerId   Int
+  customer     Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type         CustomerDocumentType
+  attachmentId String
+  attachment   Attachment           @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  createdAt    DateTime             @default(now())
+
+  @@unique([customerId, attachmentId])
+  @@index([customerId, type])
+  @@map("customer_documents")
+}

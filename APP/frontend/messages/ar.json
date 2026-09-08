@@ -451,6 +451,7 @@
     "statusAvailable": "متاحة",
     "statusRented": "مؤجرة",
     "statusService": "صيانة",
+    "statusReadyForCarOut": "جاهزة للتسليم",
     "currentRenter": "مؤجرة حالياً لـ {name}",
     "timerLabel": "⏳ تبقّى من مدة الإيجار",
     "timerExpiredLabel": "⚠ انتهت مدة الإيجار",
@@ -488,6 +489,8 @@
     "actions": {
       "generateLinkSetPrice": "توليد رابط · تحديد السعر",
       "generateReturnLink": "توليد رابط إرجاع",
+      "carOut": "تسليم السيارة",
+      "carOutShort": "تسليم",
       "setPrice": "السعر",
       "setPriceDetail": "تحديد السعر",
       "setPriceTitle": "تحديد سعر الإيجار يدويًا",
@@ -506,6 +509,7 @@
     },
     "boundary": {
       "noContract": "لا يوجد عقد مرتبط بهذه السيارة",
+      "carOutPending": "التسليم سيُفتح عند جاهزية صفحة العقود",
       "gpsPending": "تتبع GPS سيُفعَّل عند بناء نطاق GPS",
       "noAlerts": "لا توجد تنبيهات جديدة لهذه السيارة"
     },
@@ -558,15 +562,16 @@
       "period": {
         "day": "يومي",
         "week": "أسبوعي",
-        "month": "شهري"
+        "month": "شهري",
+        "custom": "مخصص"
       },
       "rentalPeriod": "فترة الإيجار",
       "days": "{count} يوم",
+      "daysLabel": "أيام الإيجار",
       "defaultPrice": "السعر الافتراضي",
       "amountLabel": "المبلغ (درهم)",
-      "submit": "🚀 إرسال الرابط للعميل",
-      "cancel": "إلغاء",
-      "pendingContracts": "إرسال الرابط يتطلب نطاق العقود — الواجهة جاهزة، التكامل قادم."
+      "submit": "إرسال الرابط للعميل",
+      "cancel": "إلغاء"
     },
     "form": {
       "createTitle": "إضافة سيارة",
@@ -611,6 +616,220 @@
       "descriptionGeneric": "هل تريد حذف هذه السيارة من الأسطول؟ سيتم إخفاؤها من السيارات النشطة مع الاحتفاظ بسجلها.",
       "confirm": "حذف من الأسطول",
       "success": "تمت إزالة السيارة من الأسطول النشط."
+    }
+  },
+  "Contracts": {
+    "crumbs": "التوثيق",
+    "title": "العقود",
+    "subtitle": "جميع عقود المكتب في مكان واحد",
+    "refresh": "تحديث",
+    "loading": "جارٍ تحميل العقود…",
+    "common": {
+      "cancel": "إلغاء",
+      "saving": "جارٍ الحفظ…"
+    },
+    "status": {
+      "AWAITING": "بانتظار العميل",
+      "FORM": "النموذج مكتمل",
+      "SIGNED": "موقّع",
+      "PAID": "جاهز للتسليم",
+      "ACTIVE": "نشط",
+      "RETOUT": "قيد الإرجاع",
+      "REVIEW": "بانتظار المطابقة",
+      "CLOSED": "مغلق"
+    },
+    "search": {
+      "inputLabel": "بحث العقود",
+      "placeholder": "ابحث باسم العميل أو رقم العقد أو اللوحة…",
+      "button": "بحث",
+      "clear": "مسح البحث"
+    },
+    "filters": {
+      "all": "كل الحالات",
+      "statusGroup": "حالة العقد",
+      "sortLabel": "الترتيب",
+      "from": "من",
+      "to": "إلى",
+      "clear": "مسح الفلاتر",
+      "activeCount": "{count} نشط",
+      "results": "{count} عقد",
+      "sort": {
+        "newest": "الأحدث",
+        "oldest": "الأقدم",
+        "amountDesc": "المبلغ · الأعلى",
+        "amountAsc": "المبلغ · الأدنى",
+        "startAt": "تاريخ البداية",
+        "number": "رقم العقد"
+      }
+    },
+    "table": {
+      "number": "رقم العقد",
+      "customer": "العميل",
+      "vehicle": "السيارة",
+      "period": "المدة",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "action": "الإجراء",
+      "days": "{count} يوم"
+    },
+    "empty": {
+      "title": "لا توجد عقود حتى الآن",
+      "description": "تبدأ العقود من تحديد سعر الإيجار لسيارة متاحة.",
+      "filteredTitle": "لا توجد عقود مطابقة",
+      "filteredDescription": "لا توجد عقود مطابقة لهذا الفلتر. جرّب مسح الفلاتر."
+    },
+    "denied": {
+      "title": "ليست لديك صلاحية الوصول إلى هذه الصفحة",
+      "description": "عرض العقود يتطلب صلاحية contracts.read."
+    },
+    "error": {
+      "title": "تعذر تحميل العقود",
+      "generic": "حدث خطأ. حاول مرة أخرى.",
+      "retry": "إعادة المحاولة",
+      "FORBIDDEN": "حسابك غير مسموح له بقراءة العقود.",
+      "UNAUTHORIZED": "انتهت جلستك. سجّل الدخول مرة أخرى.",
+      "CONTRACT_NOT_FOUND": "لم يتم العثور على هذا العقد.",
+      "CONTRACT_INVALID_TRANSITION": "تغيير الحالة هذا غير مسموح.",
+      "VEHICLE_NOT_AVAILABLE": "هذه السيارة غير متاحة للتأجير.",
+      "VEHICLE_ALREADY_RENTED": "هذه السيارة محجوزة أو مؤجرة بالفعل.",
+      "CONTRACT_LINK_INVALID": "رابط العقد غير صالح.",
+      "CONTRACT_LINK_EXPIRED": "انتهت صلاحية رابط العقد.",
+      "CONTRACT_LINK_USED": "تم استخدام رابط العقد مسبقاً.",
+      "CONTRACT_PAYMENT_REQUIRED": "يلزم تأكيد الدفع أولاً.",
+      "CONTRACT_CAR_OUT_REQUIRED": "يلزم تسليم السيارة قبل هذا الإجراء.",
+      "CONTRACT_CAR_IN_REQUIRED": "يلزم إرجاع السيارة قبل هذا الإجراء.",
+      "CONTRACT_RECONCILIATION_REQUIRED": "يلزم اعتماد المطابقة قبل الإغلاق.",
+      "CONTRACT_ALREADY_CLOSED": "هذا العقد مغلق بالفعل.",
+      "IDEMPOTENCY_KEY_CONFLICT": "هذا الطلب يتعارض مع إرسال سابق. أغلق وحاول مرة أخرى.",
+      "VALIDATION_ERROR": "بعض القيم غير صالحة. راجع الحقول وحاول مرة أخرى.",
+      "CONFLICT": "هذا الإجراء يتعارض مع حالة العقد الحالية."
+    },
+    "detail": {
+      "title": "تفاصيل العقد",
+      "close": "إغلاق",
+      "loading": "جارٍ تحميل العقد…",
+      "mobile": "الجوال",
+      "plate": "اللوحة",
+      "days": "المدة",
+      "amount": "المبلغ المتفق عليه",
+      "deposit": "التأمين",
+      "start": "البداية",
+      "end": "النهاية",
+      "payment": "الدفع",
+      "paidAmount": "المدفوع",
+      "method": "الطريقة",
+      "carOut": "التسليم",
+      "carIn": "الإرجاع",
+      "reconciliation": "المطابقة",
+      "renewals": "التجديدات"
+    },
+    "timeline": {
+      "title": "دورة حياة العقد",
+      "offer": "العرض / رابط الإيجار",
+      "offerHint": "تم إنشاء العرض ويمكن إصدار الرابط",
+      "form": "النموذج",
+      "formHint": "أكمل العميل النموذج",
+      "signed": "التوقيع",
+      "signedHint": "وافق العميل على العقد",
+      "paid": "الدفع",
+      "paidHint": "تم تأكيد الدفع — جاهز للتسليم",
+      "carOut": "التسليم",
+      "carOutHint": "تم تسليم السيارة",
+      "return": "الإرجاع",
+      "returnHint": "تم إصدار رابط الإرجاع",
+      "review": "المراجعة",
+      "reviewHint": "تم الإرجاع — بانتظار المطابقة",
+      "closed": "مغلق",
+      "closedHint": "أُغلق العقد وأُفرجت السيارة"
+    },
+    "actions": {
+      "rentalLink": "إنشاء رابط الإيجار",
+      "confirmPayment": "تأكيد الدفع",
+      "carOut": "تسليم السيارة",
+      "returnLink": "إنشاء رابط الإرجاع",
+      "returnWaiting": "بانتظار إرجاع العميل",
+      "renew": "تجديد",
+      "reconcile": "المطابقة",
+      "close": "إغلاق العقد"
+    },
+    "link": {
+      "created": "تم إنشاء رابط الإيجار",
+      "copy": "نسخ الرابط",
+      "copied": "تم النسخ",
+      "open": "فتح الرابط",
+      "done": "تم",
+      "expires": "ينتهي {date}"
+    },
+    "payment": {
+      "title": "تأكيد الدفع",
+      "description": "سجّل الدفع المؤكد. هذا يحجز السيارة للتسليم.",
+      "amount": "المبلغ (درهم)",
+      "methodLabel": "الطريقة",
+      "reference": "مرجع خارجي (اختياري)",
+      "submit": "تأكيد الدفع",
+      "method": {
+        "MANUAL": "يدوي",
+        "BANK_TRANSFER": "تحويل بنكي",
+        "CARD": "بطاقة"
+      }
+    },
+    "carOut": {
+      "title": "تسليم السيارة — Car-Out",
+      "description": "سجّل عداد الخروج والوقود وصور الزوايا الثماني.",
+      "mileage": "عداد الخروج",
+      "fuel": "الوقود",
+      "notes": "ملاحظات (اختياري)",
+      "addPhoto": "إضافة صورة",
+      "submit": "تأكيد التسليم",
+      "angle": {
+        "FRONT": "أمامي",
+        "REAR": "خلفي",
+        "RIGHT_SIDE": "جانب يمين",
+        "LEFT_SIDE": "جانب يسار",
+        "FRONT_PLATE": "لوحة أمامية",
+        "REAR_PLATE": "لوحة خلفية",
+        "INTERIOR_ODOMETER": "داخلي / عدّاد",
+        "TIRES": "الإطارات"
+      }
+    },
+    "renew": {
+      "title": "تجديد العقد",
+      "description": "مدّد هذا العقد النشط. الإجمالي يُحسب في الخادم.",
+      "days": "أيام إضافية",
+      "amount": "مبلغ إضافي (درهم)",
+      "submit": "تجديد",
+      "link": "إنشاء رابط التجديد"
+    },
+    "reconcile": {
+      "title": "المطابقة",
+      "description": "أضف بنود التسوية. الخادم يحسب الإجمالي بعد الحفظ.",
+      "lineType": "نوع البند",
+      "descriptionField": "الوصف",
+      "amount": "المبلغ",
+      "reference": "المرجع",
+      "addLine": "إضافة بند",
+      "submit": "حفظ المطابقة",
+      "charges": "إجمالي الرسوم",
+      "final": "المبلغ النهائي",
+      "type": {
+        "DAMAGE": "ضرر",
+        "FUEL": "وقود",
+        "LATE": "تأخير",
+        "SALIK": "سالك",
+        "VIOLATION": "مخالفة",
+        "OTHER": "أخرى"
+      }
+    },
+    "close": {
+      "title": "إغلاق العقد؟",
+      "description": "إغلاق {number}؟ ستعود السيارة متاحة.",
+      "descriptionGeneric": "إغلاق هذا العقد؟ ستعود السيارة متاحة.",
+      "confirm": "إغلاق العقد"
+    },
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي",
+      "page": "صفحة {page} من {totalPages}"
     }
   }
 }

@@ -9,6 +9,7 @@ import {
   deriveMonthlyRate,
 } from "../../utils/vehicle-pricing";
 import { getVehicleStatusPresentation } from "../../utils/vehicle-status";
+import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
 import { VehicleImage } from "../vehicle-image/vehicle-image";
 import { VehicleStatus } from "../vehicle-status/vehicle-status";
 import styles from "./vehicle-detail.module.css";
@@ -40,9 +41,15 @@ export function VehicleDetail({
 }: VehicleDetailProps) {
   const t = useTranslations("Vehicles");
   const format = useFormatter();
-  const statusPresentation = getVehicleStatusPresentation(vehicle.operationalStatus);
+  const statusPresentation = getVehicleStatusPresentation(
+    vehicle.operationalStatus,
+    vehicle.currentRental?.status,
+  );
   const rental = vehicle.currentRental;
-  const hasRental = rental != null && vehicle.operationalStatus === "rented";
+  const actions = getVehicleCardActions(vehicle, canManage);
+  const hasRental =
+    rental != null &&
+    (vehicle.operationalStatus === "rented" || rental.status === "paid");
   const primaryImage = vehicle.primaryImage;
 
   return (
@@ -55,7 +62,11 @@ export function VehicleDetail({
             className={styles.heroImage}
           />
         </div>
-        <VehicleStatus status={vehicle.operationalStatus} className={styles.heroStatus} />
+        <VehicleStatus
+          status={vehicle.operationalStatus}
+          currentRentalStatus={vehicle.currentRental?.status ?? null}
+          className={styles.heroStatus}
+        />
         <div className={styles.heroFooter}>
           <div className={styles.heroTitle}>
             <h3>{vehicle.displayName}</h3>
@@ -172,7 +183,7 @@ export function VehicleDetail({
         ) : null}
 
         <div className={styles.actions}>
-          {vehicle.operationalStatus === "available" ? (
+          {actions.showSetRentalPrice ? (
             <>
               <Button type="button" size="sm" onClick={onPrimaryAction}>
                 {t("actions.generateLinkSetPrice")}
@@ -182,17 +193,24 @@ export function VehicleDetail({
               </Button>
             </>
           ) : null}
-          {vehicle.operationalStatus === "rented" ? (
+          {actions.showCarOut ? (
+            <Button type="button" size="sm" onClick={onPrimaryAction}>
+              {t("actions.carOut")}
+            </Button>
+          ) : null}
+          {actions.showReturnLink ? (
             <>
               <Button type="button" size="sm" onClick={onPrimaryAction}>
                 {t("actions.generateReturnLink")}
               </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={onGps}>
-                {t("actions.gpsTrack")}
-              </Button>
+              {actions.showGps ? (
+                <Button type="button" size="sm" variant="ghost" onClick={onGps}>
+                  {t("actions.gpsTrack")}
+                </Button>
+              ) : null}
             </>
           ) : null}
-          {vehicle.operationalStatus === "service" ? (
+          {actions.showMaintenance ? (
             <Button type="button" size="sm" onClick={onMaintenance}>
               {t("actions.goMaintenance")}
             </Button>

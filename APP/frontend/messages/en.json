@@ -451,6 +451,7 @@
     "statusAvailable": "Available",
     "statusRented": "Rented",
     "statusService": "Service",
+    "statusReadyForCarOut": "Ready for Car-Out",
     "currentRenter": "Currently rented to {name}",
     "timerLabel": "⏳ Rental time remaining",
     "timerExpiredLabel": "⚠ Rental period ended",
@@ -488,6 +489,8 @@
     "actions": {
       "generateLinkSetPrice": "Generate link · Set price",
       "generateReturnLink": "Generate return link",
+      "carOut": "Car-Out · Handover",
+      "carOutShort": "Car-Out",
       "setPrice": "Price",
       "setPriceDetail": "Set price",
       "setPriceTitle": "Set rental price manually",
@@ -506,6 +509,7 @@
     },
     "boundary": {
       "noContract": "No contract is linked to this vehicle",
+      "carOutPending": "Car-Out will open when the Contracts page is ready",
       "gpsPending": "GPS tracking will be enabled when the GPS domain is built",
       "noAlerts": "No new alerts for this vehicle"
     },
@@ -558,15 +562,16 @@
       "period": {
         "day": "Daily",
         "week": "Weekly",
-        "month": "Monthly"
+        "month": "Monthly",
+        "custom": "Custom"
       },
       "rentalPeriod": "Rental period",
       "days": "{count} days",
+      "daysLabel": "Rental days",
       "defaultPrice": "Default price",
       "amountLabel": "Amount (AED)",
-      "submit": "🚀 Send link to customer",
-      "cancel": "Cancel",
-      "pendingContracts": "Sending the link requires the Contracts domain — UI is ready, integration is pending."
+      "submit": "Send link to customer",
+      "cancel": "Cancel"
     },
     "form": {
       "createTitle": "Add vehicle",
@@ -611,6 +616,220 @@
       "descriptionGeneric": "Remove this vehicle from the active fleet? It will be hidden from active vehicles while its record is kept.",
       "confirm": "Remove from fleet",
       "success": "Vehicle removed from the active fleet."
+    }
+  },
+  "Contracts": {
+    "crumbs": "Documentation",
+    "title": "Contracts",
+    "subtitle": "All office contracts in one place",
+    "refresh": "Refresh",
+    "loading": "Loading contracts…",
+    "common": {
+      "cancel": "Cancel",
+      "saving": "Saving…"
+    },
+    "status": {
+      "AWAITING": "Awaiting Customer",
+      "FORM": "Form Completed",
+      "SIGNED": "Signed",
+      "PAID": "Ready for Car-Out",
+      "ACTIVE": "Active",
+      "RETOUT": "Return in Progress",
+      "REVIEW": "Reconciliation",
+      "CLOSED": "Closed"
+    },
+    "search": {
+      "inputLabel": "Search contracts",
+      "placeholder": "Search by customer name, contract number or plate…",
+      "button": "Search",
+      "clear": "Clear search"
+    },
+    "filters": {
+      "all": "All statuses",
+      "statusGroup": "Contract status",
+      "sortLabel": "Sort",
+      "from": "From",
+      "to": "To",
+      "clear": "Clear filters",
+      "activeCount": "{count} active",
+      "results": "{count} contracts",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "amountDesc": "Amount · highest",
+        "amountAsc": "Amount · lowest",
+        "startAt": "Start date",
+        "number": "Contract number"
+      }
+    },
+    "table": {
+      "number": "Contract no.",
+      "customer": "Customer",
+      "vehicle": "Vehicle",
+      "period": "Duration",
+      "amount": "Amount",
+      "status": "Status",
+      "action": "Action",
+      "days": "{count} days"
+    },
+    "empty": {
+      "title": "No contracts yet",
+      "description": "Contracts start from Set Rental Price on an available vehicle.",
+      "filteredTitle": "No matching contracts",
+      "filteredDescription": "No contracts match this filter. Try clearing filters."
+    },
+    "denied": {
+      "title": "You do not have access to this page",
+      "description": "Viewing contracts requires the contracts.read permission."
+    },
+    "error": {
+      "title": "Contracts could not be loaded",
+      "generic": "Something went wrong. Please try again.",
+      "retry": "Try again",
+      "FORBIDDEN": "Your account is not allowed to read contracts.",
+      "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "CONTRACT_NOT_FOUND": "This contract was not found.",
+      "CONTRACT_INVALID_TRANSITION": "This status change is not allowed.",
+      "VEHICLE_NOT_AVAILABLE": "This vehicle is not available for rental.",
+      "VEHICLE_ALREADY_RENTED": "This vehicle is already reserved or rented.",
+      "CONTRACT_LINK_INVALID": "This contract link is invalid.",
+      "CONTRACT_LINK_EXPIRED": "This contract link has expired.",
+      "CONTRACT_LINK_USED": "This contract link has already been used.",
+      "CONTRACT_PAYMENT_REQUIRED": "A confirmed payment is required.",
+      "CONTRACT_CAR_OUT_REQUIRED": "Car-Out is required before this action.",
+      "CONTRACT_CAR_IN_REQUIRED": "Car-In is required before this action.",
+      "CONTRACT_RECONCILIATION_REQUIRED": "Reconciliation must be approved before closing.",
+      "CONTRACT_ALREADY_CLOSED": "This contract is already closed.",
+      "IDEMPOTENCY_KEY_CONFLICT": "This request conflicts with a previous submit. Close and try again.",
+      "VALIDATION_ERROR": "Some values are not valid. Check the fields and try again.",
+      "CONFLICT": "This action conflicts with the current contract state."
+    },
+    "detail": {
+      "title": "Contract details",
+      "close": "Close",
+      "loading": "Loading contract…",
+      "mobile": "Mobile",
+      "plate": "Plate",
+      "days": "Duration",
+      "amount": "Agreed amount",
+      "deposit": "Deposit",
+      "start": "Start",
+      "end": "End",
+      "payment": "Payment",
+      "paidAmount": "Paid",
+      "method": "Method",
+      "carOut": "Car-Out",
+      "carIn": "Car-In",
+      "reconciliation": "Reconciliation",
+      "renewals": "Renewals"
+    },
+    "timeline": {
+      "title": "Contract lifecycle",
+      "offer": "Offer / rental link",
+      "offerHint": "Offer created and link may be issued",
+      "form": "Form",
+      "formHint": "Customer completed the form",
+      "signed": "Signed",
+      "signedHint": "Customer accepted the contract",
+      "paid": "Paid",
+      "paidHint": "Payment confirmed — ready for Car-Out",
+      "carOut": "Car-Out",
+      "carOutHint": "Vehicle handed over",
+      "return": "Return",
+      "returnHint": "Return link issued",
+      "review": "Review",
+      "reviewHint": "Car-In received — reconciliation pending",
+      "closed": "Closed",
+      "closedHint": "Contract closed and vehicle released"
+    },
+    "actions": {
+      "rentalLink": "Generate rental link",
+      "confirmPayment": "Confirm payment",
+      "carOut": "Car-Out",
+      "returnLink": "Generate return link",
+      "returnWaiting": "Waiting for customer return",
+      "renew": "Renew",
+      "reconcile": "Reconciliation",
+      "close": "Close contract"
+    },
+    "link": {
+      "created": "Rental link created",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "open": "Open link",
+      "done": "Done",
+      "expires": "Expires {date}"
+    },
+    "payment": {
+      "title": "Confirm payment",
+      "description": "Record the confirmed payment. This reserves the vehicle for Car-Out.",
+      "amount": "Amount (AED)",
+      "methodLabel": "Method",
+      "reference": "External reference (optional)",
+      "submit": "Confirm payment",
+      "method": {
+        "MANUAL": "Manual",
+        "BANK_TRANSFER": "Bank transfer",
+        "CARD": "Card"
+      }
+    },
+    "carOut": {
+      "title": "Car-Out — handover",
+      "description": "Record outgoing mileage, fuel and the eight inspection photos.",
+      "mileage": "Outgoing odometer",
+      "fuel": "Fuel",
+      "notes": "Notes (optional)",
+      "addPhoto": "Add photo",
+      "submit": "Confirm Car-Out",
+      "angle": {
+        "FRONT": "Front",
+        "REAR": "Rear",
+        "RIGHT_SIDE": "Right side",
+        "LEFT_SIDE": "Left side",
+        "FRONT_PLATE": "Front plate",
+        "REAR_PLATE": "Rear plate",
+        "INTERIOR_ODOMETER": "Interior / odometer",
+        "TIRES": "Tires"
+      }
+    },
+    "renew": {
+      "title": "Renew contract",
+      "description": "Extend this active contract. Totals are computed by the backend.",
+      "days": "Additional days",
+      "amount": "Additional amount (AED)",
+      "submit": "Renew",
+      "link": "Generate renewal link"
+    },
+    "reconcile": {
+      "title": "Reconciliation",
+      "description": "Add settlement lines. Backend computes the totals after save.",
+      "lineType": "Line type",
+      "descriptionField": "Description",
+      "amount": "Amount",
+      "reference": "Reference",
+      "addLine": "Add line",
+      "submit": "Save reconciliation",
+      "charges": "Charges total",
+      "final": "Final amount",
+      "type": {
+        "DAMAGE": "Damage",
+        "FUEL": "Fuel",
+        "LATE": "Late",
+        "SALIK": "Salik",
+        "VIOLATION": "Violation",
+        "OTHER": "Other"
+      }
+    },
+    "close": {
+      "title": "Close contract?",
+      "description": "Close {number}? The vehicle will return to available.",
+      "descriptionGeneric": "Close this contract? The vehicle will return to available.",
+      "confirm": "Close contract"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {totalPages}"
     }
   }
 }

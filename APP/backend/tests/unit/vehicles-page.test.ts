@@ -103,7 +103,7 @@ test("resolvePrimaryImage prefers isPrimary then sortOrder", () => {
   assert.equal(primary?.url, "/vehicles/1/photos/a/stream");
 });
 
-test("resolveCurrentRental returns null until Contracts domain exists", () => {
+test("resolveCurrentRental stub stays null; list/detail load from Contracts", () => {
   assert.equal(resolveCurrentRental(99), null);
 });
 

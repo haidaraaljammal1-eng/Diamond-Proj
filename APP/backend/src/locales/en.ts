@@ -226,4 +226,23 @@ export const en: Record<string, string> = {
   "Financing type": "Financing type",
   "Insurance type": "Insurance type",
   "Sales channel": "Sales channel",
+
+  "Contract not found": "Contract not found",
+  "Contract status transition is not allowed": "Contract status transition is not allowed",
+  "Vehicle is not available for rental": "Vehicle is not available for rental",
+  "Vehicle is already reserved or rented": "Vehicle is already reserved or rented",
+  "Contract link is invalid": "Contract link is invalid",
+  "Contract link has expired": "Contract link has expired",
+  "Contract link has already been used": "Contract link has already been used",
+  "A confirmed payment is required": "A confirmed payment is required",
+  "Car-Out is required before this action": "Car-Out is required before this action",
+  "Car-In is required before this action": "Car-In is required before this action",
+  "Reconciliation must be approved before closing": "Reconciliation must be approved before closing",
+  "Contract is already closed": "Contract is already closed",
+  "Idempotency key was reused with a different request":
+    "Idempotency key was reused with a different request",
+  "Car inspection requires all 8 unique angles": "Car inspection requires all 8 unique angles",
+  "Identity number or passport number is required": "Identity number or passport number is required",
+  "Customer form must be completed first": "Customer form must be completed first",
+  "Contract photo not found": "Contract photo not found",
 };

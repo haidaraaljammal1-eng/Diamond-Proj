@@ -13,11 +13,13 @@ export interface VehicleImageDto {
   url: string;
 }
 
+export type VehicleCurrentRentalStatus = "paid" | "active" | "retout" | "review";
+
 export interface VehicleCurrentRentalDto {
   contractId: string;
   customerName: string;
   endAt: string;
-  status: "active" | "retout" | "review";
+  status: VehicleCurrentRentalStatus;
 }
 
 export interface VehicleModelRefDto {

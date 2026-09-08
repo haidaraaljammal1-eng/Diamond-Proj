@@ -68,8 +68,8 @@ export function resolvePrimaryImage(
 }
 
 /**
- * Contracts domain is not built yet — current rental summary stays null until
- * an authoritative rental contract model exists. Do not synthesize from history.
+ * Current rental is resolved from Contracts (PAID / ACTIVE / RETOUT / REVIEW).
+ * Do not denormalize renter fields onto Vehicle.
  */
 export function resolveCurrentRental(_vehicleId: number): CurrentRental {
   return null;

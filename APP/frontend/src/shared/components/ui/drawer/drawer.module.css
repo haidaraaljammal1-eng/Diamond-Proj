@@ -1,0 +1,115 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(70, 56, 32, 0.38);
+  -webkit-backdrop-filter: blur(6px) saturate(1.05);
+  backdrop-filter: blur(6px) saturate(1.05);
+}
+
+.panel {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 96;
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 96vw);
+  background-image:
+    var(--diamond-br-tl), var(--diamond-br-tr), var(--diamond-br-bl),
+    var(--diamond-br-br), linear-gradient(180deg, #ffffff, #fbf6eb 70%);
+  background-position: top right, top left, bottom right, bottom left, center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px, 30px 30px, 30px 30px, 30px 30px, cover;
+  border-inline-start: 1px solid rgba(201, 161, 92, 0.3);
+  box-shadow: -40px 0 90px rgba(80, 60, 30, 0.24);
+  transform: translateX(105%);
+  animation: drawer-in 0.32s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+:global([dir="rtl"]) .panel {
+  transform: translateX(-105%);
+  animation-name: drawer-in-rtl;
+  box-shadow: 40px 0 90px rgba(80, 60, 30, 0.24);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--diamond-hair);
+}
+
+.close {
+  padding: 6px 12px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--diamond-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--diamond-champagne);
+  border-color: rgba(201, 161, 92, 0.4);
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
+.heading {
+  margin: 0;
+  flex: 1;
+  text-align: start;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--diamond-gold-hi);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(105%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes drawer-in-rtl {
+  from {
+    transform: translateX(-105%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+    transform: none;
+  }
+}

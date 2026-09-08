@@ -1,7 +1,12 @@
-import type { VehicleCardDto, VehicleOperationalStatus } from "../types/vehicle.types";
+import type {
+  VehicleCardDto,
+  VehicleCurrentRentalDto,
+  VehicleOperationalStatus,
+} from "../types/vehicle.types";
 
 export interface VehicleCardActions {
   showSetRentalPrice: boolean;
+  showCarOut: boolean;
   showReturnLink: boolean;
   showGps: boolean;
   showEditRates: boolean;
@@ -11,6 +16,7 @@ export interface VehicleCardActions {
 
 const NO_ACTIONS: VehicleCardActions = {
   showSetRentalPrice: false,
+  showCarOut: false,
   showReturnLink: false,
   showGps: false,
   showEditRates: false,
@@ -18,22 +24,42 @@ const NO_ACTIONS: VehicleCardActions = {
   showMaintenance: false,
 };
 
+type VehicleActionSource = Pick<VehicleCardDto, "operationalStatus" | "isActive"> & {
+  currentRental?: VehicleCurrentRentalDto | null;
+};
+
+function isPaidReservation(vehicle: VehicleActionSource): boolean {
+  return vehicle.currentRental?.status === "paid";
+}
+
 /**
- * Central fleet card action policy — operational status + permissions are the
- * only inputs. Every card uses this helper so free-text and legacy vehicles
- * render identically.
+ * Central fleet card action policy. Operational status, currentRental.status
+ * (Backend authority), and permissions are the only inputs.
  */
 export function getVehicleCardActions(
-  vehicle: Pick<VehicleCardDto, "operationalStatus" | "isActive">,
+  vehicle: VehicleActionSource,
   canManage: boolean,
 ): VehicleCardActions {
   const isFleetActive = vehicle.isActive !== false;
   if (!isFleetActive) return NO_ACTIONS;
 
+  if (vehicle.operationalStatus === "available" && isPaidReservation(vehicle)) {
+    return {
+      showSetRentalPrice: false,
+      showCarOut: true,
+      showReturnLink: false,
+      showGps: false,
+      showEditRates: false,
+      showDelete: false,
+      showMaintenance: false,
+    };
+  }
+
   switch (vehicle.operationalStatus) {
     case "available":
       return {
         showSetRentalPrice: true,
+        showCarOut: false,
         showReturnLink: false,
         showGps: false,
         showEditRates: canManage,
@@ -43,6 +69,7 @@ export function getVehicleCardActions(
     case "rented":
       return {
         showSetRentalPrice: false,
+        showCarOut: false,
         showReturnLink: true,
         showGps: true,
         showEditRates: false,
@@ -52,6 +79,7 @@ export function getVehicleCardActions(
     case "service":
       return {
         showSetRentalPrice: false,
+        showCarOut: false,
         showReturnLink: false,
         showGps: false,
         showEditRates: false,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-08
+
+- Contracts Backend V1: Contract aggregate, explicit lifecycle, hashed public
+  links, payment/Car-Out/Car-In/reconciliation/renewal foundations, and real
+  `currentRental` on Vehicles. See `DOCU/05-pages/contracts-backend.md`.
+
 ## 2026-09-06
 
 - Staff create dialog now requires an initial password and confirmation.

@@ -41,7 +41,7 @@ UI state (detail modal, add/edit/delete dialogs, boundary notices) stays in scre
 | Add vehicle         | `forms/add-vehicle/add-vehicle-dialog.tsx`                                        |
 | Edit default rates  | `forms/edit-rates/edit-default-rate-dialog.tsx`                                   |
 | Fleet delete        | `forms/deactivate/vehicle-deactivate-dialog.tsx`                                  |
-| Set rental price UI | `forms/rental-price/set-rental-price-dialog.tsx` (Contracts boundary)             |
+| Set rental price UI | `forms/rental-price/set-rental-price-dialog.tsx` (creates a real Contract offer + rental link) |
 | Query / actions     | `utils/vehicle-filters.ts`, `utils/vehicle-card-actions.ts`                       |
 
 ## Fleet scope
@@ -76,15 +76,16 @@ Every filter is server-side; changing any filter resets to page 1.
 
 Central policy: `utils/vehicle-card-actions.ts` → `getVehicleCardActions(vehicle, canManage)`.
 
-| Status                 | Visible actions                                  |
-| ---------------------- | ------------------------------------------------ |
-| **AVAILABLE** (active) | Set Rental Price · Edit Default Rates* · Delete* |
-| **RENTED** (active)    | Return Link · GPS only                           |
-| **SERVICE** (active)   | Go to Maintenance only                           |
+| Status | Visible actions |
+| ------ | ---------------- |
+| **AVAILABLE** + no `currentRental` | Set Rental Price · Edit Default Rates* · Delete* |
+| **AVAILABLE** + `currentRental.status = paid` | Car-Out (real Contracts flow; no Set Price / Edit / Delete) |
+| **RENTED** (`active` / `retout` / `review`) | Return Link · GPS only |
+| **SERVICE** | Go to Maintenance only |
 
 \* Requires `vehicles.manage`. Inner buttons use `stopPropagation()`.
 
-`currentRental = null` does not change the matrix — `operationalStatus` is authoritative.
+`currentRental.status = paid` is Backend authority: the vehicle stays AVAILABLE until Car-Out, but the chip reads **Ready for Car-Out** / **جاهزة للتسليم** and rental/edit/delete actions are hidden. Do not invent a RESERVED operational status.
 
 ## Sort mapping
 
@@ -134,12 +135,13 @@ Pencil on **AVAILABLE** active cards only (`vehicles.manage`). `PUT /vehicles/:i
 
 Trash on **AVAILABLE** active cards only. Shared confirmation `Dialog` → `POST /vehicles/:id/deactivate`. Backend rejects rented vehicles.
 
-## Boundaries
+## Fleet ↔ Contracts bridge
 
-- **Set Rental Price** — AVAILABLE primary action; Contracts boundary (submit disabled).
-- **Return Link** — RENTED primary action; Contracts boundary.
+- **Set Rental Price** — AVAILABLE with no `currentRental` → `POST /contracts/offers` then rental link. Default rates are suggestions only.
+- **Car-Out** — AVAILABLE + `currentRental.status = paid` → Car-Out dialog for `currentRental.contractId`.
+- **Return Link** — RENTED + `active` generates a real return link; `retout` opens the contract drawer; `review` opens Reconciliation.
 - **GPS** — RENTED secondary action; temporary notice until GPS domain.
-- **currentRental** — `null` until Contracts; no fake renter/timer.
+- **currentRental** — Backend projection (`paid` / `active` / `retout` / `review`); never fake renter/timer.
 
 ## i18n
 

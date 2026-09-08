@@ -1,0 +1,59 @@
+.wrap {
+  overflow-x: auto;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(251, 246, 235, 0.9));
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 12px 14px;
+  text-align: start;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--diamond-dim);
+  border-bottom: 1px solid var(--diamond-hair);
+}
+
+.table td {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--diamond-champagne);
+  border-bottom: 1px solid var(--diamond-hair);
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  cursor: pointer;
+}
+
+.table tbody tr:hover {
+  background: rgba(201, 161, 92, 0.06);
+}
+
+.table tbody tr:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: -2px;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--diamond-gold-hi);
+}
+
+.muted {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--diamond-dim);
+}
+
+.num,
+.amount {
+  font-variant-numeric: tabular-nums;
+}

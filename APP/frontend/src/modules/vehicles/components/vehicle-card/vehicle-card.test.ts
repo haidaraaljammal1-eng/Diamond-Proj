@@ -58,4 +58,18 @@ describe("VehicleCard presentation rules", () => {
     assert.equal(vehicle.monthlyRate, 24000);
     assert.equal(vehicle.primaryImage, null);
   });
+
+  it("paid currentRental status is a valid VehicleCurrentRentalDto", () => {
+    const vehicle = fixture({
+      operationalStatus: "available",
+      currentRental: {
+        contractId: "ct-paid",
+        customerName: "Omar Test",
+        endAt: "2026-12-01T00:00:00.000Z",
+        status: "paid",
+      },
+    });
+    assert.equal(vehicle.currentRental?.status, "paid");
+    assert.equal(vehicle.operationalStatus, "available");
+  });
 });
