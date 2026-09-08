@@ -34,7 +34,7 @@ UI dialog/drawer state stays in the screen. Transient issued-link URLs live in t
 | Hooks | `hooks/use-contracts.ts`, `hooks/use-contract.ts` |
 | Types | `types/contract.types.ts` |
 | Screen / table | `components/contracts-screen/`, `components/contracts-table/` |
-| Filters | `components/contract-filters/` + Shared `DataSearch` |
+| Filters | `components/contract-filters/` + Shared `DataSearch` + Shared `DateRangePicker` |
 | Drawer | Shared `Drawer` + `components/contract-detail/` |
 | Timeline | `components/contract-timeline/` |
 | Status | `components/contract-status/` |
@@ -50,12 +50,24 @@ Server-side only. Changing any filter resets to page 1.
 | ------- | ----- | ----- |
 | Status chips | `status` | omitted when `all` |
 | Search | `search` | Explicit submit via Shared `DataSearch` — no per-keystroke request |
-| Date range | `from` / `to` | `YYYY-MM-DD` → ISO instants |
+| Date range | `from` / `to` | `YYYY-MM-DD` → ISO instants via Shared `DateRangePicker` (explicit Apply; one toolbar control) |
 | Sort | `sort` | UX presets → Backend `field:direction` (`createdAt`, `agreedAmount`, `startAt`, `contractNumber`) |
 | Pagination | `page` / `pageSize` | default 20 |
 | Result count | — | `meta.total` |
 
 No employee filter (Backend list does not support it).
+
+### Date Range Filtering
+
+- **UI:** Shared `DateRangePicker` (`src/shared/components/ui/date-range-picker`) built on **React DayPicker v9** with Diamond CSS — no native `<input type="date">` and no default DayPicker theme.
+- **Architecture:** Controlled component (`value`, `onApply`, `onClear`). Contracts filters pass applied `from` / `to` strings from Zustand query state; the picker keeps a draft range inside its popover until Apply.
+- **Server query:** `buildContractsQuery` still sends `from` / `to` as ISO instants (`YYYY-MM-DD` → `T00:00:00.000Z` / `T23:59:59.000Z`). Query param names are unchanged.
+- **Explicit Apply:** Calendar clicks and quick presets update draft only. Apply sets `from` + `to`, resets `page` to 1, closes the popover, and triggers one list request. Clear removes the range and refetches.
+- **Quick ranges:** Today, Last 7/30 Days, This/Last Month, Custom (i18n via `DateRangePicker` namespace).
+- **Layout:** Two months side-by-side on desktop (`≥769px`); one month on mobile/tablet.
+- **RTL/LTR:** `dir` from locale; logical CSS in picker + popover.
+- **Date-only safety:** Calendar dates serialize with `formatCalendarDate` / `parseCalendarDate` (local calendar fields) — never blind `toISOString().slice(0, 10)`.
+- **Active filter badge:** A date range counts as **one** active filter (not `from` + `to` separately).
 
 ## Status presentation
 

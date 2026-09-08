@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { PageHeader } from "@/shared/components/ui/page-header";
@@ -22,6 +22,8 @@ import styles from "./contracts-screen.module.css";
 
 export function ContractsScreen() {
   const t = useTranslations("Contracts");
+  const tDateRange = useTranslations("DateRangePicker");
+  const locale = useLocale();
   const {
     contracts,
     meta,
@@ -87,12 +89,27 @@ export function ContractsScreen() {
       searchButton: t("search.button"),
       searchClear: t("search.clear"),
       sortLabel: t("filters.sortLabel"),
-      fromLabel: t("filters.from"),
-      toLabel: t("filters.to"),
+      dateRange: {
+        fieldLabel: t("filters.dateRange"),
+        placeholder: tDateRange("placeholder"),
+        apply: tDateRange("apply"),
+        clear: tDateRange("clear"),
+        daysSelected: (count: number) => tDateRange("daysSelected", { count }),
+        previousMonth: tDateRange("previousMonth"),
+        nextMonth: tDateRange("nextMonth"),
+        presets: {
+          today: tDateRange("presets.today"),
+          last7: tDateRange("presets.last7"),
+          last30: tDateRange("presets.last30"),
+          thisMonth: tDateRange("presets.thisMonth"),
+          lastMonth: tDateRange("presets.lastMonth"),
+          custom: tDateRange("presets.custom"),
+        },
+      },
       clear: t("filters.clear"),
       activeCount: t("filters.activeCount", { count: activeFilterCount }),
     }),
-    [t, activeFilterCount],
+    [t, tDateRange, activeFilterCount],
   );
 
   const openAction = useCallback(
@@ -188,11 +205,13 @@ export function ContractsScreen() {
             activeFilterCount={activeFilterCount}
             searchLoading={isLoading}
             resultsLabel={t("filters.results", { count: meta?.total ?? 0 })}
+            locale={locale}
             labels={filterLabels}
             onStatusChange={setStatusFilter}
             onSearchSubmit={applySearch}
             onSearchClear={clearSearch}
-            onDateRangeChange={setDateRange}
+            onDateRangeApply={setDateRange}
+            onDateRangeClear={() => setDateRange("", "")}
             onSortChange={setSort}
             onClear={clearFilters}
           />

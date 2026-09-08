@@ -18,6 +18,11 @@ import { EditDefaultRateDialog } from "../../forms/edit-rates/edit-default-rate-
 import { VehicleDeactivateDialog } from "../../forms/deactivate/vehicle-deactivate-dialog";
 import { useContract } from "@/modules/contracts/hooks/use-contract";
 import { resolveFleetPrimaryIntent } from "../../utils/resolve-fleet-contract-intent";
+import {
+  isFleetNextDisabled,
+  isFleetPreviousDisabled,
+  shouldShowFleetPagination,
+} from "../../utils/vehicles-pagination";
 import { CarOutDialog } from "@/modules/contracts/forms/car-out/car-out-dialog";
 import { PaymentConfirmDialog } from "@/modules/contracts/forms/payment/payment-confirm-dialog";
 import { RenewDialog } from "@/modules/contracts/forms/renew/renew-dialog";
@@ -49,6 +54,7 @@ export function VehiclesScreen() {
     setVehicleType,
     setSort,
     clearFilters,
+    setPage,
   } = useVehicles();
   const { types, isLoading: typesLoading } = useFleetTypeLookup();
   const { generateReturnLink, generateRentalLink } = useContract();
@@ -214,6 +220,9 @@ export function VehiclesScreen() {
     );
   }
 
+  const showEmptyFleet = isReady && (meta?.total ?? 0) === 0;
+  const showPagination = meta != null && shouldShowFleetPagination(meta);
+
   return (
     <>
       {header}
@@ -238,7 +247,7 @@ export function VehiclesScreen() {
         onClear={clearFilters}
       />
 
-      {vehicles.length === 0 ? (
+      {showEmptyFleet ? (
         <EmptyState
           title={activeFilterCount === 0 ? t("empty.title") : t("empty.filteredTitle")}
           description={
@@ -259,15 +268,52 @@ export function VehiclesScreen() {
           }
         />
       ) : (
-        <VehiclesGrid
-          vehicles={vehicles}
-          canManage={canManage}
-          onOpen={setDetailVehicle}
-          onPrimaryAction={handlePrimaryAction}
-          onEditRates={setEditRatesVehicle}
-          onDelete={setDeactivateVehicle}
-          onGps={() => showNotice(t("boundary.gpsPending"))}
-        />
+        <>
+          <VehiclesGrid
+            vehicles={vehicles}
+            canManage={canManage}
+            onOpen={setDetailVehicle}
+            onPrimaryAction={handlePrimaryAction}
+            onEditRates={setEditRatesVehicle}
+            onDelete={setDeactivateVehicle}
+            onGps={() => showNotice(t("boundary.gpsPending"))}
+          />
+
+          {showPagination ? (
+            <nav
+              className={styles.pagination}
+              aria-label={t("pagination.label")}
+              data-testid="vehicles-pagination"
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                disabled={isFleetPreviousDisabled(meta, isLoading)}
+                aria-label={t("pagination.previous")}
+                onClick={() => setPage(meta.page - 1)}
+              >
+                {t("pagination.previous")}
+              </Button>
+              <span className={styles.paginationStatus}>
+                {t("pagination.page", {
+                  page: meta.page,
+                  totalPages: meta.totalPages,
+                })}
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                disabled={isFleetNextDisabled(meta, isLoading)}
+                aria-label={t("pagination.next")}
+                onClick={() => setPage(meta.page + 1)}
+              >
+                {t("pagination.next")}
+              </Button>
+            </nav>
+          ) : null}
+        </>
       )}
 
       <VehicleDetailDialog

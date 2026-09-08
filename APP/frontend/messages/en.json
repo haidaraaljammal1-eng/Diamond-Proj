@@ -174,6 +174,22 @@
     "noResults": "No results",
     "clear": "Clear selection"
   },
+  "DateRangePicker": {
+    "placeholder": "Select date range",
+    "apply": "Apply",
+    "clear": "Clear",
+    "daysSelected": "{count} days selected",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "presets": {
+      "today": "Today",
+      "last7": "Last 7 Days",
+      "last30": "Last 30 Days",
+      "thisMonth": "This Month",
+      "lastMonth": "Last Month",
+      "custom": "Custom Range"
+    }
+  },
   "Password": {
     "show": "Show password",
     "hide": "Hide password"
@@ -616,6 +632,12 @@
       "descriptionGeneric": "Remove this vehicle from the active fleet? It will be hidden from active vehicles while its record is kept.",
       "confirm": "Remove from fleet",
       "success": "Vehicle removed from the active fleet."
+    },
+    "pagination": {
+      "label": "Fleet pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {totalPages}"
     }
   },
   "Contracts": {
@@ -648,8 +670,7 @@
       "all": "All statuses",
       "statusGroup": "Contract status",
       "sortLabel": "Sort",
-      "from": "From",
-      "to": "To",
+      "dateRange": "Date Range",
       "clear": "Clear filters",
       "activeCount": "{count} active",
       "results": "{count} contracts",

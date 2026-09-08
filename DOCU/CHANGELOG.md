@@ -2,6 +2,11 @@
 
 ## 2026-09-08
 
+- Contracts date filters upgraded to shared React DayPicker-based
+  `DateRangePicker` (explicit Apply/Clear, quick presets, two-month desktop).
+  See `DOCU/05-pages/contracts.md` and `DOCU/00-system-overview/ui-date-range-picker.md`.
+- DateRangePicker calendar grid fix: outside-day cells no longer collapse;
+  weekday alignment preserved; outer-edge Previous/Next navigation.
 - Contracts Backend V1: Contract aggregate, explicit lifecycle, hashed public
   links, payment/Car-Out/Car-In/reconciliation/renewal foundations, and real
   `currentRental` on Vehicles. See `DOCU/05-pages/contracts-backend.md`.

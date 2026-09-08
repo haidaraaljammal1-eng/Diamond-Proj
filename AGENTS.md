@@ -113,3 +113,4 @@
 - VehicleCard delete maps to `POST /vehicles/:id/deactivate` (fleet soft-remove), not hard delete.
 - The approved Vehicles data toolbar pattern (search, status, model, sort, show retired, count, clear) is reusable for other data-heavy pages.
 - Data-heavy explicit searches should use the Shared `DataSearch` pattern: draft locally → Search/Enter → server-side applied query (`src/shared/components/data-search/`).
+- Date-range/calendar UI must reuse the shared `DateRangePicker` built on React DayPicker v9 (`src/shared/components/ui/date-range-picker`). Do not introduce native date inputs or page-specific calendar implementations when the shared component fits.

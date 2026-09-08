@@ -86,7 +86,7 @@ describe("countActiveContractFilters", () => {
         to: "2026-01-31",
         sort: "amountDesc",
       }),
-      5,
+      4,
     );
   });
 

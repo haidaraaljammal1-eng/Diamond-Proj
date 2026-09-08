@@ -48,6 +48,16 @@ UI state (detail modal, add/edit/delete dialogs, boundary notices) stays in scre
 
 The Fleet page shows **active vehicles only**. `active=true` is always sent internally; there is no Show Retired toggle in the UI. Deactivated vehicles disappear after successful deactivate + refetch.
 
+## Fleet pagination
+
+- Server-side pagination via `GET /vehicles?page=&pageSize=`.
+- Default `pageSize` is **20** (no page-size selector in the UI).
+- `meta.total`, `meta.totalPages`, and `meta.page` from the Backend are the source of truth — never derived from `data.length`.
+- Previous / Next controls appear only when `meta.totalPages > 1`.
+- Search, status, vehicle type, sort, and clear filters reset `page` to **1** before refetch.
+- After deactivate (or any mutation that shrinks `totalPages`), an out-of-range current page is corrected to the last valid page and refetched — no false empty state.
+- No runtime fleet cap (e.g. no `slice(0, 100)`); any number of active vehicles is reachable page by page.
+
 ## Approved toolbar
 
 Every filter is server-side; changing any filter resets to page 1.
