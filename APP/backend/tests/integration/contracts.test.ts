@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
 
 /**
  * Contracts V1 integration. Requires RUN_INTEGRATION=true and TEST_DATABASE_URL
@@ -85,6 +86,43 @@ if (!RUN) {
     token = res.json().data.accessToken;
   }
 
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+
+  function licenseMultipart() {
+    const boundary = "----ctlicense";
+    const payload = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="dl.png"\r\nContent-Type: image/png\r\n\r\n`,
+      ),
+      PNG,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    return { payload, headers: { "content-type": `multipart/form-data; boundary=${boundary}` } };
+  }
+
+  async function seedValidLicense(rentalToken: string) {
+    setDrivingLicenseOcrProviderForTests({
+      name: "test",
+      async analyzeDrivingLicense() {
+        return {
+          ok: true,
+          licenseNumber: "DL-1",
+          expiryDate: "2030-01-01",
+          confidence: 0.99,
+          provider: "test",
+        };
+      },
+    });
+    const { headers, payload } = licenseMultipart();
+    const up = await app.inject({
+      method: "POST",
+      url: `/contracts/rental/${rentalToken}/driving-license`,
+      headers,
+      payload,
+    });
+    assert.equal(up.statusCode, 200, up.body);
+  }
+
   let photoSeq = 0;
   async function dummyPhotos() {
     const ids: string[] = [];
@@ -104,6 +142,10 @@ if (!RUN) {
   }
 
   before(async () => {
+    const { env } = await import("src/config/env");
+    if (!/haidara_test(?:\?|$)/.test(env.DATABASE_URL)) {
+      throw new Error("contracts integration refuses to run unless DATABASE_URL is haidara_test");
+    }
     const { buildApp } = await import("src/app");
     app = await buildApp();
     prisma = app.prisma;
@@ -137,6 +179,7 @@ if (!RUN) {
   });
 
   after(async () => {
+    setDrivingLicenseOcrProviderForTests(undefined);
     await app.close();
   });
 
@@ -196,19 +239,19 @@ if (!RUN) {
       url: `/contracts/rental/${rentalToken}`,
     });
     assert.equal(publicRental.statusCode, 200, publicRental.body);
-    const rentalView = publicRental.json().data as Record<string, unknown>;
-    assert.equal(rentalView.contractNumber, offer.json().data.contractNumber);
-    assert.equal(rentalView.id, undefined);
-    assert.equal(rentalView.customer, undefined);
-    assert.equal(rentalView.payments, undefined);
-    assert.equal(rentalView.snapshot, undefined);
-    assert.equal(rentalView.actions, undefined);
+    const rentalView = publicRental.json().data as {
+      contract: { contractNumber: string; status: string };
+      flow: { step: string };
+      customer: unknown;
+    };
+    assert.equal(rentalView.contract.contractNumber, offer.json().data.contractNumber);
+    assert.equal(rentalView.flow.step, "LICENSE_VERIFICATION");
+    assert.equal((publicRental.json().data as { id?: string }).id, undefined);
+    assert.equal(rentalView.customer, null);
+    assert.equal((publicRental.json().data as { snapshot?: unknown }).snapshot, undefined);
+    assert.equal((publicRental.json().data as { actions?: unknown }).actions, undefined);
 
-    const staffUnauth = await app.inject({ method: "GET", url: `/contracts/${contractId}` });
-    assert.equal(staffUnauth.statusCode, 401);
-
-    const invalid = await app.inject({ method: "GET", url: "/contracts/rental/not-a-real-token" });
-    assert.equal(invalid.statusCode, 401);
+    await seedValidLicense(rentalToken);
 
     const form = await app.inject({
       method: "POST",
@@ -218,12 +261,18 @@ if (!RUN) {
         mobile: "+971500000001",
         nationality: "AE",
         identityNumber: "784-1990-123",
-        drivingLicenseNumber: "DL-1",
-        drivingLicenseExpiry: "2030-01-01",
+        drivingLicenseNumber: "FORGED",
       },
     });
     assert.equal(form.statusCode, 200, form.body);
-    assert.equal(form.json().data.status, "FORM");
+    assert.equal(form.json().data.contract.status, "FORM");
+    assert.equal(form.json().data.licenseVerification.licenseNumber, "DL-1");
+
+    const staffUnauth = await app.inject({ method: "GET", url: `/contracts/${contractId}` });
+    assert.equal(staffUnauth.statusCode, 401);
+
+    const invalid = await app.inject({ method: "GET", url: "/contracts/rental/not-a-real-token" });
+    assert.equal(invalid.statusCode, 401);
 
     const accept = await app.inject({
       method: "POST",
@@ -231,10 +280,12 @@ if (!RUN) {
       payload: {},
     });
     assert.equal(accept.statusCode, 200, accept.body);
-    assert.equal(accept.json().data.status, "SIGNED");
+    assert.equal(accept.json().data.contract.status, "SIGNED");
 
     const reused = await app.inject({ method: "GET", url: `/contracts/rental/${rentalToken}` });
-    assert.equal(reused.statusCode, 401);
+    assert.equal(reused.statusCode, 200, reused.body);
+    assert.equal(reused.json().data.contract.status, "SIGNED");
+    assert.equal(reused.json().data.flow.step, "PAYMENT");
 
     const signed = await app.inject({
       method: "GET",
@@ -243,6 +294,8 @@ if (!RUN) {
     });
     const snapshotName = signed.json().data.snapshot.customer.name;
     assert.equal(snapshotName, "Omar Test");
+    assert.equal(signed.json().data.snapshot.customer.drivingLicenseNumber, "DL-1");
+    assert.equal(signed.json().data.snapshot.contractNumber, offer.json().data.contractNumber);
     await prisma.customer.update({
       where: { id: signed.json().data.customerId },
       data: { name: "Changed Later" },
@@ -462,6 +515,7 @@ if (!RUN) {
         headers: auth(),
       });
       const t = link.json().data.link.token as string;
+      await seedValidLicense(t);
       await app.inject({
         method: "POST",
         url: `/contracts/rental/${t}/form`,
@@ -470,8 +524,6 @@ if (!RUN) {
           mobile: "+971500000009",
           nationality: "AE",
           passportNumber: "P123",
-          drivingLicenseNumber: "DL9",
-          drivingLicenseExpiry: "2031-01-01",
         },
       });
       await app.inject({ method: "POST", url: `/contracts/rental/${t}/accept`, payload: {} });

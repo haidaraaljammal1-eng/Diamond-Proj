@@ -50,6 +50,7 @@ export async function resolveContractLink(
   tx: Db,
   token: string,
   type: ContractLinkType,
+  options: { allowCompleted?: boolean } = {},
 ): Promise<ContractLink> {
   const digest = hashToken(token);
   const link = await tx.contractLink.findUnique({ where: { tokenHash: digest } });
@@ -57,8 +58,16 @@ export async function resolveContractLink(
     throw contractError.linkInvalid();
   }
   if (isExpired(link.expiresAt)) throw contractError.linkExpired();
-  if (link.usedAt) throw contractError.linkUsed();
+  const allowCompleted = type === "RENTAL" && options.allowCompleted;
+  if (link.usedAt && !allowCompleted) throw contractError.linkUsed();
   return link;
+}
+
+export async function completeRentalLinks(tx: Db, contractId: string): Promise<void> {
+  await tx.contractLink.updateMany({
+    where: { contractId, type: "RENTAL", usedAt: null, revokedAt: null },
+    data: { usedAt: new Date() },
+  });
 }
 
 export async function markLinkUsed(tx: Db, linkId: string): Promise<void> {

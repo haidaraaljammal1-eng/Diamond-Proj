@@ -204,7 +204,8 @@
     "passwordNumber": "Password must include a number",
     "passwordMismatch": "Passwords do not match",
     "invalidYear": "Enter a valid model year",
-    "invalidRate": "Enter a valid non-negative amount"
+    "invalidRate": "Enter a valid non-negative amount",
+    "identityOrPassport": "Enter an identity number or a passport number"
   },
   "Roles": {
     "crumbs": "Administration · Access control",
@@ -851,6 +852,152 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {page} of {totalPages}"
+    }
+  },
+  "PublicRental": {
+    "brandAlt": "Diamond Elite Rent Car",
+    "tagline": "Rent Car · Dubai",
+    "fallbackOffice": "Diamond Rent Car",
+    "loading": "Loading rental details…",
+    "retry": "Try again",
+    "progress": {
+      "label": "Rental steps",
+      "license": "License Verification",
+      "contract": "Rental Contract",
+      "payment": "Payment"
+    },
+    "summary": {
+      "title": "Rental summary",
+      "office": "Office",
+      "vehicle": "Vehicle",
+      "plate": "Plate",
+      "duration": "Rental duration",
+      "days": "Days",
+      "total": "Total agreed amount",
+      "readOnly": "These details come from the rental office and cannot be edited."
+    },
+    "license": {
+      "title": "Driving License Verification",
+      "intro": "Please upload a clear photo of your driving license to continue.",
+      "upload": "Upload Driving License",
+      "replace": "Upload Another License",
+      "formats": "JPEG or PNG — one image only",
+      "previewAlt": "Driving license preview",
+      "verifying": "Verifying your driving license...",
+      "validTitle": "Driving license verified",
+      "number": "License number",
+      "expiry": "Valid until",
+      "continue": "Continue to rental contract",
+      "expiredTitle": "Driving license expired",
+      "expiredBody": "You cannot continue this rental with an expired driving license. Please upload a valid license to proceed.",
+      "unreadableTitle": "License could not be read",
+      "unreadableBody": "The license details could not be read clearly. Please retake a clearer photo.",
+      "reviewTitle": "License needs review",
+      "reviewBody": "The license could not be confirmed automatically. Please upload a clearer photo to continue.",
+      "unavailableTitle": "Driving license verification is currently unavailable.",
+      "unavailableBody": "License verification cannot continue right now. Please contact the rental office.",
+      "ocrDevNote": "OCR provider not configured",
+      "invalidFile": "Please choose a JPEG or PNG image."
+    },
+    "contract": {
+      "numberLabel": "Contract Number:",
+      "vehicleTitle": "Vehicle",
+      "vehicle": "Vehicle",
+      "vehicleType": "Type",
+      "plate": "Plate number",
+      "year": "Model year",
+      "color": "Color",
+      "vin": "VIN",
+      "commercialTitle": "Rental terms",
+      "duration": "Rental duration",
+      "days": "Days",
+      "amount": "Total amount",
+      "deposit": "Deposit",
+      "licenseTitle": "Driving license",
+      "licenseNumber": "Driving license number",
+      "licenseExpiry": "License expiry",
+      "datesTitle": "Handover and return",
+      "pickup": "Vehicle Handover Date",
+      "pickupPlaceholder": "Completed when the vehicle is handed over",
+      "return": "Vehicle Return Date",
+      "returnPlaceholder": "Completed when the vehicle is returned",
+      "customerTitle": "Renter details",
+      "fields": {
+        "name": "Full name",
+        "mobile": "Mobile",
+        "email": "Email",
+        "nationality": "Nationality",
+        "identityNumber": "Identity number",
+        "passportNumber": "Passport number",
+        "address": "Address"
+      },
+      "save": "Save details",
+      "saving": "Saving...",
+      "acceptance": "I have read and agree to the rental contract terms and conditions.",
+      "accept": "Accept & Continue to Payment",
+      "alreadyAccepted": "This rental contract has been accepted."
+    },
+    "payment": {
+      "title": "Secure payment",
+      "totalDue": "Total Due",
+      "days": "Days",
+      "contract": "Contract",
+      "methods": "Payment method",
+      "cardTitle": "Card",
+      "cardHint": "Visa · Mastercard · Amex — secure checkout",
+      "unavailable": "Online card payment is currently unavailable. Secure card payment will be enabled after the payment gateway is connected.",
+      "devNote": "Payment provider not configured",
+      "pay": "Pay",
+      "retry": "Retry payment",
+      "processing": "Processing your payment...",
+      "pending": "Payment verification in progress. Please do not retry until the current payment status is confirmed.",
+      "checkStatus": "Check status",
+      "failed": "The payment did not complete. You can try again.",
+      "cancelled": "The payment attempt was cancelled.",
+      "confirmed": "Payment confirmed",
+      "linkExpiredDuring": "This rental link has expired. The current payment attempt is still shown. A new payment cannot be started."
+    },
+    "handover": {
+      "title": "Payment confirmed",
+      "body": "Your rental is ready for vehicle handover. The handover time will be recorded when the vehicle is delivered to you."
+    },
+    "link": {
+      "CONTRACT_LINK_EXPIRED": {
+        "title": "This rental link has expired",
+        "body": "Please contact the rental office for a new rental link."
+      },
+      "CONTRACT_LINK_INVALID": {
+        "title": "This rental link is not valid",
+        "body": "Please contact the rental office for a new rental link."
+      },
+      "CONTRACT_LINK_USED": {
+        "title": "This rental link has already been used",
+        "body": "Please contact the rental office for a new rental link."
+      },
+      "generic": {
+        "title": "This rental link could not be opened",
+        "body": "Please contact the rental office for a new rental link."
+      }
+    },
+    "error": {
+      "generic": "Something went wrong. Please try again.",
+      "NETWORK_ERROR": "Connection failed. Check your network and try again.",
+      "CONTRACT_LINK_INVALID": "This rental link is not valid.",
+      "CONTRACT_LINK_EXPIRED": "This rental link has expired.",
+      "CONTRACT_LINK_USED": "This rental link has already been used.",
+      "DRIVING_LICENSE_REQUIRED": "Driving license verification is required to continue.",
+      "DRIVING_LICENSE_OCR_NOT_CONFIGURED": "Driving license verification is currently unavailable.",
+      "DRIVING_LICENSE_UNREADABLE": "The license could not be read clearly. Please retake the photo.",
+      "DRIVING_LICENSE_REVIEW_REQUIRED": "The license needs review. Please upload a clearer photo.",
+      "DRIVING_LICENSE_EXPIRED": "The driving license is expired and cannot be used to continue.",
+      "PUBLIC_RENTAL_FORM_INCOMPLETE": "Complete your personal details to continue.",
+      "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE": "The contract cannot be accepted until the form and license are complete.",
+      "PAYMENT_PROVIDER_NOT_CONFIGURED": "Online card payment is currently unavailable.",
+      "PAYMENT_NOT_ALLOWED": "Payment is not available at this step.",
+      "PAYMENT_ALREADY_PROCESSING": "A payment is already being processed. Please wait.",
+      "PAYMENT_ATTEMPT_NOT_FOUND": "The payment attempt could not be found.",
+      "PAYMENT_STATUS_TOKEN_INVALID": "Payment status could not be verified.",
+      "PAYMENT_STATUS_TOKEN_EXPIRED": "Payment status verification has expired."
     }
   }
 }

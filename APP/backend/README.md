@@ -27,11 +27,11 @@ Use this as the foundation for a new backend. The cross-cutting concerns are don
 ```bash
 cp .env.example .env          # then edit secrets (min 32 chars each)
 npm install
-npm run db:generate           # prisma generate (also emits src/schemas/zod)
-npm run db:migrate            # create + apply the initial migration
-npm run db:seed               # idempotent generic seed
+npm run dev:bootstrap         # migrate + generate + seed + Demo Fleet (local DB only)
 npm run dev                   # http://localhost:3000, docs at /docs
 ```
+
+`dev:bootstrap` is the official one-command local database setup. It applies existing migrations, regenerates Prisma Client, seeds permissions/`system_admin`, and creates missing `DEMO-FLEET-01..20` vehicles. It never resets the database and never deletes user-created vehicles. See [Development Database Bootstrap](../../DOCU/00-system-overview/development-database-bootstrap.md).
 
 ### Environment
 
@@ -46,12 +46,15 @@ Startup **fails fast** if a required variable is missing or invalid (`src/config
 ### Database setup, migrate, seed
 
 ```bash
-npm run db:migrate     # dev: prisma migrate dev
-npm run db:deploy      # prod: prisma migrate deploy
+npm run db:migrate     # dev: prisma migrate dev (creates a new migration)
+npm run db:deploy      # prod: prisma generate + migrate deploy
 npm run db:seed        # permissions, system_admin role, notification defs, (dev admin)
+npm run db:seed:demo   # development Demo Fleet only (also run by dev:bootstrap)
+npm run dev:bootstrap  # official local DB setup: deploy + generate + seed + demo fleet
+npm run dev:check      # read-only diagnosis (no writes)
 ```
 
-The seed is **idempotent** — re-running it changes nothing. No welcome email is sent during seeding, and no credentials are hardcoded.
+The seed is **idempotent** — re-running it changes nothing. No welcome email is sent during seeding, and no credentials are hardcoded. `db:seed` does **not** include Demo Fleet (safe for every environment). Development Demo Fleet is `db:seed:demo` / `dev:bootstrap` only.
 
 ### Run / build / test
 

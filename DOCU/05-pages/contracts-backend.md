@@ -1,6 +1,6 @@
 # Contracts Backend V1
 
-Contract is the single rental aggregate. There is no parallel `Rental` model. Frontend Contracts, White Contract PDF, payment gateways, Salik/Violations/Finance/Invoice engines, GPS, WhatsApp, AI damage, and Maintenance are out of scope.
+Contract is the single rental aggregate. There is no parallel `Rental` model. Frontend public rental pages, White Contract PDF, live Stripe/Tamara/Tabby, Salik/Violations/Finance/Invoice engines, GPS, WhatsApp, AI damage, and Maintenance are out of scope of this backend document. Public Rental Flow V2: `DOCU/05-pages/public-rental-flow.md`.
 
 Money is whole AED integers (same pattern as Vehicle rates). Default currency is `AED`. Contract has no `branchId` — Vehicle/Customer do not carry a clear rental-branch owner in the current schema.
 
@@ -14,7 +14,9 @@ Prisma: `APP/backend/prisma/schema/contracts.prisma` (Customer rental fields liv
 | `ContractNumberSequence` | Year-scoped allocator `DE-{year}-{nnnnnn}` |
 | `ContractLink` | Public RENTAL / RETURN / RENEWAL tokens (hash only) |
 | `ContractAcceptance` | Signature/acceptance metadata (optional Attachment) |
-| `ContractPayment` | Payment record foundation (no gateway) |
+| `ContractPayment` | Payment attempts (`PENDING` / `PROCESSING` / `CONFIRMED` / `FAILED` / `CANCELLED`) |
+| `ContractDocument` | Contract-scoped files (driving license before Customer exists) |
+| `DrivingLicenseVerification` | Normalized OCR result; not a Contract status |
 | `ContractCarOut` / `ContractCarOutPhoto` | Staff delivery inspection (8 angles → Attachment) |
 | `ContractCarIn` / `ContractCarInPhoto` | Customer return inspection (8 angles → Attachment) |
 | `ContractReconciliation` / `Line` | Settlement summary; amounts/refs only |
@@ -91,17 +93,19 @@ Reuse `Customer`. Nullable rental fields: `nationality`, `identityNumber`, `pass
 
 ## Snapshot
 
-Written at SIGNED (not rewritten later). Contains customer identity, vehicle display facts, commercial terms, and `termsVersion`. White Contract PDF must read this snapshot later — never live master data. No PDF is generated in V1.
+Written at SIGNED (not rewritten later). Contains `contractNumber`, customer identity including verified driving-license number/expiry, vehicle display facts, commercial terms, and `termsVersion`. White Contract PDF must read this snapshot later — never live master data. No PDF is generated in this phase.
 
 ## Public links
 
-Opaque tokens via existing `generateOpaqueToken` / `hashToken`. Raw token returned **once**. DB stores SHA-256 hex only. Lookup uses hash + `timingSafeEqual`. TTL (`contracts.constants.ts`): RENTAL 72h, RETURN 24h, RENEWAL 48h. Supports expiry, revocation, single-use (`usedAt`). Accept and Car-In mark the token used. Re-issuing a link of the same type revokes the previous unused token.
+Opaque tokens via existing `generateOpaqueToken` / `hashToken`. Raw token returned **once**. DB stores SHA-256 hex only. Lookup uses hash + `timingSafeEqual`. TTL (`contracts.constants.ts`): RENTAL 72h, RETURN 24h, RENEWAL 48h. Supports expiry and revocation. Re-issuing a link of the same type revokes the previous unused token.
 
-Public token routes live under `routes/public/` with an empty public hook — **no staff JWT and no staff permissions**. The opaque token is the only customer credential. Autoload strips `routes/public`, so URLs stay `/contracts/rental/:token` (not `/public/contracts/...`). Never log raw tokens or PII in outbox payloads. Public GET returns only the customer-flow projection (`PublicContractViewSchema`): no internal ids, staff, payments, snapshot, or token hashes.
+RENTAL `usedAt` is set when the contract reaches **PAID** (not on first GET or accept), so the customer can reload across license, form, sign, and payment. RETURN still marks `usedAt` on Car-In; RENEWAL is unchanged. See `DOCU/05-pages/public-rental-flow.md`.
+
+Public token routes live under `routes/public/` with an empty public hook — **no staff JWT and no staff permissions**. The opaque token is the only customer credential. Autoload strips `routes/public`, so URLs stay `/contracts/rental/:token` (not `/public/contracts/...`). Never log raw tokens or PII in outbox payloads. Rental GET returns `PublicRentalContextSchema` (office, vehicle, flow step, license, payment). RETURN/RENEWAL GET still use `PublicContractViewSchema`.
 
 ## Payment foundation
 
-`ContractPayment`: amount, currency, method (`BANK_TRANSFER | CARD | MANUAL`), status (`PENDING | CONFIRMED | FAILED | CANCELLED`), optional `externalReference`. Staff `POST .../payment/confirm` is the only SIGNED → PAID path. No Stripe/Tamara/Tabby.
+`ContractPayment`: amount, currency, method (`BANK_TRANSFER | CARD | MANUAL`), status (`PENDING | PROCESSING | CONFIRMED | FAILED | CANCELLED`), optional `externalReference`, plus provider reference fields and a hashed payment-status token. Staff `POST .../payment/confirm` remains the manual/bank SIGNED → PAID path. Electronic card payment uses `PaymentProvider` (Stripe adapter is not live; no fake success). Public card POST never accepts amount. Redirect URLs are not confirmation. Details: `DOCU/05-pages/public-rental-flow.md`.
 
 ## Car-Out / Car-In
 
@@ -158,8 +162,13 @@ List query: `search` (number, plate, vehicle name, customer name/phone), `status
 | Method | Path |
 | ------ | ---- |
 | GET | `/contracts/rental/:token` |
+| POST | `/contracts/rental/:token/driving-license` |
+| GET | `/contracts/rental/:token/driving-license` |
 | POST | `/contracts/rental/:token/form` |
 | POST | `/contracts/rental/:token/accept` |
+| GET | `/contracts/rental/:token/payment` |
+| POST | `/contracts/rental/:token/payment` |
+| GET | `/contracts/payments/status/:statusToken` |
 | GET | `/contracts/return/:token` |
 | POST | `/contracts/return/:token/car-in` |
 | GET | `/contracts/renew/:token` |
@@ -177,6 +186,7 @@ Stable `AppError.code` + `context.reason`:
 | `VEHICLE_ALREADY_RENTED` | 409 |
 | `CONTRACT_LINK_INVALID` / `USED` | 401 (`TOKEN_INVALID`) |
 | `CONTRACT_LINK_EXPIRED` | 401 (`TOKEN_EXPIRED`) |
+| `DRIVING_LICENSE_*` / `PAYMENT_*` / `PUBLIC_RENTAL_*` | see public-rental-flow.md |
 | `CONTRACT_PAYMENT_REQUIRED` | 409 |
 | `CONTRACT_CAR_OUT_REQUIRED` | 409 |
 | `CONTRACT_CAR_IN_REQUIRED` | 409 |
@@ -187,14 +197,14 @@ Stable `AppError.code` + `context.reason`:
 
 Atomic Contract+Vehicle writes: payment confirm, Car-Out, close, renewal. Car-In status mutation is transactional (vehicle unchanged). Idempotency via existing `runIdempotent` when `Idempotency-Key` is sent: payment confirm, Car-Out, Car-In, close, renew. Scope is `contract:<action>:<contractId>` (Car-In uses the token hash). Same key + same payload replays the current result. Same key + different payload → `409` / `IDEMPOTENCY_KEY_CONFLICT`. Transitions also no-op if already at the target status.
 
-Outbox events (IDs / non-PII only): `contract.created`, `contract.form_completed`, `contract.signed`, `contract.paid`, `contract.activated`, `contract.return_started`, `contract.return_submitted`, `contract.closed`, `contract.renewed`.
+Outbox events (IDs / non-PII only): `contract.created`, `contract.license_uploaded`, `contract.license_verified`, `contract.form_completed`, `contract.signed`, `payment.started`, `payment.pending`, `payment.confirmed`, `payment.failed`, `contract.paid`, `contract.activated`, `contract.return_started`, `contract.return_submitted`, `contract.closed`, `contract.renewed`.
 
 Staff audit via `request.setAudit` on create, links, payment, Car-Out, return, reconcile, close, renew.
 
 ## Tests
 
-Unit: `tests/unit/contracts-status.test.ts`. Integration: `tests/integration/contracts.test.ts` — requires `RUN_INTEGRATION=true` and `TEST_DATABASE_URL` pointing at a disposable DB (e.g. `haidara_test`). Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
+Unit: `tests/unit/contracts-status.test.ts`, `tests/unit/public-rental-flow.test.ts`. Integration: `tests/integration/contracts.test.ts` and `tests/integration/public-rental-flow.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
 
 ## Domain boundaries
 
-Contracts owns rental lifecycle and vehicle operational rental sync. It stores Salik/Violation *amounts* as reconciliation lines only. It does not render White Contract PDF, charge card gateways, or mutate Vehicle gallery photos.
+Contracts owns rental lifecycle and vehicle operational rental sync. It stores Salik/Violation *amounts* as reconciliation lines only. It does not render White Contract PDF or mutate Vehicle gallery photos. Card charging waits on a real PaymentProvider confirmation (no fake PAID).

@@ -28,7 +28,9 @@
     "db:cleanup:dev-users": "tsx scripts/cleanup-dev-users.ts",
     "db:cleanup:dev-users:only-admin": "tsx scripts/cleanup-dev-users.ts --only-admin",
     "db:cleanup:dev-roles": "tsx scripts/cleanup-dev-roles.ts",
-    "db:cleanup:dev-roles:only-system-admin": "tsx scripts/cleanup-dev-roles.ts --only-system-admin"
+    "db:cleanup:dev-roles:only-system-admin": "tsx scripts/cleanup-dev-roles.ts --only-system-admin",
+    "dev:bootstrap": "tsx scripts/dev-bootstrap.ts",
+    "dev:check": "tsx scripts/dev-check.ts"
   },
   "prisma": {
     "seed": "node prisma/seed.cjs"

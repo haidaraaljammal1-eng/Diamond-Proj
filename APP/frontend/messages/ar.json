@@ -204,7 +204,8 @@
     "passwordNumber": "كلمة المرور يجب أن تتضمن رقمًا",
     "passwordMismatch": "كلمتا المرور غير متطابقتين",
     "invalidYear": "أدخل سنة صنع صالحة",
-    "invalidRate": "أدخل مبلغًا صالحًا (0 أو أكثر)"
+    "invalidRate": "أدخل مبلغًا صالحًا (0 أو أكثر)",
+    "identityOrPassport": "أدخل رقم الهوية أو رقم جواز السفر"
   },
   "Roles": {
     "crumbs": "الإدارة · التحكم في الوصول",
@@ -851,6 +852,152 @@
       "previous": "السابق",
       "next": "التالي",
       "page": "صفحة {page} من {totalPages}"
+    }
+  },
+  "PublicRental": {
+    "brandAlt": "Diamond Elite Rent Car",
+    "tagline": "Rent Car · Dubai",
+    "fallbackOffice": "Diamond Rent Car",
+    "loading": "جارٍ تحميل تفاصيل الإيجار…",
+    "retry": "إعادة المحاولة",
+    "progress": {
+      "label": "مراحل الإيجار",
+      "license": "التحقق من الرخصة",
+      "contract": "عقد الإيجار",
+      "payment": "الدفع"
+    },
+    "summary": {
+      "title": "ملخص الإيجار",
+      "office": "المكتب",
+      "vehicle": "المركبة",
+      "plate": "اللوحة",
+      "duration": "مدة الإيجار",
+      "days": "أيام",
+      "total": "المبلغ المتفق عليه",
+      "readOnly": "هذه البيانات صادرة من المكتب ولا يمكن تعديلها."
+    },
+    "license": {
+      "title": "التحقق من رخصة القيادة",
+      "intro": "يرجى رفع صورة واضحة لرخصة القيادة للمتابعة.",
+      "upload": "رفع صورة رخصة القيادة",
+      "replace": "رفع رخصة أخرى",
+      "formats": "JPEG أو PNG — صورة واحدة فقط",
+      "previewAlt": "معاينة رخصة القيادة",
+      "verifying": "جارٍ التحقق من رخصة القيادة...",
+      "validTitle": "تم التحقق من رخصة القيادة",
+      "number": "رقم الرخصة",
+      "expiry": "صالحة حتى",
+      "continue": "متابعة إلى عقد الإيجار",
+      "expiredTitle": "رخصة القيادة منتهية الصلاحية",
+      "expiredBody": "لا يمكن متابعة طلب الإيجار باستخدام رخصة قيادة منتهية. يرجى رفع رخصة سارية المفعول للمتابعة.",
+      "unreadableTitle": "تعذر قراءة الرخصة",
+      "unreadableBody": "تعذر قراءة بيانات الرخصة بوضوح. يرجى إعادة تصوير الرخصة بصورة أوضح.",
+      "reviewTitle": "الرخصة تحتاج مراجعة",
+      "reviewBody": "لم نتمكن من تأكيد بيانات الرخصة تلقائيًا. يرجى رفع صورة أوضح للمتابعة.",
+      "unavailableTitle": "خدمة التحقق من الرخصة غير متاحة حاليًا.",
+      "unavailableBody": "لا يمكن متابعة التحقق من الرخصة في الوقت الحالي. يرجى التواصل مع المكتب.",
+      "ocrDevNote": "OCR provider not configured",
+      "invalidFile": "يرجى اختيار صورة JPEG أو PNG."
+    },
+    "contract": {
+      "numberLabel": "رقم العقد:",
+      "vehicleTitle": "بيانات المركبة",
+      "vehicle": "المركبة",
+      "vehicleType": "النوع",
+      "plate": "رقم اللوحة",
+      "year": "سنة الصنع",
+      "color": "اللون",
+      "vin": "رقم الهيكل",
+      "commercialTitle": "البيانات التجارية",
+      "duration": "مدة الإيجار",
+      "days": "أيام",
+      "amount": "المبلغ المتفق عليه",
+      "deposit": "التأمين",
+      "licenseTitle": "رخصة القيادة",
+      "licenseNumber": "رقم رخصة القيادة",
+      "licenseExpiry": "تاريخ انتهاء الرخصة",
+      "datesTitle": "الاستلام والإرجاع",
+      "pickup": "تاريخ استلام السيارة",
+      "pickupPlaceholder": "يُعبّأ عند استلام السيارة",
+      "return": "تاريخ إرجاع السيارة",
+      "returnPlaceholder": "يُعبّأ عند إعادة السيارة",
+      "customerTitle": "بيانات المستأجر",
+      "fields": {
+        "name": "الاسم الكامل",
+        "mobile": "رقم الجوال",
+        "email": "البريد الإلكتروني",
+        "nationality": "الجنسية",
+        "identityNumber": "رقم الهوية",
+        "passportNumber": "رقم جواز السفر",
+        "address": "العنوان"
+      },
+      "save": "حفظ البيانات",
+      "saving": "جارٍ الحفظ...",
+      "acceptance": "قرأت عقد الإيجار وأوافق على الشروط والأحكام.",
+      "accept": "الموافقة والمتابعة إلى الدفع",
+      "alreadyAccepted": "تمت الموافقة على عقد الإيجار."
+    },
+    "payment": {
+      "title": "الدفع الآمن",
+      "totalDue": "المطلوب الآن",
+      "days": "أيام",
+      "contract": "رقم العقد",
+      "methods": "وسيلة الدفع",
+      "cardTitle": "بطاقة ائتمانية",
+      "cardHint": "Visa · Mastercard · Amex — حماية آمنة",
+      "unavailable": "الدفع الإلكتروني غير متاح حاليًا. سيتم تفعيل الدفع الآمن عبر البطاقة بعد ربط بوابة الدفع.",
+      "devNote": "Payment provider not configured",
+      "pay": "ادفع",
+      "retry": "إعادة المحاولة",
+      "processing": "جارٍ معالجة عملية الدفع...",
+      "pending": "جاري التحقق من حالة الدفع. يرجى عدم إعادة المحاولة حتى يتم تأكيد نتيجة العملية.",
+      "checkStatus": "التحقق من الحالة",
+      "failed": "لم تكتمل عملية الدفع. يمكنك المحاولة مرة أخرى.",
+      "cancelled": "تم إلغاء محاولة الدفع.",
+      "confirmed": "تم تأكيد الدفع",
+      "linkExpiredDuring": "انتهت صلاحية رابط الإيجار. نعرض حالة محاولة الدفع الحالية دون بدء دفع جديد."
+    },
+    "handover": {
+      "title": "تم تأكيد الدفع بنجاح",
+      "body": "أصبح عقد الإيجار جاهزًا لتسليم المركبة. سيتم تسجيل وقت استلام السيارة عند تسليمها لك."
+    },
+    "link": {
+      "CONTRACT_LINK_EXPIRED": {
+        "title": "انتهت صلاحية رابط الإيجار",
+        "body": "يرجى التواصل مع المكتب للحصول على رابط جديد."
+      },
+      "CONTRACT_LINK_INVALID": {
+        "title": "رابط الإيجار غير صالح",
+        "body": "يرجى التواصل مع المكتب للحصول على رابط جديد."
+      },
+      "CONTRACT_LINK_USED": {
+        "title": "تم استخدام رابط الإيجار",
+        "body": "يرجى التواصل مع المكتب للحصول على رابط جديد."
+      },
+      "generic": {
+        "title": "تعذر فتح رابط الإيجار",
+        "body": "يرجى التواصل مع المكتب للحصول على رابط جديد."
+      }
+    },
+    "error": {
+      "generic": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+      "NETWORK_ERROR": "تعذر الاتصال. تحقق من الشبكة ثم أعد المحاولة.",
+      "CONTRACT_LINK_INVALID": "رابط الإيجار غير صالح.",
+      "CONTRACT_LINK_EXPIRED": "انتهت صلاحية رابط الإيجار.",
+      "CONTRACT_LINK_USED": "تم استخدام رابط الإيجار.",
+      "DRIVING_LICENSE_REQUIRED": "يلزم التحقق من رخصة القيادة للمتابعة.",
+      "DRIVING_LICENSE_OCR_NOT_CONFIGURED": "خدمة التحقق من الرخصة غير متاحة حاليًا.",
+      "DRIVING_LICENSE_UNREADABLE": "تعذر قراءة بيانات الرخصة بوضوح. يرجى إعادة التصوير.",
+      "DRIVING_LICENSE_REVIEW_REQUIRED": "الرخصة تحتاج مراجعة. يرجى رفع صورة أوضح.",
+      "DRIVING_LICENSE_EXPIRED": "رخصة القيادة منتهية الصلاحية ولا يمكن المتابعة.",
+      "PUBLIC_RENTAL_FORM_INCOMPLETE": "أكمل بياناتك الشخصية للمتابعة.",
+      "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE": "لا يمكن الموافقة على العقد قبل اكتمال البيانات والتحقق من الرخصة.",
+      "PAYMENT_PROVIDER_NOT_CONFIGURED": "الدفع الإلكتروني غير متاح حاليًا.",
+      "PAYMENT_NOT_ALLOWED": "الدفع غير متاح في هذه المرحلة.",
+      "PAYMENT_ALREADY_PROCESSING": "توجد عملية دفع قيد المعالجة. يرجى الانتظار.",
+      "PAYMENT_ATTEMPT_NOT_FOUND": "تعذر العثور على محاولة الدفع.",
+      "PAYMENT_STATUS_TOKEN_INVALID": "تعذر التحقق من حالة الدفع.",
+      "PAYMENT_STATUS_TOKEN_EXPIRED": "انتهت صلاحية التحقق من حالة الدفع."
     }
   }
 }

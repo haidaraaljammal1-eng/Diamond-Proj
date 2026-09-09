@@ -11,7 +11,7 @@ User ──< UserRole >── Role ──< RolePermission >── Permission
 
 ### Catalog sync (development)
 
-After adding keys to `PERMISSION_CATALOG`, run `npm run db:seed` so the `Permission` and `RolePermission` rows exist (the seed upserts every catalog entry and links all DB permissions to `system_admin`). Re-login any test admin afterward — the frontend JWT stores permissions at login; access-token refresh does not reload them. Verify with `GET /auth/me` and a protected route before testing page guards.
+After adding keys to `PERMISSION_CATALOG`, run `npm run dev:bootstrap` (or `npm run db:seed`) so the `Permission` and `RolePermission` rows exist. The seed upserts every catalog entry and links all DB permissions to `system_admin`. Verify with `GET /auth/me` and a protected route before testing page guards. The frontend NextAuth session mirrors `/auth/me` on login, access-token refresh, and session revalidation — UX only; Backend DB effective permissions remain the authorization authority. New domain permissions require: Catalog → Seed → RolePermission → `/auth/me` verification → frontend session verification. Do not assume another developer's local database already has the new keys.
 - Roles have a stable `key` and an `isSystem` flag. **Business logic must never branch on a role key** — check permissions (or `isSystem`) instead.
 - The seeded `system_admin` role holds every permission and cannot be deleted.
 

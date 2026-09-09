@@ -43,4 +43,67 @@ export const contractError = {
     err(ErrorCode.CONFLICT, "Contract is already closed", "CONTRACT_ALREADY_CLOSED"),
   vehicleNotFound: () => AppError.notFound("Vehicle not found"),
   customerNotFound: () => AppError.notFound("Customer not found"),
+  drivingLicenseRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A valid driving license is required",
+      "DRIVING_LICENSE_REQUIRED",
+    ),
+  drivingLicenseOcrNotConfigured: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Driving license verification is not configured",
+      "DRIVING_LICENSE_OCR_NOT_CONFIGURED",
+    ),
+  drivingLicenseUnreadable: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Driving license could not be read",
+      "DRIVING_LICENSE_UNREADABLE",
+    ),
+  drivingLicenseReviewRequired: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Driving license requires another photo",
+      "DRIVING_LICENSE_REVIEW_REQUIRED",
+    ),
+  drivingLicenseExpired: (expiryDate?: string) =>
+    err(
+      ErrorCode.CONFLICT,
+      "Driving license is expired",
+      "DRIVING_LICENSE_EXPIRED",
+      expiryDate ? { expiryDate } : {},
+    ),
+  publicFormIncomplete: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Public rental form is incomplete",
+      "PUBLIC_RENTAL_FORM_INCOMPLETE",
+    ),
+  notReadyForAcceptance: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Rental is not ready for acceptance",
+      "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE",
+    ),
+  paymentProviderNotConfigured: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Card payment is not configured",
+      "PAYMENT_PROVIDER_NOT_CONFIGURED",
+    ),
+  paymentNotAllowed: () =>
+    err(ErrorCode.CONFLICT, "Electronic payment is not allowed", "PAYMENT_NOT_ALLOWED"),
+  paymentAlreadyProcessing: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A payment attempt is already in progress",
+      "PAYMENT_ALREADY_PROCESSING",
+    ),
+  paymentAttemptNotFound: () =>
+    err(ErrorCode.NOT_FOUND, "Payment attempt was not found", "PAYMENT_ATTEMPT_NOT_FOUND"),
+  paymentStatusTokenInvalid: () =>
+    err(ErrorCode.TOKEN_INVALID, "Payment status token is invalid", "PAYMENT_STATUS_TOKEN_INVALID"),
+  paymentStatusTokenExpired: () =>
+    err(ErrorCode.TOKEN_EXPIRED, "Payment status token has expired", "PAYMENT_STATUS_TOKEN_EXPIRED"),
 };

@@ -6,6 +6,10 @@ import type {
   TokenPair,
 } from "@/infrastructure/auth/auth.types";
 import { createRefreshCoordinator } from "@/infrastructure/auth/refresh-coordinator";
+import {
+  shouldSyncPermissionsFromAuthMe,
+  syncJwtPermissionsFromAuthMe,
+} from "@/infrastructure/auth/session-permissions";
 import { env } from "@/config/env";
 
 async function backendRequest<T>(
@@ -39,6 +43,16 @@ async function backendRequest<T>(
  */
 const refreshToken = createRefreshCoordinator<TokenPair>((token) =>
   backendRequest<TokenPair>("/auth/refresh", { refreshToken: token }),
+);
+
+/**
+ * Concurrent jwt callbacks share one GET /auth/me per access token so session
+ * revalidation cannot stampede the Backend. Failures are not cached.
+ */
+const fetchCurrentUser = createRefreshCoordinator<AuthUser>(
+  (accessToken) =>
+    backendRequest<AuthUser>("/auth/me", undefined, accessToken, "GET"),
+  { ttlMs: 5_000 },
 );
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -75,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.userId = user.id;
         token.roles = user.roles;
@@ -83,27 +97,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accessToken = user.accessToken;
         token.accessTokenExpiresAt = user.accessTokenExpiresAt;
         token.refreshToken = user.refreshToken;
-      }
-      if (
-        !token.accessToken ||
-        !token.accessTokenExpiresAt ||
-        Date.now() < token.accessTokenExpiresAt - 30_000
-      )
+        token.permissionsSyncedAt = Date.now();
         return token;
-      if (!token.refreshToken)
+      }
+
+      const accessTokenStillFresh =
+        Boolean(token.accessToken) &&
+        typeof token.accessTokenExpiresAt === "number" &&
+        Date.now() < token.accessTokenExpiresAt - 30_000;
+
+      if (accessTokenStillFresh) {
+        if (shouldSyncPermissionsFromAuthMe(token, Date.now(), trigger)) {
+          return syncJwtPermissionsFromAuthMe(token, fetchCurrentUser);
+        }
+        return token;
+      }
+
+      if (!token.accessToken || !token.accessTokenExpiresAt) {
+        return token;
+      }
+      if (!token.refreshToken) {
         return { ...token, error: "RefreshAccessTokenError" };
+      }
       try {
         const refreshed = await refreshToken(token.refreshToken);
-        return {
+        const next = {
           ...token,
           accessToken: refreshed.accessToken,
           accessTokenExpiresAt: Date.now() + refreshed.expiresIn * 1000,
           refreshToken: refreshed.refreshToken,
+          error: undefined,
         };
+        return await syncJwtPermissionsFromAuthMe(next, fetchCurrentUser);
       } catch {
         return {
           ...token,
-          error: "RefreshAccessTokenError",
+          error: "RefreshAccessTokenError" as const,
           accessToken: undefined,
           refreshToken: undefined,
         };

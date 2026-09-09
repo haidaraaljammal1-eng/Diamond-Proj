@@ -10,9 +10,29 @@ export const CONTRACT_LINK_TTL_SECONDS = {
 export const CONTRACT_CURRENCY = "AED";
 export const CONTRACT_TERMS_VERSION = "diamond-rental-terms-v1";
 export const CONTRACT_NUMBER_PREFIX = "DE";
+export const OFFICE_DISPLAY_NAME_DEFAULT = "Diamond Rent Car";
+
 
 export const VEHICLE_RENTAL_LOCK_NS = "vehicle_rental";
 export const CONTRACT_NUMBER_LOCK_NS = "contract_number";
+export const CONTRACT_PAYMENT_LOCK_NS = "contract_payment";
+export const CONTRACT_LICENSE_LOCK_NS = "contract_license";
+
+export const PUBLIC_RENTAL_FLOW_STEPS = [
+  "LICENSE_VERIFICATION",
+  "CONTRACT",
+  "PAYMENT",
+  "READY_FOR_HANDOVER",
+] as const;
+export type PublicRentalFlowStep = (typeof PUBLIC_RENTAL_FLOW_STEPS)[number];
+
+export const DRIVING_LICENSE_UPLOAD_MIME = ["image/jpeg", "image/png"] as const;
+
+/** Overall / per-field OCR confidence must be >= this to be eligible as VALID. */
+export const DRIVING_LICENSE_MIN_CONFIDENCE = 0.8;
+
+export const PAYMENT_STATUS_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
+export const ACTIVE_PAYMENT_STATUSES = ["PENDING", "PROCESSING"] as const;
 
 /**
  * Statuses that allocate the vehicle to this contract.

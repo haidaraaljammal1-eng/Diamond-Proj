@@ -1,0 +1,32 @@
+.amount {
+  color: var(--diamond-gold-hi);
+  font-family: var(--diamond-font-display);
+  font-size: 22px;
+  unicode-bidi: isolate;
+}
+
+.rows {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--diamond-muted);
+  font-size: 12.5px;
+}
+
+.value {
+  color: var(--diamond-ivory);
+  text-align: end;
+  unicode-bidi: isolate;
+}
+
+.note {
+  margin: 10px 0 0;
+  color: var(--diamond-dim);
+  font-size: 11px;
+}

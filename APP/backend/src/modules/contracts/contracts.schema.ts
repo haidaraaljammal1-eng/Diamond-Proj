@@ -21,11 +21,26 @@ export const ContractLinkTypeSchema = z.enum(["RENTAL", "RETURN", "RENEWAL"]);
 export const ContractPaymentMethodSchema = z.enum(["BANK_TRANSFER", "CARD", "MANUAL"]);
 export const ContractPaymentStatusSchema = z.enum([
   "PENDING",
+  "PROCESSING",
   "CONFIRMED",
   "FAILED",
   "CANCELLED",
 ]);
 export const CustomerDocumentTypeSchema = z.enum(["IDENTITY", "PASSPORT", "DRIVING_LICENSE"]);
+export const DrivingLicenseVerificationStatusSchema = z.enum([
+  "PENDING",
+  "VALID",
+  "EXPIRED",
+  "UNREADABLE",
+  "REVIEW_REQUIRED",
+  "PROVIDER_UNAVAILABLE",
+]);
+export const PublicRentalFlowStepSchema = z.enum([
+  "LICENSE_VERIFICATION",
+  "CONTRACT",
+  "PAYMENT",
+  "READY_FOR_HANDOVER",
+]);
 export const ReconciliationLineTypeSchema = z.enum([
   "DAMAGE",
   "FUEL",
@@ -116,18 +131,7 @@ export const PublicFormSchema = z.object({
   nationality: z.string().trim().min(2).max(80),
   identityNumber: z.string().trim().min(3).max(50).optional(),
   passportNumber: z.string().trim().min(3).max(50).optional(),
-  drivingLicenseNumber: z.string().trim().min(3).max(50),
-  drivingLicenseExpiry: z.coerce.date(),
   address: z.string().trim().max(400).optional(),
-  documents: z
-    .array(
-      z.object({
-        type: CustomerDocumentTypeSchema,
-        attachmentId: z.string().uuid(),
-      }),
-    )
-    .max(10)
-    .optional(),
 });
 
 export const PublicAcceptSchema = z.object({
@@ -305,6 +309,100 @@ export const PublicContractViewSchema = z.object({
     color: z.string().nullable(),
     modelYear: z.number().int().nullable(),
   }),
+});
+
+export const PublicLicenseVerificationSchema = z.object({
+  status: DrivingLicenseVerificationStatusSchema,
+  licenseNumber: z.string().nullable(),
+  licenseNumberMasked: z.string().nullable(),
+  expiryDate: z.string().nullable(),
+  confidence: z.number().nullable(),
+});
+
+export const PublicRentalContextSchema = z.object({
+  office: z.object({ displayName: z.string() }),
+  flow: z.object({ step: PublicRentalFlowStepSchema }),
+  contract: z.object({
+    contractNumber: z.string(),
+    status: ContractStatusSchema,
+    termsVersion: z.string(),
+  }),
+  vehicle: z.object({
+    displayName: z.string(),
+    vehicleType: z.string().nullable(),
+    plateNumber: z.string().nullable(),
+    modelYear: z.number().int().nullable(),
+    color: z.string().nullable(),
+    vin: z.string().nullable(),
+  }),
+  rental: z.object({
+    rentalDays: z.number().int(),
+    agreedAmount: z.number().int(),
+    currency: z.string(),
+    depositAmount: z.number().int().nullable(),
+    startAt: z.date().nullable(),
+    endAt: z.date().nullable(),
+    actualPickupAt: z.date().nullable(),
+    actualReturnAt: z.date().nullable(),
+  }),
+  customer: z
+    .object({
+      name: z.string(),
+      mobile: z.string().nullable(),
+      email: z.string().nullable(),
+      nationality: z.string().nullable(),
+      identityNumber: z.string().nullable(),
+      passportNumber: z.string().nullable(),
+      address: z.string().nullable(),
+      drivingLicenseNumber: z.string().nullable(),
+      drivingLicenseExpiry: z.string().nullable(),
+    })
+    .nullable(),
+  licenseVerification: PublicLicenseVerificationSchema,
+  payment: z.object({
+    status: ContractPaymentStatusSchema.nullable(),
+    method: ContractPaymentMethodSchema.nullable(),
+    amount: z.number().int().nullable(),
+    currency: z.string(),
+    providerAvailable: z.boolean(),
+  }),
+});
+
+export const PublicPaymentContextSchema = z.object({
+  office: z.object({ displayName: z.string() }),
+  contractNumber: z.string(),
+  vehicle: z.object({
+    displayName: z.string(),
+    plateNumber: z.string().nullable(),
+  }),
+  rentalDays: z.number().int(),
+  agreedAmount: z.number().int(),
+  currency: z.string(),
+  payment: z.object({
+    status: ContractPaymentStatusSchema.nullable(),
+    method: ContractPaymentMethodSchema.nullable(),
+  }),
+  providerAvailable: z.boolean(),
+});
+
+export const PublicPaymentAttemptSchema = z.object({
+  payment: z.object({
+    status: ContractPaymentStatusSchema,
+    amount: z.number().int(),
+    currency: z.string(),
+    method: ContractPaymentMethodSchema,
+  }),
+  statusToken: z.string().nullable(),
+  providerAvailable: z.boolean(),
+});
+
+export const PublicPaymentStatusSchema = z.object({
+  status: ContractPaymentStatusSchema,
+  contractStatus: ContractStatusSchema.nullable(),
+});
+
+export const PaymentStatusTokenParam = z.object({
+  statusToken: z.string().min(16).max(128),
 });
 
 export const AttachmentRefSchema = z.object({
