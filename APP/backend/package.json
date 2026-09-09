@@ -24,7 +24,11 @@
     "test:integration": "node --import tsx --test-concurrency=1 --test tests/integration/*.test.ts",
     "verify:reports": "tsx scripts/verify-reports.ts",
     "db:seed:demo": "tsx prisma/seed/demo-fleet.ts",
-    "db:cleanup:dev-fleet": "tsx scripts/cleanup-dev-fleet.ts"
+    "db:cleanup:dev-fleet": "tsx scripts/cleanup-dev-fleet.ts",
+    "db:cleanup:dev-users": "tsx scripts/cleanup-dev-users.ts",
+    "db:cleanup:dev-users:only-admin": "tsx scripts/cleanup-dev-users.ts --only-admin",
+    "db:cleanup:dev-roles": "tsx scripts/cleanup-dev-roles.ts",
+    "db:cleanup:dev-roles:only-system-admin": "tsx scripts/cleanup-dev-roles.ts --only-system-admin"
   },
   "prisma": {
     "seed": "node prisma/seed.cjs"
