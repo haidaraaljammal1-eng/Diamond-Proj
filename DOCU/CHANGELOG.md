@@ -2,7 +2,7 @@
 
 ## 2026-09-09
 
-- Demo Simulation Mode (frontend-only, `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`): labeled in-memory overlay for public rental OCR/payment progression and staff TARS status display. No Azure, Stripe, or TARS calls, no database writes, no persisted simulation. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/04-api-contracts/tars-integration.md`.
+- Demo Simulation Mode (frontend-only, `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`): labeled in-memory overlay for public rental OCR/payment progression and staff TARS status display. Shared local enablement lives in committed `APP/frontend/.env.development` (`npm run dev`); production stays off unless the host sets the flag. No Azure, Stripe, or TARS calls, no database writes, no persisted simulation. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/04-api-contracts/tars-integration.md`.
 - Contract renewal flow completion: staff Generate Renewal Link stores a pending
   `ContractRenewal` offer; public `/[locale]/renew/[token]` confirms server-owned
   days/amount on the same ACTIVE Contract; Vehicle stays RENTED. Used tokens can

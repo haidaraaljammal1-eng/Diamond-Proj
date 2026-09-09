@@ -180,7 +180,7 @@ Frontend unit tests live under `src/modules/public-rental/**/*.test.ts`.
 
 ## Demo Simulation Mode
 
-Frontend-only presentation overlay for customer demos when Azure OCR or Stripe is not configured. Gate: `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` (never `NODE_ENV` alone). Module: `APP/frontend/src/modules/public-rental` stays the source UI; overlay lives in `APP/frontend/src/modules/demo-simulation/`.
+Frontend-only presentation overlay for customer demos when Azure OCR or Stripe is not configured. Gate: `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` (never `NODE_ENV` alone). Local `npm run dev` reads `APP/frontend/.env.development`, so teammates get Simulate without copying `.env.local`. Production builds stay off unless the host sets the flag. Module: `APP/frontend/src/modules/public-rental` stays the source UI; overlay lives in `APP/frontend/src/modules/demo-simulation/`.
 
 - In-memory Zustand only. No `localStorage`, `sessionStorage`, cookies, persisted store, Backend write, or database mutation.
 - Real Contract / Vehicle / office / duration / agreed amount / currency / deposit remain the display authority.
