@@ -12,7 +12,7 @@ import {
   PublicPaymentContextSchema,
   PublicPaymentStatusSchema,
   PublicRentalContextSchema,
-  RenewSchema,
+  ConfirmPublicRenewalSchema,
 } from "src/modules/contracts/contracts.schema";
 import { commonErrorResponses, dataResponse } from "src/lib/http/response";
 import { AppError } from "src/lib/errors/app-error";
@@ -227,12 +227,12 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         tags: ["Contracts"],
         public: true,
         params: ContractTokenParam,
-        body: RenewSchema,
+        body: ConfirmPublicRenewalSchema,
         response: { 200: dataResponse(PublicContractViewSchema), ...commonErrorResponses },
       },
     },
     async (request) => ({
-      data: await contracts.confirmRenewalPublic(request.params.token, request.body),
+      data: await contracts.confirmRenewalPublic(request.params.token),
     }),
   );
 }

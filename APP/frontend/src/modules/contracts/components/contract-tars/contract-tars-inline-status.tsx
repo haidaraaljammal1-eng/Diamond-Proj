@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { IntegrationStatusRow } from "@/shared/components/integration-status-row";
+import { applyTarsSimulation, useDemoSimulation } from "@/modules/demo-simulation";
 import { useContractTars } from "../../hooks/use-contract-tars";
 import { getTarsStatusPresentation } from "../../utils/tars-status";
 import type { TarsOperationKey } from "../../types/tars.types";
@@ -28,7 +29,12 @@ export function ContractTarsInlineStatus({
   className,
 }: ContractTarsInlineStatusProps) {
   const t = useTranslations("Contracts.tars");
-  const { tars } = useContractTars(contractId);
+  const { tars: realTars } = useContractTars(contractId);
+  const simulation = useDemoSimulation();
+  const tars = applyTarsSimulation(
+    realTars,
+    simulation.enabled ? simulation.snapshot.tarsPreset : null,
+  );
   if (!tars) return null;
 
   const presentation = getTarsStatusPresentation(tars.operations?.[operation]);

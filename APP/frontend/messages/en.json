@@ -722,6 +722,7 @@
       "CONTRACT_CAR_IN_REQUIRED": "Car-In is required before this action.",
       "CONTRACT_RECONCILIATION_REQUIRED": "Reconciliation must be approved before closing.",
       "CONTRACT_ALREADY_CLOSED": "This contract is already closed.",
+      "CONTRACT_RENEWAL_OFFER_REQUIRED": "A renewal offer must be issued before confirmation.",
       "IDEMPOTENCY_KEY_CONFLICT": "This request conflicts with a previous submit. Close and try again.",
       "VALIDATION_ERROR": "Some values are not valid. Check the fields and try again.",
       "CONFLICT": "This action conflicts with the current contract state."
@@ -743,7 +744,11 @@
       "carOut": "Car-Out",
       "carIn": "Car-In",
       "reconciliation": "Reconciliation",
-      "renewals": "Renewals"
+      "renewals": "Renewals",
+      "renewalState": {
+        "pending": "Pending",
+        "confirmed": "Confirmed"
+      }
     },
     "timeline": {
       "title": "Contract lifecycle",
@@ -796,6 +801,7 @@
       "rentalLink": "Generate rental link",
       "confirmPayment": "Confirm payment",
       "carOut": "Car-Out",
+      "carIn": "Car-In",
       "returnLink": "Generate return link",
       "returnWaiting": "Waiting for customer return",
       "renew": "Renew",
@@ -842,21 +848,41 @@
         "TIRES": "Tires"
       }
     },
+    "carIn": {
+      "title": "Car-In — return inspection",
+      "description": "Record incoming mileage, fuel and the eight inspection photos. This does not close the contract.",
+      "mileage": "Incoming odometer",
+      "fuel": "Fuel",
+      "notes": "Notes (optional)",
+      "addPhoto": "Add photo",
+      "submit": "Confirm Car-In"
+    },
     "renew": {
       "title": "Renew contract",
       "description": "Extend this active contract. Totals are computed by the backend.",
       "days": "Additional days",
       "amount": "Additional amount (AED)",
       "submit": "Renew",
-      "link": "Generate renewal link"
+      "link": "Generate renewal link",
+      "applyOffice": "Apply in office"
     },
     "reconcile": {
       "title": "Reconciliation",
-      "description": "Add settlement lines. Backend computes the totals after save.",
+      "description": "Add settlement lines. Backend computes the totals after save. Salik and Violations are manual categories only — no live lookup.",
+      "hint": "Use Salik and Violation lines for tolls and traffic notices. Amount, reference and note are recorded here; no external API is called.",
+      "categoriesLabel": "Settlement categories",
       "lineType": "Line type",
       "descriptionField": "Description",
       "amount": "Amount",
       "reference": "Reference",
+      "placeholder": {
+        "SALIK": "Salik trips / gates",
+        "VIOLATION": "Traffic or parking notice"
+      },
+      "referenceHint": {
+        "SALIK": "Salik reference",
+        "VIOLATION": "Notice / plate reference"
+      },
       "addLine": "Add line",
       "submit": "Save reconciliation",
       "charges": "Charges total",
@@ -1026,6 +1052,128 @@
       "PAYMENT_ATTEMPT_NOT_FOUND": "The payment attempt could not be found.",
       "PAYMENT_STATUS_TOKEN_INVALID": "Payment status could not be verified.",
       "PAYMENT_STATUS_TOKEN_EXPIRED": "Payment status verification has expired."
+    }
+  },
+  "PublicReturn": {
+    "brandAlt": "Diamond Elite Rent Car",
+    "tagline": "Rent Car · Dubai",
+    "fallbackOffice": "Diamond Rent Car",
+    "loading": "Loading return details…",
+    "retry": "Try again",
+    "title": "Vehicle return",
+    "office": "Office",
+    "contractNumber": "Contract number",
+    "vehicle": "Vehicle",
+    "plate": "Plate",
+    "agreedReturn": "Agreed return",
+    "agreedAmount": "Agreed amount",
+    "instructions": "Please bring the vehicle to the office. Staff will complete the return inspection. This page does not close the contract.",
+    "receivedTitle": "Return received",
+    "receivedBody": "The office has received this vehicle. Settlement continues with the rental office. You do not need to take further action here.",
+    "link": {
+      "CONTRACT_LINK_EXPIRED": {
+        "title": "This return link has expired",
+        "body": "Please contact the rental office for a new return link."
+      },
+      "CONTRACT_LINK_INVALID": {
+        "title": "This return link is not valid",
+        "body": "Please contact the rental office for a new return link."
+      },
+      "CONTRACT_LINK_USED": {
+        "title": "This return link is no longer active",
+        "body": "Please contact the rental office if you need help with this return."
+      },
+      "generic": {
+        "title": "This return link could not be opened",
+        "body": "Please contact the rental office for a new return link."
+      }
+    },
+    "error": {
+      "generic": "Something went wrong. Please try again.",
+      "NETWORK_ERROR": "Connection failed. Check your network and try again.",
+      "CONTRACT_LINK_INVALID": "This return link is not valid.",
+      "CONTRACT_LINK_EXPIRED": "This return link has expired.",
+      "CONTRACT_LINK_USED": "This return link is no longer active."
+    }
+  },
+  "PublicRenewal": {
+    "brandAlt": "Diamond Elite Rent Car",
+    "tagline": "Rent Car · Dubai",
+    "fallbackOffice": "Diamond Rent Car",
+    "loading": "Loading renewal details…",
+    "retry": "Try again",
+    "title": "Rental extension",
+    "office": "Office",
+    "contractNumber": "Contract number",
+    "vehicle": "Vehicle",
+    "plate": "Plate",
+    "duration": "Current duration",
+    "end": "Current end",
+    "agreedAmount": "Agreed amount",
+    "currency": "Currency",
+    "daysValue": "{count} days",
+    "currentRental": "Current Rental",
+    "renewalOffer": "Renewal Offer",
+    "extension": "Extension",
+    "previousEnd": "Previous end",
+    "newEnd": "Updated end",
+    "renewalAmount": "Renewal amount",
+    "confirm": "Confirm Rental Extension",
+    "successTitle": "Your rental extension has been confirmed",
+    "successBody": "The same contract stays active. Please keep this confirmation for your records.",
+    "missingOffer": "This renewal link has no offer. Please contact the rental office.",
+    "link": {
+      "CONTRACT_LINK_EXPIRED": {
+        "title": "This renewal link has expired",
+        "body": "Please contact the rental office for a new renewal link."
+      },
+      "CONTRACT_LINK_INVALID": {
+        "title": "This renewal link is not valid",
+        "body": "Please contact the rental office for a new renewal link."
+      },
+      "CONTRACT_LINK_USED": {
+        "title": "This renewal link is no longer active",
+        "body": "Please contact the rental office if you need help with this extension."
+      },
+      "generic": {
+        "title": "This renewal link could not be opened",
+        "body": "Please contact the rental office for a new renewal link."
+      }
+    },
+    "error": {
+      "generic": "Something went wrong. Please try again.",
+      "NETWORK_ERROR": "Connection failed. Check your network and try again.",
+      "CONTRACT_LINK_INVALID": "This renewal link is not valid.",
+      "CONTRACT_LINK_EXPIRED": "This renewal link has expired.",
+      "CONTRACT_LINK_USED": "This renewal link is no longer active.",
+      "CONTRACT_INVALID_TRANSITION": "This contract can no longer be extended. Please contact the rental office.",
+      "CONTRACT_RENEWAL_OFFER_REQUIRED": "A renewal offer is not available. Please contact the rental office."
+    }
+  },
+  "DemoSimulation": {
+    "simulate": "Simulate",
+    "badge": "Simulation Mode",
+    "hint": "Demo environment — no external transactions are performed.",
+    "reset": "Reset Simulation",
+    "scenarios": "Presentation scenarios",
+    "license": {
+      "valid": "Valid",
+      "expired": "Expired",
+      "unreadable": "Unreadable"
+    },
+    "contract": {
+      "fill": "Fill demo customer"
+    },
+    "payment": {
+      "run": "Simulate Payment",
+      "failed": "Failed Payment",
+      "pending": "Pending Payment"
+    },
+    "tars": {
+      "notStarted": "Not Started",
+      "syncing": "Syncing",
+      "synced": "Synced",
+      "partialFailure": "Partial Failure"
     }
   }
 }

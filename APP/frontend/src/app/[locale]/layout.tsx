@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { routing } from "@/infrastructure/i18n/routing";
 import { Providers } from "@/app/providers";
+import { SimulationChrome } from "@/modules/demo-simulation";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
@@ -35,7 +36,10 @@ export default async function LocaleLayout({
     <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <body>
         <NextIntlClientProvider messages={messages}>
-          <Providers>{children}</Providers>
+          <Providers>
+            <SimulationChrome />
+            {children}
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>

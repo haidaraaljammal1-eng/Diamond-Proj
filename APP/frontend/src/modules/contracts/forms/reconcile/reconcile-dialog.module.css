@@ -4,6 +4,38 @@
   color: var(--diamond-warn);
 }
 
+.hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--diamond-muted);
+  line-height: 1.5;
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.categories li {
+  padding: 4px 9px;
+  border: 1px solid rgba(201, 161, 92, 0.28);
+  border-radius: 999px;
+  color: var(--diamond-muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.categoryEmphasis {
+  border-color: rgba(201, 161, 92, 0.7) !important;
+  background: rgba(201, 161, 92, 0.12);
+  color: var(--diamond-champagne) !important;
+  font-weight: 600;
+}
+
 .compare {
   margin-bottom: 12px;
   font-size: 12px;

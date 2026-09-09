@@ -6,6 +6,7 @@ import { useLocale } from "next-intl";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useContractsStore } from "../stores/contracts.store";
 import type {
+  CarInPayload,
   CarOutPayload,
   ConfirmContractPaymentPayload,
   ContractDetailDto,
@@ -41,6 +42,8 @@ export interface UseContractResult {
   paymentError: ApiRequestError | null;
   carOutPending: boolean;
   carOutError: ApiRequestError | null;
+  carInPending: boolean;
+  carInError: ApiRequestError | null;
   returnLinkPending: boolean;
   returnLinkError: ApiRequestError | null;
   renewPending: boolean;
@@ -70,14 +73,22 @@ export interface UseContractResult {
     },
     idempotencyKey: string,
   ) => Promise<boolean>;
+  submitCarIn: (
+    id: string,
+    payload: Omit<CarInPayload, "photos"> & {
+      photos: { angle: InspectionAngle; file: File }[];
+    },
+    idempotencyKey: string,
+  ) => Promise<boolean>;
   generateReturnLink: (id: string) => Promise<boolean>;
-  generateRenewalLink: (id: string) => Promise<boolean>;
+  generateRenewalLink: (id: string, payload: RenewPayload) => Promise<boolean>;
   renew: (id: string, payload: RenewPayload, idempotencyKey: string) => Promise<boolean>;
   reconcile: (id: string, payload: ReconcilePayload) => Promise<boolean>;
   close: (id: string, idempotencyKey: string) => Promise<boolean>;
   clearOfferError: () => void;
   clearPaymentError: () => void;
   clearCarOutError: () => void;
+  clearCarInError: () => void;
   clearRenewError: () => void;
   clearReconcileError: () => void;
   clearCloseError: () => void;
@@ -119,6 +130,8 @@ export function useContract(): UseContractResult {
     paymentError: store.payment.error,
     carOutPending: store.carOut.pending,
     carOutError: store.carOut.error,
+    carInPending: store.carIn.pending,
+    carInError: store.carIn.error,
     returnLinkPending: store.returnLink.pending,
     returnLinkError: store.returnLink.error,
     renewPending: store.renewSlot.pending,
@@ -136,14 +149,16 @@ export function useContract(): UseContractResult {
     generateRentalLink: (id) => store.generateRentalLink(id, locale),
     confirmPayment: store.confirmPayment,
     submitCarOut: store.submitCarOut,
+    submitCarIn: store.submitCarIn,
     generateReturnLink: (id) => store.generateReturnLink(id, locale),
-    generateRenewalLink: (id) => store.generateRenewalLink(id, locale),
+    generateRenewalLink: (id, payload) => store.generateRenewalLink(id, locale, payload),
     renew: store.renew,
     reconcile: store.reconcile,
     close: store.close,
     clearOfferError: store.clearOfferError,
     clearPaymentError: store.clearPaymentError,
     clearCarOutError: store.clearCarOutError,
+    clearCarInError: store.clearCarInError,
     clearRenewError: store.clearRenewError,
     clearReconcileError: store.clearReconcileError,
     clearCloseError: store.clearCloseError,

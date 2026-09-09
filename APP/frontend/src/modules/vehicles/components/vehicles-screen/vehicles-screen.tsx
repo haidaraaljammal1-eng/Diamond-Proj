@@ -24,6 +24,7 @@ import {
   shouldShowFleetPagination,
 } from "../../utils/vehicles-pagination";
 import { CarOutDialog } from "@/modules/contracts/forms/car-out/car-out-dialog";
+import { CarInDialog } from "@/modules/contracts/forms/car-in/car-in-dialog";
 import { PaymentConfirmDialog } from "@/modules/contracts/forms/payment/payment-confirm-dialog";
 import { RenewDialog } from "@/modules/contracts/forms/renew/renew-dialog";
 import { ContractLinkResultDialog } from "@/modules/contracts/components/contract-link-result/contract-link-result-dialog";
@@ -66,6 +67,7 @@ export function VehiclesScreen() {
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [carOutId, setCarOutId] = useState<string | null>(null);
+  const [carInId, setCarInId] = useState<string | null>(null);
   const [contractDrawerId, setContractDrawerId] = useState<string | null>(null);
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeId, setCloseId] = useState<string | null>(null);
@@ -333,6 +335,7 @@ export function VehiclesScreen() {
       />
 
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
+      <CarInDialog contractId={carInId} onClose={() => setCarInId(null)} />
       <PaymentConfirmDialog
         contractId={paymentId}
         amount={0}
@@ -346,6 +349,7 @@ export function VehiclesScreen() {
         onGenerateRentalLink={(id) => void generateRentalLink(id)}
         onConfirmPayment={setPaymentId}
         onCarOut={setCarOutId}
+        onCarIn={setCarInId}
         onReturnLink={(id) => void generateReturnLink(id)}
         onRenew={setRenewId}
         onReconcile={setReconcileId}

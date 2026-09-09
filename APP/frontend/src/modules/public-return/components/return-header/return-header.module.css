@@ -1,0 +1,38 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  width: auto;
+  height: 42px;
+  object-fit: contain;
+}
+
+.brandMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.office {
+  color: var(--diamond-champagne);
+  font-family: var(--diamond-font-display);
+  font-size: 15px;
+}
+
+.tagline {
+  color: var(--diamond-muted);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}

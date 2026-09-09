@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, ContractStatus } from "@prisma/client";
 import { createReadStream } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { AppError } from "src/lib/errors/app-error";
-import { withTransaction } from "src/lib/db/transaction";
+import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { writeOutboxEvent } from "src/lib/db/outbox";
 import { runIdempotent, fingerprintIdempotentPayload } from "src/lib/db/idempotency";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
@@ -20,6 +20,7 @@ import {
   CONTRACT_TERMS_VERSION,
   DRIVING_LICENSE_UPLOAD_MIME,
   INSPECTION_ANGLES,
+  OFFICE_DISPLAY_NAME_DEFAULT,
   PAYMENT_STATUS_TOKEN_TTL_SECONDS,
 } from "src/modules/contracts/contracts.constants";
 import { allocateContractNumber } from "src/modules/contracts/contracts-number";
@@ -27,9 +28,11 @@ import { assertStatus, assertTransition } from "src/modules/contracts/contracts-
 import { buildContractSnapshot } from "src/modules/contracts/contracts-snapshot";
 import {
   completeRentalLinks,
+  completeReturnLinks,
   issueContractLink,
   markLinkUsed,
   resolveContractLink,
+  revokeUnusedRenewalLinks,
 } from "src/modules/contracts/contracts-links";
 import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental-guard";
 import { contractError } from "src/modules/contracts/contracts.errors";
@@ -75,6 +78,33 @@ function assertEightAngles(photos: { angle: string }[]): void {
 function derivedEndAt(startAt: Date | null | undefined, days: number, fallback = new Date()): Date {
   const start = startAt ?? fallback;
   return new Date(start.getTime() + days * 86_400_000);
+}
+
+type RenewalHistoryRow = {
+  additionalDays: number;
+  additionalAmount: number;
+  previousEndAt: Date;
+  newEndAt: Date;
+  approvedAt: Date | null;
+};
+
+function toPublicRenewal(row: RenewalHistoryRow, confirmed: boolean) {
+  return {
+    additionalDays: row.additionalDays,
+    additionalAmount: row.additionalAmount,
+    previousEndAt: row.previousEndAt,
+    newEndAt: row.newEndAt,
+    confirmed,
+  };
+}
+
+function pickPublicRenewal(renewals: RenewalHistoryRow[], preferConfirmed: boolean) {
+  const pending = renewals.find((row) => row.approvedAt == null);
+  if (!preferConfirmed && pending) return toPublicRenewal(pending, false);
+  const latestApproved = renewals.find((row) => row.approvedAt != null);
+  if (latestApproved) return toPublicRenewal(latestApproved, true);
+  if (pending) return toPublicRenewal(pending, false);
+  return null;
 }
 
 export function createContractsService(fastify: FastifyInstance) {
@@ -240,6 +270,7 @@ export function createContractsService(fastify: FastifyInstance) {
     contractId: string,
     type: "RENTAL" | "RETURN" | "RENEWAL",
     actorUserId: number,
+    offer?: z.infer<typeof RenewSchema>,
   ) {
     return withTransaction(prisma, async (tx) => {
       const contract = await tx.contract.findUnique({ where: { id: contractId } });
@@ -261,8 +292,24 @@ export function createContractsService(fastify: FastifyInstance) {
           throw contractError.invalidTransition(contract.status, "RETOUT");
         }
       }
-      if (type === "RENEWAL" && contract.status !== "ACTIVE") {
-        throw contractError.invalidTransition(contract.status, "ACTIVE");
+      if (type === "RENEWAL") {
+        if (contract.status !== "ACTIVE") {
+          throw contractError.invalidTransition(contract.status, "ACTIVE");
+        }
+        if (!offer) throw contractError.renewalOfferRequired();
+        const previousEndAt = contract.endAt ?? derivedEndAt(contract.startAt, contract.rentalDays);
+        const newEndAt = derivedEndAt(previousEndAt, offer.additionalDays, previousEndAt);
+        await tx.contractRenewal.deleteMany({ where: { contractId, approvedAt: null } });
+        await tx.contractRenewal.create({
+          data: {
+            contractId,
+            additionalDays: offer.additionalDays,
+            additionalAmount: offer.additionalAmount,
+            previousEndAt,
+            newEndAt,
+            createdByUserId: actorUserId,
+          },
+        });
       }
 
       const issued = await issueContractLink(tx, {
@@ -570,51 +617,61 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
+  async function persistCarIn(
+    tx: Tx,
+    contract: {
+      id: string;
+      status: ContractStatus;
+      vehicleId: number;
+      carIn: { id: string } | null;
+      carOut: { id: string } | null;
+    },
+    input: z.infer<typeof CarInSchema>,
+  ): Promise<"created" | "existing"> {
+    if (contract.status === "REVIEW" && contract.carIn) return "existing";
+    assertTransition(contract.status, "REVIEW");
+    if (!contract.carOut) throw contractError.carOutRequired();
+
+    const now = input.occurredAt ?? new Date();
+    const row = await tx.contractCarIn.create({
+      data: {
+        contractId: contract.id,
+        occurredAt: now,
+        mileageIn: input.mileageIn,
+        fuelIn: input.fuelIn,
+        notes: input.notes ?? null,
+      },
+    });
+    await tx.contractCarInPhoto.createMany({
+      data: input.photos.map((p, i) => ({
+        carInId: row.id,
+        attachmentId: p.attachmentId,
+        angle: p.angle,
+        sortOrder: i,
+      })),
+    });
+    await tx.contract.update({
+      where: { id: contract.id },
+      data: { status: "REVIEW", revision: { increment: 1 } },
+    });
+    await emit(tx, "contract.return_submitted", contract.id, { vehicleId: contract.vehicleId });
+    return "created";
+  }
+
   async function carIn(token: string, input: z.infer<typeof CarInSchema>, idempotencyKey?: string) {
     assertEightAngles(input.photos);
     const run = async () =>
       withTransaction(prisma, async (tx) => {
-        const link = await resolveContractLink(tx, token, "RETURN");
+        const link = await resolveContractLink(tx, token, "RETURN", {
+          allowCompleted: true,
+        });
         const contract = await tx.contract.findUnique({
           where: { id: link.contractId },
           include: { carIn: true, carOut: true },
         });
         if (!contract) throw contractError.notFound();
-        if (contract.status === "REVIEW" && contract.carIn) {
-          return publicView(
-            await tx.contract.findUniqueOrThrow({
-              where: { id: contract.id },
-              include: { vehicle: { include: { model: { select: { name: true } } } } },
-            }),
-          );
-        }
-        assertTransition(contract.status, "REVIEW");
-        if (!contract.carOut) throw contractError.carOutRequired();
-
-        const now = input.occurredAt ?? new Date();
-        const row = await tx.contractCarIn.create({
-          data: {
-            contractId: contract.id,
-            occurredAt: now,
-            mileageIn: input.mileageIn,
-            fuelIn: input.fuelIn,
-            notes: input.notes ?? null,
-          },
-        });
-        await tx.contractCarInPhoto.createMany({
-          data: input.photos.map((p, i) => ({
-            carInId: row.id,
-            attachmentId: p.attachmentId,
-            angle: p.angle,
-            sortOrder: i,
-          })),
-        });
-        await tx.contract.update({
-          where: { id: contract.id },
-          data: { status: "REVIEW", revision: { increment: 1 } },
-        });
-        await markLinkUsed(tx, link.id);
-        await emit(tx, "contract.return_submitted", contract.id, { vehicleId: contract.vehicleId });
+        const outcome = await persistCarIn(tx, contract, input);
+        if (outcome === "created") await markLinkUsed(tx, link.id);
         return publicView(
           await tx.contract.findUniqueOrThrow({
             where: { id: contract.id },
@@ -640,6 +697,49 @@ export function createContractsService(fastify: FastifyInstance) {
       run,
     );
     if (outcome.deduped) return getPublic("RETURN", token);
+    return outcome.result!;
+  }
+
+  async function carInStaff(
+    contractId: string,
+    input: z.infer<typeof CarInSchema>,
+    idempotencyKey?: string,
+  ) {
+    assertEightAngles(input.photos);
+    const run = async () =>
+      withTransaction(prisma, async (tx) => {
+        const contract = await tx.contract.findUnique({
+          where: { id: contractId },
+          include: { carIn: true, carOut: true },
+        });
+        if (!contract) throw contractError.notFound();
+        const outcome = await persistCarIn(tx, contract, input);
+        if (outcome === "created") await completeReturnLinks(tx, contract.id);
+        return toDetail(
+          await tx.contract.findUniqueOrThrow({
+            where: { id: contract.id },
+            include: CONTRACT_DETAIL_INCLUDE,
+          }),
+        );
+      });
+
+    if (!idempotencyKey) return run();
+    const outcome = await runIdempotent(
+      prisma,
+      {
+        scope: `contract:car-in-staff:${contractId}`,
+        key: idempotencyKey,
+        fingerprint: fingerprintIdempotentPayload({
+          mileageIn: input.mileageIn,
+          fuelIn: input.fuelIn,
+          notes: input.notes ?? null,
+          occurredAt: input.occurredAt?.toISOString() ?? null,
+          photos: input.photos,
+        }),
+      },
+      run,
+    );
+    if (outcome.deduped) return get(contractId);
     return outcome.result!;
   }
 
@@ -773,6 +873,8 @@ export function createContractsService(fastify: FastifyInstance) {
 
         const previousEndAt = contract.endAt ?? derivedEndAt(contract.startAt, contract.rentalDays);
         const newEndAt = derivedEndAt(previousEndAt, input.additionalDays, previousEndAt);
+        await tx.contractRenewal.deleteMany({ where: { contractId, approvedAt: null } });
+        await revokeUnusedRenewalLinks(tx, contractId);
         await tx.contractRenewal.create({
           data: {
             contractId,
@@ -819,38 +921,90 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
-  async function confirmRenewalPublic(token: string, input: z.infer<typeof RenewSchema>) {
-    const link = await resolveContractLink(prisma, token, "RENEWAL");
-    await renew(link.contractId, input, null);
-    await markLinkUsed(prisma, link.id);
-    return publicView(
-      await prisma.contract.findUniqueOrThrow({
-        where: { id: link.contractId },
-        include: { vehicle: { include: { model: { select: { name: true } } } } },
-      }),
-    );
+  async function confirmRenewalPublic(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const include = {
+        vehicle: { include: { model: { select: { name: true } } } },
+        renewals: { orderBy: { createdAt: "desc" as const } },
+      };
+      const preview = await resolveContractLink(tx, token, "RENEWAL", { allowCompleted: true });
+      if (preview.usedAt) {
+        const already = await tx.contract.findUnique({
+          where: { id: preview.contractId },
+          include,
+        });
+        if (!already) throw contractError.notFound();
+        return publicView(already, pickPublicRenewal(already.renewals, true));
+      }
+
+      const contract = await tx.contract.findUnique({
+        where: { id: preview.contractId },
+        include,
+      });
+      if (!contract) throw contractError.notFound();
+      assertStatus(contract.status, "ACTIVE");
+      await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
+
+      const lockedLink = await resolveContractLink(tx, token, "RENEWAL", { allowCompleted: true });
+      if (lockedLink.usedAt) {
+        const already = await tx.contract.findUniqueOrThrow({
+          where: { id: lockedLink.contractId },
+          include,
+        });
+        return publicView(already, pickPublicRenewal(already.renewals, true));
+      }
+
+      const pending = contract.renewals.find((row) => row.approvedAt == null);
+      if (!pending) throw contractError.renewalOfferRequired();
+
+      await tx.contractRenewal.update({
+        where: { id: pending.id },
+        data: { approvedAt: new Date() },
+      });
+      await tx.contract.update({
+        where: { id: contract.id },
+        data: {
+          rentalDays: contract.rentalDays + pending.additionalDays,
+          agreedAmount: contract.agreedAmount + pending.additionalAmount,
+          endAt: pending.newEndAt,
+          revision: { increment: 1 },
+        },
+      });
+      await emit(tx, "contract.renewed", contract.id, { additionalDays: pending.additionalDays });
+      await markLinkUsed(tx, lockedLink.id);
+
+      const fresh = await tx.contract.findUniqueOrThrow({
+        where: { id: contract.id },
+        include,
+      });
+      return publicView(fresh, pickPublicRenewal(fresh.renewals, true));
+    });
   }
 
-  function publicView(row: {
-    contractNumber: string;
-    status: z.infer<typeof import("./contracts.schema").ContractStatusSchema>;
-    priceType: z.infer<typeof import("./contracts.schema").ContractPriceTypeSchema>;
-    rentalDays: number;
-    agreedAmount: number;
-    currency: string;
-    startAt: Date | null;
-    endAt: Date | null;
-    depositAmount: number | null;
-    termsVersion: string;
-    vehicle: {
-      vehicleName: string | null;
-      plateNumber: string | null;
-      color: string | null;
-      modelYear: number | null;
-      model: { name: string } | null;
-    };
-  }) {
+  function publicView(
+    row: {
+      contractNumber: string;
+      status: z.infer<typeof import("./contracts.schema").ContractStatusSchema>;
+      priceType: z.infer<typeof import("./contracts.schema").ContractPriceTypeSchema>;
+      rentalDays: number;
+      agreedAmount: number;
+      currency: string;
+      startAt: Date | null;
+      endAt: Date | null;
+      depositAmount: number | null;
+      termsVersion: string;
+      vehicle: {
+        vehicleName: string | null;
+        plateNumber: string | null;
+        color: string | null;
+        modelYear: number | null;
+        model: { name: string } | null;
+      };
+    },
+    renewal?: ReturnType<typeof toPublicRenewal> | null,
+  ) {
     return {
+      office: { displayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT },
       contractNumber: row.contractNumber,
       status: row.status,
       priceType: row.priceType,
@@ -872,6 +1026,7 @@ export function createContractsService(fastify: FastifyInstance) {
         color: row.vehicle.color,
         modelYear: row.vehicle.modelYear,
       },
+      ...(renewal === undefined ? {} : { renewal }),
     };
   }
 
@@ -1149,13 +1304,19 @@ export function createContractsService(fastify: FastifyInstance) {
 
   async function getPublic(type: "RENTAL" | "RETURN" | "RENEWAL", token: string) {
     return withTransaction(prisma, async (tx) => {
-      const link = await resolveContractLink(tx, token, type);
+      const link = await resolveContractLink(tx, token, type, {
+        allowCompleted: type === "RETURN" || type === "RENEWAL",
+      });
       const contract = await tx.contract.findUnique({
         where: { id: link.contractId },
-        include: { vehicle: { include: { model: { select: { name: true } } } } },
+        include: {
+          vehicle: { include: { model: { select: { name: true } } } },
+          renewals: { orderBy: { createdAt: "desc" as const } },
+        },
       });
       if (!contract) throw contractError.notFound();
-      return publicView(contract);
+      if (type !== "RENEWAL") return publicView(contract);
+      return publicView(contract, pickPublicRenewal(contract.renewals, Boolean(link.usedAt)));
     });
   }
 
@@ -1200,6 +1361,7 @@ export function createContractsService(fastify: FastifyInstance) {
     submitPublicForm,
     acceptPublic,
     carIn,
+    carInStaff,
     reconcile,
     close,
     renew,

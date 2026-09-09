@@ -11,6 +11,7 @@ import { ContractInspectionImage } from "../contract-inspection-image/contract-i
 import { ContractTarsStatus } from "../contract-tars/contract-tars-status";
 import { ContractTarsInlineStatus } from "../contract-tars/contract-tars-inline-status";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
+import { renewalHistoryState } from "../../utils/renewal-history";
 import styles from "./contract-detail-drawer.module.css";
 
 export interface ContractDetailDrawerProps {
@@ -19,6 +20,7 @@ export interface ContractDetailDrawerProps {
   onGenerateRentalLink: (id: string) => void;
   onConfirmPayment: (id: string) => void;
   onCarOut: (id: string) => void;
+  onCarIn: (id: string) => void;
   onReturnLink: (id: string) => void;
   onRenew: (id: string) => void;
   onReconcile: (id: string) => void;
@@ -41,6 +43,7 @@ export function ContractDetailDrawer({
   onGenerateRentalLink,
   onConfirmPayment,
   onCarOut,
+  onCarIn,
   onReturnLink,
   onRenew,
   onReconcile,
@@ -193,13 +196,33 @@ export function ContractDetailDrawer({
           ) : null}
 
           {detail.renewals.length > 0 ? (
-            <section className={styles.section}>
+            <section className={styles.section} data-testid="renewal-history">
               <p className={styles.sectionTitle}>{t("detail.renewals")}</p>
-              {detail.renewals.map((renewal) => (
-                <p key={renewal.id} className={styles.muted}>
-                  +{format.number(renewal.additionalDays)} / {money(renewal.additionalAmount, detail.currency)}
-                </p>
-              ))}
+              <ol className={styles.renewalList}>
+                {detail.renewals.map((renewal) => {
+                  const state = renewalHistoryState(renewal.approvedAt);
+                  const stamp = renewal.approvedAt ?? renewal.createdAt;
+                  return (
+                    <li key={renewal.id} className={styles.renewalItem}>
+                      <p className={styles.renewalMeta}>
+                        {format.dateTime(new Date(stamp), { dateStyle: "medium", timeStyle: "short" })}
+                        {" · "}
+                        {t(`detail.renewalState.${state}`)}
+                      </p>
+                      <p className={styles.muted}>
+                        {format.dateTime(new Date(renewal.previousEndAt), { dateStyle: "medium" })}
+                        {" → "}
+                        {format.dateTime(new Date(renewal.newEndAt), { dateStyle: "medium" })}
+                      </p>
+                      <p className={styles.muted}>
+                        +{format.number(renewal.additionalDays)} {t("detail.days").toLowerCase()}
+                        {" · "}
+                        {money(renewal.additionalAmount, detail.currency)}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ol>
             </section>
           ) : null}
 
@@ -230,6 +253,11 @@ export function ContractDetailDrawer({
               {actions.showGenerateReturnLink ? (
                 <Button type="button" size="sm" onClick={() => onReturnLink(detail.id)}>
                   {t("actions.returnLink")}
+                </Button>
+              ) : null}
+              {actions.showCarIn ? (
+                <Button type="button" size="sm" onClick={() => onCarIn(detail.id)}>
+                  {t("actions.carIn")}
                 </Button>
               ) : null}
               {actions.showReturnWaiting ? (

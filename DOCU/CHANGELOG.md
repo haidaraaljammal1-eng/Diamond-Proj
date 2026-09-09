@@ -2,6 +2,23 @@
 
 ## 2026-09-09
 
+- Demo Simulation Mode (frontend-only, `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`): labeled in-memory overlay for public rental OCR/payment progression and staff TARS status display. No Azure, Stripe, or TARS calls, no database writes, no persisted simulation. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/04-api-contracts/tars-integration.md`.
+- Contract renewal flow completion: staff Generate Renewal Link stores a pending
+  `ContractRenewal` offer; public `/[locale]/renew/[token]` confirms server-owned
+  days/amount on the same ACTIVE Contract; Vehicle stays RENTED. Used tokens can
+  reload the success state. Drawer shows compact renewal history. No TARS
+  renewal execution and no Stripe step. See `DOCU/05-pages/contracts.md` and
+  `DOCU/05-pages/contracts-backend.md`.
+- Return / Car-In flow completion: public `/[locale]/return/[token]` page, staff
+  `POST /contracts/:id/car-in` (RETOUT → REVIEW, vehicle stays RENTED), Salik /
+  Violation reconciliation labels, Dialog stacked above Drawer. Close remains the
+  only step that sets Vehicle AVAILABLE. TARS stays status-only. See
+  `DOCU/05-pages/contracts.md` and `DOCU/05-pages/contracts-backend.md`.
+- Reconciliation dialog opens with empty Salik, Violation, and Other rows plus
+  emphasized category chips (manual categories only — no amounts invented, no
+  Salik/Violations APIs). Visual e2e covers dialog stacking, TARS Return /
+  Completion display, and public return EN/AR/mobile.
+
 - TARS integration status frontend (read-only): a new section in the existing Contract
   Detail Drawer showing the connection state and the five mandatory procedures, plus
   compact indicators in the Car-Out dialog, the Car-In record and the Close dialog. No

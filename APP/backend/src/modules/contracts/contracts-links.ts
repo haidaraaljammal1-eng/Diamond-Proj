@@ -58,7 +58,9 @@ export async function resolveContractLink(
     throw contractError.linkInvalid();
   }
   if (isExpired(link.expiresAt)) throw contractError.linkExpired();
-  const allowCompleted = type === "RENTAL" && options.allowCompleted;
+  const allowCompleted =
+    (type === "RENTAL" || type === "RETURN" || type === "RENEWAL") &&
+    options.allowCompleted;
   if (link.usedAt && !allowCompleted) throw contractError.linkUsed();
   return link;
 }
@@ -67,6 +69,20 @@ export async function completeRentalLinks(tx: Db, contractId: string): Promise<v
   await tx.contractLink.updateMany({
     where: { contractId, type: "RENTAL", usedAt: null, revokedAt: null },
     data: { usedAt: new Date() },
+  });
+}
+
+export async function completeReturnLinks(tx: Db, contractId: string): Promise<void> {
+  await tx.contractLink.updateMany({
+    where: { contractId, type: "RETURN", usedAt: null, revokedAt: null },
+    data: { usedAt: new Date() },
+  });
+}
+
+export async function revokeUnusedRenewalLinks(tx: Db, contractId: string): Promise<void> {
+  await tx.contractLink.updateMany({
+    where: { contractId, type: "RENEWAL", usedAt: null, revokedAt: null },
+    data: { revokedAt: new Date() },
   });
 }
 

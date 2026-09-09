@@ -208,9 +208,11 @@ An unknown or missing status falls back to `NOT_STARTED`, matching the Backend p
 
 **Loading and read failure.** The section owns its own surface: skeleton placeholders while loading, and on failure only "Unable to load TARS integration status." / "تعذر تحميل حالة الربط مع TARS." inside the section. The rest of the drawer keeps working.
 
-**Workflow indicators.** Compact read-only lines were added at three existing operational points — the Car-Out dialog (`TARS Handover`), the drawer Car-In record (`TARS Return`) and the Close-contract dialog (`TARS Completion`). Each renders nothing while loading or on error. They add no action, block nothing and change no validation or lifecycle.
+**Workflow indicators.** Compact read-only lines were added at existing operational points — the Car-Out dialog (`TARS Handover`), the Car-In dialog and drawer Car-In record (`TARS Return`) and the Close-contract dialog (`TARS Completion`). Each renders nothing while loading or on error. They add no action, block nothing and change no validation or lifecycle.
 
 **No customer-facing TARS state.** The public rental pages (`/[locale]/rental/[token]`) were not touched. Registration and acceptance status are staff-only. Future OTP behaviour waits for official TARS documentation.
+
+**Demo Simulation (UI only).** When `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true`, the existing TARS section may show a secondary Simulate control that overlays in-memory status presets (Not Started, Syncing, Synced, Partial Failure). Real TARS architecture is unchanged: no POST, no `TarsIntegrationService` call, no `TarsOperation` row, no Retry, and no simulated state persists after refresh. Inline Car-Out / Car-In / Close indicators follow the same in-memory overlay while it is active.
 
 ## 18. Current behaviour: non-blocking, not wired
 
@@ -264,6 +266,6 @@ Rebuilding Contract, Customer, Vehicle, Car-Out, Car-In, the Public Rental Flow 
 
 Backend unit: `tests/unit/tars-integration.test.ts` (provider fail-closed, projection rules, all five mappers). Backend integration: `tests/integration/tars-integration.test.ts` — requires `RUN_INTEGRATION=true` and a disposable `TEST_DATABASE_URL` (`haidara_test`), never the development fleet DB. A `FakeTarsProvider` is injected via `setTarsProviderForTests` in tests only.
 
-Frontend unit: `src/modules/contracts/utils/tars-status.test.ts` — operation order, every status tone, unknown-status fallback, connection presentation, `configured` true/false summaries, external reference and last-sync passthrough, the section's own loading/error view, AR + EN label coverage, and the "no execution surface" guard.
+Frontend unit: `src/modules/contracts/utils/tars-status.test.ts` — operation order, every status tone, unknown-status fallback, connection presentation, `configured` true/false summaries, external reference and last-sync passthrough, the section's own loading/error view, AR + EN label coverage, and the "no execution surface" guard. Demo Simulation overlays are covered by `src/modules/demo-simulation/simulation.test.ts`.
 
 Frontend browser verification: `e2e/tars-status.visual.spec.ts` — AR and EN drawers against the live unconfigured backend, mobile 390px overflow, and `SUCCEEDED` / `PROCESSING` / `PENDING` / `FAILED` / connected states plus the three workflow indicators from an intercepted projection response. Interception is a **UI fixture only**; it never produces runtime TARS success.

@@ -1,0 +1,58 @@
+.wrap {
+  position: fixed;
+  z-index: 80;
+  top: 10px;
+  inset-inline-end: 10px;
+  pointer-events: none;
+}
+
+.badge {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 20px));
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 161, 92, 0.4);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 253, 248, 0.96),
+    rgba(250, 244, 232, 0.94)
+  );
+  box-shadow: 0 10px 24px rgba(122, 96, 48, 0.12);
+}
+
+.mark {
+  color: var(--diamond-gold-hi);
+  font-family: var(--diamond-font-display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.copy {
+  flex: 1 1 160px;
+  color: var(--diamond-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.reset {
+  width: auto;
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+@media (max-width: 430px) {
+  .wrap {
+    inset-inline: 10px;
+    inset-inline-end: 10px;
+  }
+
+  .badge {
+    max-width: none;
+  }
+}

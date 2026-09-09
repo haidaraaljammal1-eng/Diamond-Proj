@@ -69,6 +69,7 @@ export interface ContractActionsDto {
   canConfirmPayment: boolean;
   canCarOut: boolean;
   canGenerateReturnLink: boolean;
+  canCarIn: boolean;
   canReconcile: boolean;
   canClose: boolean;
   canRenew: boolean;
@@ -208,6 +209,14 @@ export interface CarOutPayload {
   occurredAt?: string;
   mileageOut: number;
   fuelOut: FuelLevel;
+  notes?: string;
+  photos: InspectionPhotoInput[];
+}
+
+export interface CarInPayload {
+  occurredAt?: string;
+  mileageIn: number;
+  fuelIn: FuelLevel;
   notes?: string;
   photos: InspectionPhotoInput[];
 }

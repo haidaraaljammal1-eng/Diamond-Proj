@@ -99,9 +99,9 @@ Written at SIGNED (not rewritten later). Contains `contractNumber`, customer ide
 
 Opaque tokens via existing `generateOpaqueToken` / `hashToken`. Raw token returned **once**. DB stores SHA-256 hex only. Lookup uses hash + `timingSafeEqual`. TTL (`contracts.constants.ts`): RENTAL 72h, RETURN 24h, RENEWAL 48h. Supports expiry and revocation. Re-issuing a link of the same type revokes the previous unused token.
 
-RENTAL `usedAt` is set when the contract reaches **PAID** (not on first GET or accept), so the customer can reload across license, form, sign, and payment. RETURN still marks `usedAt` on Car-In; RENEWAL is unchanged. See `DOCU/05-pages/public-rental-flow.md`.
+RENTAL `usedAt` is set when the contract reaches **PAID** (not on first GET or accept), so the customer can reload across license, form, sign, and payment. RETURN marks `usedAt` on Car-In (staff or public token). RETURN GET still resolves a used, unexpired token so the customer can see a received state. RENEWAL is unchanged. See `DOCU/05-pages/public-rental-flow.md`.
 
-Public token routes live under `routes/public/` with an empty public hook — **no staff JWT and no staff permissions**. The opaque token is the only customer credential. Autoload strips `routes/public`, so URLs stay `/contracts/rental/:token` (not `/public/contracts/...`). Never log raw tokens or PII in outbox payloads. Rental GET returns `PublicRentalContextSchema` (office, vehicle, flow step, license, payment). RETURN/RENEWAL GET still use `PublicContractViewSchema`.
+Public token routes live under `routes/public/` with an empty public hook — **no staff JWT and no staff permissions**. The opaque token is the only customer credential. Autoload strips `routes/public`, so URLs stay `/contracts/rental/:token` (not `/public/contracts/...`). Never log raw tokens or PII in outbox payloads. Rental GET returns `PublicRentalContextSchema` (office, vehicle, flow step, license, payment). RETURN/RENEWAL GET use `PublicContractViewSchema` (includes `office.displayName` from `OFFICE_DISPLAY_NAME`; no TARS, reconciliation, or payment internals).
 
 ## Payment foundation
 
@@ -110,6 +110,8 @@ Public token routes live under `routes/public/` with an empty public hook — **
 ## Car-Out / Car-In
 
 Eight Demo angles: FRONT, REAR, RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES. Junctions reference Attachment; they are **not** `VehiclePhoto`. Stream routes are authenticated (`contracts.read`).
+
+Staff Car-In: `POST /contracts/:id/car-in` (`contracts.return`) on RETOUT. Public token Car-In: `POST /contracts/return/:token/car-in` (used RETURN tokens are allowed so a second submit after REVIEW is idempotent). Both write `ContractCarIn` + eight photos, transition RETOUT → REVIEW, emit `contract.return_submitted`, and **do not** change the vehicle. Vehicle stays RENTED until CLOSE.
 
 Car-Out is the future TARS `HANDOVER` integration checkpoint and Car-In the future `RETURN_DOCUMENTATION` checkpoint. Neither calls TARS today, and the sequencing is unconfirmed. See `DOCU/04-api-contracts/tars-integration.md`.
 
@@ -134,7 +136,7 @@ Staff only. Public token routes have no staff permissions.
 | `contracts.read` | List, detail, inspection streams |
 | `contracts.manage` | Create offer, rental link, confirm payment |
 | `contracts.activate` + `contracts.car_out` | Car-Out (both required on the route) |
-| `contracts.return` | Return link |
+| `contracts.return` | Return link + staff Car-In |
 | `contracts.reconcile` | Reconciliation |
 | `contracts.close` | Close |
 | `contracts.renew` | Renewal link + renew |
@@ -150,15 +152,16 @@ Staff only. Public token routes have no staff permissions.
 | POST | `/contracts/:id/payment/confirm` | manage |
 | POST | `/contracts/:id/car-out` | car_out + activate |
 | POST | `/contracts/:id/return-link` | return |
+| POST | `/contracts/:id/car-in` | return |
 | POST | `/contracts/:id/reconcile` | reconcile |
 | POST | `/contracts/:id/close` | close |
-| POST | `/contracts/:id/renewal-link` | renew |
+| POST | `/contracts/:id/renewal-link` | renew (body: `additionalDays`, `additionalAmount`) |
 | POST | `/contracts/:id/renew` | renew |
 | GET | `/contracts/:id/car-out/photos/:photoId/stream` | read |
 | GET | `/contracts/:id/car-in/photos/:photoId/stream` | read |
 | GET | `/contracts/:id/tars` | read |
 
-List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, and `actions` capability flags. No raw tokens.
+List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, and `actions` capability flags (`canCarIn` is true on RETOUT with no Car-In yet). No raw tokens.
 
 ## Public routes
 
@@ -176,6 +179,8 @@ List query: `search` (number, plate, vehicle name, customer name/phone), `status
 | POST | `/contracts/return/:token/car-in` |
 | GET | `/contracts/renew/:token` |
 | POST | `/contracts/renew/:token/confirm` |
+
+`POST /contracts/:id/renewal-link` is ACTIVE-only. It upserts a pending `ContractRenewal` (the stored offer) and issues an opaque hashed RENEWAL token (`CONTRACT_LINK_TTL_SECONDS.RENEWAL` = 48h). Prior unused RENEWAL links are revoked. Public `GET /contracts/renew/:token` returns `PublicContractView` plus optional `renewal` (`additionalDays`, `additionalAmount`, `previousEndAt`, `newEndAt`, `confirmed`). Used RENEWAL tokens may be re-read (`allowCompleted`) for the success reload. Public `POST /contracts/renew/:token/confirm` ignores client days/amount and applies the pending offer on the **same** Contract. The Contract stays ACTIVE; Vehicle stays RENTED; no second Contract is created. Staff `POST /contracts/:id/renew` still applies immediately, deletes pending offers, and revokes unused RENEWAL links. Duplicate public confirm is idempotent (same totals, same contract number). No TARS renewal execution. No payment/Stripe on renewal.
 
 ## Errors
 
@@ -195,18 +200,19 @@ Stable `AppError.code` + `context.reason`:
 | `CONTRACT_CAR_IN_REQUIRED` | 409 |
 | `CONTRACT_RECONCILIATION_REQUIRED` | 409 |
 | `CONTRACT_ALREADY_CLOSED` | 409 |
+| `CONTRACT_RENEWAL_OFFER_REQUIRED` | 409 |
 
 ## Transactions / idempotency / outbox / audit
 
-Atomic Contract+Vehicle writes: payment confirm, Car-Out, close, renewal. Car-In status mutation is transactional (vehicle unchanged). Idempotency via existing `runIdempotent` when `Idempotency-Key` is sent: payment confirm, Car-Out, Car-In, close, renew. Scope is `contract:<action>:<contractId>` (Car-In uses the token hash). Same key + same payload replays the current result. Same key + different payload → `409` / `IDEMPOTENCY_KEY_CONFLICT`. Transitions also no-op if already at the target status.
+Atomic Contract+Vehicle writes: payment confirm, Car-Out, close, renewal. Car-In status mutation is transactional (vehicle unchanged). Idempotency via existing `runIdempotent` when `Idempotency-Key` is sent: payment confirm, Car-Out, Car-In, close, renew. Scope is `contract:<action>:<contractId>` (public Car-In uses the token hash; staff Car-In uses `contract:car-in-staff:<contractId>`). Same key + same payload replays the current result. Same key + different payload → `409` / `IDEMPOTENCY_KEY_CONFLICT`. Transitions also no-op if already at the target status.
 
 Outbox events (IDs / non-PII only): `contract.created`, `contract.license_uploaded`, `contract.license_verified`, `contract.form_completed`, `contract.signed`, `payment.started`, `payment.pending`, `payment.confirmed`, `payment.failed`, `contract.paid`, `contract.activated`, `contract.return_started`, `contract.return_submitted`, `contract.closed`, `contract.renewed`.
 
-Staff audit via `request.setAudit` on create, links, payment, Car-Out, return, reconcile, close, renew.
+Staff audit via `request.setAudit` on create, links, payment, Car-Out, Car-In, return, reconcile, close, renew.
 
 ## Tests
 
-Unit: `tests/unit/contracts-status.test.ts`, `tests/unit/public-rental-flow.test.ts`. Integration: `tests/integration/contracts.test.ts` and `tests/integration/public-rental-flow.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
+Unit: `tests/unit/contracts-status.test.ts` (includes 48h RENEWAL TTL), `tests/unit/public-rental-flow.test.ts`. Integration: `tests/integration/contracts.test.ts`, `tests/integration/contracts-renewal.test.ts`, and `tests/integration/public-rental-flow.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
 
 ## TARS Integration Boundary
 

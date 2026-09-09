@@ -32,7 +32,7 @@
 - Frontend NextAuth session mirrors `GET /auth/me` for UX guards; permissions re-hydrate on login, token refresh, and session revalidation. Backend DB effective permissions remain the authorization authority.
 - Permission matrix rows represent backend permissions and columns represent backend roles.
 - Frontend permission visibility is UX only; the Backend remains the authorization authority.
-- Dialogs use the shared Dialog (`src/shared/components/ui/dialog`) with FormBuilder inside; overlays are portalled to `<body>`.
+- Dialogs use the shared Dialog (`src/shared/components/ui/dialog`) with FormBuilder inside; overlays are portalled to `<body>`. When a Dialog opens over a Drawer, the Dialog must stack above it (dialog z-index 110 vs drawer 95/96). Dialog Escape uses capture + `stopImmediatePropagation` so it does not close the Drawer.
 - Every checkbox uses the shared Diamond Checkbox (`src/shared/components/ui/checkbox`).
 - Form values are not duplicated in Zustand; lookup fields use dedicated lookup hooks/APIs when available.
 - Page-specific decorative layouts stay inside their feature.
@@ -103,6 +103,7 @@
 - Public Rental customers cannot override vehicle, amount, duration, or contract number.
 - An expired driving license blocks customer form and signing. License expiry is a backend calendar date.
 - Do not implement fake OCR or fake payment success. Unconfigured providers must fail closed.
+- Demo simulation must remain environment-gated, frontend-only, visibly labeled, non-persistent, and must never create provider/business success in backend.
 - Payment success is backend/provider authoritative. A redirect URL is not confirmation.
 - PROCESSING/PENDING card attempts block duplicate retry. UNKNOWN provider status stays in-flight.
 - After a successful implementation, update the relevant MD under `DOCU` (API detail does not belong in this file).

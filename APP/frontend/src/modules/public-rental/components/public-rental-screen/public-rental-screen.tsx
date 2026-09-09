@@ -21,6 +21,13 @@ import { RentalHeader } from "../rental-header/rental-header";
 import { RentalLinkError } from "../rental-link-error/rental-link-error";
 import { RentalProgress } from "../rental-progress/rental-progress";
 import { RentalSummary } from "../rental-summary/rental-summary";
+import {
+  SimulationButton,
+  applyRentalSimulation,
+  shouldHoldLicenseStage,
+  shouldSkipRentalMutation,
+  useDemoSimulation,
+} from "@/modules/demo-simulation";
 import styles from "./public-rental-screen.module.css";
 
 interface PublicRentalScreenProps {
@@ -38,6 +45,8 @@ function errorTranslator(t: ReturnType<typeof useTranslations<"PublicRental">>) 
 export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   const t = useTranslations("PublicRental");
   const rental = usePublicRental(token);
+  const simulation = useDemoSimulation();
+  const clearRentalOverlay = simulation.clearRentalOverlay;
   const [boundToken, setBoundToken] = useState(token);
   const [viewStage, setViewStage] = useState<PublicRentalUiStage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -50,6 +59,10 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
   }
+
+  useEffect(() => {
+    clearRentalOverlay();
+  }, [token, clearRentalOverlay]);
 
   useEffect(() => {
     return () => {
@@ -91,10 +104,16 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     );
   }
 
-  const context = rental.context;
+  const context = applyRentalSimulation(rental.context, simulation.snapshot);
   const allowed = uiStageFromFlowStep(context.flow.step);
   const current: PublicRentalUiStage =
-    viewStage && canEnterStage(viewStage, allowed) ? viewStage : allowed;
+    allowed === "handover"
+      ? "handover"
+      : viewStage && canEnterStage(viewStage, allowed)
+        ? viewStage
+        : shouldHoldLicenseStage(simulation.snapshot, viewStage, allowed)
+          ? "license"
+          : allowed;
   const inlineError = resolvePublicRentalErrorMessage(
     errorTranslator(t),
     rental.error,
@@ -109,7 +128,9 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(file));
     setViewStage("license");
-    void rental.uploadLicense(file);
+    if (!shouldSkipRentalMutation(simulation.active)) {
+      void rental.uploadLicense(file);
+    }
   };
 
   return (
@@ -126,10 +147,17 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
 
         <div className={styles.layout}>
           <div className={styles.main}>
+            {simulation.enabled ? (
+              <div className={styles.simRow}>
+                {current === "license" ? <SimulationButton surface="license" /> : null}
+                {current === "contract" ? <SimulationButton surface="contract" /> : null}
+                {current === "payment" ? <SimulationButton surface="payment" /> : null}
+              </div>
+            ) : null}
             {current === "license" ? (
               <LicenseStep
                 context={context}
-                pending={rental.uploadPending}
+                pending={rental.uploadPending || simulation.snapshot.license.verifying}
                 previewUrl={previewUrl}
                 readOnly={
                   context.contract.status !== "AWAITING" &&
@@ -144,13 +172,22 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
             {current === "contract" ? (
               <ContractStep
                 context={context}
-                formPending={rental.formPending}
-                acceptPending={rental.acceptPending}
+                formPending={rental.formPending || simulation.snapshot.formPending}
+                acceptPending={rental.acceptPending || simulation.snapshot.acceptPending}
                 formError={inlineError}
                 onSubmitForm={async (values) => {
+                  if (shouldSkipRentalMutation(simulation.active)) {
+                    await simulation.simulateFormSubmit(values);
+                    return;
+                  }
                   await rental.submitForm(toPublicRentalFormPayload(values));
                 }}
                 onAccept={async () => {
+                  if (shouldSkipRentalMutation(simulation.active)) {
+                    const ok = await simulation.simulateAccept();
+                    if (ok) setViewStage("payment");
+                    return;
+                  }
                   const ok = await rental.accept();
                   if (ok) setViewStage("payment");
                 }}
@@ -160,12 +197,25 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
             {current === "payment" ? (
               <PaymentStep
                 context={context}
-                paymentStatus={rental.paymentStatus?.status ?? context.payment.status}
-                payPending={rental.payPending}
+                paymentStatus={
+                  simulation.snapshot.payment.status ??
+                  rental.paymentStatus?.status ??
+                  context.payment.status
+                }
+                payPending={rental.payPending || simulation.snapshot.payment.payPending}
                 statusPending={rental.statusPending}
                 linkExpiredDuringPayment={rental.linkExpiredDuringPayment}
-                onPay={() => void rental.startPayment()}
-                onRefreshStatus={() => void rental.refreshPaymentStatus()}
+                onPay={() => {
+                  if (shouldSkipRentalMutation(simulation.active)) {
+                    void simulation.simulatePayment();
+                    return;
+                  }
+                  void rental.startPayment();
+                }}
+                onRefreshStatus={() => {
+                  if (shouldSkipRentalMutation(simulation.active)) return;
+                  void rental.refreshPaymentStatus();
+                }}
               />
             ) : null}
 

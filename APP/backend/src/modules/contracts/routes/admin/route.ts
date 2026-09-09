@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { createContractsService } from "src/modules/contracts/contracts.service";
 import {
+  CarInSchema,
   CarOutSchema,
   ConfirmPaymentSchema,
   ContractDetailSchema,
@@ -214,6 +215,36 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   );
 
   app.post(
+    "/:id/car-in",
+    {
+      schema: {
+        summary: "Record Car-In and move the contract to REVIEW",
+        operationId: "contractCarIn",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam,
+        body: CarInSchema,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.carInStaff(
+        request.params.id,
+        request.body,
+        typeof key === "string" ? key : undefined,
+      );
+      request.setAudit({
+        action: "contracts.car_in",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
     "/:id/reconcile",
     {
       schema: {
@@ -276,12 +307,18 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
         tags: ["Contracts"],
         permissions: [PERMISSIONS.CONTRACTS_RENEW],
         params: ContractIdParam,
+        body: RenewSchema,
         response: { 200: dataResponse(ContractLinkIssuedSchema), ...commonErrorResponses },
       },
     },
     async (request) => {
       const actor = requireAuth(request);
-      const data = await contracts.generateLink(request.params.id, "RENEWAL", actor.id);
+      const data = await contracts.generateLink(
+        request.params.id,
+        "RENEWAL",
+        actor.id,
+        request.body,
+      );
       request.setAudit({
         action: "contracts.renewal_link",
         entityType: "contract",

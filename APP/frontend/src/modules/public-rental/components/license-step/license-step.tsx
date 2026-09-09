@@ -56,7 +56,7 @@ export function LicenseStep({
       <p className={styles.intro}>{t("intro")}</p>
 
       {panel === "verifying" ? (
-        <div className={`${styles.panel} ${styles.muted}`} role="status">
+        <div className={`${styles.panel} ${styles.muted}`} role="status" data-testid="license-verifying">
           <p className={styles.title}>{t("verifying")}</p>
         </div>
       ) : null}

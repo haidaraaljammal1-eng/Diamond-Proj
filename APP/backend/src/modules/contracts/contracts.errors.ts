@@ -41,6 +41,12 @@ export const contractError = {
     ),
   alreadyClosed: () =>
     err(ErrorCode.CONFLICT, "Contract is already closed", "CONTRACT_ALREADY_CLOSED"),
+  renewalOfferRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A renewal offer must be issued before confirmation",
+      "CONTRACT_RENEWAL_OFFER_REQUIRED",
+    ),
   vehicleNotFound: () => AppError.notFound("Vehicle not found"),
   customerNotFound: () => AppError.notFound("Customer not found"),
   drivingLicenseRequired: () =>

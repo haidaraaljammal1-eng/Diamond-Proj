@@ -45,7 +45,34 @@ export function Dialog({
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const nodes = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      );
+      const focusable = [...nodes].filter(
+        (el) => el.tabIndex !== -1 && !el.hasAttribute("disabled"),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialogRef.current)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     },
     [onClose],
   );
@@ -53,14 +80,14 @@ export function Dialog({
   useEffect(() => {
     if (!open) return;
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown, true);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const previouslyFocused = document.activeElement;
     dialogRef.current?.focus();
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown, true);
       document.body.style.overflow = previousOverflow;
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
@@ -73,7 +100,8 @@ export function Dialog({
 
   return createPortal(
     <div
-      className={styles.scrim}
+        className={styles.scrim}
+        data-testid="shared-dialog"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

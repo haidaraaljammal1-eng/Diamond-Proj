@@ -23,6 +23,17 @@
   min-width: 0;
 }
 
+.simRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 430px) {
+  .simRow {
+    justify-content: stretch;
+  }
+}
+
 .aside {
   min-width: 0;
 }

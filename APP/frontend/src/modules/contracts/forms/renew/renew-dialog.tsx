@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
-import { FormBuilder } from "@/shared/components/forms/form-builder";
+import { FieldRenderer } from "@/shared/components/forms/form-builder/field-renderer";
 import type { FormField } from "@/shared/components/forms/form-builder";
 import { useContract } from "../../hooks/use-contract";
 import { renewFormSchema, type RenewFormValues } from "./renew.schema";
@@ -44,6 +46,10 @@ function RenewForm({
   const t = useTranslations("Contracts");
   const { renew, generateRenewalLink, renewPending, renewError } = useContract();
   const keyRef = useRef(createIdempotencyKey());
+  const methods = useForm<RenewFormValues>({
+    resolver: zodResolver(renewFormSchema) as never,
+    defaultValues: { additionalDays: 7, additionalAmount: 0 },
+  });
 
   const fields = useMemo<FormField<RenewFormValues>[]>(
     () => [
@@ -56,38 +62,46 @@ function RenewForm({
   const errorMessage = resolveContractsErrorMessage(t, renewError);
 
   return (
-    <>
+    <FormProvider {...methods}>
       {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
-      <FormBuilder
-        fields={fields}
-        schema={renewFormSchema}
-        defaultValues={{ additionalDays: 7, additionalAmount: 0 }}
-        submitLabel={t("renew.submit")}
-        submittingLabel={t("common.saving")}
-        submitSize="md"
-        submitDisabled={renewPending}
-        secondaryAction={
+      <form
+        className={styles.form}
+        onSubmit={methods.handleSubmit(async (values) => {
+          const ok = await generateRenewalLink(contractId, values);
+          if (ok) onClose();
+        })}
+        noValidate
+      >
+        <div className={styles.fields}>
+          {fields.map((field) => (
+            <FieldRenderer key={String(field.name)} field={field} />
+          ))}
+        </div>
+        <div className={styles.actions}>
+          <Button type="submit" size="md" loading={renewPending || methods.formState.isSubmitting}>
+            {t("renew.link")}
+          </Button>
           <Button type="button" variant="ghost" size="md" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-        }
-        onSubmit={async (values) => {
-          const parsed = renewFormSchema.parse(values);
-          const ok = await renew(contractId, parsed, keyRef.current);
-          if (ok) onClose();
-        }}
-      />
+        </div>
+      </form>
       <div className={styles.linkRow}>
         <Button
           type="button"
           variant="secondary"
           size="sm"
           loading={renewPending}
-          onClick={() => void generateRenewalLink(contractId)}
+          onClick={() =>
+            void methods.handleSubmit(async (values) => {
+              const ok = await renew(contractId, values, keyRef.current);
+              if (ok) onClose();
+            })()
+          }
         >
-          {t("renew.link")}
+          {t("renew.applyOffice")}
         </Button>
       </div>
-    </>
+    </FormProvider>
   );
 }

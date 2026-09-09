@@ -39,7 +39,7 @@ UI dialog/drawer state stays in the screen. Transient issued-link URLs live in t
 | Timeline | `components/contract-timeline/` |
 | Status | `components/contract-status/` |
 | Link result | `components/contract-link-result/` |
-| Forms | `forms/offer`, `payment`, `car-out`, `renew`, `reconcile`, `close` |
+| Forms | `forms/offer`, `payment`, `car-out`, `car-in`, `renew`, `reconcile`, `close` |
 | Policy | `utils/contract-actions.ts`, `utils/contract-status.ts`, `utils/contract-timeline.ts` |
 | TARS status | `api/tars.api.ts`, `stores/contract-tars.store.ts`, `hooks/use-contract-tars.ts`, `components/contract-tars/`, `utils/tars-status.ts` |
 
@@ -88,7 +88,7 @@ Labels: Awaiting Customer / Form Completed / Signed / Ready for Car-Out / Active
 | SIGNED | Confirm payment (+ optional regenerate link) |
 | PAID | Car-Out |
 | ACTIVE | Return link + Renew |
-| RETOUT | Waiting for customer return — no renew, no Car-Out |
+| RETOUT | Staff Car-In (`contracts.return`). Waiting copy only if Car-In is not available |
 | REVIEW | Reconciliation; Close after Backend `canClose` |
 | CLOSED | Read-only |
 
@@ -108,7 +108,7 @@ Header shows an overall chip: **Not Connected / غير متصل حالياً** o
 
 Below it, the five approved procedures render as shared `IntegrationStatusRow` lines: Contract Registration, Contract Acceptance, Vehicle Handover, Vehicle Return, Contract Completion. Statuses map `NOT_STARTED` neutral / `PENDING` amber / `PROCESSING` gold with a slow pulse / `SUCCEEDED` positive / `FAILED` soft red.
 
-Compact read-only indicators also sit in the Car-Out dialog (`TARS Handover`), the drawer Car-In record (`TARS Return`) and the Close dialog (`TARS Completion`). They render nothing while loading or on error.
+Compact read-only indicators also sit in the Car-Out dialog (`TARS Handover`), the Car-In dialog and drawer Car-In record (`TARS Return`) and the Close dialog (`TARS Completion`). They render nothing while loading or on error.
 
 **No action buttons of any kind** — no Register, Send, Submit, Retry, Test or Sync Now. Contract lifecycle, validation and existing actions are untouched, and the public rental pages show no TARS state. While loading, the section shows skeletons; if the read fails, only "Unable to load TARS integration status." appears inside the section and the rest of the drawer keeps working.
 
@@ -122,7 +122,7 @@ After success the link result UI offers Copy / Open. Vehicle stays AVAILABLE unt
 
 ## Rental / return / renewal links
 
-Staff generate real Backend tokens. Frontend builds `/{locale}/rental|return|renew/{token}`. Rental public pages are live (`PublicRental` module). Open Link is Development / QA preview, not an operational staff action. RETURN / RENEWAL public pages are later. Copy still copies the real URL.
+Staff generate real Backend tokens. Frontend builds `/{locale}/rental|return|renew/{token}`. Rental public pages are live (`PublicRental` module). Return public pages are live (`PublicReturn` module at `/[locale]/return/[token]`). Renewal public pages are live (`PublicRenewal` module at `/[locale]/renew/[token]`). Open Link is Development / QA preview, not an operational staff action. Copy still copies the real URL.
 
 ## Payment confirmation
 
@@ -132,17 +132,25 @@ SIGNED + `contracts.manage` → `POST /contracts/:id/payment/confirm` (`MANUAL` 
 
 PAID fleet card and contract drawer. Eight inspection slots + mileage + fuel. Photos upload to `POST /files` (not Vehicle gallery), then `POST /contracts/:id/car-out`. PAID → ACTIVE; Vehicle → RENTED. Then refetch contracts + vehicles.
 
-## Return link
+## Return link / public return
 
-ACTIVE → `POST /contracts/:id/return-link` → RETOUT. Vehicle stays RENTED. RETOUT fleet action opens contract detail (does not mint a new link). REVIEW opens Reconciliation.
+ACTIVE → `POST /contracts/:id/return-link` → RETOUT. Vehicle stays RENTED. RETOUT fleet action opens contract detail (does not mint a new link). Customer page `/[locale]/return/[token]` is public, token-scoped, no staff JWT, no AppShell. It shows office, contract number, vehicle, agreed return context, and instructions. It never exposes TARS, reconciliation, payment internals, or a close action. Customer cannot submit Car-In.
 
-## Renewal
+## Car-In
 
-ACTIVE only. `additionalDays` + `additionalAmount`. Optional renewal link. Hidden in RETOUT.
+Staff operational action on RETOUT via `POST /contracts/:id/car-in` (`contracts.return`). Same fields as Backend `CarInSchema`: optional `occurredAt`, `mileageIn`, `fuelIn`, notes, eight inspection photos. RETOUT → REVIEW. Vehicle stays RENTED. Car-In never closes the contract. Public `POST /contracts/return/:token/car-in` remains for the hashed token path.
 
 ## Reconciliation / Close
 
-REVIEW → line items (`DAMAGE` / `FUEL` / `LATE` / `SALIK` / `VIOLATION` / `OTHER`). Backend computes totals. Close uses Shared confirmation Dialog. REVIEW → CLOSED; Vehicle → AVAILABLE.
+REVIEW → line items (`DAMAGE` / `FUEL` / `LATE` / `SALIK` / `VIOLATION` / `OTHER`). The dialog lists every category and opens with empty Salik and Violation rows (amount / reference / note) so those settlement types are visible immediately — no live engines and no invented amounts. Totals come from the Backend after save (`chargesTotal`, `finalAmount`). Close uses Shared confirmation Dialog and is available only when Backend `canClose` is true (REVIEW + Car-In + approved reconciliation). REVIEW → CLOSED; Vehicle → AVAILABLE.
+
+## Overlay stacking
+
+Shared Dialog stacks above Shared Drawer (dialog z-index 110, drawer 95/96). Escape on the dialog does not close the drawer. See `AGENTS.md`.
+
+## Renewal
+
+ACTIVE contracts only. The same Contract stays ACTIVE; no second Contract or Rental is created. Vehicle stays RENTED. Staff enter `additionalDays` + `additionalAmount` when generating a Renewal Link (`POST /contracts/:id/renewal-link`). Those values are stored as a pending `ContractRenewal` and become the server-owned offer. The customer page `/[locale]/renew/[token]` is public, token-scoped, no staff JWT, no AppShell. The customer reviews Current Rental vs Renewal Offer and confirms; the client cannot override amount, duration, vehicle, or contract identity. Used links may be reloaded for the success state. Drawer Renewal History uses existing `ContractRenewal` rows (date, previous/new end, days, amount, pending vs confirmed). Renewal is not part of mandatory TARS execution and has no payment/Stripe step. Hidden in RETOUT / REVIEW / CLOSED.
 
 ## Refresh
 
@@ -150,8 +158,8 @@ Sensitive mutations refetch the contract, contracts list, and vehicles list.
 
 ## Errors / idempotency
 
-Store keeps `ApiRequestError` including `context.reason`. UI maps `CONTRACT_*` codes via next-intl. Payment, Car-Out, renew, close send `Idempotency-Key` per UI attempt.
+Store keeps `ApiRequestError` including `context.reason`. UI maps `CONTRACT_*` codes via next-intl. Payment, Car-Out, Car-In, renew, close send `Idempotency-Key` per UI attempt.
 
 ## Out of scope
 
-Return / renewal public pages, White Contract PDF, Stripe / Tamara / Tabby, Salik / Violations engines, Finance, Invoices, GPS map, WhatsApp, Maintenance workflow.
+White Contract PDF, Stripe / Tamara / Tabby, Salik / Violations engines, Finance, Invoices, GPS map, WhatsApp, Maintenance workflow, TARS renewal execution.

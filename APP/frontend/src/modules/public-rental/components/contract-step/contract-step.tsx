@@ -161,7 +161,7 @@ export function ContractStep({
         <h2 className={styles.sectionTitle}>{t("customerTitle")}</h2>
         {canEdit ? (
           <FormBuilder<PublicRentalFormValues>
-            key={`${context.contract.status}-${context.customer?.name ?? "new"}`}
+            key={`${context.contract.status}-${context.customer?.name ?? "new"}-${context.customer?.mobile ?? ""}`}
             fields={publicRentalFormFields((key) => t(key))}
             schema={publicRentalFormSchema}
             defaultValues={defaultValues}

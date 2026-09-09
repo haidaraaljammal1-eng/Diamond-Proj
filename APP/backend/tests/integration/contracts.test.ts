@@ -391,6 +391,7 @@ if (!RUN) {
       method: "POST",
       url: `/contracts/${contractId}/renewal-link`,
       headers: auth(),
+      payload: { additionalDays: 2, additionalAmount: 800 },
     });
     assert.equal(renewalLink.statusCode, 200, renewalLink.body);
     const renewToken = renewalLink.json().data.link.token as string;
@@ -424,8 +425,63 @@ if (!RUN) {
     assert.equal(publicReturn.statusCode, 200, publicReturn.body);
     assert.equal(publicReturn.json().data.status, "RETOUT");
     assert.equal(publicReturn.json().data.id, undefined);
+    assert.equal(typeof publicReturn.json().data.office.displayName, "string");
+    assert.ok(publicReturn.json().data.office.displayName.length > 0);
+    assert.equal(publicReturn.json().data.reconciliation, undefined);
+
+    const afterReturn = await app.inject({
+      method: "GET",
+      url: `/vehicles/${lifeVehicleId}`,
+      headers: auth(),
+    });
+    assert.equal(afterReturn.json().data.operationalStatus, "rented");
+    assert.equal(afterReturn.json().data.currentRental.status, "retout");
+
+    const retoutDetail = await app.inject({
+      method: "GET",
+      url: `/contracts/${contractId}`,
+      headers: auth(),
+    });
+    assert.equal(retoutDetail.json().data.status, "RETOUT");
+    assert.equal(retoutDetail.json().data.actions.canCarIn, true);
+    assert.equal(retoutDetail.json().data.vehicle.operationalStatus, "RENTED");
+
+    const closeOnRetout = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/close`,
+      headers: auth(),
+    });
+    assert.equal(closeOnRetout.statusCode, 409);
+
+    const staffCarInUnauth = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/car-in`,
+      payload: { mileageIn: 1400, fuelIn: "1/2", photos: await dummyPhotos() },
+    });
+    assert.equal(staffCarInUnauth.statusCode, 401);
 
     const inPhotos = await dummyPhotos();
+    const staffCarIn = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/car-in`,
+      headers: auth(),
+      payload: { mileageIn: 1400, fuelIn: "1/2", notes: "office return", photos: inPhotos },
+    });
+    assert.equal(staffCarIn.statusCode, 200, staffCarIn.body);
+    assert.equal(staffCarIn.json().data.status, "REVIEW");
+    assert.equal(staffCarIn.json().data.carIn.mileageIn, 1400);
+    assert.equal(staffCarIn.json().data.carIn.photos.length, 8);
+    assert.equal(staffCarIn.json().data.vehicle.operationalStatus, "RENTED");
+    assert.equal(staffCarIn.json().data.actions.canCarIn, false);
+
+    const publicReturnAfter = await app.inject({
+      method: "GET",
+      url: `/contracts/return/${returnToken}`,
+    });
+    assert.equal(publicReturnAfter.statusCode, 200, publicReturnAfter.body);
+    assert.equal(publicReturnAfter.json().data.status, "REVIEW");
+    assert.equal(publicReturnAfter.json().data.office.displayName, publicReturn.json().data.office.displayName);
+
     const carIn = await app.inject({
       method: "POST",
       url: `/contracts/return/${returnToken}/car-in`,
@@ -455,14 +511,22 @@ if (!RUN) {
       headers: auth(),
       payload: {
         lines: [
+          { type: "DAMAGE", description: "bumper scuff", amount: 100 },
           { type: "FUEL", description: "fuel gap", amount: 80 },
-          { type: "SALIK", description: "salik ref only", amount: 40, sourceDomain: "salik" },
+          { type: "LATE", description: "late return", amount: 50 },
+          { type: "SALIK", description: "salik trips", amount: 40, externalReference: "SLK-1" },
+          { type: "VIOLATION", description: "parking notice", amount: 200, externalReference: "VIO-9" },
+          { type: "OTHER", description: "cleaning", amount: 30 },
         ],
       },
     });
     assert.equal(rec.statusCode, 200, rec.body);
-    assert.equal(rec.json().data.reconciliation.chargesTotal, 120);
-    assert.equal(rec.json().data.reconciliation.finalAmount, -380);
+    assert.equal(rec.json().data.reconciliation.chargesTotal, 500);
+    assert.equal(rec.json().data.reconciliation.finalAmount, 0);
+    assert.deepEqual(
+      rec.json().data.reconciliation.lines.map((line: { type: string }) => line.type).sort(),
+      ["DAMAGE", "FUEL", "LATE", "OTHER", "SALIK", "VIOLATION"],
+    );
 
     const closed = await app.inject({
       method: "POST",

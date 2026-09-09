@@ -79,6 +79,7 @@ function actionsFor(row: ContractDetailRow): ContractDetail["actions"] {
     canConfirmPayment: row.status === "SIGNED",
     canCarOut: row.status === "PAID",
     canGenerateReturnLink: row.status === "ACTIVE",
+    canCarIn: row.status === "RETOUT" && !row.carIn,
     canReconcile: row.status === "REVIEW",
     canClose: row.status === "REVIEW" && !!row.carIn && !!row.reconciliation?.approvedAt,
     canRenew: row.status === "ACTIVE",

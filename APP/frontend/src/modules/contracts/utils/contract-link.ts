@@ -7,9 +7,9 @@ const LINK_PATH: Record<ContractLinkType, string> = {
 };
 
 /**
- * Customer URL the staff copies or opens. Rental public flow is
- * `/[locale]/rental/[token]`. Open Link remains a Development / QA preview,
- * not an operational staff action. RETURN / RENEWAL public pages are later.
+ * Customer URL the staff copies or opens. Rental, return, and renewal public
+ * pages live at `/[locale]/rental|return|renew/[token]`. Open Link remains a
+ * Development / QA preview, not an operational staff action.
  */
 export function buildPublicContractUrl(
   origin: string,

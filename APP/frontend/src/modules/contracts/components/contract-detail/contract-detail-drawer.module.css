@@ -75,6 +75,26 @@
   color: var(--diamond-muted);
 }
 
+.renewalList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.renewalItem {
+  display: grid;
+  gap: 2px;
+}
+
+.renewalMeta {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
 .error {
   margin: 0 0 12px;
   font-size: 12px;

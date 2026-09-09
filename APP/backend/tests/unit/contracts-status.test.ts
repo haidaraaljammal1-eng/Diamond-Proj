@@ -4,13 +4,21 @@ import { canTransition } from "src/modules/contracts/contracts-status";
 import { formatContractNumber } from "src/modules/contracts/contracts-number";
 import { hashesEqual } from "src/modules/contracts/contracts-links";
 import { hashToken } from "src/lib/security/tokens";
-import { ALLOWED_TRANSITIONS, CURRENT_RENTAL_STATUSES } from "src/modules/contracts/contracts.constants";
+import {
+  ALLOWED_TRANSITIONS,
+  CONTRACT_LINK_TTL_SECONDS,
+  CURRENT_RENTAL_STATUSES,
+} from "src/modules/contracts/contracts.constants";
 import {
   assertIdempotencyFingerprint,
   fingerprintIdempotentPayload,
 } from "src/lib/db/idempotency";
 import { AppError } from "src/lib/errors/app-error";
 import type { ContractStatus } from "@prisma/client";
+
+test("renewal link TTL is 48 hours", () => {
+  assert.equal(CONTRACT_LINK_TTL_SECONDS.RENEWAL, 48 * 60 * 60);
+});
 
 test("happy-path transitions are allowed", () => {
   const path: ContractStatus[] = [

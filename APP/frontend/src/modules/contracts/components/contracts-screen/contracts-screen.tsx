@@ -15,6 +15,7 @@ import { ContractDetailDrawer } from "../contract-detail/contract-detail-drawer"
 import { ContractLinkResultDialog } from "../contract-link-result/contract-link-result-dialog";
 import { PaymentConfirmDialog } from "../../forms/payment/payment-confirm-dialog";
 import { CarOutDialog } from "../../forms/car-out/car-out-dialog";
+import { CarInDialog } from "../../forms/car-in/car-in-dialog";
 import { RenewDialog } from "../../forms/renew/renew-dialog";
 import { ReconcileDialog } from "../../forms/reconcile/reconcile-dialog";
 import { CloseContractDialog } from "../../forms/close/close-contract-dialog";
@@ -50,6 +51,7 @@ export function ContractsScreen() {
     agreedAmount: number;
   } | null>(null);
   const [carOutId, setCarOutId] = useState<string | null>(null);
+  const [carInId, setCarInId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeTarget, setCloseTarget] = useState<{ id: string; number?: string } | null>(null);
@@ -279,6 +281,7 @@ export function ContractsScreen() {
           setPaymentTarget({ id, agreedAmount: row?.agreedAmount ?? 0 });
         }}
         onCarOut={setCarOutId}
+        onCarIn={setCarInId}
         onReturnLink={(id) => void generateReturnLink(id)}
         onRenew={setRenewId}
         onReconcile={setReconcileId}
@@ -291,6 +294,7 @@ export function ContractsScreen() {
         onClose={() => setPaymentTarget(null)}
       />
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
+      <CarInDialog contractId={carInId} onClose={() => setCarInId(null)} />
       <RenewDialog contractId={renewId} onClose={() => setRenewId(null)} />
       <ReconcileDialog
         contractId={reconcileId}

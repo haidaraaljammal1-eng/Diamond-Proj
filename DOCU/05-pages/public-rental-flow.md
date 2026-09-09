@@ -177,3 +177,13 @@ Module: `APP/frontend/src/modules/public-rental/` (`api` / `hooks` / `stores` / 
 Link errors `CONTRACT_LINK_INVALID` / `EXPIRED` / `USED` show a branded page and hide the journey. Mobile-first (375 / 390 / 430), Arabic RTL, English LTR. Shared Button / FormBuilder / Checkbox / Card. Staff Open Link remains Development / QA preview.
 
 Frontend unit tests live under `src/modules/public-rental/**/*.test.ts`.
+
+## Demo Simulation Mode
+
+Frontend-only presentation overlay for customer demos when Azure OCR or Stripe is not configured. Gate: `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` (never `NODE_ENV` alone). Module: `APP/frontend/src/modules/public-rental` stays the source UI; overlay lives in `APP/frontend/src/modules/demo-simulation/`.
+
+- In-memory Zustand only. No `localStorage`, `sessionStorage`, cookies, persisted store, Backend write, or database mutation.
+- Real Contract / Vehicle / office / duration / agreed amount / currency / deposit remain the display authority.
+- Simulated license results, customer autofill, acceptance, and payment states never POST OCR, form, accept, or payment endpoints.
+- Visible champagne badge: Simulation Mode / وضع المحاكاة, plus Reset Simulation / إعادة ضبط المحاكاة.
+- Simulated VALID license can Continue locally to the official contract; EXPIRED and UNREADABLE stay on the license step. Simulated card payment can show PROCESSING → PENDING → CONFIRMED → READY_FOR_HANDOVER, or FAILED / PENDING, with demo reference `DEMO-PAY-00001` (never a Stripe PaymentIntent). Refresh restores Backend-derived state.

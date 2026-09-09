@@ -124,6 +124,17 @@ export const RenewSchema = z.object({
   additionalAmount: MoneyAed,
 });
 
+/** Public confirm applies the stored offer. Extra body fields are ignored. */
+export const ConfirmPublicRenewalSchema = z.object({}).passthrough();
+
+export const PublicRenewalOfferSchema = z.object({
+  additionalDays: z.number().int(),
+  additionalAmount: z.number().int(),
+  previousEndAt: z.date(),
+  newEndAt: z.date(),
+  confirmed: z.boolean(),
+});
+
 export const PublicFormSchema = z.object({
   name: z.string().trim().min(1).max(200),
   mobile: z.string().trim().min(3).max(30),
@@ -276,6 +287,7 @@ export const ContractDetailSchema = z.object({
     canConfirmPayment: z.boolean(),
     canCarOut: z.boolean(),
     canGenerateReturnLink: z.boolean(),
+    canCarIn: z.boolean(),
     canReconcile: z.boolean(),
     canClose: z.boolean(),
     canRenew: z.boolean(),
@@ -293,6 +305,7 @@ export const ContractLinkIssuedSchema = z.object({
 });
 
 export const PublicContractViewSchema = z.object({
+  office: z.object({ displayName: z.string() }),
   contractNumber: z.string(),
   status: ContractStatusSchema,
   priceType: ContractPriceTypeSchema,
@@ -309,6 +322,7 @@ export const PublicContractViewSchema = z.object({
     color: z.string().nullable(),
     modelYear: z.number().int().nullable(),
   }),
+  renewal: PublicRenewalOfferSchema.nullable().optional(),
 });
 
 export const PublicLicenseVerificationSchema = z.object({

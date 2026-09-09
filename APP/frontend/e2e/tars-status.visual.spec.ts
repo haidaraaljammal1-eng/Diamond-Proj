@@ -100,7 +100,9 @@ test.describe("TARS integration status — live unconfigured backend", () => {
     await expect(tars.getByText("لم يبدأ", { exact: true })).toHaveCount(5);
 
     // Status display only — no execution surface anywhere in the section.
-    await expect(tars.getByRole("button")).toHaveCount(0);
+    await expect(
+      tars.getByRole("button", { name: /retry|resync|execute|إعادة المحاولة|تنفيذ/i }),
+    ).toHaveCount(0);
     await expect(page.getByTestId("contract-timeline")).toBeVisible();
 
     await tars.screenshot({ path: `${SHOTS}/ar-not-connected.png` });
@@ -123,7 +125,9 @@ test.describe("TARS integration status — live unconfigured backend", () => {
     ])
       await expect(tars.getByText(label, { exact: true })).toBeVisible();
     await expect(tars.getByText("Not Started", { exact: true })).toHaveCount(5);
-    await expect(tars.getByRole("button")).toHaveCount(0);
+    await expect(
+      tars.getByRole("button", { name: /retry|resync|execute|إعادة المحاولة|تنفيذ/i }),
+    ).toHaveCount(0);
 
     await tars.screenshot({ path: `${SHOTS}/en-not-connected.png` });
     await page.screenshot({ path: `${SHOTS}/en-drawer.png` });
@@ -175,14 +179,15 @@ test.describe("TARS workflow indicators", () => {
     canConfirmPayment: false,
     canCarOut: false,
     canGenerateReturnLink: false,
+    canCarIn: false,
     canReconcile: false,
     canClose: false,
     canRenew: false,
   };
 
   /**
-   * The drawer that launched the dialog stays open and sits above it — existing
-   * app behaviour. Dismiss it so the dialog can be captured unobstructed.
+   * Dialogs now stack above the drawer. Dismiss the drawer so the dialog can
+   * be captured unobstructed.
    */
   async function dismissDrawer(page: Page) {
     await page
@@ -318,7 +323,9 @@ test.describe("TARS integration status — mocked projection states", () => {
     await expect(tars.getByText("Syncing", { exact: true })).toBeVisible();
     await expect(tars.getByText("Pending", { exact: true })).toBeVisible();
     await expect(tars.getByText("Sync Failed", { exact: true })).toBeVisible();
-    await expect(tars.getByRole("button")).toHaveCount(0);
+    await expect(
+      tars.getByRole("button", { name: /retry|resync|execute|إعادة المحاولة|تنفيذ/i }),
+    ).toHaveCount(0);
 
     await tars.screenshot({ path: `${SHOTS}/en-connected-mixed.png` });
   });
