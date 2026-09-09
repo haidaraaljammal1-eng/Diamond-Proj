@@ -6,6 +6,8 @@ This is the unified workspace for the Diamond Rent Car system.
 
 Fastify Backend Template + Diamond Backend Modules.
 
+Local database setup (each laptop has its own Postgres): from `APP/backend` run `npm run dev:bootstrap`. See `DOCU/00-system-overview/development-database-bootstrap.md`.
+
 ## APP/frontend
 
 Diamond Frontend. This directory is reserved for the future frontend application.

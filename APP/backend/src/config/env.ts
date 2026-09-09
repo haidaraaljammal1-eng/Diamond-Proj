@@ -78,6 +78,18 @@ const EnvSchema = z
       .default("image/png,image/jpeg,application/pdf")
       .transform(csv),
 
+    OFFICE_DISPLAY_NAME: z.string().trim().min(1).default("Diamond Rent Car"),
+    // Asia/Dubai (UTC+4, no DST). License expiry uses this offset, not the client clock.
+    BUSINESS_TIMEZONE_OFFSET_MINUTES: z.coerce.number().int().default(240),
+    DOCUMENT_OCR_PROVIDER: z.enum(["none", "azure"]).default("none"),
+    AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: z.string().optional().default(""),
+    AZURE_DOCUMENT_INTELLIGENCE_KEY: z.string().optional().default(""),
+    DOCUMENT_OCR_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
+    PAYMENT_PROVIDER: z.enum(["none", "stripe"]).default("none"),
+    STRIPE_SECRET_KEY: z.string().optional().default(""),
+    STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
+    STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
+
     EMAIL_ENABLED: envBool(false),
     SMTP_HOST: z.string().optional().default(""),
     SMTP_PORT: z.coerce.number().int().positive().default(587),

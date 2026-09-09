@@ -1,0 +1,52 @@
+.root {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  padding: 16px 16px 40px;
+}
+
+.shell {
+  display: grid;
+  gap: 16px;
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.layout {
+  display: grid;
+  gap: 16px;
+}
+
+.main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.aside {
+  min-width: 0;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  min-height: 40vh;
+  color: var(--diamond-muted);
+  font-size: 13px;
+}
+
+@media (min-width: 900px) {
+  .root {
+    padding: 28px 24px 56px;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+
+  .aside {
+    position: sticky;
+    top: 20px;
+  }
+}

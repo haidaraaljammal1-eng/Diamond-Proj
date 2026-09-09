@@ -48,4 +48,6 @@ Routes are locale-aware (`/ar/...` and `/en/...`). The default locale is Arabic.
 
 The Backend in `APP/backend` remains the authority for authentication, authorization, permissions, validation, and business rules. The frontend uses the Backend's `{ data, meta? }` success envelope and structured `error` envelope. Access-token storage is not invented in the frontend; requests use credentials so the Backend session strategy remains authoritative.
 
-This foundation contains no Diamond business feature or Demo page.
+## Public customer routes
+
+Public rental lives outside `(protected)` and does not use AppShell. Route: `/[locale]/rental/[token]`. Domain module: `src/modules/public-rental/`. See `DOCU/05-pages/public-rental-flow.md`.

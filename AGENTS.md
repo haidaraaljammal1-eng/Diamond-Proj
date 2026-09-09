@@ -29,6 +29,7 @@
 - FormBuilder is powered by React Hook Form and Zod and never performs API calls.
 - Pages and components use domain hooks rather than calling APIs or Zustand stores directly.
 - Roles and permissions always come from the Backend; RBAC data is never hardcoded in the frontend.
+- Frontend NextAuth session mirrors `GET /auth/me` for UX guards; permissions re-hydrate on login, token refresh, and session revalidation. Backend DB effective permissions remain the authorization authority.
 - Permission matrix rows represent backend permissions and columns represent backend roles.
 - Frontend permission visibility is UX only; the Backend remains the authorization authority.
 - Dialogs use the shared Dialog (`src/shared/components/ui/dialog`) with FormBuilder inside; overlays are portalled to `<body>`.
@@ -96,6 +97,15 @@
 - Double-booking: `withTransaction` + `acquireAdvisoryLock(tx, "vehicle_rental", vehicleId)` around PAID / ACTIVE / renewal / CLOSE.
 - Blocking statuses: PAID, ACTIVE, RETOUT, REVIEW. AWAITING / FORM / SIGNED do not lock the vehicle.
 - Public customer routes authenticate with hashed ContractLink tokens, not staff JWT. Persist hash only; never log raw tokens or PII.
+- Public customer pages (`/[locale]/rental/[token]`) must not use AppShell, staff JWT, or staff navigation. The rental token comes from the route only and must never be persisted (localStorage, sessionStorage, cookies, or persisted Zustand).
+- Any new Prisma model requires migrate → generate → runtime verification. Never `prisma migrate reset` against Development.
+- Any new staff permission requires PERMISSION_CATALOG → idempotent seed → RolePermission → `/auth/me` verification.
+- Public Rental customers cannot override vehicle, amount, duration, or contract number.
+- An expired driving license blocks customer form and signing. License expiry is a backend calendar date.
+- Do not implement fake OCR or fake payment success. Unconfigured providers must fail closed.
+- Payment success is backend/provider authoritative. A redirect URL is not confirmation.
+- PROCESSING/PENDING card attempts block duplicate retry. UNKNOWN provider status stays in-flight.
+- After a successful implementation, update the relevant MD under `DOCU` (API detail does not belong in this file).
 
 ## Vehicle creation (Add Vehicle)
 
@@ -114,3 +124,16 @@
 - The approved Vehicles data toolbar pattern (search, status, model, sort, show retired, count, clear) is reusable for other data-heavy pages.
 - Data-heavy explicit searches should use the Shared `DataSearch` pattern: draft locally → Search/Enter → server-side applied query (`src/shared/components/data-search/`).
 - Date-range/calendar UI must reuse the shared `DateRangePicker` built on React DayPicker v9 (`src/shared/components/ui/date-range-picker`). Do not introduce native date inputs or page-specific calendar implementations when the shared component fits.
+
+## Development Database Bootstrap
+
+Git syncs code, schemas, migrations, and seed scripts — not local PostgreSQL data. Never assume data seeded on one developer's laptop exists on another.
+
+When a backend feature adds Prisma models, migrations, permissions, or required development seed data, update the development bootstrap and relevant MD documentation. A feature is not environment-ready until a clean/local development database can reproduce the required state.
+
+Official command (`APP/backend`): `npm run dev:bootstrap`  
+Read-only diagnosis: `npm run dev:check`  
+Details: `DOCU/00-system-overview/development-database-bootstrap.md`
+
+The 20 `DEMO-FLEET-*` vehicles are initial seed only, not a fleet maximum. User-created vehicles must never be deleted by bootstrap.
+

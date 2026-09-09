@@ -5,6 +5,7 @@ import {
 } from "src/modules/contracts/contracts.constants";
 
 export interface ContractSnapshot {
+  contractNumber: string;
   customer: {
     name: string;
     mobile: string | null;
@@ -68,6 +69,7 @@ type CommercialSnapInput = {
 };
 
 export function buildContractSnapshot(input: {
+  contractNumber: string;
   customer: CustomerSnapInput | null;
   vehicle: VehicleSnapInput;
   commercial: CommercialSnapInput;
@@ -75,6 +77,7 @@ export function buildContractSnapshot(input: {
 }): ContractSnapshot {
   const customer = input.customer;
   return {
+    contractNumber: input.contractNumber,
     customer: {
       name: customer?.name ?? "",
       mobile: customer?.mobile ?? null,
@@ -83,7 +86,9 @@ export function buildContractSnapshot(input: {
       identityNumber: customer?.identityNumber ?? null,
       passportNumber: customer?.passportNumber ?? null,
       drivingLicenseNumber: customer?.drivingLicenseNumber ?? null,
-      drivingLicenseExpiry: customer?.drivingLicenseExpiry?.toISOString() ?? null,
+      drivingLicenseExpiry: customer?.drivingLicenseExpiry
+        ? customer.drivingLicenseExpiry.toISOString().slice(0, 10)
+        : null,
       address: customer?.address ?? null,
     },
     vehicle: {

@@ -245,4 +245,18 @@ export const en: Record<string, string> = {
   "Identity number or passport number is required": "Identity number or passport number is required",
   "Customer form must be completed first": "Customer form must be completed first",
   "Contract photo not found": "Contract photo not found",
+  "A valid driving license is required": "A valid driving license is required",
+  "Driving license verification is not configured":
+    "Driving license verification is not configured",
+  "Driving license could not be read": "Driving license could not be read",
+  "Driving license requires another photo": "Driving license requires another photo",
+  "Driving license is expired": "Driving license is expired",
+  "Public rental form is incomplete": "Public rental form is incomplete",
+  "Rental is not ready for acceptance": "Rental is not ready for acceptance",
+  "Card payment is not configured": "Card payment is not configured",
+  "Electronic payment is not allowed": "Electronic payment is not allowed",
+  "A payment attempt is already in progress": "A payment attempt is already in progress",
+  "Payment attempt was not found": "Payment attempt was not found",
+  "Payment status token is invalid": "Payment status token is invalid",
+  "Payment status token has expired": "Payment status token has expired",
 };

@@ -54,6 +54,9 @@ templates, notification definitions, the integration catalog) are seeded by
 `prisma/seed/index.ts` and are safe to re-run: they upsert by a stable business key
 (`code`) and never overwrite a customised row. `npm run db:seed` runs the base seed
 only — it carries no demo/business data, so it is safe in every environment.
+After a schema change, run `npm run dev:bootstrap` on each local development
+database so migrations, Prisma Client, permissions, and Demo Fleet stay in sync.
+Git does not copy local Postgres data between laptops.
 
 ## Verifying
 

@@ -1,7 +1,8 @@
 /**
  * Development-only fleet cleanup.
  *
- * Ensures exactly DEMO-FLEET-01..20 remain in the database with no photos.
+ * Explicit destructive command — NOT part of `npm run dev:bootstrap`.
+ * Bootstrap never deletes user-created vehicles.
  * Refuses to run when NODE_ENV=production or when DATABASE_URL looks non-local.
  *
  * Run: npm run db:cleanup:dev-fleet
@@ -12,6 +13,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "src/config/env";
 import { resolveStoragePath } from "src/lib/files/storage-key";
 import { normalizedNameExtension } from "src/lib/db/prisma-extensions";
+import { assertDevelopmentDatabase } from "src/lib/dev/development-database";
 import {
   DEMO_FLEET,
   DEMO_FLEET_EXTERNAL_ID_PREFIX,
@@ -21,21 +23,10 @@ import {
 const KNOWN_DEMO_EXTERNAL_IDS = DEMO_FLEET.map((car) => car.externalId);
 
 function assertDevelopmentEnvironment(): void {
-  if (env.NODE_ENV === "production") {
-    throw new Error("[cleanup:dev-fleet] refusing to run in production");
-  }
-
-  const url = env.DATABASE_URL.toLowerCase();
-  const looksLocal =
-    url.includes("localhost") ||
-    url.includes("127.0.0.1") ||
-    url.includes("@host.docker.internal");
-
-  if (!looksLocal) {
-    throw new Error(
-      "[cleanup:dev-fleet] DATABASE_URL does not look like a local development database",
-    );
-  }
+  assertDevelopmentDatabase({
+    nodeEnv: env.NODE_ENV,
+    databaseUrl: env.DATABASE_URL,
+  });
 }
 
 async function removeVehiclePhotos(

@@ -1,0 +1,20 @@
+.wrap {
+  display: grid;
+  gap: 12px;
+  padding: 28px 18px;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  color: var(--diamond-champagne);
+  font-family: var(--diamond-font-display);
+  font-size: 26px;
+}
+
+.body {
+  margin: 0;
+  color: var(--diamond-ivory);
+  font-size: 14px;
+  line-height: 1.7;
+}

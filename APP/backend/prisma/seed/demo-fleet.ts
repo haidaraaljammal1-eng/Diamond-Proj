@@ -2,16 +2,23 @@
  * prisma/seed/demo-fleet.ts — Diamond fleet development seed.
  *
  * Seeds 20 realistic fleet vehicles with direct `vehicleName` text (no VehicleModel
- * master-data creation). Idempotent via stable `externalId` upserts; stale
- * `DEMO-FLEET-*` rows not in the current fixture are removed on each run.
+ * master-data creation). Idempotent via stable `externalId`.
  *
- * Run with `npm run db:seed:demo`. Refuses to run against NODE_ENV=production.
+ * Invoked by `npm run db:seed:demo` and `npm run dev:bootstrap`.
+ * Refuses to run against production or a non-local database.
+ *
+ * Re-runs:
+ * - create missing DEMO-FLEET-01..20
+ * - update seed-controlled identity fields on existing demo rows
+ * - never overwrite operationalStatus / isActive (deliberate local changes stay)
+ * - never delete user-created vehicles
  */
 import { PrismaClient } from "@prisma/client";
 import type { VehicleOperationalStatus } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "src/config/env";
 import { normalizedNameExtension } from "src/lib/db/prisma-extensions";
+import { assertDevelopmentDatabase } from "src/lib/dev/development-database";
 import { normalizePlateNumber } from "src/lib/master-data/code";
 
 /** Stable prefix for all demo fleet rows — used for safe cleanup only. */
@@ -255,16 +262,20 @@ export const DEMO_FLEET: FleetSeedRow[] = [
 ];
 
 const KNOWN_DEMO_EXTERNAL_IDS = DEMO_FLEET.map((car) => car.externalId);
+export const DEMO_FLEET_EXTERNAL_IDS = KNOWN_DEMO_EXTERNAL_IDS;
 
 export async function runDemoFleetSeed(): Promise<void> {
-  if (env.NODE_ENV === "production") {
-    throw new Error("[seed:demo] refusing to seed demo data in production");
-  }
+  const target = assertDevelopmentDatabase({
+    nodeEnv: env.NODE_ENV,
+    databaseUrl: env.DATABASE_URL,
+  });
 
   const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
   const prisma = new PrismaClient({ adapter }).$extends(normalizedNameExtension);
 
   try {
+    console.log(`[seed:demo] Development database: ${target.host}:${target.port} / ${target.database}`);
+
     const stale = await prisma.vehicle.deleteMany({
       where: {
         externalId: { startsWith: DEMO_FLEET_EXTERNAL_ID_PREFIX },
@@ -278,21 +289,29 @@ export async function runDemoFleetSeed(): Promise<void> {
 
     for (const car of DEMO_FLEET) {
       const plateNumber = normalizePlateNumber(car.plateNumber);
-
-      await prisma.vehicle.upsert({
+      const existing = await prisma.vehicle.findUnique({
         where: { externalId: car.externalId },
-        update: {
-          vehicleName: car.vehicleName,
-          modelId: null,
-          modelYear: car.modelYear,
-          color: car.color,
-          plateNumber,
-          dailyRate: car.dailyRate,
-          monthlyRate: car.monthlyRate,
-          operationalStatus: car.status,
-          isActive: car.isActive,
-        },
-        create: {
+        select: { id: true },
+      });
+
+      if (existing) {
+        await prisma.vehicle.update({
+          where: { id: existing.id },
+          data: {
+            vehicleName: car.vehicleName,
+            modelId: null,
+            modelYear: car.modelYear,
+            color: car.color,
+            plateNumber,
+            dailyRate: car.dailyRate,
+            monthlyRate: car.monthlyRate,
+          },
+        });
+        continue;
+      }
+
+      await prisma.vehicle.create({
+        data: {
           externalId: car.externalId,
           vehicleName: car.vehicleName,
           modelYear: car.modelYear,

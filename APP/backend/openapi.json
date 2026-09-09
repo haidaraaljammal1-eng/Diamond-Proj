@@ -3378,7 +3378,7 @@
     "/contracts/rental/{token}": {
       "get": {
         "operationId": "getPublicRentalContract",
-        "summary": "Load a rental offer by public token",
+        "summary": "Load public rental context by token",
         "tags": [
           "Contracts"
         ],
@@ -3405,62 +3405,65 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "contractNumber": {
-                          "type": "string"
+                        "office": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName"
+                          ],
+                          "additionalProperties": false
                         },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "AWAITING",
-                            "FORM",
-                            "SIGNED",
-                            "PAID",
-                            "ACTIVE",
-                            "RETOUT",
-                            "REVIEW",
-                            "CLOSED"
-                          ]
+                        "flow": {
+                          "type": "object",
+                          "properties": {
+                            "step": {
+                              "type": "string",
+                              "enum": [
+                                "LICENSE_VERIFICATION",
+                                "CONTRACT",
+                                "PAYMENT",
+                                "READY_FOR_HANDOVER"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "step"
+                          ],
+                          "additionalProperties": false
                         },
-                        "priceType": {
-                          "type": "string",
-                          "enum": [
-                            "DAILY",
-                            "WEEKLY",
-                            "MONTHLY",
-                            "CUSTOM"
-                          ]
-                        },
-                        "rentalDays": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "agreedAmount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "currency": {
-                          "type": "string"
-                        },
-                        "startAt": {
-                          "nullable": true,
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "endAt": {
-                          "nullable": true,
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "depositAmount": {
-                          "nullable": true,
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "termsVersion": {
-                          "type": "string"
+                        "contract": {
+                          "type": "object",
+                          "properties": {
+                            "contractNumber": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "AWAITING",
+                                "FORM",
+                                "SIGNED",
+                                "PAID",
+                                "ACTIVE",
+                                "RETOUT",
+                                "REVIEW",
+                                "CLOSED"
+                              ]
+                            },
+                            "termsVersion": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "contractNumber",
+                            "status",
+                            "termsVersion"
+                          ],
+                          "additionalProperties": false
                         },
                         "vehicle": {
                           "type": "object",
@@ -3468,11 +3471,11 @@
                             "displayName": {
                               "type": "string"
                             },
-                            "plateNumber": {
+                            "vehicleType": {
                               "nullable": true,
                               "type": "string"
                             },
-                            "color": {
+                            "plateNumber": {
                               "nullable": true,
                               "type": "string"
                             },
@@ -3481,29 +3484,1705 @@
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
+                            },
+                            "color": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "vin": {
+                              "nullable": true,
+                              "type": "string"
                             }
                           },
                           "required": [
                             "displayName",
+                            "vehicleType",
                             "plateNumber",
+                            "modelYear",
                             "color",
-                            "modelYear"
+                            "vin"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "rental": {
+                          "type": "object",
+                          "properties": {
+                            "rentalDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "agreedAmount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "depositAmount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "startAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "endAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualPickupAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualReturnAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "rentalDays",
+                            "agreedAmount",
+                            "currency",
+                            "depositAmount",
+                            "startAt",
+                            "endAt",
+                            "actualPickupAt",
+                            "actualReturnAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "customer": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "email": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "nationality": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "identityNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "passportNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "address": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseExpiry": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "mobile",
+                            "email",
+                            "nationality",
+                            "identityNumber",
+                            "passportNumber",
+                            "address",
+                            "drivingLicenseNumber",
+                            "drivingLicenseExpiry"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "licenseVerification": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "VALID",
+                                "EXPIRED",
+                                "UNREADABLE",
+                                "REVIEW_REQUIRED",
+                                "PROVIDER_UNAVAILABLE"
+                              ]
+                            },
+                            "licenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "licenseNumberMasked": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "expiryDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "licenseNumber",
+                            "licenseNumberMasked",
+                            "expiryDate",
+                            "confidence"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "CONFIRMED",
+                                "FAILED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "method": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "BANK_TRANSFER",
+                                "CARD",
+                                "MANUAL"
+                              ]
+                            },
+                            "amount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "providerAvailable": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "method",
+                            "amount",
+                            "currency",
+                            "providerAvailable"
                           ],
                           "additionalProperties": false
                         }
                       },
                       "required": [
-                        "contractNumber",
-                        "status",
-                        "priceType",
-                        "rentalDays",
-                        "agreedAmount",
-                        "currency",
-                        "startAt",
-                        "endAt",
-                        "depositAmount",
-                        "termsVersion",
-                        "vehicle"
+                        "office",
+                        "flow",
+                        "contract",
+                        "vehicle",
+                        "rental",
+                        "customer",
+                        "licenseVerification",
+                        "payment"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/rental/{token}/driving-license": {
+      "post": {
+        "operationId": "uploadPublicRentalDrivingLicense",
+        "summary": "Upload a driving-license photo for the rental token",
+        "tags": [
+          "Contracts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "token",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "office": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "flow": {
+                          "type": "object",
+                          "properties": {
+                            "step": {
+                              "type": "string",
+                              "enum": [
+                                "LICENSE_VERIFICATION",
+                                "CONTRACT",
+                                "PAYMENT",
+                                "READY_FOR_HANDOVER"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "step"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "contract": {
+                          "type": "object",
+                          "properties": {
+                            "contractNumber": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "AWAITING",
+                                "FORM",
+                                "SIGNED",
+                                "PAID",
+                                "ACTIVE",
+                                "RETOUT",
+                                "REVIEW",
+                                "CLOSED"
+                              ]
+                            },
+                            "termsVersion": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "contractNumber",
+                            "status",
+                            "termsVersion"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "vehicle": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "vehicleType": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "plateNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "modelYear": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "color": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "vin": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName",
+                            "vehicleType",
+                            "plateNumber",
+                            "modelYear",
+                            "color",
+                            "vin"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "rental": {
+                          "type": "object",
+                          "properties": {
+                            "rentalDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "agreedAmount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "depositAmount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "startAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "endAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualPickupAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualReturnAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "rentalDays",
+                            "agreedAmount",
+                            "currency",
+                            "depositAmount",
+                            "startAt",
+                            "endAt",
+                            "actualPickupAt",
+                            "actualReturnAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "customer": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "email": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "nationality": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "identityNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "passportNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "address": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseExpiry": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "mobile",
+                            "email",
+                            "nationality",
+                            "identityNumber",
+                            "passportNumber",
+                            "address",
+                            "drivingLicenseNumber",
+                            "drivingLicenseExpiry"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "licenseVerification": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "VALID",
+                                "EXPIRED",
+                                "UNREADABLE",
+                                "REVIEW_REQUIRED",
+                                "PROVIDER_UNAVAILABLE"
+                              ]
+                            },
+                            "licenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "licenseNumberMasked": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "expiryDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "licenseNumber",
+                            "licenseNumberMasked",
+                            "expiryDate",
+                            "confidence"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "CONFIRMED",
+                                "FAILED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "method": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "BANK_TRANSFER",
+                                "CARD",
+                                "MANUAL"
+                              ]
+                            },
+                            "amount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "providerAvailable": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "method",
+                            "amount",
+                            "currency",
+                            "providerAvailable"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "office",
+                        "flow",
+                        "contract",
+                        "vehicle",
+                        "rental",
+                        "customer",
+                        "licenseVerification",
+                        "payment"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getPublicRentalDrivingLicense",
+        "summary": "Current driving-license verification for the rental token",
+        "tags": [
+          "Contracts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "token",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "office": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "flow": {
+                          "type": "object",
+                          "properties": {
+                            "step": {
+                              "type": "string",
+                              "enum": [
+                                "LICENSE_VERIFICATION",
+                                "CONTRACT",
+                                "PAYMENT",
+                                "READY_FOR_HANDOVER"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "step"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "contract": {
+                          "type": "object",
+                          "properties": {
+                            "contractNumber": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "AWAITING",
+                                "FORM",
+                                "SIGNED",
+                                "PAID",
+                                "ACTIVE",
+                                "RETOUT",
+                                "REVIEW",
+                                "CLOSED"
+                              ]
+                            },
+                            "termsVersion": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "contractNumber",
+                            "status",
+                            "termsVersion"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "vehicle": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "vehicleType": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "plateNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "modelYear": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "color": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "vin": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName",
+                            "vehicleType",
+                            "plateNumber",
+                            "modelYear",
+                            "color",
+                            "vin"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "rental": {
+                          "type": "object",
+                          "properties": {
+                            "rentalDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "agreedAmount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "depositAmount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "startAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "endAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualPickupAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualReturnAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "rentalDays",
+                            "agreedAmount",
+                            "currency",
+                            "depositAmount",
+                            "startAt",
+                            "endAt",
+                            "actualPickupAt",
+                            "actualReturnAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "customer": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "email": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "nationality": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "identityNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "passportNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "address": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseExpiry": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "mobile",
+                            "email",
+                            "nationality",
+                            "identityNumber",
+                            "passportNumber",
+                            "address",
+                            "drivingLicenseNumber",
+                            "drivingLicenseExpiry"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "licenseVerification": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "VALID",
+                                "EXPIRED",
+                                "UNREADABLE",
+                                "REVIEW_REQUIRED",
+                                "PROVIDER_UNAVAILABLE"
+                              ]
+                            },
+                            "licenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "licenseNumberMasked": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "expiryDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "licenseNumber",
+                            "licenseNumberMasked",
+                            "expiryDate",
+                            "confidence"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "CONFIRMED",
+                                "FAILED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "method": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "BANK_TRANSFER",
+                                "CARD",
+                                "MANUAL"
+                              ]
+                            },
+                            "amount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "providerAvailable": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "method",
+                            "amount",
+                            "currency",
+                            "providerAvailable"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "office",
+                        "flow",
+                        "contract",
+                        "vehicle",
+                        "rental",
+                        "customer",
+                        "licenseVerification",
+                        "payment"
                       ],
                       "additionalProperties": false
                     }
@@ -3956,49 +5635,15 @@
                     "minLength": 3,
                     "maxLength": 50
                   },
-                  "drivingLicenseNumber": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 50
-                  },
-                  "drivingLicenseExpiry": {},
                   "address": {
                     "type": "string",
                     "maxLength": 400
-                  },
-                  "documents": {
-                    "maxItems": 10,
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "IDENTITY",
-                            "PASSPORT",
-                            "DRIVING_LICENSE"
-                          ]
-                        },
-                        "attachmentId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "attachmentId"
-                      ]
-                    }
                   }
                 },
                 "required": [
                   "name",
                   "mobile",
-                  "nationality",
-                  "drivingLicenseNumber",
-                  "drivingLicenseExpiry"
+                  "nationality"
                 ]
               }
             }
@@ -4027,62 +5672,65 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "contractNumber": {
-                          "type": "string"
+                        "office": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName"
+                          ],
+                          "additionalProperties": false
                         },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "AWAITING",
-                            "FORM",
-                            "SIGNED",
-                            "PAID",
-                            "ACTIVE",
-                            "RETOUT",
-                            "REVIEW",
-                            "CLOSED"
-                          ]
+                        "flow": {
+                          "type": "object",
+                          "properties": {
+                            "step": {
+                              "type": "string",
+                              "enum": [
+                                "LICENSE_VERIFICATION",
+                                "CONTRACT",
+                                "PAYMENT",
+                                "READY_FOR_HANDOVER"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "step"
+                          ],
+                          "additionalProperties": false
                         },
-                        "priceType": {
-                          "type": "string",
-                          "enum": [
-                            "DAILY",
-                            "WEEKLY",
-                            "MONTHLY",
-                            "CUSTOM"
-                          ]
-                        },
-                        "rentalDays": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "agreedAmount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "currency": {
-                          "type": "string"
-                        },
-                        "startAt": {
-                          "nullable": true,
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "endAt": {
-                          "nullable": true,
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "depositAmount": {
-                          "nullable": true,
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "termsVersion": {
-                          "type": "string"
+                        "contract": {
+                          "type": "object",
+                          "properties": {
+                            "contractNumber": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "AWAITING",
+                                "FORM",
+                                "SIGNED",
+                                "PAID",
+                                "ACTIVE",
+                                "RETOUT",
+                                "REVIEW",
+                                "CLOSED"
+                              ]
+                            },
+                            "termsVersion": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "contractNumber",
+                            "status",
+                            "termsVersion"
+                          ],
+                          "additionalProperties": false
                         },
                         "vehicle": {
                           "type": "object",
@@ -4090,11 +5738,11 @@
                             "displayName": {
                               "type": "string"
                             },
-                            "plateNumber": {
+                            "vehicleType": {
                               "nullable": true,
                               "type": "string"
                             },
-                            "color": {
+                            "plateNumber": {
                               "nullable": true,
                               "type": "string"
                             },
@@ -4103,29 +5751,229 @@
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
+                            },
+                            "color": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "vin": {
+                              "nullable": true,
+                              "type": "string"
                             }
                           },
                           "required": [
                             "displayName",
+                            "vehicleType",
                             "plateNumber",
+                            "modelYear",
                             "color",
-                            "modelYear"
+                            "vin"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "rental": {
+                          "type": "object",
+                          "properties": {
+                            "rentalDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "agreedAmount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "depositAmount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "startAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "endAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualPickupAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualReturnAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "rentalDays",
+                            "agreedAmount",
+                            "currency",
+                            "depositAmount",
+                            "startAt",
+                            "endAt",
+                            "actualPickupAt",
+                            "actualReturnAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "customer": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "email": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "nationality": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "identityNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "passportNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "address": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseExpiry": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "mobile",
+                            "email",
+                            "nationality",
+                            "identityNumber",
+                            "passportNumber",
+                            "address",
+                            "drivingLicenseNumber",
+                            "drivingLicenseExpiry"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "licenseVerification": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "VALID",
+                                "EXPIRED",
+                                "UNREADABLE",
+                                "REVIEW_REQUIRED",
+                                "PROVIDER_UNAVAILABLE"
+                              ]
+                            },
+                            "licenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "licenseNumberMasked": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "expiryDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "licenseNumber",
+                            "licenseNumberMasked",
+                            "expiryDate",
+                            "confidence"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "CONFIRMED",
+                                "FAILED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "method": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "BANK_TRANSFER",
+                                "CARD",
+                                "MANUAL"
+                              ]
+                            },
+                            "amount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "providerAvailable": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "method",
+                            "amount",
+                            "currency",
+                            "providerAvailable"
                           ],
                           "additionalProperties": false
                         }
                       },
                       "required": [
-                        "contractNumber",
-                        "status",
-                        "priceType",
-                        "rentalDays",
-                        "agreedAmount",
-                        "currency",
-                        "startAt",
-                        "endAt",
-                        "depositAmount",
-                        "termsVersion",
-                        "vehicle"
+                        "office",
+                        "flow",
+                        "contract",
+                        "vehicle",
+                        "rental",
+                        "customer",
+                        "licenseVerification",
+                        "payment"
                       ],
                       "additionalProperties": false
                     }
@@ -4585,30 +6433,776 @@
                     "data": {
                       "type": "object",
                       "properties": {
+                        "office": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "flow": {
+                          "type": "object",
+                          "properties": {
+                            "step": {
+                              "type": "string",
+                              "enum": [
+                                "LICENSE_VERIFICATION",
+                                "CONTRACT",
+                                "PAYMENT",
+                                "READY_FOR_HANDOVER"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "step"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "contract": {
+                          "type": "object",
+                          "properties": {
+                            "contractNumber": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "AWAITING",
+                                "FORM",
+                                "SIGNED",
+                                "PAID",
+                                "ACTIVE",
+                                "RETOUT",
+                                "REVIEW",
+                                "CLOSED"
+                              ]
+                            },
+                            "termsVersion": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "contractNumber",
+                            "status",
+                            "termsVersion"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "vehicle": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "vehicleType": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "plateNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "modelYear": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "color": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "vin": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName",
+                            "vehicleType",
+                            "plateNumber",
+                            "modelYear",
+                            "color",
+                            "vin"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "rental": {
+                          "type": "object",
+                          "properties": {
+                            "rentalDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "agreedAmount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "depositAmount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "startAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "endAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualPickupAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actualReturnAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "rentalDays",
+                            "agreedAmount",
+                            "currency",
+                            "depositAmount",
+                            "startAt",
+                            "endAt",
+                            "actualPickupAt",
+                            "actualReturnAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "customer": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "email": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "nationality": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "identityNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "passportNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "address": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "drivingLicenseExpiry": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "mobile",
+                            "email",
+                            "nationality",
+                            "identityNumber",
+                            "passportNumber",
+                            "address",
+                            "drivingLicenseNumber",
+                            "drivingLicenseExpiry"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "licenseVerification": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "VALID",
+                                "EXPIRED",
+                                "UNREADABLE",
+                                "REVIEW_REQUIRED",
+                                "PROVIDER_UNAVAILABLE"
+                              ]
+                            },
+                            "licenseNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "licenseNumberMasked": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "expiryDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "licenseNumber",
+                            "licenseNumberMasked",
+                            "expiryDate",
+                            "confidence"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "CONFIRMED",
+                                "FAILED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "method": {
+                              "nullable": true,
+                              "type": "string",
+                              "enum": [
+                                "BANK_TRANSFER",
+                                "CARD",
+                                "MANUAL"
+                              ]
+                            },
+                            "amount": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "providerAvailable": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "method",
+                            "amount",
+                            "currency",
+                            "providerAvailable"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "office",
+                        "flow",
+                        "contract",
+                        "vehicle",
+                        "rental",
+                        "customer",
+                        "licenseVerification",
+                        "payment"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/rental/{token}/payment": {
+      "get": {
+        "operationId": "getPublicRentalPayment",
+        "summary": "Public payment page context",
+        "tags": [
+          "Contracts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "token",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "office": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName"
+                          ],
+                          "additionalProperties": false
+                        },
                         "contractNumber": {
                           "type": "string"
                         },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "AWAITING",
-                            "FORM",
-                            "SIGNED",
-                            "PAID",
-                            "ACTIVE",
-                            "RETOUT",
-                            "REVIEW",
-                            "CLOSED"
-                          ]
-                        },
-                        "priceType": {
-                          "type": "string",
-                          "enum": [
-                            "DAILY",
-                            "WEEKLY",
-                            "MONTHLY",
-                            "CUSTOM"
-                          ]
+                        "vehicle": {
+                          "type": "object",
+                          "properties": {
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "plateNumber": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "displayName",
+                            "plateNumber"
+                          ],
+                          "additionalProperties": false
                         },
                         "rentalDays": {
                           "type": "integer",
@@ -4623,67 +7217,999 @@
                         "currency": {
                           "type": "string"
                         },
-                        "startAt": {
-                          "nullable": true,
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "endAt": {
-                          "nullable": true,
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "depositAmount": {
-                          "nullable": true,
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "termsVersion": {
-                          "type": "string"
-                        },
-                        "vehicle": {
+                        "payment": {
                           "type": "object",
                           "properties": {
-                            "displayName": {
-                              "type": "string"
-                            },
-                            "plateNumber": {
+                            "status": {
                               "nullable": true,
-                              "type": "string"
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "CONFIRMED",
+                                "FAILED",
+                                "CANCELLED"
+                              ]
                             },
-                            "color": {
+                            "method": {
                               "nullable": true,
-                              "type": "string"
-                            },
-                            "modelYear": {
-                              "nullable": true,
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
+                              "type": "string",
+                              "enum": [
+                                "BANK_TRANSFER",
+                                "CARD",
+                                "MANUAL"
+                              ]
                             }
                           },
                           "required": [
-                            "displayName",
-                            "plateNumber",
-                            "color",
-                            "modelYear"
+                            "status",
+                            "method"
                           ],
                           "additionalProperties": false
+                        },
+                        "providerAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
+                        "office",
                         "contractNumber",
-                        "status",
-                        "priceType",
+                        "vehicle",
                         "rentalDays",
                         "agreedAmount",
                         "currency",
-                        "startAt",
-                        "endAt",
-                        "depositAmount",
-                        "termsVersion",
-                        "vehicle"
+                        "payment",
+                        "providerAvailable"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "startPublicRentalPayment",
+        "summary": "Start an electronic card payment attempt",
+        "tags": [
+          "Contracts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "token",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "CONFIRMED",
+                                "FAILED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "amount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "BANK_TRANSFER",
+                                "CARD",
+                                "MANUAL"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "amount",
+                            "currency",
+                            "method"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "statusToken": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "providerAvailable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "payment",
+                        "statusToken",
+                        "providerAvailable"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/payments/status/{statusToken}": {
+      "get": {
+        "operationId": "getPublicPaymentStatus",
+        "summary": "Resolve an electronic payment by status token",
+        "tags": [
+          "Contracts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "statusToken",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "CONFIRMED",
+                            "FAILED",
+                            "CANCELLED"
+                          ]
+                        },
+                        "contractStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "enum": [
+                            "AWAITING",
+                            "FORM",
+                            "SIGNED",
+                            "PAID",
+                            "ACTIVE",
+                            "RETOUT",
+                            "REVIEW",
+                            "CLOSED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "contractStatus"
                       ],
                       "additionalProperties": false
                     }
@@ -74107,6 +77633,7 @@
                               "type": "string",
                               "enum": [
                                 "PENDING",
+                                "PROCESSING",
                                 "CONFIRMED",
                                 "FAILED",
                                 "CANCELLED"
@@ -75149,6 +78676,7 @@
                               "type": "string",
                               "enum": [
                                 "PENDING",
+                                "PROCESSING",
                                 "CONFIRMED",
                                 "FAILED",
                                 "CANCELLED"
@@ -76645,6 +80173,7 @@
                               "type": "string",
                               "enum": [
                                 "PENDING",
+                                "PROCESSING",
                                 "CONFIRMED",
                                 "FAILED",
                                 "CANCELLED"
@@ -77709,6 +81238,7 @@
                               "type": "string",
                               "enum": [
                                 "PENDING",
+                                "PROCESSING",
                                 "CONFIRMED",
                                 "FAILED",
                                 "CANCELLED"
@@ -79237,6 +82767,7 @@
                               "type": "string",
                               "enum": [
                                 "PENDING",
+                                "PROCESSING",
                                 "CONFIRMED",
                                 "FAILED",
                                 "CANCELLED"
@@ -80228,6 +83759,7 @@
                               "type": "string",
                               "enum": [
                                 "PENDING",
+                                "PROCESSING",
                                 "CONFIRMED",
                                 "FAILED",
                                 "CANCELLED"
@@ -81720,6 +85252,7 @@
                               "type": "string",
                               "enum": [
                                 "PENDING",
+                                "PROCESSING",
                                 "CONFIRMED",
                                 "FAILED",
                                 "CANCELLED"
@@ -134886,6 +138419,7 @@
                               "status": {
                                 "type": "string",
                                 "enum": [
+                                  "paid",
                                   "active",
                                   "retout",
                                   "review"
@@ -136542,6 +140076,7 @@
                             "status": {
                               "type": "string",
                               "enum": [
+                                "paid",
                                 "active",
                                 "retout",
                                 "review"

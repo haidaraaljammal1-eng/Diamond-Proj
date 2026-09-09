@@ -107,7 +107,7 @@ After success the link result UI offers Copy / Open. Vehicle stays AVAILABLE unt
 
 ## Rental / return / renewal links
 
-Staff generate real Backend tokens. Frontend builds `/{locale}/rental|return|renew/{token}`. Public customer pages are **not** built in V1 — Open may 404 until that phase. Copy still copies the real URL.
+Staff generate real Backend tokens. Frontend builds `/{locale}/rental|return|renew/{token}`. Rental public pages are live (`PublicRental` module). Open Link is Development / QA preview, not an operational staff action. RETURN / RENEWAL public pages are later. Copy still copies the real URL.
 
 ## Payment confirmation
 
@@ -139,4 +139,4 @@ Store keeps `ApiRequestError` including `context.reason`. UI maps `CONTRACT_*` c
 
 ## Out of scope
 
-Customer public pages, White Contract / PDF, Stripe / Tamara / Tabby, Salik / Violations engines, Finance, Invoices, GPS map, WhatsApp, Maintenance workflow.
+Return / renewal public pages, White Contract PDF, Stripe / Tamara / Tabby, Salik / Violations engines, Finance, Invoices, GPS map, WhatsApp, Maintenance workflow.

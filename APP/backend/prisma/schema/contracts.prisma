@@ -36,9 +36,23 @@ enum ContractPaymentMethod {
 
 enum ContractPaymentStatus {
   PENDING
+  PROCESSING
   CONFIRMED
   FAILED
   CANCELLED
+}
+
+enum ContractDocumentType {
+  DRIVING_LICENSE
+}
+
+enum DrivingLicenseVerificationStatus {
+  PENDING
+  VALID
+  EXPIRED
+  UNREADABLE
+  REVIEW_REQUIRED
+  PROVIDER_UNAVAILABLE
 }
 
 enum CustomerDocumentType {
@@ -110,13 +124,15 @@ model Contract {
   updatedAt   DateTime  @updatedAt
   revision    Int       @default(0)
 
-  links          ContractLink[]
-  acceptance     ContractAcceptance?
-  payments       ContractPayment[]
-  carOut         ContractCarOut?
-  carIn          ContractCarIn?
-  reconciliation ContractReconciliation?
-  renewals       ContractRenewal[]
+  links                ContractLink[]
+  acceptance           ContractAcceptance?
+  payments             ContractPayment[]
+  documents            ContractDocument[]
+  licenseVerifications DrivingLicenseVerification[]
+  carOut               ContractCarOut?
+  carIn                ContractCarIn?
+  reconciliation       ContractReconciliation?
+  renewals             ContractRenewal[]
 
   @@index([vehicleId, status])
   @@index([customerId])
@@ -160,21 +176,69 @@ model ContractAcceptance {
 }
 
 model ContractPayment {
-  id                String                @id @default(uuid())
-  contractId        String
-  contract          Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  amount            Int
-  currency          String                @default("AED")
-  method            ContractPaymentMethod
-  status            ContractPaymentStatus @default(PENDING)
-  externalReference String?
-  confirmedAt       DateTime?
-  createdAt         DateTime              @default(now())
-  createdByUserId   Int?
-  createdBy         User?                 @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  id                    String                @id @default(uuid())
+  contractId            String
+  contract              Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  amount                Int
+  currency              String                @default("AED")
+  method                ContractPaymentMethod
+  status                ContractPaymentStatus @default(PENDING)
+  externalReference     String?
+  provider              String?
+  providerReference     String?
+  providerStatus        String?
+  processingStartedAt   DateTime?
+  confirmedAt           DateTime?
+  failedAt              DateTime?
+  /// SHA-256 of the one-time payment-status token. Raw value is never stored.
+  statusTokenHash       String?               @unique
+  statusTokenExpiresAt  DateTime?
+  createdAt             DateTime              @default(now())
+  createdByUserId       Int?
+  createdBy             User?                 @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([contractId, status])
   @@map("contract_payments")
+}
+
+/// Contract-scoped file (customer may not exist yet). One active driving license
+/// per contract for the public rental verification flow (`supersededAt` null).
+model ContractDocument {
+  id           String               @id @default(uuid())
+  contractId   String
+  contract     Contract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  type         ContractDocumentType
+  attachmentId String
+  attachment   Attachment           @relation("ContractDocumentAttachment", fields: [attachmentId], references: [id], onDelete: Restrict)
+  supersededAt DateTime?
+  createdAt    DateTime             @default(now())
+
+  verifications DrivingLicenseVerification[]
+
+  @@index([contractId, type, supersededAt])
+  @@map("contract_documents")
+}
+
+model DrivingLicenseVerification {
+  id              String                           @id @default(uuid())
+  contractId      String
+  contract        Contract                         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  documentId      String
+  document        ContractDocument                 @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  attachmentId    String
+  status          DrivingLicenseVerificationStatus @default(PENDING)
+  licenseNumber   String?
+  /// Calendar date stored at UTC noon so timezone offsets cannot shift the day.
+  expiryDate      DateTime?
+  confidence      Float?
+  provider        String?
+  providerVersion String?
+  verifiedAt      DateTime?
+  createdAt       DateTime                         @default(now())
+  updatedAt       DateTime                         @updatedAt
+
+  @@index([contractId, createdAt])
+  @@map("driving_license_verifications")
 }
 
 model ContractCarOut {

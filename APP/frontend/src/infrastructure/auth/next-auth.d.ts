@@ -30,5 +30,7 @@ declare module "next-auth/jwt" {
     accessTokenExpiresAt?: number;
     refreshToken?: string;
     error?: "RefreshAccessTokenError";
+    /** Last time roles/permissions were copied from GET /auth/me. */
+    permissionsSyncedAt?: number;
   }
 }

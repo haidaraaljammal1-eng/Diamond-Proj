@@ -12,6 +12,7 @@ This repository's agent instructions live in **[CLAUDE.md](./CLAUDE.md)** — re
 - Multi-step writes use `withTransaction`; concurrency-sensitive sections use advisory locks; external side effects use `runIdempotent`.
 - Enforce uniqueness with DB constraints + normalized values. Audit sensitive changes via `request.setAudit`. Never log secrets.
 - Before claiming done: `npm run typecheck && npm run lint && npm run build && npm test`.
+- After Prisma / permission / required seed changes, run `npm run dev:bootstrap` on a local development database. Git does not sync local Postgres data. See `DOCU/00-system-overview/development-database-bootstrap.md`.
 
 ## Diamond contracts (critical)
 

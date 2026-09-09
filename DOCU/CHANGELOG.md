@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-09
+
+- Customer Public Rental Flow V2 frontend: `/[locale]/rental/[token]` three-step journey (license, official contract, payment) driven by Backend `flow.step`, with no AppShell, no fake OCR, and no fake payment. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/05-pages/contracts.md`.
+- Public Rental Flow V2 backend: token-scoped license upload, OCR/payment provider boundaries (no fake success), multi-request Rental links, and ContractPayment electronic attempts. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/05-pages/contracts-backend.md`.
+- NextAuth now re-hydrates effective permissions from `GET /auth/me` on access-token refresh and session revalidation, so new domain permissions (for example `contracts.read`) apply without a manual re-login. Backend authorization is unchanged. See `DOCU/05-pages/authentication.md`.
+
 ## 2026-09-08
 
 - Contracts date filters upgraded to shared React DayPicker-based
