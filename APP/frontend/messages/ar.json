@@ -764,6 +764,34 @@
       "closed": "مغلق",
       "closedHint": "أُغلق العقد وأُفرجت السيارة"
     },
+    "tars": {
+      "title": "حالة الربط مع TARS",
+      "connected": "متصل",
+      "notConnected": "غير متصل حالياً",
+      "notConnectedHint": "سيتم تفعيل المزامنة عند ربط واجهة TARS الرسمية.",
+      "reference": "مرجع TARS",
+      "lastSync": "آخر مزامنة ناجحة",
+      "error": "تعذر تحميل حالة الربط مع TARS.",
+      "operation": {
+        "registerContract": "تسجيل العقد",
+        "contractAcceptance": "اعتماد العقد / التوقيع",
+        "handover": "تسليم المركبة",
+        "returnDocumentation": "توثيق إعادة المركبة",
+        "completeContract": "إكمال العقد"
+      },
+      "status": {
+        "NOT_STARTED": "لم يبدأ",
+        "PENDING": "بانتظار المعالجة",
+        "PROCESSING": "جارٍ المزامنة",
+        "SUCCEEDED": "تمت المزامنة",
+        "FAILED": "فشل الربط"
+      },
+      "inline": {
+        "handover": "TARS — التسليم",
+        "returnDocumentation": "TARS — الإرجاع",
+        "completeContract": "TARS — إكمال العقد"
+      }
+    },
     "actions": {
       "rentalLink": "إنشاء رابط الإيجار",
       "confirmPayment": "تأكيد الدفع",

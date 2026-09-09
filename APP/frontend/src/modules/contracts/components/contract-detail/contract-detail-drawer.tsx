@@ -8,6 +8,8 @@ import { useContract } from "../../hooks/use-contract";
 import { ContractStatusChip } from "../contract-status/contract-status";
 import { ContractTimeline } from "../contract-timeline/contract-timeline";
 import { ContractInspectionImage } from "../contract-inspection-image/contract-inspection-image";
+import { ContractTarsStatus } from "../contract-tars/contract-tars-status";
+import { ContractTarsInlineStatus } from "../contract-tars/contract-tars-inline-status";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
 import styles from "./contract-detail-drawer.module.css";
 
@@ -168,6 +170,11 @@ export function ContractDetailDrawer({
                   ))}
                 </div>
               ) : null}
+              <ContractTarsInlineStatus
+                contractId={detail.id}
+                operation="returnDocumentation"
+                className={styles.inlineIntegration}
+              />
             </section>
           ) : null}
 
@@ -200,6 +207,8 @@ export function ContractDetailDrawer({
             <p className={styles.sectionTitle}>{t("timeline.title")}</p>
             <ContractTimeline status={detail.status} />
           </section>
+
+          <ContractTarsStatus contractId={detail.id} />
 
           {actions ? (
             <div className={styles.actions}>

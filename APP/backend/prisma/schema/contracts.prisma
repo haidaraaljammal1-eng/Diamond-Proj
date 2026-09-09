@@ -133,6 +133,9 @@ model Contract {
   carIn                ContractCarIn?
   reconciliation       ContractReconciliation?
   renewals             ContractRenewal[]
+  /// TARS integration metadata only. Contract lifecycle never depends on it.
+  tarsIntegration      TarsContractIntegration?
+  tarsOperations       TarsOperation[]
 
   @@index([vehicleId, status])
   @@index([customerId])

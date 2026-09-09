@@ -41,6 +41,7 @@ UI dialog/drawer state stays in the screen. Transient issued-link URLs live in t
 | Link result | `components/contract-link-result/` |
 | Forms | `forms/offer`, `payment`, `car-out`, `renew`, `reconcile`, `close` |
 | Policy | `utils/contract-actions.ts`, `utils/contract-status.ts`, `utils/contract-timeline.ts` |
+| TARS status | `api/tars.api.ts`, `stores/contract-tars.store.ts`, `hooks/use-contract-tars.ts`, `components/contract-tars/`, `utils/tars-status.ts` |
 
 ## List / search / filter
 
@@ -96,6 +97,20 @@ Labels: Awaiting Customer / Form Completed / Signed / Ready for Car-Out / Active
 Row click opens the Shared Drawer. `GET /contracts/:id` shows number, status, vehicle, customer, pricing, period, payment, Car-Out/In, reconciliation, renewals, timeline. Empty fields are omitted.
 
 Timeline is derived from `contract.status` only (done / current / upcoming).
+
+## TARS integration status
+
+Read-only. Full contract and rationale: [tars-integration.md](../04-api-contracts/tars-integration.md).
+
+One drawer section, placed after the lifecycle timeline and before the staff action area — there is no TARS page. `GET /contracts/:id/tars` via `useContractTars()`, reusing the existing `contracts.read` request; no new permission and no role-name checks. The store is separate from `contracts.store`, is cached per contract, fetches once when the drawer opens or the id changes, and never polls.
+
+Header shows an overall chip: **Not Connected / غير متصل حالياً** on the neutral champagne tone while TARS is unconfigured — a development state, never red — with the line "Synchronization will be enabled once the official TARS API is configured." When configured it shows **Connected**, plus `TARS Reference` (LTR-isolated) and `Last Sync` when the Backend has them.
+
+Below it, the five approved procedures render as shared `IntegrationStatusRow` lines: Contract Registration, Contract Acceptance, Vehicle Handover, Vehicle Return, Contract Completion. Statuses map `NOT_STARTED` neutral / `PENDING` amber / `PROCESSING` gold with a slow pulse / `SUCCEEDED` positive / `FAILED` soft red.
+
+Compact read-only indicators also sit in the Car-Out dialog (`TARS Handover`), the drawer Car-In record (`TARS Return`) and the Close dialog (`TARS Completion`). They render nothing while loading or on error.
+
+**No action buttons of any kind** — no Register, Send, Submit, Retry, Test or Sync Now. Contract lifecycle, validation and existing actions are untouched, and the public rental pages show no TARS state. While loading, the section shows skeletons; if the read fails, only "Unable to load TARS integration status." appears inside the section and the rest of the drawer keeps working.
 
 ## Fleet Set Rental Price
 

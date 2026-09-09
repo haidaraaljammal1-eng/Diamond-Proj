@@ -64,6 +64,11 @@
   gap: 8px;
 }
 
+/* Read-only integration state pinned to the workflow record above it. */
+.inlineIntegration {
+  margin-top: 10px;
+}
+
 .muted {
   margin: 0;
   font-size: 12px;

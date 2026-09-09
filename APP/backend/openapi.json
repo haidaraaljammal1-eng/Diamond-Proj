@@ -78409,6 +78409,533 @@
         }
       }
     },
+    "/contracts/{id}/tars": {
+      "get": {
+        "operationId": "getContractTarsState",
+        "summary": "Get TARS integration state for a contract",
+        "tags": [
+          "Contracts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "tars": {
+                          "type": "object",
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            },
+                            "externalContractId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "lastSuccessfulSyncAt": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "operations": {
+                              "type": "object",
+                              "properties": {
+                                "registerContract": {
+                                  "type": "string",
+                                  "enum": [
+                                    "NOT_STARTED",
+                                    "PENDING",
+                                    "PROCESSING",
+                                    "SUCCEEDED",
+                                    "FAILED"
+                                  ]
+                                },
+                                "contractAcceptance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "NOT_STARTED",
+                                    "PENDING",
+                                    "PROCESSING",
+                                    "SUCCEEDED",
+                                    "FAILED"
+                                  ]
+                                },
+                                "handover": {
+                                  "type": "string",
+                                  "enum": [
+                                    "NOT_STARTED",
+                                    "PENDING",
+                                    "PROCESSING",
+                                    "SUCCEEDED",
+                                    "FAILED"
+                                  ]
+                                },
+                                "returnDocumentation": {
+                                  "type": "string",
+                                  "enum": [
+                                    "NOT_STARTED",
+                                    "PENDING",
+                                    "PROCESSING",
+                                    "SUCCEEDED",
+                                    "FAILED"
+                                  ]
+                                },
+                                "completeContract": {
+                                  "type": "string",
+                                  "enum": [
+                                    "NOT_STARTED",
+                                    "PENDING",
+                                    "PROCESSING",
+                                    "SUCCEEDED",
+                                    "FAILED"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "registerContract",
+                                "contractAcceptance",
+                                "handover",
+                                "returnDocumentation",
+                                "completeContract"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "configured",
+                            "externalContractId",
+                            "lastSuccessfulSyncAt",
+                            "operations"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "tars"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/contracts/offers": {
       "post": {
         "operationId": "createContractOffer",

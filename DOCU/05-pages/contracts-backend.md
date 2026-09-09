@@ -111,6 +111,8 @@ Public token routes live under `routes/public/` with an empty public hook — **
 
 Eight Demo angles: FRONT, REAR, RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES. Junctions reference Attachment; they are **not** `VehiclePhoto`. Stream routes are authenticated (`contracts.read`).
 
+Car-Out is the future TARS `HANDOVER` integration checkpoint and Car-In the future `RETURN_DOCUMENTATION` checkpoint. Neither calls TARS today, and the sequencing is unconfirmed. See `DOCU/04-api-contracts/tars-integration.md`.
+
 ## Reconciliation
 
 Staff-owned settlement. Line types: DAMAGE, FUEL, LATE, SALIK, VIOLATION, OTHER. Amounts and optional `externalReference` / `sourceDomain` only — no Salik or Violations engines. Totals computed server-side: `chargesTotal`, `depositAmount`, `deductions` (= deposit), `finalAmount` (= charges − deposit). Saving reconciliation sets `approvedAt` (V1: reconcile action is the approval).
@@ -154,6 +156,7 @@ Staff only. Public token routes have no staff permissions.
 | POST | `/contracts/:id/renew` | renew |
 | GET | `/contracts/:id/car-out/photos/:photoId/stream` | read |
 | GET | `/contracts/:id/car-in/photos/:photoId/stream` | read |
+| GET | `/contracts/:id/tars` | read |
 
 List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, and `actions` capability flags. No raw tokens.
 
@@ -204,6 +207,12 @@ Staff audit via `request.setAudit` on create, links, payment, Car-Out, return, r
 ## Tests
 
 Unit: `tests/unit/contracts-status.test.ts`, `tests/unit/public-rental-flow.test.ts`. Integration: `tests/integration/contracts.test.ts` and `tests/integration/public-rental-flow.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
+
+## TARS Integration Boundary
+
+Contracts does **not** depend on TARS and never calls it directly. TARS is reached only through `TarsIntegrationService` → `TarsProvider`, which lives in `src/modules/integrations/tars/`. Integration state is stored separately (`TarsContractIntegration`, `TarsOperation`) and is independent of `Contract.status` — no TARS state was added to the lifecycle.
+
+In this phase nothing is wired: signing, payment, Car-Out, Car-In and Close behave exactly as documented above, and no real TARS API exists (`TARS_NOT_CONFIGURED`). The only Contracts-facing surface is the read-only `GET /contracts/:id/tars` projection (`contracts.read`). Full detail — provider/mapper architecture, retry and idempotency rules, privacy rules and future checkpoints — lives in `DOCU/04-api-contracts/tars-integration.md`.
 
 ## Domain boundaries
 

@@ -764,6 +764,34 @@
       "closed": "Closed",
       "closedHint": "Contract closed and vehicle released"
     },
+    "tars": {
+      "title": "TARS Integration Status",
+      "connected": "Connected",
+      "notConnected": "Not Connected",
+      "notConnectedHint": "Synchronization will be enabled once the official TARS API is configured.",
+      "reference": "TARS Reference",
+      "lastSync": "Last Sync",
+      "error": "Unable to load TARS integration status.",
+      "operation": {
+        "registerContract": "Contract Registration",
+        "contractAcceptance": "Contract Acceptance",
+        "handover": "Vehicle Handover",
+        "returnDocumentation": "Vehicle Return",
+        "completeContract": "Contract Completion"
+      },
+      "status": {
+        "NOT_STARTED": "Not Started",
+        "PENDING": "Pending",
+        "PROCESSING": "Syncing",
+        "SUCCEEDED": "Synced",
+        "FAILED": "Sync Failed"
+      },
+      "inline": {
+        "handover": "TARS Handover",
+        "returnDocumentation": "TARS Return",
+        "completeContract": "TARS Completion"
+      }
+    },
     "actions": {
       "rentalLink": "Generate rental link",
       "confirmPayment": "Confirm payment",

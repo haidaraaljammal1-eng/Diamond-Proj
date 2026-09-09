@@ -107,6 +107,18 @@
 - PROCESSING/PENDING card attempts block duplicate retry. UNKNOWN provider status stays in-flight.
 - After a successful implementation, update the relevant MD under `DOCU` (API detail does not belong in this file).
 
+## TARS integration (Diamond)
+
+- TARS integration is mandatory-procedures-only: REGISTER_CONTRACT, CONTRACT_ACCEPTANCE, HANDOVER, RETURN_DOCUMENTATION, COMPLETE_CONTRACT. Nothing else.
+- Never call TARS directly from a domain service (`contracts.service.ts`, `vehicles.service.ts`, Car-Out, Car-In). Always go through `TarsIntegrationService` → `TarsProvider`.
+- Do not invent TARS API endpoints, authentication, configuration or payload field names before official documentation exists.
+- No fake TARS success: no invented `externalContractId`, `externalReference` or sync timestamp. An unconfigured provider fails closed with `TARS_NOT_CONFIGURED` and writes no operation row.
+- TARS state must never replace or extend the Contract lifecycle. Do not add TARS states to `Contract.status`.
+- Contract, Customer and Vehicle remain the Diamond Source of Truth. TARS tables store external references, sync state and operation history only — never business data or Attachment bytes.
+- TARS network calls must not run inside a long DB transaction: claim the attempt, call the provider outside the transaction, then persist the outcome.
+- The TARS frontend is status display only: no execute/retry/test/sync control, and no customer-facing TARS state. A Diamond action will drive TARS automatically once the official API exists; the employee never gets a second action to remember.
+- Update `DOCU/04-api-contracts/tars-integration.md` after any successful TARS implementation work.
+
 ## Vehicle creation (Add Vehicle)
 
 - Diamond Add Vehicle uses direct free-text `vehicleName`, not a required VehicleModel lookup.

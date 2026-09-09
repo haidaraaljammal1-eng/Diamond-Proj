@@ -90,6 +90,12 @@ const EnvSchema = z
     STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
     STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
 
+    // TARS mandatory-procedure integration. There is no official TARS API
+    // documentation yet, so this flag only expresses intent — no adapter,
+    // endpoint, credential or payload contract is assumed. Execution stays
+    // fail-closed (TARS_NOT_CONFIGURED) until a real TarsApiProvider exists.
+    TARS_ENABLED: envBool(false),
+
     EMAIL_ENABLED: envBool(false),
     SMTP_HOST: z.string().optional().default(""),
     SMTP_PORT: z.coerce.number().int().positive().default(587),

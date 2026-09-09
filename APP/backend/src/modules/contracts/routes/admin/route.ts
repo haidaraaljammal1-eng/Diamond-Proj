@@ -14,6 +14,8 @@ import {
   ReconcileSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
+import { ContractTarsResponseSchema } from "src/modules/integrations/tars/tars.schema";
+import { createTarsIntegrationService } from "src/modules/integrations/tars/tars.service";
 import { commonErrorResponses, dataResponse, listResponse } from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { requireAuth } from "src/lib/context/auth-context";
@@ -23,6 +25,9 @@ const InspectionPhotoParam = ContractIdParam.extend({ photoId: z.string().uuid()
 export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const contracts = createContractsService(fastify);
+  // Read-only integration state. Contracts business logic never calls TARS —
+  // see DOCU/04-api-contracts/tars-integration.md.
+  const tars = createTarsIntegrationService(fastify);
 
   app.get(
     "/",
@@ -52,6 +57,25 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.get(request.params.id) }),
+  );
+
+  app.get(
+    "/:id/tars",
+    {
+      schema: {
+        summary: "Get TARS integration state for a contract",
+        operationId: "getContractTarsState",
+        tags: ["Contracts"],
+        // Reading integration state is part of reading the contract — no
+        // separate TARS permission is invented for a read-only projection.
+        permissions: [PERMISSIONS.CONTRACTS_READ],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ContractTarsResponseSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({
+      data: { tars: await tars.getIntegrationState(request.params.id) },
+    }),
   );
 
   app.post(
