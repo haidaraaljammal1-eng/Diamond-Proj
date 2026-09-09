@@ -16,6 +16,12 @@ const password = process.env.PLAYWRIGHT_LOGIN_PASSWORD ?? "Diamond123!";
 
 const SHOTS = "e2e/__screens__/tars";
 
+/**
+ * The TARS section loads behind its own skeleton, so the first assertion on its
+ * content waits out the projection request rather than the default 5s.
+ */
+const expectLoaded = expect.configure({ timeout: 60_000 });
+
 async function login(page: Page, locale: "ar" | "en") {
   await page.goto(`/${locale}/login`);
   await page.locator("#email").fill(email);
@@ -24,15 +30,21 @@ async function login(page: Page, locale: "ar" | "en") {
   await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 30_000 });
 }
 
+/**
+ * Waits for the desk to settle on a cold `next dev` server, where the first
+ * compile of a route can outlast the default locator timeout.
+ */
+const DESK_TIMEOUT = 90_000;
+
 /** Opens the first contract row, or skips when the desk is empty. */
 async function openFirstContract(page: Page, locale: "ar" | "en") {
   await page.goto(`/${locale}/contracts`);
   const table = page.getByTestId("contracts-table");
   const empty = page.getByTestId("contracts-empty");
-  await expect(table.or(empty)).toBeVisible({ timeout: 30_000 });
+  await expect(table.or(empty)).toBeVisible({ timeout: DESK_TIMEOUT });
   if (!(await table.isVisible())) test.skip(true, "No contract in this environment");
   await page.locator("[data-testid=contracts-table] tbody tr").first().click();
-  await expect(page.getByTestId("contract-detail")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("contract-detail")).toBeVisible({ timeout: DESK_TIMEOUT });
 }
 
 function mockTars(
@@ -71,7 +83,7 @@ test.describe("TARS integration status — live unconfigured backend", () => {
     const tars = page.getByTestId("contract-tars");
     await expect(tars).toBeVisible();
     await expect(tars.getByText("حالة الربط مع TARS")).toBeVisible();
-    await expect(tars.getByText("غير متصل حالياً")).toBeVisible();
+    await expectLoaded(tars.getByText("غير متصل حالياً")).toBeVisible();
     await expect(
       tars.getByText("سيتم تفعيل المزامنة عند ربط واجهة TARS الرسمية."),
     ).toBeVisible();
@@ -101,7 +113,7 @@ test.describe("TARS integration status — live unconfigured backend", () => {
 
     const tars = page.getByTestId("contract-tars");
     await expect(tars.getByText("TARS Integration Status")).toBeVisible();
-    await expect(tars.getByText("Not Connected")).toBeVisible();
+    await expectLoaded(tars.getByText("Not Connected")).toBeVisible();
     for (const label of [
       "Contract Registration",
       "Contract Acceptance",
@@ -184,9 +196,9 @@ test.describe("TARS workflow indicators", () => {
   async function openFirstRow(page: Page) {
     await page.goto("/en/contracts");
     const table = page.getByTestId("contracts-table");
-    await expect(table).toBeVisible({ timeout: 30_000 });
+    await expect(table).toBeVisible({ timeout: DESK_TIMEOUT });
     await page.locator("[data-testid=contracts-table] tbody tr").first().click();
-    await expect(page.getByTestId("contract-detail")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("contract-detail")).toBeVisible({ timeout: DESK_TIMEOUT });
   }
 
   test("Car-Out dialog shows the read-only handover state and no TARS action", async ({
@@ -208,7 +220,7 @@ test.describe("TARS workflow indicators", () => {
     await page.getByTestId("shared-drawer").getByRole("button", { name: /^Car-Out$/ }).click();
     const dialog = page.getByRole("dialog", { name: /Car-Out — handover/ });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText("TARS Handover")).toBeVisible();
+    await expectLoaded(dialog.getByText("TARS Handover")).toBeVisible();
     await expect(dialog.getByText("Pending", { exact: true })).toBeVisible();
     // The handover form is untouched: its only submit is the Diamond action.
     await expect(dialog.getByRole("button", { name: /Confirm Car-Out/i })).toBeVisible();
@@ -237,7 +249,7 @@ test.describe("TARS workflow indicators", () => {
       .click();
     const dialog = page.getByRole("dialog", { name: /Close contract\?/ });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText("TARS Completion")).toBeVisible();
+    await expectLoaded(dialog.getByText("TARS Completion")).toBeVisible();
     await expect(dialog.getByText("Not Started", { exact: true })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /^Close contract$/ })).toBeEnabled();
 
@@ -272,7 +284,7 @@ test.describe("TARS workflow indicators", () => {
       .locator("section")
       .filter({ hasText: "Car-In" })
       .first();
-    await expect(carInSection.getByText("TARS Return")).toBeVisible();
+    await expectLoaded(carInSection.getByText("TARS Return")).toBeVisible();
     await expect(carInSection.getByText("Synced", { exact: true })).toBeVisible();
 
     await carInSection.screenshot({ path: `${SHOTS}/en-car-in-inline.png` });
@@ -299,7 +311,7 @@ test.describe("TARS integration status — mocked projection states", () => {
     await openFirstContract(page, "en");
 
     const tars = page.getByTestId("contract-tars");
-    await expect(tars.getByText("Connected")).toBeVisible();
+    await expectLoaded(tars.getByText("Connected")).toBeVisible();
     await expect(tars.getByText("TARS-2026-000411")).toBeVisible();
     await expect(tars.getByText("Last Sync")).toBeVisible();
     await expect(tars.getByText("Synced", { exact: true })).toHaveCount(2);
@@ -324,7 +336,7 @@ test.describe("TARS integration status — mocked projection states", () => {
     await openFirstContract(page, "ar");
 
     const tars = page.getByTestId("contract-tars");
-    await expect(tars.getByText("متصل", { exact: true })).toBeVisible();
+    await expectLoaded(tars.getByText("متصل", { exact: true })).toBeVisible();
     await expect(tars.getByText("تمت المزامنة", { exact: true })).toHaveCount(5);
     await expect(tars.getByText("TARS-2026-000411")).toBeVisible();
 
@@ -347,7 +359,7 @@ test.describe("TARS integration status — mocked projection states", () => {
     // The Contract Drawer keeps working.
     await expect(page.getByTestId("contract-detail")).toBeVisible();
     await expect(page.getByTestId("contract-timeline")).toBeVisible();
-    await expect(
+    await expectLoaded(
       page.getByTestId("contract-tars").getByText("Unable to load TARS integration status."),
     ).toBeVisible();
 
