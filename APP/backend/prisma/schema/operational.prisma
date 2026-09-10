@@ -91,9 +91,10 @@ model Vehicle {
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt
 
-  experiences PurchaseExperience[]
-  photos      VehiclePhoto[]
-  contracts   Contract[]
+  experiences       PurchaseExperience[]
+  photos            VehiclePhoto[]
+  contracts         Contract[]
+  maintenanceOrders MaintenanceOrder[]
 
   @@index([modelId])
   @@index([isActive])

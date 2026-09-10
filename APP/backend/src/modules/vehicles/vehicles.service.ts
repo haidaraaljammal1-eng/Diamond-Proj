@@ -24,6 +24,7 @@ import {
 } from "src/modules/vehicles/vehicles.mapper";
 import { loadCurrentRentalsByVehicleIds } from "src/modules/contracts/current-rental";
 import { vehicleHasBlockingContract } from "src/modules/contracts/vehicle-rental-guard";
+import { assertVehicleOperationalStatusAllowedWithActiveMaintenance } from "src/modules/maintenance/maintenance-vehicle-guard";
 import { buildVehicleListOrderBy } from "src/modules/vehicles/vehicles-sort";
 import type {
   CreateVehicleSchema,
@@ -358,7 +359,14 @@ export function createVehiclesService(fastify: FastifyInstance) {
     if (input.dailyRate !== undefined) data.dailyRate = input.dailyRate;
     if (input.monthlyRate !== undefined) data.monthlyRate = input.monthlyRate;
     if (input.operationalStatus !== undefined) {
-      data.operationalStatus = operationalStatusFromDto(input.operationalStatus);
+      const requested = operationalStatusFromDto(input.operationalStatus);
+      await assertVehicleOperationalStatusAllowedWithActiveMaintenance(
+        prisma,
+        id,
+        existing.operationalStatus,
+        requested,
+      );
+      data.operationalStatus = requested;
     }
     if (input.externalId !== undefined) {
       if (input.externalId !== null) {

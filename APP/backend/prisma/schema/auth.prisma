@@ -84,6 +84,7 @@ model User {
   contractCarOutsPerformed        ContractCarOut[]           @relation("ContractCarOutPerformedBy")
   contractReconciliationsApproved ContractReconciliation[]   @relation("ContractReconciliationApprovedBy")
   contractRenewalsCreated         ContractRenewal[]          @relation("ContractRenewalCreatedBy")
+  maintenanceOrdersCreated        MaintenanceOrder[]         @relation("MaintenanceOrderCreatedBy")
 
   @@index([status])
   @@map("users")

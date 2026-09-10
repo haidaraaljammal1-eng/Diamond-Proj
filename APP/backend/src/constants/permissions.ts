@@ -80,6 +80,9 @@ export const PERMISSIONS = {
   VEHICLES_READ: "vehicles.read",
   VEHICLES_MANAGE: "vehicles.manage",
 
+  MAINTENANCE_READ: "maintenance.read",
+  MAINTENANCE_MANAGE: "maintenance.manage",
+
   // --- Diamond rental contracts ---
   CONTRACTS_READ: "contracts.read",
   CONTRACTS_MANAGE: "contracts.manage",
@@ -299,6 +302,16 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     key: PERMISSIONS.VEHICLES_MANAGE,
     category: "vehicles",
     description: "Create/update/(de)activate vehicles",
+  },
+  {
+    key: PERMISSIONS.MAINTENANCE_READ,
+    category: "maintenance",
+    description: "View maintenance orders and summary",
+  },
+  {
+    key: PERMISSIONS.MAINTENANCE_MANAGE,
+    category: "maintenance",
+    description: "Create and manage maintenance orders",
   },
   { key: PERMISSIONS.CONTRACTS_READ, category: "contracts", description: "View rental contracts" },
   {

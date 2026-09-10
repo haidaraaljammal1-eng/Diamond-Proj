@@ -179,26 +179,26 @@ model ContractAcceptance {
 }
 
 model ContractPayment {
-  id                    String                @id @default(uuid())
-  contractId            String
-  contract              Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  amount                Int
-  currency              String                @default("AED")
-  method                ContractPaymentMethod
-  status                ContractPaymentStatus @default(PENDING)
-  externalReference     String?
-  provider              String?
-  providerReference     String?
-  providerStatus        String?
-  processingStartedAt   DateTime?
-  confirmedAt           DateTime?
-  failedAt              DateTime?
+  id                   String                @id @default(uuid())
+  contractId           String
+  contract             Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  amount               Int
+  currency             String                @default("AED")
+  method               ContractPaymentMethod
+  status               ContractPaymentStatus @default(PENDING)
+  externalReference    String?
+  provider             String?
+  providerReference    String?
+  providerStatus       String?
+  processingStartedAt  DateTime?
+  confirmedAt          DateTime?
+  failedAt             DateTime?
   /// SHA-256 of the one-time payment-status token. Raw value is never stored.
-  statusTokenHash       String?               @unique
-  statusTokenExpiresAt  DateTime?
-  createdAt             DateTime              @default(now())
-  createdByUserId       Int?
-  createdBy             User?                 @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  statusTokenHash      String?               @unique
+  statusTokenExpiresAt DateTime?
+  createdAt            DateTime              @default(now())
+  createdByUserId      Int?
+  createdBy            User?                 @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([contractId, status])
   @@map("contract_payments")

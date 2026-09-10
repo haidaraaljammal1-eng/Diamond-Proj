@@ -1,0 +1,54 @@
+// ---------------------------------------------------------------------------
+// Maintenance Center — workshop orders tied to fleet vehicles.
+// Vehicle.operationalStatus remains the fleet authority; maintenance lifecycle
+// coordinates AVAILABLE ↔ SERVICE through explicit staff actions.
+// ---------------------------------------------------------------------------
+
+enum MaintenanceOrderStatus {
+  SCHEDULED
+  IN_SERVICE
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  MECHANICAL
+  ELECTRICAL
+  TIRES
+  AIR_CONDITIONING
+  BODY
+  PERIODIC
+  OTHER
+}
+
+model MaintenanceOrder {
+  id                   Int                    @id @default(autoincrement())
+  vehicleId            Int
+  vehicle              Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  status               MaintenanceOrderStatus
+  maintenanceType      MaintenanceType
+  issueDescription     String
+  scheduledAt          DateTime?
+  startedAt            DateTime?
+  readyAt              DateTime?
+  completedAt          DateTime?
+  workshopName         String?
+  odometerIn           Int?
+  expectedCompletionAt DateTime?
+  notes                String?
+  /// Actual known maintenance cost in whole AED (nullable until workshop invoice).
+  cost                 Int?
+  createdByUserId      Int
+  createdBy            User                   @relation("MaintenanceOrderCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@index([vehicleId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([expectedCompletionAt])
+  @@index([completedAt])
+  @@index([createdByUserId])
+  @@map("maintenance_orders")
+}
