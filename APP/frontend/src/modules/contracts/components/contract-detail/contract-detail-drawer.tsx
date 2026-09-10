@@ -157,8 +157,10 @@ export function ContractDetailDrawer({
           ) : null}
 
           {detail.carIn ? (
-            <section className={styles.section}>
+            <section className={styles.section} data-testid="contract-custody">
               <p className={styles.sectionTitle}>{t("detail.carIn")}</p>
+              <p className={styles.custody}>{t("detail.carInReturned")}</p>
+              <p className={styles.custodyMuted}>{t("detail.custodyEnded")}</p>
               <Kv label={t("carOut.mileage")} value={format.number(detail.carIn.mileageIn)} />
               <Kv label={t("carOut.fuel")} value={detail.carIn.fuelIn} />
               {detail.carIn.photos.length > 0 ? (
@@ -178,6 +180,38 @@ export function ContractDetailDrawer({
                 operation="returnDocumentation"
                 className={styles.inlineIntegration}
               />
+            </section>
+          ) : null}
+
+          {detail.roadLiabilitySignals?.hasSalikGpsSignal ? (
+            <section className={styles.gpsFlag} data-testid="contract-gps-salik-flag">
+              <p className={styles.gpsTitle}>{t("detail.gpsSalikTitle")}</p>
+              {detail.roadLiabilitySignals.unconfirmedSalikGpsSignalCount > 0 ? (
+                <>
+                  <p className={styles.gpsBody}>{t("detail.gpsSalikBody")}</p>
+                  {detail.status === "CLOSED" ? (
+                    <p className={styles.gpsBody}>{t("detail.gpsSalikClosed")}</p>
+                  ) : null}
+                </>
+              ) : null}
+            </section>
+          ) : null}
+
+          {detail.postCloseReceivables && detail.postCloseReceivables.count > 0 ? (
+            <section className={styles.section} data-testid="contract-post-close">
+              <p className={styles.sectionTitle}>{t("detail.postClose")}</p>
+              {detail.postCloseReceivables.items.map((item) => (
+                <div key={item.id} className={styles.kv}>
+                  <span>
+                    {item.roadLiabilityType === "SALIK_TOLL"
+                      ? t("reconcile.type.SALIK")
+                      : t("reconcile.type.VIOLATION")}
+                    {" · "}
+                    {item.status === "OPEN" ? t("detail.postCloseOpen") : item.status}
+                  </span>
+                  <b dir="ltr">{money(item.amount, item.currency)}</b>
+                </div>
+              ))}
             </section>
           ) : null}
 

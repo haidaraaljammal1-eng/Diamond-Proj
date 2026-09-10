@@ -41,3 +41,114 @@ describe("isNavigationItemVisible", () => {
     );
   });
 });
+
+const maintenance: NavigationItem = {
+  key: "maintenance",
+  type: "link",
+  labelKey: "maintenance",
+  href: "/maintenance",
+  icon: "maintenance",
+  permissions: ["maintenance.read"],
+};
+
+describe("maintenance navigation visibility", () => {
+  it("shows Maintenance when the session holds maintenance.read", () => {
+    assert.equal(
+      isNavigationItemVisible(
+        maintenance,
+        main,
+        (permission) => permission === "maintenance.read",
+        false,
+      ),
+      true,
+    );
+  });
+
+  it("hides Maintenance when the session does not hold maintenance.read", () => {
+    assert.equal(
+      isNavigationItemVisible(maintenance, main, () => false, false),
+      false,
+    );
+  });
+
+  it("does not treat system_admin as a Maintenance bypass", () => {
+    assert.equal(
+      isNavigationItemVisible(maintenance, main, () => false, true),
+      false,
+    );
+  });
+});
+
+const gps: NavigationItem = {
+  key: "gps",
+  type: "link",
+  labelKey: "gps",
+  href: "/gps",
+  icon: "gps",
+  permission: "gps.read",
+};
+
+describe("gps navigation visibility", () => {
+  it("shows GPS when the session holds gps.read", () => {
+    assert.equal(
+      isNavigationItemVisible(
+        gps,
+        main,
+        (permission) => permission === "gps.read",
+        false,
+      ),
+      true,
+    );
+  });
+
+  it("hides GPS when the session does not hold gps.read", () => {
+    assert.equal(
+      isNavigationItemVisible(gps, main, () => false, false),
+      false,
+    );
+  });
+
+  it("does not treat system_admin as a GPS bypass", () => {
+    assert.equal(
+      isNavigationItemVisible(gps, main, () => false, true),
+      false,
+    );
+  });
+});
+
+const violations: NavigationItem = {
+  key: "violations",
+  type: "link",
+  labelKey: "violations",
+  href: "/violations",
+  icon: "violations",
+  permission: "violations.read",
+};
+
+describe("violations navigation visibility", () => {
+  it("shows Violations & Salik when the session holds violations.read", () => {
+    assert.equal(
+      isNavigationItemVisible(
+        violations,
+        main,
+        (permission) => permission === "violations.read",
+        false,
+      ),
+      true,
+    );
+  });
+
+  it("hides Violations & Salik when the session does not hold violations.read", () => {
+    assert.equal(
+      isNavigationItemVisible(violations, main, () => false, false),
+      false,
+    );
+  });
+
+  it("does not treat system_admin as a Violations bypass", () => {
+    assert.equal(
+      isNavigationItemVisible(violations, main, () => false, true),
+      false,
+    );
+  });
+});

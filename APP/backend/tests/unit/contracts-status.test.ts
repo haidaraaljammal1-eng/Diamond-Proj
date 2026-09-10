@@ -6,6 +6,7 @@ import { hashesEqual } from "src/modules/contracts/contracts-links";
 import { hashToken } from "src/lib/security/tokens";
 import {
   ALLOWED_TRANSITIONS,
+  BLOCKING_CONTRACT_STATUSES,
   CONTRACT_LINK_TTL_SECONDS,
   CURRENT_RENTAL_STATUSES,
 } from "src/modules/contracts/contracts.constants";
@@ -59,8 +60,11 @@ test("token hashes are not the raw token and compare in constant time", () => {
   assert.equal(hashesEqual(digest, hashToken("other")), false);
 });
 
-test("currentRental statuses include PAID as blocking fleet context", () => {
-  assert.deepEqual([...CURRENT_RENTAL_STATUSES], ["PAID", "ACTIVE", "RETOUT", "REVIEW"]);
+test("currentRental and blocking statuses are possession/reservation only", () => {
+  assert.deepEqual([...CURRENT_RENTAL_STATUSES], ["PAID", "ACTIVE", "RETOUT"]);
+  assert.deepEqual([...BLOCKING_CONTRACT_STATUSES], ["PAID", "ACTIVE", "RETOUT"]);
+  assert.equal(CURRENT_RENTAL_STATUSES.includes("REVIEW"), false);
+  assert.equal(BLOCKING_CONTRACT_STATUSES.includes("REVIEW"), false);
 });
 
 test("idempotency fingerprint matches same payload and rejects a mismatch", () => {

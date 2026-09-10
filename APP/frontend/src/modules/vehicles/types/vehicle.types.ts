@@ -13,7 +13,7 @@ export interface VehicleImageDto {
   url: string;
 }
 
-export type VehicleCurrentRentalStatus = "paid" | "active" | "retout" | "review";
+export type VehicleCurrentRentalStatus = "paid" | "active" | "retout";
 
 export interface VehicleCurrentRentalDto {
   contractId: string;

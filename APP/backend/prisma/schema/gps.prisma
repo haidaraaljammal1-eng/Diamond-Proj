@@ -1,0 +1,69 @@
+// ---------------------------------------------------------------------------
+// GPS Operations — provider-neutral tracking metadata for Diamond fleet
+// vehicles. Vehicle and Contract remain the business source of truth. This
+// file stores only device binding and the latest normalized position.
+//
+// No GPS vendor API, authentication scheme, IMEI format or webhook contract
+// is assumed. A future adapter translates vendor payloads into Diamond
+// normalized positions and calls GpsTelemetryService — never Vehicles or
+// Contracts services.
+//
+// Location history / route playback is intentionally absent in this phase.
+// ---------------------------------------------------------------------------
+
+/// Persisted motion from normalized speed (or UNKNOWN when speed is missing).
+/// OFFLINE is never stored — it is derived from capturedAt vs the offline
+/// threshold at read time.
+enum GpsMotionState {
+  UNKNOWN
+  MOVING
+  PARKED
+}
+
+/// Associates one Diamond Vehicle with one future external tracking device.
+/// Rows are never auto-created; a future management flow will write them.
+model VehicleGpsBinding {
+  id               String   @id @default(uuid())
+  vehicleId        Int      @unique
+  vehicle          Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  /// Vendor-neutral key (e.g. future adapter name). Not a Prisma enum.
+  providerKey      String
+  externalDeviceId String
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  latestState VehicleGpsLatestState?
+
+  @@index([providerKey, externalDeviceId])
+  @@index([isActive])
+  @@map("vehicle_gps_bindings")
+}
+
+/// One latest operational position per vehicle/binding. Coordinates are
+/// persisted only from ingestLatestPosition after validation — never invented.
+model VehicleGpsLatestState {
+  id        String            @id @default(uuid())
+  vehicleId Int               @unique
+  vehicle   Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  bindingId String            @unique
+  binding   VehicleGpsBinding @relation(fields: [bindingId], references: [id], onDelete: Restrict)
+
+  latitude       Decimal        @db.Decimal(10, 7)
+  longitude      Decimal        @db.Decimal(11, 7)
+  speedKph       Decimal?       @db.Decimal(8, 3)
+  headingDegrees Decimal?       @db.Decimal(6, 2)
+  accuracyMeters Decimal?       @db.Decimal(8, 2)
+  motionState    GpsMotionState
+  capturedAt     DateTime
+  receivedAt     DateTime
+  /// Provider event id when supplied — used for ingest idempotency.
+  sourceEventId  String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([bindingId, sourceEventId])
+  @@index([capturedAt])
+  @@index([motionState])
+  @@map("vehicle_gps_latest_states")
+}

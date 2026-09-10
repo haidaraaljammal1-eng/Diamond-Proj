@@ -47,6 +47,16 @@
   color: var(--diamond-gold-hi);
 }
 
+.gpsDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-inline-start: 8px;
+  border-radius: 50%;
+  background: #c9a15c;
+  vertical-align: middle;
+}
+
 .muted {
   margin-top: 2px;
   font-size: 11px;

@@ -61,13 +61,13 @@ export const MaintenanceOrderSchema = z.object({
   createdByUserId: z.number().int(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  /** Embedded Vehicle projection — list and detail share this join, no N+1. */
+  vehicle: MaintenanceVehicleSchema,
 });
 export type MaintenanceOrderDto = z.infer<typeof MaintenanceOrderSchema>;
 
-export const MaintenanceOrderDetailSchema = MaintenanceOrderSchema.extend({
-  vehicle: MaintenanceVehicleSchema,
-});
-export type MaintenanceOrderDetailDto = z.infer<typeof MaintenanceOrderDetailSchema>;
+export const MaintenanceOrderDetailSchema = MaintenanceOrderSchema;
+export type MaintenanceOrderDetailDto = MaintenanceOrderDto;
 
 export const ListMaintenanceQuerySchema = PaginationQuerySchema.extend({
   search: z.string().trim().min(1).optional(),

@@ -167,6 +167,7 @@ export function toMaintenanceOrder(
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    vehicle: toVehicleProjection(row.vehicle),
   };
 }
 
@@ -174,8 +175,5 @@ export function toMaintenanceDetail(
   row: MaintenanceOrderRow,
   now: Date = new Date(),
 ): MaintenanceOrderDetailDto {
-  return {
-    ...toMaintenanceOrder(row, now),
-    vehicle: toVehicleProjection(row.vehicle),
-  };
+  return toMaintenanceOrder(row, now);
 }

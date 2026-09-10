@@ -17,6 +17,8 @@ export const VEHICLE_RENTAL_LOCK_NS = "vehicle_rental";
 export const CONTRACT_NUMBER_LOCK_NS = "contract_number";
 export const CONTRACT_PAYMENT_LOCK_NS = "contract_payment";
 export const CONTRACT_LICENSE_LOCK_NS = "contract_license";
+export const CONTRACT_RECONCILE_LOCK_NS = "contract_reconcile";
+export const ROAD_LIABILITY_CHARGE_LOCK_NS = "road_liability_charge";
 
 export const PUBLIC_RENTAL_FLOW_STEPS = [
   "LICENSE_VERIFICATION",
@@ -44,19 +46,18 @@ export const BLOCKING_CONTRACT_STATUSES: readonly ContractStatus[] = [
   "PAID",
   "ACTIVE",
   "RETOUT",
-  "REVIEW",
 ] as const;
 
 /**
  * Blocking rental context shown on Vehicles as currentRental.
  * PAID is included: the vehicle stays AVAILABLE until Car-Out, but it is
  * reserved and must not look free on the fleet page.
+ * REVIEW is financial review after Car-In — not current possession.
  */
 export const CURRENT_RENTAL_STATUSES: readonly ContractStatus[] = [
   "PAID",
   "ACTIVE",
   "RETOUT",
-  "REVIEW",
 ] as const;
 
 export const INSPECTION_ANGLES = [

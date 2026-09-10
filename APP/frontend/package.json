@@ -16,6 +16,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@iconify/react": "^6.0.2",
     "date-fns": "^4.4.0",
+    "leaflet": "^1.9.4",
     "next": "16.3.4",
     "next-auth": "^5.0.0-beta.32",
     "next-intl": "^4.3.0",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

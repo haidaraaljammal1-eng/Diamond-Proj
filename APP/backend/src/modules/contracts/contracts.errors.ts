@@ -112,4 +112,46 @@ export const contractError = {
     err(ErrorCode.TOKEN_INVALID, "Payment status token is invalid", "PAYMENT_STATUS_TOKEN_INVALID"),
   paymentStatusTokenExpired: () =>
     err(ErrorCode.TOKEN_EXPIRED, "Payment status token has expired", "PAYMENT_STATUS_TOKEN_EXPIRED"),
+  roadLiabilityRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Salik and traffic violation charges must originate from a confirmed Road Liability",
+      "ROAD_LIABILITY_REQUIRED",
+    ),
+  roadLiabilityNotChargeable: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This road liability is not eligible for customer charge review",
+      "ROAD_LIABILITY_NOT_CHARGEABLE",
+    ),
+  roadLiabilityContractMismatch: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This road liability is not attributed to this contract",
+      "ROAD_LIABILITY_CONTRACT_MISMATCH",
+    ),
+  roadLiabilityAlreadyCharged: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This road liability already has a confirmed customer charge",
+      "ROAD_LIABILITY_ALREADY_CHARGED",
+    ),
+  customerChargeBelowOfficial: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Customer charge cannot be lower than the official amount",
+      "CUSTOMER_CHARGE_BELOW_OFFICIAL",
+    ),
+  adjustmentReasonRequired: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "An adjustment reason is required when the customer charge is higher than the official amount",
+      "ADJUSTMENT_REASON_REQUIRED",
+    ),
+  invalidCustomerCharge: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Customer charge must be a positive whole AED amount",
+      "INVALID_CUSTOMER_CHARGE",
+    ),
 };

@@ -1,0 +1,210 @@
+// ---------------------------------------------------------------------------
+// Road liabilities — provider-neutral observations and canonical financial
+// obligations for RTA violations, Salik tolls, and Salik violations.
+//
+// GPS inference is NEVER authoritative financial evidence. Official Salik/RTA
+// observations confirm amounts. TARS traffic/toll capability is unverified:
+// reserve sourceKey "TARS" only — do not invent a TARS adapter here.
+//
+// TollGate catalog is empty until verified official geometry exists.
+// Do not seed approximate Salik coordinates.
+// ---------------------------------------------------------------------------
+
+enum RoadLiabilityType {
+  RTA_VIOLATION
+  SALIK_TOLL
+  SALIK_VIOLATION
+}
+
+enum RoadLiabilityConfirmationStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  REJECTED
+}
+
+enum RoadLiabilityAttributionStatus {
+  UNRESOLVED
+  MATCHED
+  UNMATCHED
+  AMBIGUOUS
+}
+
+enum RoadLiabilityCollectionStatus {
+  NOT_READY
+  OPEN
+  SETTLED
+  DISPUTED
+  VOID
+}
+
+enum RoadLiabilityConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+/// Provider-neutral toll gate geometry. Production/development catalogs stay
+/// empty until official coordinates are supplied. Tests may insert fixtures.
+model TollGate {
+  id                      String    @id @default(uuid())
+  networkKey              String
+  externalGateCode        String?
+  nameEn                  String
+  nameAr                  String
+  lineStartLatitude       Decimal   @db.Decimal(10, 7)
+  lineStartLongitude      Decimal   @db.Decimal(11, 7)
+  lineEndLatitude         Decimal   @db.Decimal(10, 7)
+  lineEndLongitude        Decimal   @db.Decimal(11, 7)
+  corridorMeters          Decimal   @db.Decimal(8, 2)
+  allowedHeadingDegrees   Decimal?  @db.Decimal(6, 2)
+  headingToleranceDegrees Decimal?  @db.Decimal(6, 2)
+  isActive                Boolean   @default(true)
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  sourceReference         String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  liabilities  RoadLiability[]
+  observations RoadLiabilityObservation[]
+
+  @@index([networkKey, isActive])
+  @@index([externalGateCode])
+  @@map("toll_gates")
+}
+
+/// One normalized source event (GPS prediction or official provider event).
+/// Never stores provider secrets, raw payloads, or GPS route coordinates.
+model RoadLiabilityObservation {
+  id                    String                   @id @default(uuid())
+  sourceKey             String
+  authoritative         Boolean
+  externalEventId       String?
+  ingestionFingerprint  String                   @unique
+  eventType             RoadLiabilityType
+  vehicleId             Int?
+  vehicle               Vehicle?                 @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  plateNumberNormalized String?
+  externalVehicleRef    String?
+  occurredAt            DateTime
+  /// Whole AED. GPS inference always null.
+  amount                Int?
+  currency              String?
+  externalReference     String?
+  gateId                String?
+  gate                  TollGate?                @relation(fields: [gateId], references: [id], onDelete: SetNull)
+  locationLabel         String?
+  confidence            RoadLiabilityConfidence?
+  liabilityId           String?
+  liability             RoadLiability?           @relation(fields: [liabilityId], references: [id], onDelete: Restrict)
+  receivedAt            DateTime
+  createdAt             DateTime                 @default(now())
+
+  @@unique([sourceKey, externalEventId])
+  @@index([sourceKey, occurredAt])
+  @@index([vehicleId, gateId, occurredAt])
+  @@index([liabilityId])
+  @@index([eventType, occurredAt])
+  @@map("road_liability_observations")
+}
+
+/// Canonical operational/financial obligation. Customer identity comes from
+/// the attributed Contract — do not duplicate PII here.
+///
+/// Reconciliation references `id` uniquely (one confirmed liability charged at
+/// most once). This module still does not insert reconciliation lines.
+model RoadLiability {
+  id                             String                          @id @default(uuid())
+  type                           RoadLiabilityType
+  vehicleId                      Int?
+  vehicle                        Vehicle?                        @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  occurredAt                     DateTime
+  gateId                         String?
+  gate                           TollGate?                       @relation(fields: [gateId], references: [id], onDelete: SetNull)
+  locationLabel                  String?
+  /// Whole AED. Confirmed only from authoritative observations.
+  amount                         Int?
+  currency                       String?
+  authoritativeSourceKey         String?
+  authoritativeExternalReference String?
+  confirmationStatus             RoadLiabilityConfirmationStatus
+  attributionStatus              RoadLiabilityAttributionStatus
+  collectionStatus               RoadLiabilityCollectionStatus
+  attributedContractId           String?
+  attributedContract             Contract?                       @relation(fields: [attributedContractId], references: [id], onDelete: Restrict)
+  confirmedAt                    DateTime?
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+
+  observations          RoadLiabilityObservation[]
+  reconciliationLine    ContractReconciliationLine?
+  customerCharge        RoadLiabilityCustomerCharge?
+  postCloseReceivable   ContractPostCloseReceivable?
+
+  @@index([occurredAt])
+  @@index([type])
+  @@index([confirmationStatus])
+  @@index([attributionStatus])
+  @@index([collectionStatus])
+  @@index([vehicleId, occurredAt])
+  @@index([attributedContractId])
+  @@index([authoritativeSourceKey])
+  @@map("road_liabilities")
+}
+
+enum RoadLiabilityCustomerChargeDestination {
+  RECONCILIATION
+  POST_CLOSE_RECEIVABLE
+}
+
+enum ContractPostCloseReceivableStatus {
+  OPEN
+  SETTLED
+  VOID
+}
+
+/// One employee-confirmed customer charge from one RoadLiability.
+/// Destination is either current Reconciliation or a Post-Close Receivable — never both.
+model RoadLiabilityCustomerCharge {
+  id                     String                                  @id @default(uuid())
+  roadLiabilityId        String                                  @unique
+  roadLiability          RoadLiability                           @relation(fields: [roadLiabilityId], references: [id], onDelete: Restrict)
+  contractId             String
+  contract               Contract                                @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  destinationType        RoadLiabilityCustomerChargeDestination
+  officialAmountSnapshot Int
+  customerChargeAmount   Int
+  adjustmentAmount       Int
+  adjustmentReason       String?
+  adjustmentNote         String?
+  confirmedByUserId      Int?
+  confirmedBy            User?                                   @relation("RoadLiabilityCustomerChargeConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  confirmedAt            DateTime
+  reconciliationLineId   String?                                 @unique
+  reconciliationLine     ContractReconciliationLine?             @relation(fields: [reconciliationLineId], references: [id], onDelete: SetNull)
+  postCloseReceivable    ContractPostCloseReceivable?
+  createdAt              DateTime                                @default(now())
+
+  @@index([contractId])
+  @@map("road_liability_customer_charges")
+}
+
+/// Customer amount confirmed after the Contract was already CLOSED.
+/// Does not rewrite historical reconciliation totals. Finance settlement is later.
+model ContractPostCloseReceivable {
+  id               String                            @id @default(uuid())
+  contractId       String
+  contract         Contract                          @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  customerChargeId String                      @unique
+  customerCharge   RoadLiabilityCustomerCharge @relation(fields: [customerChargeId], references: [id], onDelete: Restrict)
+  roadLiabilityId  String                            @unique
+  roadLiability    RoadLiability                     @relation(fields: [roadLiabilityId], references: [id], onDelete: Restrict)
+  amount           Int
+  currency         String                            @default("AED")
+  status           ContractPostCloseReceivableStatus @default(OPEN)
+  createdAt        DateTime                          @default(now())
+  updatedAt        DateTime                          @updatedAt
+
+  @@index([contractId, status])
+  @@map("contract_post_close_receivables")
+}

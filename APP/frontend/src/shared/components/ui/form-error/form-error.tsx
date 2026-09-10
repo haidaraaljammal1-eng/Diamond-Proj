@@ -14,7 +14,9 @@ export type ValidationMessageKey =
   | "passwordMismatch"
   | "invalidYear"
   | "invalidRate"
-  | "identityOrPassport";
+  | "identityOrPassport"
+  | "invalidNonnegative"
+  | "scheduledRequired";
 
 interface FormErrorProps {
   id?: string;

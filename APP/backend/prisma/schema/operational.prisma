@@ -91,10 +91,14 @@ model Vehicle {
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt
 
-  experiences       PurchaseExperience[]
-  photos            VehiclePhoto[]
-  contracts         Contract[]
-  maintenanceOrders MaintenanceOrder[]
+  experiences               PurchaseExperience[]
+  photos                    VehiclePhoto[]
+  contracts                 Contract[]
+  maintenanceOrders         MaintenanceOrder[]
+  gpsBinding                VehicleGpsBinding?
+  gpsLatestState            VehicleGpsLatestState?
+  roadLiabilities           RoadLiability[]
+  roadLiabilityObservations RoadLiabilityObservation[]
 
   @@index([modelId])
   @@index([isActive])

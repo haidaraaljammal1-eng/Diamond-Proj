@@ -471,7 +471,7 @@ if (!RUN) {
     assert.equal(staffCarIn.json().data.status, "REVIEW");
     assert.equal(staffCarIn.json().data.carIn.mileageIn, 1400);
     assert.equal(staffCarIn.json().data.carIn.photos.length, 8);
-    assert.equal(staffCarIn.json().data.vehicle.operationalStatus, "RENTED");
+    assert.equal(staffCarIn.json().data.vehicle.operationalStatus, "AVAILABLE");
     assert.equal(staffCarIn.json().data.actions.canCarIn, false);
 
     const publicReturnAfter = await app.inject({
@@ -495,8 +495,8 @@ if (!RUN) {
       url: `/vehicles/${lifeVehicleId}`,
       headers: auth(),
     });
-    assert.equal(afterIn.json().data.operationalStatus, "rented");
-    assert.equal(afterIn.json().data.currentRental.status, "review");
+    assert.equal(afterIn.json().data.operationalStatus, "available");
+    assert.equal(afterIn.json().data.currentRental, null);
 
     const closeEarly = await app.inject({
       method: "POST",
@@ -514,9 +514,7 @@ if (!RUN) {
           { type: "DAMAGE", description: "bumper scuff", amount: 100 },
           { type: "FUEL", description: "fuel gap", amount: 80 },
           { type: "LATE", description: "late return", amount: 50 },
-          { type: "SALIK", description: "salik trips", amount: 40, externalReference: "SLK-1" },
-          { type: "VIOLATION", description: "parking notice", amount: 200, externalReference: "VIO-9" },
-          { type: "OTHER", description: "cleaning", amount: 30 },
+          { type: "OTHER", description: "cleaning", amount: 270 },
         ],
       },
     });
@@ -525,7 +523,7 @@ if (!RUN) {
     assert.equal(rec.json().data.reconciliation.finalAmount, 0);
     assert.deepEqual(
       rec.json().data.reconciliation.lines.map((line: { type: string }) => line.type).sort(),
-      ["DAMAGE", "FUEL", "LATE", "OTHER", "SALIK", "VIOLATION"],
+      ["DAMAGE", "FUEL", "LATE", "OTHER"],
     );
 
     const closed = await app.inject({
@@ -612,6 +610,106 @@ if (!RUN) {
     assert.deepEqual(codes, [200, 409]);
     const failed = payA.statusCode === 409 ? payA : payB;
     assert.equal(failed.json().error.context.reason, "VEHICLE_ALREADY_RENTED");
+  });
+
+  test("REVIEW after Car-In is not currentRental and close does not steal a newer rental", async () => {
+    const v = await app.inject({
+      method: "POST",
+      url: "/vehicles",
+      headers: auth(),
+      payload: { vehicleName: `CT-REV-${run}`, plateNumber: `CT R ${run}` },
+    });
+    const vid = v.json().data.id as number;
+    const { normalizeEmail } = await import("src/lib/security/normalize");
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { email: normalizeEmail(admin.email) },
+    });
+    const customer = await prisma.customer.create({ data: { name: `CT Review ${run}` } });
+    const old = await prisma.contract.create({
+      data: {
+        contractNumber: `CT-OLD-${run}`,
+        status: "REVIEW",
+        vehicleId: vid,
+        customerId: customer.id,
+        createdByUserId: actor.id,
+        priceType: "DAILY",
+        rentalDays: 2,
+        agreedAmount: 800,
+        depositAmount: 0,
+        carOut: {
+          create: {
+            performedByUserId: actor.id,
+            occurredAt: new Date("2026-09-01T08:00:00.000Z"),
+            mileageOut: 10,
+            fuelOut: "F",
+          },
+        },
+        carIn: {
+          create: {
+            occurredAt: new Date("2026-09-01T11:00:00.000Z"),
+            mileageIn: 40,
+            fuelIn: "1/2",
+          },
+        },
+        reconciliation: {
+          create: {
+            chargesTotal: 0,
+            depositAmount: 0,
+            deductions: 0,
+            finalAmount: 0,
+            approvedAt: new Date("2026-09-01T11:20:00.000Z"),
+          },
+        },
+      },
+    });
+    await prisma.vehicle.update({ where: { id: vid }, data: { operationalStatus: "AVAILABLE" } });
+    const idle = await app.inject({ method: "GET", url: `/vehicles/${vid}`, headers: auth() });
+    assert.equal(idle.json().data.operationalStatus, "available");
+    assert.equal(idle.json().data.currentRental, null);
+
+    const next = await prisma.contract.create({
+      data: {
+        contractNumber: `CT-NEW-${run}`,
+        status: "PAID",
+        vehicleId: vid,
+        customerId: customer.id,
+        createdByUserId: actor.id,
+        priceType: "DAILY",
+        rentalDays: 2,
+        agreedAmount: 900,
+        payments: {
+          create: {
+            amount: 900,
+            method: "MANUAL",
+            status: "CONFIRMED",
+            confirmedAt: new Date(),
+            createdByUserId: actor.id,
+          },
+        },
+      },
+    });
+    const photos = await dummyPhotos();
+    const out = await app.inject({
+      method: "POST",
+      url: `/contracts/${next.id}/car-out`,
+      headers: auth(),
+      payload: { mileageOut: 50, fuelOut: "F", photos },
+    });
+    assert.equal(out.statusCode, 200, out.body);
+    const rented = await app.inject({ method: "GET", url: `/vehicles/${vid}`, headers: auth() });
+    assert.equal(rented.json().data.operationalStatus, "rented");
+    assert.equal(rented.json().data.currentRental.contractId, next.id);
+
+    const closeOld = await app.inject({
+      method: "POST",
+      url: `/contracts/${old.id}/close`,
+      headers: auth(),
+    });
+    assert.equal(closeOld.statusCode, 200, closeOld.body);
+    assert.equal(closeOld.json().data.status, "CLOSED");
+    const still = await app.inject({ method: "GET", url: `/vehicles/${vid}`, headers: auth() });
+    assert.equal(still.json().data.operationalStatus, "rented");
+    assert.equal(still.json().data.currentRental.contractId, next.id);
   });
 
   test("expired and revoked rental links are rejected", async () => {

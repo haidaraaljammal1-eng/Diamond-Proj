@@ -37,10 +37,10 @@ There is no generic status PUT. Every change is an explicit service action.
 | PAID | Confirmed payment; vehicle reserved (not yet RENTED) |
 | ACTIVE | Car-Out done; vehicle RENTED |
 | RETOUT | Return link issued; vehicle stays RENTED |
-| REVIEW | Car-In submitted; staff reconciliation pending |
-| CLOSED | Staff close; vehicle AVAILABLE |
+| REVIEW | Car-In submitted; vehicle already returned; staff reconciliation pending |
+| CLOSED | Staff close; financial lifecycle ended. Vehicle availability was already decided at Car-In. |
 
-**Car-In does not close the contract and does not set the vehicle AVAILABLE.** Only CLOSE does.
+**Car-In ends customer possession.** Contract RETOUT → REVIEW and Vehicle RENTED → AVAILABLE in the same Car-In transaction. Close does not wait for hypothetical future RTA/Salik liabilities and does not release the vehicle.
 
 Invalid jumps (`AWAITING → ACTIVE`, `ACTIVE → CLOSED`, `RETOUT → CLOSED`, `REVIEW → ACTIVE`, any `CLOSED` transition) are rejected with `409` / `CONTRACT_INVALID_TRANSITION`.
 
@@ -61,10 +61,11 @@ Never derived from row count.
 | Offer / FORM / SIGNED | No lock. SERVICE vehicles cannot start an offer. |
 | PAID | Reserved: blocking contract exists; `operationalStatus` unchanged |
 | ACTIVE (Car-Out) | `RENTED` (same transaction) |
-| RETOUT / Car-In / REVIEW | Stays `RENTED` |
-| CLOSED | `AVAILABLE` (same transaction) |
+| RETOUT | Stays `RENTED` (customer still has the vehicle) |
+| REVIEW (Car-In) | `AVAILABLE` if the vehicle was `RENTED` (custody ended). Does not overwrite `SERVICE`. |
+| CLOSED | Vehicle unchanged. Close must not set AVAILABLE and must not steal a newer rental. |
 
-Blocking contract statuses: **PAID, ACTIVE, RETOUT, REVIEW**. CLOSED is never blocking. AWAITING / FORM / SIGNED do not permanently lock the vehicle — the first offer to reach PAID wins under the lock.
+Blocking / currentRental statuses: **PAID, ACTIVE, RETOUT**. REVIEW is not blocking. CLOSED is never blocking. AWAITING / FORM / SIGNED do not permanently lock the vehicle — the first offer to reach PAID wins under the lock.
 
 Critical mutations take `withTransaction` + `acquireAdvisoryLock(tx, "vehicle_rental", vehicleId)`, then re-read Vehicle and conflicting Contracts. Second blocking contract → `409` / `VEHICLE_ALREADY_RENTED`.
 
@@ -72,15 +73,17 @@ Fleet `PUT` / deactivate still reject `operationalStatus = RENTED`, and also rej
 
 ## currentRental
 
-`currentRental` is the **current blocking rental context** for a vehicle — not only a physically started rental.
+`currentRental` is the **current possession/reservation context** for a vehicle — not every financially-open Contract.
 
-Included: `PAID | ACTIVE | RETOUT | REVIEW`.  
-Excluded: `AWAITING | FORM | SIGNED | CLOSED`.
+Included: `PAID | ACTIVE | RETOUT`.  
+Excluded: `AWAITING | FORM | SIGNED | REVIEW | CLOSED`.
+
+A REVIEW Contract after Car-In must not appear as `currentRental`. The vehicle may enter a new valid Contract while the prior Contract stays in REVIEW.
 
 Shape:
 
 ```json
-{ "contractId": "…", "customerName": "…", "endAt": "…", "status": "paid"|"active"|"retout"|"review" }
+{ "contractId": "…", "customerName": "…", "endAt": "…", "status": "paid"|"active"|"retout" }
 ```
 
 At **PAID**: Vehicle `operationalStatus` stays `AVAILABLE` (Car-Out has not happened). `currentRental.status` is `"paid"` so the fleet page can see the reservation. Fleet edit/deactivate remain 409 because PAID is a blocking contract.
@@ -111,17 +114,25 @@ Public token routes live under `routes/public/` with an empty public hook — **
 
 Eight Demo angles: FRONT, REAR, RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES. Junctions reference Attachment; they are **not** `VehiclePhoto`. Stream routes are authenticated (`contracts.read`).
 
-Staff Car-In: `POST /contracts/:id/car-in` (`contracts.return`) on RETOUT. Public token Car-In: `POST /contracts/return/:token/car-in` (used RETURN tokens are allowed so a second submit after REVIEW is idempotent). Both write `ContractCarIn` + eight photos, transition RETOUT → REVIEW, emit `contract.return_submitted`, and **do not** change the vehicle. Vehicle stays RENTED until CLOSE.
+Staff Car-In: `POST /contracts/:id/car-in` (`contracts.return`) on RETOUT. Public token Car-In: `POST /contracts/return/:token/car-in` (used RETURN tokens are allowed so a second submit after REVIEW is idempotent). Both write `ContractCarIn` + eight photos, transition RETOUT → REVIEW, emit `contract.return_submitted`, and if the vehicle is RENTED set it AVAILABLE in the same transaction (advisory lock `vehicle_rental`). Car-In never closes the Contract. REVIEW means financial/operational review is still open, not that the customer still has the vehicle.
+
+GPS Salik intelligence is a derived Contract projection (`roadLiabilitySignals`), not a stored boolean and not a lifecycle hold. Detail also includes a compact `postCloseReceivables` summary (count, openAmount, bounded items) without N+1.
 
 Car-Out is the future TARS `HANDOVER` integration checkpoint and Car-In the future `RETURN_DOCUMENTATION` checkpoint. Neither calls TARS today, and the sequencing is unconfirmed. See `DOCU/04-api-contracts/tars-integration.md`.
 
 ## Reconciliation
 
-Staff-owned settlement. Line types: DAMAGE, FUEL, LATE, SALIK, VIOLATION, OTHER. Amounts and optional `externalReference` / `sourceDomain` only — no Salik or Violations engines. Totals computed server-side: `chargesTotal`, `depositAmount`, `deductions` (= deposit), `finalAmount` (= charges − deposit). Saving reconciliation sets `approvedAt` (V1: reconcile action is the approval).
+Staff-owned settlement at Contract status **REVIEW** (after Car-In). Line types: DAMAGE, FUEL, LATE, SALIK, VIOLATION, OTHER.
+
+New manual `SALIK` / `VIOLATION` lines are not accepted (`ROAD_LIABILITY_REQUIRED`). Those charges must originate from a confirmed `RoadLiability` via confirm-charge. Existing historical manual SALIK/VIOLATION rows remain readable and are not migrated or deleted.
+
+RoadLiability-backed lines: unique `roadLiabilityId`, `line.amount` = final customer charge, `officialAmountSnapshot` / `adjustmentAmount` / `adjustmentReason` preserved. `POST /contracts/:id/reconcile` keeps those lines (does not delete/recreate them) and adds DAMAGE/FUEL/LATE/OTHER from the payload. Totals use customer charge once — adjustment is metadata, not a second line.
+
+Saving reconciliation sets `approvedAt` (V1: reconcile action is the approval). Confirm-charge locks the liability snapshot but does not by itself mark the reconciliation approved or the liability `SETTLED`.
 
 ## Close
 
-Requires REVIEW + Car-In + approved reconciliation. Same transaction + vehicle lock: status CLOSED, `closedAt`, vehicle AVAILABLE, audit, outbox `contract.closed`.
+Requires REVIEW + Car-In + approved reconciliation. Same transaction: status CLOSED, `closedAt`, audit, outbox `contract.closed`. Close does **not** set Vehicle AVAILABLE and must not overwrite SERVICE or a newer rental's RENTED status.
 
 ## Renewal
 
@@ -154,6 +165,8 @@ Staff only. Public token routes have no staff permissions.
 | POST | `/contracts/:id/return-link` | return |
 | POST | `/contracts/:id/car-in` | return |
 | POST | `/contracts/:id/reconcile` | reconcile |
+| GET | `/contracts/:id/reconciliation/road-liabilities` | reconcile |
+| POST | `/contracts/:id/reconciliation/road-liabilities/:roadLiabilityId/confirm-charge` | reconcile |
 | POST | `/contracts/:id/close` | close |
 | POST | `/contracts/:id/renewal-link` | renew (body: `additionalDays`, `additionalAmount`) |
 | POST | `/contracts/:id/renew` | renew |
@@ -161,7 +174,7 @@ Staff only. Public token routes have no staff permissions.
 | GET | `/contracts/:id/car-in/photos/:photoId/stream` | read |
 | GET | `/contracts/:id/tars` | read |
 
-List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, and `actions` capability flags (`canCarIn` is true on RETOUT with no Car-In yet). No raw tokens.
+List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. List items include `hasSalikGpsSignal` (batched). Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, `roadLiabilitySignals`, `postCloseReceivables`, and `actions` capability flags (`canCarIn` is true on RETOUT with no Car-In yet). No raw tokens.
 
 ## Public routes
 
@@ -200,11 +213,15 @@ Stable `AppError.code` + `context.reason`:
 | `CONTRACT_CAR_IN_REQUIRED` | 409 |
 | `CONTRACT_RECONCILIATION_REQUIRED` | 409 |
 | `CONTRACT_ALREADY_CLOSED` | 409 |
-| `CONTRACT_RENEWAL_OFFER_REQUIRED` | 409 |
+| `ROAD_LIABILITY_REQUIRED` | 409 |
+| `ROAD_LIABILITY_NOT_CHARGEABLE` | 409 |
+| `ROAD_LIABILITY_CONTRACT_MISMATCH` | 409 |
+| `ROAD_LIABILITY_ALREADY_CHARGED` | 409 |
+| `CUSTOMER_CHARGE_BELOW_OFFICIAL` / `ADJUSTMENT_REASON_REQUIRED` / `INVALID_CUSTOMER_CHARGE` | 422 |
 
 ## Transactions / idempotency / outbox / audit
 
-Atomic Contract+Vehicle writes: payment confirm, Car-Out, close, renewal. Car-In status mutation is transactional (vehicle unchanged). Idempotency via existing `runIdempotent` when `Idempotency-Key` is sent: payment confirm, Car-Out, Car-In, close, renew. Scope is `contract:<action>:<contractId>` (public Car-In uses the token hash; staff Car-In uses `contract:car-in-staff:<contractId>`). Same key + same payload replays the current result. Same key + different payload → `409` / `IDEMPOTENCY_KEY_CONFLICT`. Transitions also no-op if already at the target status.
+Atomic Contract+Vehicle writes: payment confirm, Car-Out, Car-In (vehicle AVAILABLE), renewal. Close is transactional for the Contract only (vehicle unchanged). Idempotency via existing `runIdempotent` when `Idempotency-Key` is sent: payment confirm, Car-Out, Car-In, close, renew, confirm-charge. Unified charge confirm uses scope `road-liability:confirm-charge:${roadLiabilityId}`; the old Contract wrapper remains REVIEW-only. Same key + same payload replays the current result. Same key + different payload → `409` / `IDEMPOTENCY_KEY_CONFLICT`. Transitions also no-op if already at the target status. Confirm-charge also uses DB unique `RoadLiabilityCustomerCharge.roadLiabilityId` + advisory locks `contract_reconcile` / `road_liability_charge`.
 
 Outbox events (IDs / non-PII only): `contract.created`, `contract.license_uploaded`, `contract.license_verified`, `contract.form_completed`, `contract.signed`, `payment.started`, `payment.pending`, `payment.confirmed`, `payment.failed`, `contract.paid`, `contract.activated`, `contract.return_started`, `contract.return_submitted`, `contract.closed`, `contract.renewed`.
 
@@ -212,7 +229,7 @@ Staff audit via `request.setAudit` on create, links, payment, Car-Out, Car-In, r
 
 ## Tests
 
-Unit: `tests/unit/contracts-status.test.ts` (includes 48h RENEWAL TTL), `tests/unit/public-rental-flow.test.ts`. Integration: `tests/integration/contracts.test.ts`, `tests/integration/contracts-renewal.test.ts`, and `tests/integration/public-rental-flow.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
+Unit: `tests/unit/contracts-status.test.ts` (includes 48h RENEWAL TTL), `tests/unit/public-rental-flow.test.ts`, `tests/unit/contracts-road-liability-charge.test.ts`. Integration: `tests/integration/contracts.test.ts`, `tests/integration/contracts-renewal.test.ts`, `tests/integration/public-rental-flow.test.ts`, and `tests/integration/contracts-road-liability-charge.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
 
 ## TARS Integration Boundary
 

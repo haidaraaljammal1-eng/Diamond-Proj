@@ -19,6 +19,8 @@ export function useDemoSimulation() {
     acceptPending: store.acceptPending,
     payment: store.payment,
     tarsPreset: store.tarsPreset,
+    gpsOverlay: store.gpsOverlay,
+    roadLiabilitiesOverlay: store.roadLiabilitiesOverlay,
   };
 
   return {
@@ -32,6 +34,12 @@ export function useDemoSimulation() {
     setPaymentScenario: store.setPaymentScenario,
     simulatePayment: store.simulatePayment,
     simulateTars: store.simulateTars,
+    simulateGps: store.simulateGps,
+    tickGpsPath: store.tickGpsPath,
+    clearGpsOverlay: store.clearGpsOverlay,
+    simulateRoadLiabilities: store.simulateRoadLiabilities,
+    attachSimulatedRoadLiabilityCharge: store.attachSimulatedRoadLiabilityCharge,
+    clearRoadLiabilitiesOverlay: store.clearRoadLiabilitiesOverlay,
     clearRentalOverlay: store.clearRentalOverlay,
     reset: store.reset,
   };

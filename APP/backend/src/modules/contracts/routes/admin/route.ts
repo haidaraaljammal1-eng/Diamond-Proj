@@ -6,6 +6,8 @@ import {
   CarInSchema,
   CarOutSchema,
   ConfirmPaymentSchema,
+  ConfirmRoadLiabilityChargeParam,
+  ConfirmRoadLiabilityChargeSchema,
   ContractDetailSchema,
   ContractIdParam,
   ContractLinkIssuedSchema,
@@ -13,6 +15,7 @@ import {
   CreateOfferSchema,
   ListContractsQuerySchema,
   ReconcileSchema,
+  ReconciliationRoadLiabilitiesSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
 import { ContractTarsResponseSchema } from "src/modules/integrations/tars/tars.schema";
@@ -262,6 +265,57 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       const data = await contracts.reconcile(request.params.id, request.body, actor.id);
       request.setAudit({
         action: "contracts.reconcile",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.get(
+    "/:id/reconciliation/road-liabilities",
+    {
+      schema: {
+        summary: "List chargeable and attached road liabilities for reconciliation",
+        operationId: "listContractReconciliationRoadLiabilities",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ReconciliationRoadLiabilitiesSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const data = await contracts.listReconciliationRoadLiabilities(request.params.id);
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/road-liabilities/:roadLiabilityId/confirm-charge",
+    {
+      schema: {
+        summary: "Confirm the customer charge for a confirmed road liability",
+        operationId: "confirmContractRoadLiabilityCharge",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ConfirmRoadLiabilityChargeParam,
+        body: ConfirmRoadLiabilityChargeSchema,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.confirmRoadLiabilityCharge(
+        request.params.id,
+        request.params.roadLiabilityId,
+        request.body,
+        actor.id,
+        typeof key === "string" ? key : undefined,
+      );
+      request.setAudit({
+        action: "contracts.confirm_road_liability_charge",
         entityType: "contract",
         entityId: request.params.id,
       });

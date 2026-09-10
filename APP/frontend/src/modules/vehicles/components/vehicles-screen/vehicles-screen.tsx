@@ -278,7 +278,7 @@ export function VehiclesScreen() {
             onPrimaryAction={handlePrimaryAction}
             onEditRates={setEditRatesVehicle}
             onDelete={setDeactivateVehicle}
-            onGps={() => showNotice(t("boundary.gpsPending"))}
+            onGps={(vehicle) => router.push(`/${locale}/gps?vehicleId=${vehicle.id}`)}
           />
 
           {showPagination ? (
@@ -324,7 +324,7 @@ export function VehiclesScreen() {
         onClose={() => setDetailVehicle(null)}
         onSetPrice={setPriceVehicle}
         onPrimaryAction={handlePrimaryAction}
-        onGps={() => showNotice(t("boundary.gpsPending"))}
+        onGps={(vehicle) => router.push(`/${locale}/gps?vehicleId=${vehicle.id}`)}
         onMaintenance={() => router.push(`/${locale}/maintenance`)}
         onPhotoNotice={showNotice}
       />

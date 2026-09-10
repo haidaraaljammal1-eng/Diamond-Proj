@@ -12,9 +12,15 @@ import styles from "./simulation-button.module.css";
 
 interface SimulationButtonProps {
   surface: SimulationSurface;
+  onGpsSimulate?: () => void;
+  onViolationsSimulate?: () => void;
 }
 
-export function SimulationButton({ surface }: SimulationButtonProps) {
+export function SimulationButton({
+  surface,
+  onGpsSimulate,
+  onViolationsSimulate,
+}: SimulationButtonProps) {
   const t = useTranslations("DemoSimulation");
   const simulation = useDemoSimulation();
   const [open, setOpen] = useState(false);
@@ -80,6 +86,32 @@ export function SimulationButton({ surface }: SimulationButtonProps) {
           </Button>
           <Button type="button" variant="secondary" size="sm" data-testid="simulate-payment-pending" onClick={() => run(() => simulation.simulatePayment("pending"))}>
             {t("payment.pending")}
+          </Button>
+        </div>
+      ) : null}
+      {surface === "gps" ? (
+        <div className={styles.actions}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="simulate-gps-run"
+            onClick={() => run(() => onGpsSimulate?.())}
+          >
+            {t("gps.run")}
+          </Button>
+        </div>
+      ) : null}
+      {surface === "violations" ? (
+        <div className={styles.actions}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="simulate-violations-run"
+            onClick={() => run(() => onViolationsSimulate?.())}
+          >
+            {t("violations.run")}
           </Button>
         </div>
       ) : null}

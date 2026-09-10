@@ -334,6 +334,81 @@ test.describe("Live desk states (non-mutating)", () => {
     await page.screenshot({ path: `${SHOTS}/en-vehicles-available.png` });
   });
 
+  test("REVIEW after Car-In shows returned custody and GPS informational flag", async ({
+    page,
+  }) => {
+    await login(page, "en");
+    await mockDetail(page, {
+      status: "REVIEW",
+      carIn: {
+        id: "car-in-fixture",
+        occurredAt: "2026-09-10T11:00:00.000Z",
+        mileageIn: 80,
+        fuelIn: "1/2",
+        notes: null,
+        photos: [],
+      },
+      roadLiabilitySignals: {
+        hasSalikGpsSignal: true,
+        salikGpsSignalCount: 1,
+        unconfirmedSalikGpsSignalCount: 1,
+        latestSalikGpsSignalAt: "2026-09-10T10:31:00.000Z",
+      },
+      postCloseReceivables: { count: 0, openAmount: 0, items: [] },
+    });
+    await openFirstRow(page);
+    await expect(page.getByTestId("contract-custody")).toContainText("Vehicle returned");
+    await expect(page.getByTestId("contract-custody")).toContainText("Custody ended");
+    await expect(page.getByTestId("contract-gps-salik-flag")).toContainText(
+      "Possible Salik crossing detected by GPS",
+    );
+    await expect(page.getByTestId("shared-drawer")).not.toContainText("Waiting for Violation");
+    await expect(page.getByTestId("shared-drawer")).not.toContainText("waiting for Salik");
+    await page.screenshot({ path: `${SHOTS}/en-review-custody-gps-flag.png` });
+  });
+
+  test("CLOSED contract shows historical GPS flag and post-close charges", async ({ page }) => {
+    await login(page, "en");
+    await mockDetail(page, {
+      status: "CLOSED",
+      carIn: {
+        id: "car-in-fixture",
+        occurredAt: "2026-09-10T11:00:00.000Z",
+        mileageIn: 80,
+        fuelIn: "1/2",
+        notes: null,
+        photos: [],
+      },
+      roadLiabilitySignals: {
+        hasSalikGpsSignal: true,
+        salikGpsSignalCount: 1,
+        unconfirmedSalikGpsSignalCount: 1,
+        latestSalikGpsSignalAt: "2026-09-10T10:31:00.000Z",
+      },
+      postCloseReceivables: {
+        count: 1,
+        openAmount: 120,
+        items: [
+          {
+            id: "pcr-1",
+            amount: 120,
+            currency: "AED",
+            status: "OPEN",
+            roadLiabilityType: "RTA_VIOLATION",
+            createdAt: "2026-09-20T10:00:00.000Z",
+          },
+        ],
+      },
+    });
+    await openFirstRow(page);
+    await expect(page.getByTestId("contract-gps-salik-flag")).toContainText(
+      "No official Salik charge confirmed yet",
+    );
+    await expect(page.getByTestId("contract-post-close")).toContainText("Post-Close Charges");
+    await expect(page.getByTestId("contract-post-close")).toContainText("120 AED");
+    await page.screenshot({ path: `${SHOTS}/en-closed-gps-post-close.png` });
+  });
+
   test("Arabic desk RTL status filters", async ({ page }) => {
     await login(page, "ar");
     await page.goto("/ar/contracts");

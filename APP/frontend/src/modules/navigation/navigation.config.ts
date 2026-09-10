@@ -2,6 +2,7 @@ import { ROLES_PAGE_PERMISSIONS } from "@/modules/roles/roles.permissions";
 import { USERS_PAGE_PERMISSIONS } from "@/modules/users/users.permissions";
 import { VEHICLES_PAGE_PERMISSIONS } from "@/modules/vehicles/vehicles.permissions";
 import { CONTRACTS_PAGE_PERMISSIONS } from "@/modules/contracts/contracts.permissions";
+import { MAINTENANCE_PAGE_PERMISSIONS } from "@/modules/maintenance/maintenance.permissions";
 import type { NavigationConfig } from "./navigation.types";
 
 /**
@@ -10,8 +11,10 @@ import type { NavigationConfig } from "./navigation.types";
  *
  * Permission notes:
  * - `dashboard.read`, the Staff entry (`users.read`), the Roles entry
- *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`), and
- *   Contracts (`contracts.read`) map to permissions that exist in the Backend catalog.
+ *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`),
+ *   Contracts (`contracts.read`), Maintenance (`maintenance.read`),
+ *   GPS (`gps.read`), and Violations & Salik (`violations.read`) map to
+ *   permissions that exist in the Backend catalog.
  * - Every other Demo page still has NO matching Backend permission, so it
  *   intentionally declares none (never invented).
  * - `adminOnly` mirrors the Demo `adminonly` owner/employee behavior.
@@ -51,6 +54,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "gps",
         href: "/gps",
         icon: "gps",
+        permission: "gps.read",
       },
       {
         key: "maintenance",
@@ -58,6 +62,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "maintenance",
         href: "/maintenance",
         icon: "maintenance",
+        permissions: [...MAINTENANCE_PAGE_PERMISSIONS],
       },
       {
         key: "violations",
@@ -65,7 +70,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "violations",
         href: "/violations",
         icon: "violations",
-        adminOnly: true,
+        permission: "violations.read",
       },
       {
         key: "finance",

@@ -7,6 +7,7 @@ import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { writeOutboxEvent } from "src/lib/db/outbox";
 import { runIdempotent, fingerprintIdempotentPayload } from "src/lib/db/idempotency";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
+import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { paginate, parseSort } from "src/lib/http/pagination";
 import { normalizeEmail, normalizePhone } from "src/lib/security/normalize";
 import { resolveStoragePath } from "src/lib/files/storage-key";
@@ -17,11 +18,13 @@ import {
   CONTRACT_CURRENCY,
   CONTRACT_LICENSE_LOCK_NS,
   CONTRACT_PAYMENT_LOCK_NS,
+  CONTRACT_RECONCILE_LOCK_NS,
   CONTRACT_TERMS_VERSION,
   DRIVING_LICENSE_UPLOAD_MIME,
   INSPECTION_ANGLES,
   OFFICE_DISPLAY_NAME_DEFAULT,
   PAYMENT_STATUS_TOKEN_TTL_SECONDS,
+  VEHICLE_RENTAL_LOCK_NS,
 } from "src/modules/contracts/contracts.constants";
 import { allocateContractNumber } from "src/modules/contracts/contracts-number";
 import { assertStatus, assertTransition } from "src/modules/contracts/contracts-status";
@@ -54,12 +57,23 @@ import type {
   CarInSchema,
   CarOutSchema,
   ConfirmPaymentSchema,
+  ConfirmRoadLiabilityChargeSchema,
   CreateOfferInput,
   PublicAcceptSchema,
   PublicFormSchema,
   ReconcileSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
+import {
+  isManualExternalReconLineType,
+  reconciliationTotalsFromLines,
+} from "src/modules/contracts/contracts-road-liability-charge";
+import {
+  buildRoadLiabilityChargeProposal,
+  COLLECTIBLE_WHERE,
+} from "src/modules/road-liabilities/road-liability.mapper";
+import { createRoadLiabilityCustomerChargeService } from "src/modules/road-liabilities/road-liability-customer-charge.service";
+import { loadSalikGpsSignals } from "src/modules/contracts/contract-road-liability-signals";
 import type { z } from "zod";
 import type { ListContractsQuerySchema } from "src/modules/contracts/contracts.schema";
 
@@ -110,6 +124,12 @@ function pickPublicRenewal(renewals: RenewalHistoryRow[], preferConfirmed: boole
 export function createContractsService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
   const files = createFilesService(fastify);
+  const customerCharges = createRoadLiabilityCustomerChargeService(fastify);
+
+  async function decorateDetail(row: Awaited<ReturnType<typeof loadDetail>>, db: typeof prisma | Tx = prisma) {
+    const signals = await loadSalikGpsSignals(db, [row.id]);
+    return toDetail(row, signals.get(row.id));
+  }
 
   function assertLicenseProgress(
     status: string | null | undefined,
@@ -204,7 +224,7 @@ export function createContractsService(fastify: FastifyInstance) {
         },
       });
       await emit(tx, "contract.created", created.id, { vehicleId: input.vehicleId });
-      return toDetail(
+      return decorateDetail(
         await tx.contract.findUniqueOrThrow({
           where: { id: created.id },
           include: CONTRACT_DETAIL_INCLUDE,
@@ -257,13 +277,22 @@ export function createContractsService(fastify: FastifyInstance) {
           skip,
           take,
         });
-        return rows.map(toListItem);
+        const signals = await loadSalikGpsSignals(
+          prisma,
+          rows.map((row) => row.id),
+        );
+        return rows.map((row) =>
+          toListItem({
+            ...row,
+            hasSalikGpsSignal: signals.get(row.id)?.hasSalikGpsSignal ?? false,
+          }),
+        );
       },
     });
   }
 
   async function get(id: string) {
-    return toDetail(await loadDetail(id));
+    return decorateDetail(await loadDetail(id));
   }
 
   async function generateLink(
@@ -336,7 +365,7 @@ export function createContractsService(fastify: FastifyInstance) {
         const contract = await tx.contract.findUnique({ where: { id: contractId } });
         if (!contract) throw contractError.notFound();
         if (contract.status === "PAID" || contract.status === "ACTIVE") {
-          return toDetail(
+          return decorateDetail(
             await tx.contract.findUniqueOrThrow({
               where: { id: contractId },
               include: CONTRACT_DETAIL_INCLUDE,
@@ -364,7 +393,7 @@ export function createContractsService(fastify: FastifyInstance) {
         });
         await completeRentalLinks(tx, contractId);
         await emit(tx, "contract.paid", contractId, { vehicleId: contract.vehicleId });
-        return toDetail(
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -405,7 +434,7 @@ export function createContractsService(fastify: FastifyInstance) {
         });
         if (!contract) throw contractError.notFound();
         if (contract.status === "ACTIVE" && contract.carOut) {
-          return toDetail(
+          return decorateDetail(
             await tx.contract.findUniqueOrThrow({
               where: { id: contractId },
               include: CONTRACT_DETAIL_INCLUDE,
@@ -448,7 +477,7 @@ export function createContractsService(fastify: FastifyInstance) {
           data: { operationalStatus: "RENTED" },
         });
         await emit(tx, "contract.activated", contractId, { vehicleId: contract.vehicleId });
-        return toDetail(
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -632,6 +661,7 @@ export function createContractsService(fastify: FastifyInstance) {
     assertTransition(contract.status, "REVIEW");
     if (!contract.carOut) throw contractError.carOutRequired();
 
+    await acquireAdvisoryLock(tx, VEHICLE_RENTAL_LOCK_NS, contract.vehicleId);
     const now = input.occurredAt ?? new Date();
     const row = await tx.contractCarIn.create({
       data: {
@@ -654,6 +684,16 @@ export function createContractsService(fastify: FastifyInstance) {
       where: { id: contract.id },
       data: { status: "REVIEW", revision: { increment: 1 } },
     });
+    const vehicle = await tx.vehicle.findUnique({
+      where: { id: contract.vehicleId },
+      select: { operationalStatus: true },
+    });
+    if (vehicle?.operationalStatus === "RENTED") {
+      await tx.vehicle.update({
+        where: { id: contract.vehicleId },
+        data: { operationalStatus: "AVAILABLE" },
+      });
+    }
     await emit(tx, "contract.return_submitted", contract.id, { vehicleId: contract.vehicleId });
     return "created";
   }
@@ -715,7 +755,7 @@ export function createContractsService(fastify: FastifyInstance) {
         if (!contract) throw contractError.notFound();
         const outcome = await persistCarIn(tx, contract, input);
         if (outcome === "created") await completeReturnLinks(tx, contract.id);
-        return toDetail(
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contract.id },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -743,12 +783,28 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  async function detailFromTx(tx: Tx, contractId: string) {
+    return decorateDetail(
+      await tx.contract.findUniqueOrThrow({
+        where: { id: contractId },
+        include: CONTRACT_DETAIL_INCLUDE,
+      }),
+      tx,
+    );
+  }
+
   async function reconcile(
     contractId: string,
     input: z.infer<typeof ReconcileSchema>,
     actorUserId: number,
   ) {
+    for (const line of input.lines) {
+      if (isManualExternalReconLineType(line.type)) {
+        throw contractError.roadLiabilityRequired();
+      }
+    }
     return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
       const contract = await tx.contract.findUnique({
         where: { id: contractId },
         include: { carIn: true, reconciliation: true },
@@ -757,23 +813,25 @@ export function createContractsService(fastify: FastifyInstance) {
       assertStatus(contract.status, "REVIEW");
       if (!contract.carIn) throw contractError.carInRequired();
 
-      const chargesTotal = input.lines.reduce((sum, line) => sum + line.amount, 0);
-      const depositAmount = contract.depositAmount ?? 0;
-      const deductions = depositAmount;
-      const finalAmount = chargesTotal - deductions;
+      const preservedLiabilityLines = contract.reconciliation
+        ? await tx.contractReconciliationLine.findMany({
+            where: { reconciliationId: contract.reconciliation.id, roadLiabilityId: { not: null } },
+          })
+        : [];
+      const totals = reconciliationTotalsFromLines(
+        [...preservedLiabilityLines, ...input.lines],
+        contract.depositAmount ?? 0,
+      );
       const now = new Date();
 
       if (contract.reconciliation) {
         await tx.contractReconciliationLine.deleteMany({
-          where: { reconciliationId: contract.reconciliation.id },
+          where: { reconciliationId: contract.reconciliation.id, roadLiabilityId: null },
         });
         await tx.contractReconciliation.update({
           where: { id: contract.reconciliation.id },
           data: {
-            chargesTotal,
-            depositAmount,
-            deductions,
-            finalAmount,
+            ...totals,
             approvedAt: now,
             approvedByUserId: actorUserId,
             lines: { create: input.lines },
@@ -783,23 +841,113 @@ export function createContractsService(fastify: FastifyInstance) {
         await tx.contractReconciliation.create({
           data: {
             contractId,
-            chargesTotal,
-            depositAmount,
-            deductions,
-            finalAmount,
+            ...totals,
             approvedAt: now,
             approvedByUserId: actorUserId,
             lines: { create: input.lines },
           },
         });
       }
-      return toDetail(
-        await tx.contract.findUniqueOrThrow({
-          where: { id: contractId },
-          include: CONTRACT_DETAIL_INCLUDE,
-        }),
-      );
+      return detailFromTx(tx, contractId);
     });
+  }
+
+  async function listReconciliationRoadLiabilities(contractId: string) {
+    const contract = await prisma.contract.findUnique({ where: { id: contractId } });
+    if (!contract) throw contractError.notFound();
+
+    const [availableRows, attachedRows] = await Promise.all([
+      prisma.roadLiability.findMany({
+        where: {
+          ...COLLECTIBLE_WHERE,
+          attributedContractId: contractId,
+          reconciliationLine: { is: null },
+        },
+        include: {
+          vehicle: { include: { model: { select: { name: true } } } },
+          observations: { select: { sourceKey: true } },
+        },
+        orderBy: { occurredAt: "asc" },
+      }),
+      prisma.contractReconciliationLine.findMany({
+        where: {
+          reconciliation: { contractId },
+          roadLiabilityId: { not: null },
+        },
+        include: { roadLiability: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+
+    return {
+      available: availableRows.flatMap((row) => {
+        if (row.amount == null || !row.currency) return [];
+        const proposal = buildRoadLiabilityChargeProposal({ amount: row.amount });
+        return [
+          {
+            id: row.id,
+            type: row.type,
+            sourceKey: row.authoritativeSourceKey,
+            occurredAt: row.occurredAt,
+            officialAmount: proposal.officialAmount,
+            currency: row.currency,
+            suggestedCustomerChargeAmount: proposal.suggestedCustomerChargeAmount,
+            minimumCustomerChargeAmount: proposal.minimumCustomerChargeAmount,
+            externalReference: row.authoritativeExternalReference,
+            locationLabel: row.locationLabel,
+            predictedByGps: row.observations.some((observation) => observation.sourceKey === "GPS_INFERENCE"),
+            vehicle: row.vehicle
+              ? {
+                  id: row.vehicle.id,
+                  displayName: vehicleDisplayName({
+                    vehicleName: row.vehicle.vehicleName,
+                    modelName: row.vehicle.model?.name ?? null,
+                    modelYear: row.vehicle.modelYear,
+                    plateNumber: row.vehicle.plateNumber,
+                  }),
+                  plateNumber: row.vehicle.plateNumber,
+                }
+              : null,
+          },
+        ];
+      }),
+      attached: attachedRows.flatMap((line) => {
+        const liability = line.roadLiability;
+        if (!liability || !line.roadLiabilityId) return [];
+        return [
+          {
+            roadLiabilityId: line.roadLiabilityId,
+            reconciliationLineId: line.id,
+            type: liability.type,
+            sourceKey: liability.authoritativeSourceKey,
+            occurredAt: liability.occurredAt,
+            officialAmount: line.officialAmountSnapshot ?? liability.amount ?? 0,
+            customerChargeAmount: line.amount,
+            adjustmentAmount: line.adjustmentAmount ?? 0,
+            adjustmentReason: line.adjustmentReason,
+            adjustmentNote: line.adjustmentNote,
+            locked: true as const,
+          },
+        ];
+      }),
+    };
+  }
+
+  async function confirmRoadLiabilityCharge(
+    contractId: string,
+    roadLiabilityId: string,
+    input: z.infer<typeof ConfirmRoadLiabilityChargeSchema>,
+    actorUserId: number,
+    idempotencyKey?: string,
+  ) {
+    await customerCharges.confirmForContract(
+      contractId,
+      roadLiabilityId,
+      input,
+      actorUserId,
+      idempotencyKey,
+    );
+    return get(contractId);
   }
 
   async function close(contractId: string, actorUserId: number, idempotencyKey?: string) {
@@ -811,7 +959,7 @@ export function createContractsService(fastify: FastifyInstance) {
         });
         if (!contract) throw contractError.notFound();
         if (contract.status === "CLOSED") {
-          return toDetail(
+          return decorateDetail(
             await tx.contract.findUniqueOrThrow({
               where: { id: contractId },
               include: CONTRACT_DETAIL_INCLUDE,
@@ -822,21 +970,16 @@ export function createContractsService(fastify: FastifyInstance) {
         if (!contract.carIn) throw contractError.carInRequired();
         if (!contract.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
 
-        await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
         const now = new Date();
         await tx.contract.update({
           where: { id: contractId },
           data: { status: "CLOSED", closedAt: now, revision: { increment: 1 } },
         });
-        await tx.vehicle.update({
-          where: { id: contract.vehicleId },
-          data: { operationalStatus: "AVAILABLE" },
-        });
         await emit(tx, "contract.closed", contractId, {
           vehicleId: contract.vehicleId,
           actorUserId,
         });
-        return toDetail(
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -896,7 +1039,7 @@ export function createContractsService(fastify: FastifyInstance) {
           },
         });
         await emit(tx, "contract.renewed", contractId, { additionalDays: input.additionalDays });
-        return toDetail(
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -1363,6 +1506,8 @@ export function createContractsService(fastify: FastifyInstance) {
     carIn,
     carInStaff,
     reconcile,
+    listReconciliationRoadLiabilities,
+    confirmRoadLiabilityCharge,
     close,
     renew,
     confirmRenewalPublic,

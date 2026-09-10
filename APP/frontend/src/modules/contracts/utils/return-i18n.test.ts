@@ -45,16 +45,44 @@ describe("return / car-in i18n", () => {
     assert.equal(nested(ar, ["Contracts", "carIn", "title"]), "استلام المركبة");
     assert.equal(
       nested(ar, ["Contracts", "carIn", "description"]),
-      "سجّل حالة المركبة وبياناتها عند الإرجاع وأرفق صور الفحص المطلوبة.",
+      "سجّل حالة المركبة عند الإرجاع. تصبح المركبة متاحة فوراً. هذا لا يغلق العقد.",
     );
     assert.equal(nested(en, ["Contracts", "carIn", "title"]), "Car-In — return inspection");
     assert.equal(
       nested(en, ["Contracts", "carIn", "description"]),
-      "Record incoming mileage, fuel and the eight inspection photos. This does not close the contract.",
+      "Record incoming mileage, fuel and the eight inspection photos. The vehicle becomes available again. This does not close the contract.",
     );
     assert.notEqual(
       nested(en, ["PublicReturn", "instructions"]),
       nested(ar, ["PublicReturn", "instructions"]),
     );
+  });
+
+  it("treats Car-In as returned custody and GPS Salik as informational only", () => {
+    const en = readMessages("en");
+    const ar = readMessages("ar");
+    assert.equal(nested(en, ["Contracts", "detail", "carInReturned"]), "Vehicle returned");
+    assert.equal(nested(en, ["Contracts", "detail", "custodyEnded"]), "Custody ended");
+    assert.equal(
+      nested(en, ["Contracts", "timeline", "reviewHint"]),
+      "Vehicle already returned — financial review still open",
+    );
+    assert.equal(
+      nested(en, ["Contracts", "detail", "gpsSalikTitle"]),
+      "Possible Salik crossing detected by GPS",
+    );
+    assert.ok(nested(en, ["Contracts", "detail", "gpsSalikBody"]).includes("informational only"));
+    assert.equal(nested(ar, ["Contracts", "detail", "carInReturned"]), "تم إرجاع السيارة");
+    assert.equal(nested(ar, ["Contracts", "detail", "custodyEnded"]), "حالة الحيازة: انتهت");
+    assert.equal(nested(ar, ["Contracts", "timeline", "review"]), "مراجعة التسوية");
+    assert.equal(
+      nested(ar, ["Contracts", "detail", "gpsSalikTitle"]),
+      "رصد GPS مروراً محتملاً عبر سالك",
+    );
+    const blob = JSON.stringify(en) + JSON.stringify(ar);
+    assert.equal(blob.includes("Waiting for Violation"), false);
+    assert.equal(blob.includes("العقد بانتظار مخالفة"), false);
+    assert.equal(blob.toLowerCase().includes("wait for traffic"), false);
+    assert.equal(blob.toLowerCase().includes("wait for salik"), false);
   });
 });

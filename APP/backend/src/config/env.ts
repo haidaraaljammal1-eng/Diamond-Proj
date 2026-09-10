@@ -96,6 +96,13 @@ const EnvSchema = z
     // fail-closed (TARS_NOT_CONFIGURED) until a real TarsApiProvider exists.
     TARS_ENABLED: envBool(false),
 
+    // GPS Operations. There is no official GPS vendor yet, so GPS_ENABLED is
+    // intent only — runtime always uses GpsUnconfiguredProvider until a real
+    // adapter exists. Do not add vendor URL/key env vars here.
+    GPS_ENABLED: envBool(false),
+    GPS_OFFLINE_AFTER_MINUTES: z.coerce.number().int().positive().default(10),
+    GPS_MOVING_SPEED_THRESHOLD_KPH: z.coerce.number().min(0).default(3),
+
     EMAIL_ENABLED: envBool(false),
     SMTP_HOST: z.string().optional().default(""),
     SMTP_PORT: z.coerce.number().int().positive().default(587),

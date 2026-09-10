@@ -84,7 +84,7 @@
 - Vehicle data must come from Backend APIs, never Demo mock CARS.
 - VehicleCard must compose Shared Card.
 - Vehicle page/components consume hooks, never stores/APIs directly.
-- `currentRental` is a Contracts projection (`PAID` / `ACTIVE` / `RETOUT` / `REVIEW`). Never fake renter/timer data and never denormalize it onto Vehicle.
+- `currentRental` is a Contracts projection (`PAID` / `ACTIVE` / `RETOUT`). Never fake renter/timer data and never denormalize it onto Vehicle.
 - Vehicle page must not implement Contract, GPS, or Maintenance domains.
 
 ## Contracts backend (Diamond)
@@ -92,10 +92,11 @@
 - Contract is the only rental aggregate — do not add a parallel Rental/Client/Car model.
 - Canonical status path: AWAITING → FORM → SIGNED → PAID → ACTIVE → RETOUT → REVIEW → CLOSED. No generic status PUT.
 - PAID reserves the vehicle; ACTIVE begins only at Car-Out (`operationalStatus = RENTED`).
-- Car-In moves RETOUT → REVIEW only. It must never CLOSE the contract and must never set the vehicle AVAILABLE.
-- CLOSE (staff, REVIEW + Car-In + approved reconciliation) sets the vehicle AVAILABLE.
-- Double-booking: `withTransaction` + `acquireAdvisoryLock(tx, "vehicle_rental", vehicleId)` around PAID / ACTIVE / renewal / CLOSE.
-- Blocking statuses: PAID, ACTIVE, RETOUT, REVIEW. AWAITING / FORM / SIGNED do not lock the vehicle.
+- Car-In ends vehicle custody: RETOUT → REVIEW and Vehicle RENTED → AVAILABLE. It must never CLOSE the contract.
+- CLOSE (staff, REVIEW + Car-In + approved reconciliation) closes the Contract only. It does not release the vehicle and must not overwrite a newer rental or SERVICE.
+- Double-booking: `withTransaction` + `acquireAdvisoryLock(tx, "vehicle_rental", vehicleId)` around PAID / ACTIVE / renewal / Car-In.
+- Blocking / currentRental statuses: PAID, ACTIVE, RETOUT. REVIEW is financial review after Car-In, not possession and not a blocking vehicle state.
+- Contracts never wait for hypothetical future RTA/Salik liabilities. No WAITING_FOR_VIOLATION (or equivalent) Contract status.
 - Public customer routes authenticate with hashed ContractLink tokens, not staff JWT. Persist hash only; never log raw tokens or PII.
 - Public customer pages (`/[locale]/rental/[token]`) must not use AppShell, staff JWT, or staff navigation. The rental token comes from the route only and must never be persisted (localStorage, sessionStorage, cookies, or persisted Zustand).
 - Any new Prisma model requires migrate → generate → runtime verification. Never `prisma migrate reset` against Development.
@@ -107,6 +108,23 @@
 - Payment success is backend/provider authoritative. A redirect URL is not confirmation.
 - PROCESSING/PENDING card attempts block duplicate retry. UNKNOWN provider status stays in-flight.
 - After a successful implementation, update the relevant MD under `DOCU` (API detail does not belong in this file).
+
+## GPS Operations (Diamond)
+
+- Never invent GPS/provider data, coordinates, devices, or vendor API contracts.
+- GPS provider integrations stay behind `GpsProvider` (`APP/backend/src/modules/gps/`). Vehicles and Contracts must not call a GPS vendor.
+- Exact location is staff-permission protected (`gps.read`). No public or customer GPS API.
+- Frontend Demo Simulation must never persist fake GPS coordinates to Backend.
+- Unconfigured GPS still serves read APIs (`providerConfigured: false`, empty map points) and must not throw `GPS_NOT_CONFIGURED` on ordinary reads.
+- GPS inference is never authoritative financial evidence. Predicted road liabilities never enter confirmed financial totals.
+- GPS Salik signals on a Contract are derived, informational, and non-blocking. They never create debt or hold Close.
+- Never overwrite an authoritative external charge amount (`RoadLiability.amount`).
+- A RoadLiability may produce exactly one Customer Charge destination (Reconciliation or Post-Close Receivable), enforced by `RoadLiabilityCustomerCharge.roadLiabilityId` UNIQUE.
+- New Salik/traffic-violation reconciliation charges must originate from a confirmed RoadLiability.
+- Final customer charge may exceed the official amount only through explicit pre-confirmation charge review (increase + reason). Discounts/waivers are a separate future workflow.
+- Road liabilities are attributed by actual Car-Out/Car-In custody windows, not `currentRental` or scheduled rental dates.
+- Late authoritative Road Liabilities on CLOSED Contracts create Post-Close Receivables. They must not reopen the Contract or rewrite the old Reconciliation.
+- External road liabilities enter through provider/ingestion boundaries, never staff CRUD.
 
 ## TARS integration (Diamond)
 
@@ -135,7 +153,7 @@
 - VehicleCard edit (pencil) changes default `dailyRate` / `monthlyRate` only — not rental-offer pricing.
 - VehicleCard delete maps to `POST /vehicles/:id/deactivate` (fleet soft-remove), not hard delete.
 - The approved Vehicles data toolbar pattern (search, status, model, sort, show retired, count, clear) is reusable for other data-heavy pages.
-- Data-heavy explicit searches should use the Shared `DataSearch` pattern: draft locally → Search/Enter → server-side applied query (`src/shared/components/data-search/`).
+- Data-heavy explicit searches should use the Shared `DataSearch` pattern: draft locally → Search/Enter → server-side applied query (`src/shared/components/data-search/`). Inside an existing `<form>`, pass `embedded` so DataSearch does not render a nested form.
 - Date-range/calendar UI must reuse the shared `DateRangePicker` built on React DayPicker v9 (`src/shared/components/ui/date-range-picker`). Do not introduce native date inputs or page-specific calendar implementations when the shared component fits.
 
 ## Development Database Bootstrap

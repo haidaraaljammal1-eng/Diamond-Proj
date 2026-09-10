@@ -165,3 +165,17 @@
     transform: none;
   }
 }
+
+.compact {
+  padding: 10px 14px 9px;
+}
+
+.compact .number {
+  font-size: 22px;
+  font-family: var(--diamond-font-body);
+  font-weight: 600;
+}
+
+.compact:hover {
+  transform: translateY(-1px);
+}

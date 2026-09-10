@@ -119,6 +119,58 @@ export const ReconcileSchema = z.object({
   lines: z.array(ReconciliationLineInputSchema).min(1).max(50),
 });
 
+export const ConfirmRoadLiabilityChargeParam = ContractIdParam.extend({
+  roadLiabilityId: z.uuid(),
+});
+
+export const ConfirmRoadLiabilityChargeSchema = z
+  .object({
+    customerChargeAmount: MoneyAed.min(1),
+    adjustmentReason: z.string().trim().min(1).max(200).optional(),
+    adjustmentNote: z.string().trim().min(1).max(2000).optional(),
+  })
+  .strict();
+
+export const ReconciliationRoadLiabilityAvailableSchema = z.object({
+  id: z.string().uuid(),
+  type: z.enum(["RTA_VIOLATION", "SALIK_TOLL", "SALIK_VIOLATION"]),
+  sourceKey: z.string().nullable(),
+  occurredAt: z.date(),
+  officialAmount: z.number().int(),
+  currency: z.string(),
+  suggestedCustomerChargeAmount: z.number().int(),
+  minimumCustomerChargeAmount: z.number().int(),
+  externalReference: z.string().nullable(),
+  locationLabel: z.string().nullable(),
+  predictedByGps: z.boolean(),
+  vehicle: z
+    .object({
+      id: z.number().int(),
+      displayName: z.string(),
+      plateNumber: z.string().nullable(),
+    })
+    .nullable(),
+});
+
+export const ReconciliationRoadLiabilityAttachedSchema = z.object({
+  roadLiabilityId: z.string().uuid(),
+  reconciliationLineId: z.string().uuid(),
+  type: z.enum(["RTA_VIOLATION", "SALIK_TOLL", "SALIK_VIOLATION"]),
+  sourceKey: z.string().nullable(),
+  occurredAt: z.date(),
+  officialAmount: z.number().int(),
+  customerChargeAmount: z.number().int(),
+  adjustmentAmount: z.number().int(),
+  adjustmentReason: z.string().nullable(),
+  adjustmentNote: z.string().nullable(),
+  locked: z.literal(true),
+});
+
+export const ReconciliationRoadLiabilitiesSchema = z.object({
+  available: z.array(ReconciliationRoadLiabilityAvailableSchema),
+  attached: z.array(ReconciliationRoadLiabilityAttachedSchema),
+});
+
 export const RenewSchema = z.object({
   additionalDays: Days,
   additionalAmount: MoneyAed,
@@ -161,6 +213,28 @@ const LinkIssuedSchema = z.object({
   type: ContractLinkTypeSchema,
 });
 
+export const ContractRoadLiabilitySignalsSchema = z.object({
+  hasSalikGpsSignal: z.boolean(),
+  salikGpsSignalCount: z.number().int(),
+  unconfirmedSalikGpsSignalCount: z.number().int(),
+  latestSalikGpsSignalAt: z.date().nullable(),
+});
+
+export const ContractPostCloseReceivableItemSchema = z.object({
+  id: z.string().uuid(),
+  amount: z.number().int(),
+  currency: z.string(),
+  status: z.enum(["OPEN", "SETTLED", "VOID"]),
+  roadLiabilityType: z.enum(["RTA_VIOLATION", "SALIK_TOLL", "SALIK_VIOLATION"]),
+  createdAt: z.date(),
+});
+
+export const ContractPostCloseReceivablesSummarySchema = z.object({
+  count: z.number().int(),
+  openAmount: z.number().int(),
+  items: z.array(ContractPostCloseReceivableItemSchema),
+});
+
 export const ContractListItemSchema = z.object({
   id: z.string(),
   contractNumber: z.string(),
@@ -177,6 +251,7 @@ export const ContractListItemSchema = z.object({
   startAt: z.date().nullable(),
   endAt: z.date().nullable(),
   createdAt: z.date(),
+  hasSalikGpsSignal: z.boolean(),
 });
 
 const InspectionPhotoPublicSchema = z.object({
@@ -259,16 +334,20 @@ export const ContractDetailSchema = z.object({
       deductions: z.number().int(),
       finalAmount: z.number().int(),
       approvedAt: z.date().nullable(),
-      lines: z.array(
-        z.object({
-          id: z.string(),
-          type: ReconciliationLineTypeSchema,
-          description: z.string(),
-          amount: z.number().int(),
-          externalReference: z.string().nullable(),
-          sourceDomain: z.string().nullable(),
-        }),
-      ),
+          lines: z.array(
+            z.object({
+              id: z.string(),
+              type: ReconciliationLineTypeSchema,
+              description: z.string(),
+              amount: z.number().int(),
+              externalReference: z.string().nullable(),
+              sourceDomain: z.string().nullable(),
+              roadLiabilityId: z.string().uuid().nullable(),
+              officialAmountSnapshot: z.number().int().nullable(),
+              adjustmentAmount: z.number().int().nullable(),
+              adjustmentReason: z.string().nullable(),
+            }),
+          ),
     })
     .nullable(),
   renewals: z.array(
@@ -292,6 +371,8 @@ export const ContractDetailSchema = z.object({
     canClose: z.boolean(),
     canRenew: z.boolean(),
   }),
+  roadLiabilitySignals: ContractRoadLiabilitySignalsSchema,
+  postCloseReceivables: ContractPostCloseReceivablesSummarySchema,
 });
 
 export const ContractOfferCreatedSchema = z.object({

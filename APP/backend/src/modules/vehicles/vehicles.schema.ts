@@ -43,8 +43,9 @@ export const VehicleImageSchema = z.object({
 export type VehicleImage = z.infer<typeof VehicleImageSchema>;
 
 /**
- * Current blocking rental context from Contracts (PAID / ACTIVE / RETOUT / REVIEW).
+ * Current blocking rental context from Contracts (PAID / ACTIVE / RETOUT).
  * PAID means reserved and ready for Car-Out while operationalStatus stays AVAILABLE.
+ * REVIEW after Car-In is not possession and is never currentRental.
  * Never denormalized on Vehicle.
  */
 export const VehicleCurrentRentalSchema = z
@@ -52,7 +53,7 @@ export const VehicleCurrentRentalSchema = z
     contractId: z.string(),
     customerName: z.string(),
     endAt: z.date(),
-    status: z.enum(["paid", "active", "retout", "review"]),
+    status: z.enum(["paid", "active", "retout"]),
   })
   .nullable();
 

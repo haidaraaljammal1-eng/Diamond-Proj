@@ -62,6 +62,7 @@ export interface ContractListItemDto {
   startAt: string | null;
   endAt: string | null;
   createdAt: string;
+  hasSalikGpsSignal: boolean;
 }
 
 export interface ContractActionsDto {
@@ -152,6 +153,28 @@ export interface ContractRenewalDto {
   approvedAt: string | null;
 }
 
+export interface ContractRoadLiabilitySignalsDto {
+  hasSalikGpsSignal: boolean;
+  salikGpsSignalCount: number;
+  unconfirmedSalikGpsSignalCount: number;
+  latestSalikGpsSignalAt: string | null;
+}
+
+export interface ContractPostCloseReceivableItemDto {
+  id: string;
+  amount: number;
+  currency: string;
+  status: "OPEN" | "SETTLED" | "VOID";
+  roadLiabilityType: "RTA_VIOLATION" | "SALIK_TOLL" | "SALIK_VIOLATION";
+  createdAt: string;
+}
+
+export interface ContractPostCloseReceivablesSummaryDto {
+  count: number;
+  openAmount: number;
+  items: ContractPostCloseReceivableItemDto[];
+}
+
 export interface ContractDetailDto {
   id: string;
   contractNumber: string;
@@ -181,6 +204,8 @@ export interface ContractDetailDto {
   reconciliation: ContractReconciliationDto | null;
   renewals: ContractRenewalDto[];
   actions: ContractActionsDto;
+  roadLiabilitySignals: ContractRoadLiabilitySignalsDto;
+  postCloseReceivables: ContractPostCloseReceivablesSummaryDto;
 }
 
 export interface CreateContractOfferPayload {

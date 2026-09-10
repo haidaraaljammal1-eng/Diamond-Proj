@@ -83,6 +83,11 @@ export const PERMISSIONS = {
   MAINTENANCE_READ: "maintenance.read",
   MAINTENANCE_MANAGE: "maintenance.manage",
 
+  GPS_READ: "gps.read",
+
+  VIOLATIONS_READ: "violations.read",
+  VIOLATIONS_CHARGE: "violations.charge",
+
   // --- Diamond rental contracts ---
   CONTRACTS_READ: "contracts.read",
   CONTRACTS_MANAGE: "contracts.manage",
@@ -313,6 +318,21 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     category: "maintenance",
     description: "Create and manage maintenance orders",
   },
+  {
+    key: PERMISSIONS.GPS_READ,
+    category: "gps",
+    description: "View GPS Operations summary, vehicle tracking, and map points",
+  },
+  {
+    key: PERMISSIONS.VIOLATIONS_READ,
+    category: "violations",
+    description: "View road liabilities (violations and Salik) summary, list, and detail",
+  },
+  {
+    key: PERMISSIONS.VIOLATIONS_CHARGE,
+    category: "violations",
+    description: "Confirm customer charges derived from road liabilities (reconciliation or post-close)",
+  },
   { key: PERMISSIONS.CONTRACTS_READ, category: "contracts", description: "View rental contracts" },
   {
     key: PERMISSIONS.CONTRACTS_MANAGE,
@@ -342,7 +362,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   {
     key: PERMISSIONS.CONTRACTS_CLOSE,
     category: "contracts",
-    description: "Close a reviewed contract and release the vehicle",
+    description: "Close a reviewed contract",
   },
   {
     key: PERMISSIONS.CONTRACTS_RENEW,

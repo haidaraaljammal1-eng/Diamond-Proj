@@ -9,6 +9,13 @@ import {
   type SimulatedTarsPreset,
   type SimulationSnapshot,
 } from "./simulation.types";
+import type { SimulatedGpsOverlay } from "@/modules/gps/utils/gps-simulation";
+import { advanceGpsSimulationPath } from "@/modules/gps/utils/gps-simulation";
+import type { SimulatedRoadLiabilitiesOverlay } from "@/modules/road-liabilities/utils/road-liability-simulation";
+import {
+  applySimulatedChargeReview,
+} from "@/modules/road-liabilities/utils/road-liability-simulation";
+import type { ConfirmRoadLiabilityChargePayload } from "@/modules/road-liabilities/types/road-liability-charge-review.types";
 import type { PublicRentalFormValues } from "@/modules/public-rental/schemas/public-rental-form.schema";
 import { licenseSimulationResult, paymentSimulationPhase } from "./simulation.utils";
 
@@ -20,6 +27,15 @@ interface DemoSimulationState extends SimulationSnapshot {
   setPaymentScenario: (scenario: SimulatedPaymentScenario) => void;
   simulatePayment: (scenario?: SimulatedPaymentScenario) => Promise<void>;
   simulateTars: (preset: SimulatedTarsPreset) => void;
+  simulateGps: (overlay: SimulatedGpsOverlay) => void;
+  tickGpsPath: () => void;
+  clearGpsOverlay: () => void;
+  simulateRoadLiabilities: (overlay: SimulatedRoadLiabilitiesOverlay) => void;
+  attachSimulatedRoadLiabilityCharge: (
+    roadLiabilityId: string,
+    payload: ConfirmRoadLiabilityChargePayload,
+  ) => void;
+  clearRoadLiabilitiesOverlay: () => void;
   clearRentalOverlay: () => void;
   reset: () => void;
 }
@@ -50,6 +66,8 @@ const empty: SimulationSnapshot = {
   acceptPending: false,
   payment: idlePayment,
   tarsPreset: null,
+  gpsOverlay: null,
+  roadLiabilitiesOverlay: null,
 };
 
 function wait(ms: number): Promise<void> {
@@ -172,6 +190,57 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
     set({ active: true, tarsPreset: preset });
   },
 
+  simulateGps(overlay) {
+    set({
+      active: true,
+      gpsOverlay: overlay,
+    });
+  },
+
+  tickGpsPath() {
+    const overlay = get().gpsOverlay;
+    if (!overlay) return;
+    set({ gpsOverlay: advanceGpsSimulationPath(overlay) });
+  },
+
+  simulateRoadLiabilities(overlay) {
+    set({
+      active: true,
+      roadLiabilitiesOverlay: overlay,
+    });
+  },
+
+  attachSimulatedRoadLiabilityCharge(roadLiabilityId, payload) {
+    const overlay = get().roadLiabilitiesOverlay;
+    if (!overlay) return;
+    set({
+      roadLiabilitiesOverlay: applySimulatedChargeReview(overlay, roadLiabilityId, payload),
+    });
+  },
+
+  clearRoadLiabilitiesOverlay() {
+    set({
+      roadLiabilitiesOverlay: null,
+      active:
+        get().tarsPreset != null ||
+        get().flowStep != null ||
+        get().license.status != null ||
+        get().gpsOverlay != null,
+    });
+  },
+
+  clearGpsOverlay() {
+    const gpsCleared = null;
+    set({
+      gpsOverlay: gpsCleared,
+      active:
+        get().tarsPreset != null ||
+        get().flowStep != null ||
+        get().license.status != null ||
+        get().roadLiabilitiesOverlay != null,
+    });
+  },
+
   clearRentalOverlay() {
     const generation = get().generation + 1;
     set({
@@ -183,7 +252,10 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
       formPending: false,
       acceptPending: false,
       payment: idlePayment,
-      active: get().tarsPreset != null,
+      active:
+        get().tarsPreset != null ||
+        get().gpsOverlay != null ||
+        get().roadLiabilitiesOverlay != null,
     });
   },
 

@@ -205,7 +205,9 @@
     "passwordMismatch": "Passwords do not match",
     "invalidYear": "Enter a valid model year",
     "invalidRate": "Enter a valid non-negative amount",
-    "identityOrPassport": "Enter an identity number or a passport number"
+    "identityOrPassport": "Enter an identity number or a passport number",
+    "invalidNonnegative": "Enter a valid non-negative number",
+    "scheduledRequired": "Enter a valid date and time"
   },
   "Roles": {
     "crumbs": "Administration · Access control",
@@ -658,7 +660,7 @@
       "PAID": "Ready for Car-Out",
       "ACTIVE": "Active",
       "RETOUT": "Return in Progress",
-      "REVIEW": "Reconciliation",
+      "REVIEW": "Reconciliation review",
       "CLOSED": "Closed"
     },
     "search": {
@@ -743,7 +745,14 @@
       "method": "Method",
       "carOut": "Car-Out",
       "carIn": "Car-In",
+      "carInReturned": "Vehicle returned",
+      "custodyEnded": "Custody ended",
       "reconciliation": "Reconciliation",
+      "postClose": "Post-Close Charges",
+      "postCloseOpen": "Open",
+      "gpsSalikTitle": "Possible Salik crossing detected by GPS",
+      "gpsSalikBody": "A possible crossing was detected during the rental. This is informational only and is not a confirmed charge.",
+      "gpsSalikClosed": "No official Salik charge confirmed yet.",
       "renewals": "Renewals",
       "renewalState": {
         "pending": "Pending",
@@ -762,12 +771,12 @@
       "paidHint": "Payment confirmed — ready for Car-Out",
       "carOut": "Car-Out",
       "carOutHint": "Vehicle handed over",
-      "return": "Return",
-      "returnHint": "Return link issued",
-      "review": "Review",
-      "reviewHint": "Car-In received — reconciliation pending",
+      "return": "Vehicle returned",
+      "returnHint": "Customer possession ended at Car-In",
+      "review": "Reconciliation review",
+      "reviewHint": "Vehicle already returned — financial review still open",
       "closed": "Closed",
-      "closedHint": "Contract closed and vehicle released"
+      "closedHint": "Contract closed. The vehicle was already released at Car-In."
     },
     "tars": {
       "title": "TARS Integration Status",
@@ -850,7 +859,7 @@
     },
     "carIn": {
       "title": "Car-In — return inspection",
-      "description": "Record incoming mileage, fuel and the eight inspection photos. This does not close the contract.",
+      "description": "Record incoming mileage, fuel and the eight inspection photos. The vehicle becomes available again. This does not close the contract.",
       "mileage": "Incoming odometer",
       "fuel": "Fuel",
       "notes": "Notes (optional)",
@@ -898,8 +907,8 @@
     },
     "close": {
       "title": "Close contract?",
-      "description": "Close {number}? The vehicle will return to available.",
-      "descriptionGeneric": "Close this contract? The vehicle will return to available.",
+      "description": "Close {number}? Financial review ends. The vehicle was already released at Car-In.",
+      "descriptionGeneric": "Close this contract? The vehicle was already released at Car-In.",
       "confirm": "Close contract"
     },
     "pagination": {
@@ -1150,6 +1159,223 @@
       "CONTRACT_RENEWAL_OFFER_REQUIRED": "A renewal offer is not available. Please contact the rental office."
     }
   },
+  "Maintenance": {
+    "crumbs": "Fleet · Maintenance",
+    "title": "Maintenance Center",
+    "subtitle": "Workshop follow-up — scheduling, readiness and cost.",
+    "add": "+ Add Vehicle to Maintenance",
+    "refresh": "Refresh",
+    "loading": "Loading maintenance…",
+    "noPlate": "No plate",
+    "vehicleUnknown": "Vehicle",
+    "kpi": {
+      "inService": "In Service",
+      "inServiceNoteEmpty": "No vehicles in the workshop",
+      "inServiceNoteOverdue": "{count} overdue",
+      "scheduled": "Scheduled",
+      "scheduledNote": "Upcoming appointments",
+      "ready": "Ready for Pickup",
+      "readyNote": "Waiting for pickup from the workshop",
+      "cost": "Maintenance Cost",
+      "costNote": "Total work orders"
+    },
+    "overdue": {
+      "title": "Alert — {count} overdue maintenance",
+      "body": "These vehicles stay off the active fleet until pickup. Review the workshop schedule.",
+      "show": "Show overdue"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "in_service": "In Service",
+      "ready_for_pickup": "Ready for Pickup",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "overdue": "Overdue"
+    },
+    "type": {
+      "mechanical": "Mechanical",
+      "electrical": "Electrical",
+      "tires": "Tires",
+      "air_conditioning": "Air conditioning",
+      "body": "Body",
+      "periodic": "Periodic",
+      "other": "Other"
+    },
+    "search": {
+      "inputLabel": "Search maintenance",
+      "placeholder": "Search by vehicle, plate, issue or workshop…",
+      "button": "Search",
+      "clear": "Clear search"
+    },
+    "vehicleSearch": {
+      "inputLabel": "Search available vehicles",
+      "placeholder": "Search by name or plate…",
+      "loading": "Loading vehicles…",
+      "empty": "No available vehicles found."
+    },
+    "filters": {
+      "all": "All",
+      "in_service": "In Service",
+      "scheduled": "Scheduled",
+      "ready_for_pickup": "Ready for Pickup",
+      "overdue": "Overdue",
+      "completed": "Completed",
+      "statusGroup": "Maintenance status",
+      "typeLabel": "Maintenance type",
+      "typeAll": "All types",
+      "sortLabel": "Sort",
+      "clear": "Clear filters",
+      "activeCount": "{count} active",
+      "results": "{count} orders",
+      "sort": {
+        "newest": "Newest first",
+        "scheduledAt": "Scheduled date",
+        "expectedCompletion": "Expected completion"
+      }
+    },
+    "card": {
+      "started": "Started {date}",
+      "notStarted": "Not started",
+      "eta": "ETA: {date}",
+      "etaUnknown": "ETA: —",
+      "costPending": "Cost later"
+    },
+    "actions": {
+      "start": "Start Maintenance",
+      "ready": "Ready for Pickup",
+      "complete": "Complete Maintenance",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "details": "Details"
+    },
+    "form": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "submit": "Add",
+      "save": "Save",
+      "saving": "Saving…",
+      "createTitle": "Add Vehicle to Maintenance",
+      "createDescription": "Identify the exact vehicle, describe what happened, then start now or schedule for later.",
+      "editTitle": "Edit maintenance",
+      "vehicle": "Vehicle",
+      "issue": "What happened to the vehicle?",
+      "issuePlaceholder": "Describe the issue or reason for maintenance...",
+      "type": "Maintenance Type",
+      "entry": "Maintenance Entry",
+      "entryNow": "Now",
+      "entryScheduled": "Schedule for later",
+      "scheduledDate": "Date",
+      "scheduledTime": "Time",
+      "workshop": "Workshop / Service Center",
+      "workshopPlaceholder": "Workshop name",
+      "odometer": "Current Odometer",
+      "odometerPlaceholder": "km",
+      "expectedDate": "Expected Completion",
+      "expectedTime": "Time",
+      "cost": "Cost",
+      "costPlaceholder": "AED",
+      "costHint": "Optional — can be added later",
+      "notes": "Notes",
+      "notesPlaceholder": "Internal notes"
+    },
+    "complete": {
+      "title": "Complete Maintenance",
+      "description": "Completing maintenance for {name} ({plate}) returns the vehicle to available fleet status.",
+      "descriptionGeneric": "Completing maintenance returns the vehicle to available fleet status.",
+      "confirm": "Complete and return to fleet"
+    },
+    "cancel": {
+      "title": "Cancel scheduled maintenance",
+      "description": "Cancel the scheduled maintenance for {name}? The vehicle stays available.",
+      "descriptionGeneric": "Cancel this scheduled maintenance?",
+      "confirm": "Cancel maintenance"
+    },
+    "detail": {
+      "title": "Maintenance details",
+      "loading": "Loading details…",
+      "id": "Work order",
+      "status": "Status",
+      "vehicle": "Vehicle",
+      "plate": "Plate",
+      "scheduledAt": "Scheduled at",
+      "startedAt": "Started at",
+      "readyAt": "Ready at",
+      "completedAt": "Completed at",
+      "expectedAt": "Expected completion"
+    },
+    "history": {
+      "title": "Maintenance History",
+      "loading": "Loading history…",
+      "errorTitle": "History could not be loaded",
+      "id": "No.",
+      "vehicle": "Vehicle",
+      "type": "Type",
+      "workshop": "Workshop",
+      "odometer": "Odometer",
+      "cost": "Cost",
+      "status": "Status",
+      "completed": "Completed",
+      "km": "{value} km"
+    },
+    "empty": {
+      "active": {
+        "title": "No vehicles currently in maintenance.",
+        "description": "Add a vehicle when it needs workshop time."
+      },
+      "scheduled": {
+        "title": "No scheduled maintenance.",
+        "description": "Schedule a future workshop visit from this page."
+      },
+      "inService": {
+        "title": "No vehicles in the workshop.",
+        "description": "In-service orders will appear here."
+      },
+      "ready": {
+        "title": "Nothing is ready for pickup.",
+        "description": "Orders marked ready will appear here."
+      },
+      "history": {
+        "title": "No completed maintenance records yet.",
+        "description": "Completed work orders become history on this page."
+      },
+      "search": {
+        "title": "No search results.",
+        "description": "Try another plate, vehicle or workshop."
+      }
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "status": "Page {page} of {pages}"
+    },
+    "notice": {
+      "created": "Maintenance order created.",
+      "updated": "Maintenance order updated.",
+      "completed": "Maintenance completed — vehicle is available.",
+      "cancelled": "Scheduled maintenance cancelled."
+    },
+    "denied": {
+      "title": "You do not have access to this page",
+      "description": "Viewing Maintenance Center requires the maintenance.read permission. Ask an administrator to grant it."
+    },
+    "error": {
+      "title": "Maintenance could not be loaded",
+      "generic": "Something went wrong. Please try again.",
+      "retry": "Try again",
+      "FORBIDDEN": "Your account is not allowed to view maintenance.",
+      "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "NETWORK_ERROR": "Network connection error.",
+      "VEHICLE_NOT_AVAILABLE_FOR_MAINTENANCE": "This vehicle is no longer available for maintenance. Please select another vehicle.",
+      "ACTIVE_MAINTENANCE_EXISTS": "This vehicle already has an active maintenance order.",
+      "MAINTENANCE_INVALID_TRANSITION": "This maintenance order has already changed. Refresh and try again.",
+      "MAINTENANCE_SCHEDULED_AT_REQUIRED": "A scheduled date and time is required.",
+      "MAINTENANCE_SCHEDULED_AT_MUST_BE_FUTURE": "The scheduled time must be in the future.",
+      "MAINTENANCE_COMPLETED_IMMUTABLE": "Completed maintenance cannot be edited.",
+      "MAINTENANCE_NOT_FOUND": "This maintenance order was not found.",
+      "VEHICLE_NOT_FOUND": "This vehicle was not found.",
+      "CONFLICT": "This action could not be completed because the record changed."
+    }
+  },
   "DemoSimulation": {
     "simulate": "Simulate",
     "badge": "Simulation Mode",
@@ -1174,6 +1400,320 @@
       "syncing": "Syncing",
       "synced": "Synced",
       "partialFailure": "Partial Failure"
+    },
+    "gps": {
+      "run": "Simulate GPS"
+    },
+    "violations": {
+      "run": "Simulate Violations & Salik"
+    }
+  },
+  "Gps": {
+    "crumbs": "Operations · Tracking",
+    "title": "GPS Operations Center",
+    "subtitle": "Live fleet positions, motion and rental context.",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "noPlate": "No plate",
+    "noUpdate": "No GPS update",
+    "kpi": {
+      "tracked": "Tracked",
+      "trackedNote": "Active GPS bindings",
+      "online": "Online",
+      "onlineNote": "Fresh GPS locations",
+      "moving": "Moving",
+      "parkedCount": "{count} parked",
+      "offline": "Offline",
+      "offlineNote": "Stale location"
+    },
+    "provider": {
+      "title": "GPS provider is not connected yet",
+      "body": "Live vehicle locations will appear once the tracking provider is connected."
+    },
+    "status": {
+      "moving": "Moving",
+      "parked": "Parked",
+      "online": "Online",
+      "offline": "Offline",
+      "no_data": "No GPS Data",
+      "unassigned": "GPS Not Assigned",
+      "not_configured": "Provider Not Connected"
+    },
+    "operational": {
+      "available": "Available",
+      "rented": "Rented",
+      "service": "Service"
+    },
+    "rental": {
+      "paid": "Paid",
+      "active": "Active",
+      "retout": "Returned",
+      "review": "Review"
+    },
+    "search": {
+      "inputLabel": "Search vehicles",
+      "placeholder": "Search by name or plate…",
+      "button": "Search",
+      "clear": "Clear search"
+    },
+    "filters": {
+      "all": "All",
+      "tracking": "Tracking status",
+      "operational": "Operational status"
+    },
+    "panel": {
+      "title": "Fleet",
+      "results": "{count} vehicles",
+      "loading": "Loading vehicles…",
+      "empty": "No vehicles match these filters."
+    },
+    "pagination": {
+      "label": "Vehicle pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {totalPages}"
+    },
+    "map": {
+      "empty": "No live GPS locations are available yet",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fit": "Fit vehicles",
+      "recenter": "Recenter"
+    },
+    "detail": {
+      "title": "Vehicle GPS",
+      "close": "Close",
+      "loading": "Loading vehicle GPS…",
+      "vehicle": "Vehicle",
+      "gps": "GPS",
+      "rental": "Current rental",
+      "year": "Year",
+      "type": "Type",
+      "color": "Color",
+      "coordinates": "Coordinates",
+      "noCoordinates": "No GPS data available for this vehicle.",
+      "speed": "Speed",
+      "speedValue": "{value} km/h",
+      "heading": "Heading",
+      "accuracy": "Accuracy",
+      "accuracyValue": "{value} m",
+      "capturedAt": "Captured",
+      "receivedAt": "Received",
+      "contract": "Contract",
+      "customer": "Customer",
+      "rentalStatus": "Rental status",
+      "start": "Start",
+      "end": "End",
+      "viewContract": "View Contract"
+    },
+    "denied": {
+      "title": "GPS access is not available",
+      "description": "This page requires the gps.read permission."
+    },
+    "error": {
+      "generic": "GPS data could not be loaded. Try again."
+    }
+  },
+  "RoadLiabilities": {
+    "crumbs": "Operations · Road Liabilities",
+    "title": "Violations & Salik",
+    "subtitle": "Automated road liabilities linked to vehicles, contracts and customers.",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "noPlate": "No plate",
+    "noVehicle": "No vehicle",
+    "noCustomer": "No customer",
+    "noContract": "No contract",
+    "kpi": {
+      "collectibleAmount": "Collectible Amount",
+      "awaiting": "Awaiting Confirmation",
+      "needsAttention": "Needs Attention",
+      "settled": "Settled"
+    },
+    "queues": {
+      "label": "Work queues",
+      "all": "All",
+      "collectible": "Collectible",
+      "needs_attention": "Needs Attention",
+      "settled": "Settled"
+    },
+    "channel": {
+      "RTA": "RTA",
+      "SALIK": "Salik"
+    },
+    "workState": {
+      "awaiting_confirmation": "Awaiting Confirmation",
+      "awaiting_confirmation_salik": "Awaiting Salik Confirmation",
+      "collectible": "Collectible",
+      "needs_contract": "Contract Match Needed",
+      "ambiguous_match": "Review Contract Match",
+      "attribution_pending": "Contract Match Pending",
+      "disputed": "Disputed",
+      "settled": "Settled",
+      "rejected": "Rejected",
+      "void": "Void",
+      "not_ready": "Not Ready"
+    },
+    "type": {
+      "rta_violation": "RTA Violation",
+      "salik_toll": "Salik Toll",
+      "salik_violation": "Salik Violation"
+    },
+    "source": {
+      "RTA": "RTA",
+      "SALIK": "Salik",
+      "GPS_INFERENCE": "GPS Detection",
+      "TARS": "TARS",
+      "unknown": "Unknown source"
+    },
+    "confirmation": {
+      "pending_confirmation": "Awaiting Confirmation",
+      "confirmed": "Confirmed",
+      "rejected": "Rejected"
+    },
+    "attribution": {
+      "matched": "Contract Matched",
+      "unmatched": "Unmatched",
+      "ambiguous": "Ambiguous Match",
+      "unresolved": "Attribution Pending",
+      "matchedNote": "Matched using the vehicle custody period.",
+      "unmatchedNote": "No rental contract matched the event time.",
+      "ambiguousNote": "Multiple possible contract matches were found. No contract was selected automatically.",
+      "unresolvedNote": "Contract attribution has not been resolved yet."
+    },
+    "collection": {
+      "not_ready": "Not Ready for Collection",
+      "open": "Open for Collection",
+      "settled": "Settled",
+      "disputed": "Disputed",
+      "void": "Void"
+    },
+    "amount": {
+      "awaiting": "Awaiting Official Amount"
+    },
+    "prediction": {
+      "detectedByGps": "Detected by GPS",
+      "rowHint": "Detected by GPS · Awaiting official confirmation",
+      "confirmedAfterGps": "GPS detected → Confirmed by Salik"
+    },
+    "search": {
+      "inputLabel": "Search road liabilities",
+      "placeholder": "Search vehicle, plate, contract, customer or reference...",
+      "button": "Search",
+      "clear": "Clear search"
+    },
+    "filters": {
+      "all": "All",
+      "channel": "Authority",
+      "advanced": "Advanced Filters",
+      "advancedWithCount": "Advanced Filters ({count})",
+      "clearAdvanced": "Clear Advanced Filters",
+      "type": "Event Type",
+      "source": "Detection Source",
+      "confirmation": "Confirmation Status",
+      "attribution": "Attribution Status",
+      "collection": "Collection Status",
+      "dateRange": "Occurred date"
+    },
+    "columns": {
+      "authority": "Authority / Type",
+      "source": "Source / Type",
+      "vehicle": "Vehicle",
+      "party": "Contract / Customer",
+      "occurred": "Occurred",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "list": {
+      "loading": "Loading liabilities…",
+      "results": "{count} liabilities"
+    },
+    "pagination": {
+      "label": "Liability pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {totalPages}"
+    },
+    "empty": {
+      "title": "No road liabilities are currently recorded.",
+      "description": "Salik and RTA events will appear here automatically when available from connected sources."
+    },
+    "detail": {
+      "title": "Road liability",
+      "close": "Close",
+      "loading": "Loading liability…",
+      "overview": "Liability overview",
+      "eventStatus": "Event Status",
+      "confirmation": "Confirmation",
+      "attribution": "Attribution",
+      "collection": "Collection",
+      "type": "Type",
+      "source": "Source",
+      "occurred": "Occurred",
+      "location": "Location",
+      "reference": "Reference",
+      "vehicle": "Vehicle",
+      "contract": "Contract & customer",
+      "contractNumber": "Contract",
+      "contractStatus": "Contract status",
+      "customer": "Customer",
+      "provenance": "Provenance",
+      "viewContract": "View Contract",
+      "viewGps": "View GPS"
+    },
+    "provenance": {
+      "empty": "No source observations are recorded for this liability.",
+      "authoritative": "Official confirmation",
+      "prediction": "Prediction"
+    },
+    "denied": {
+      "title": "Violations & Salik access is not available",
+      "description": "This page requires the violations.read permission."
+    },
+    "error": {
+      "generic": "Road liabilities could not be loaded. Try again."
+    },
+    "charge": {
+      "section": "Customer Charge",
+      "officialAmount": "Official Amount",
+      "officialHint": "The official authority amount is locked and cannot be edited.",
+      "suggested": "Suggested Customer Charge",
+      "customerCharge": "Customer Charge",
+      "additional": "Additional Charge",
+      "reason": "Reason for Additional Charge",
+      "note": "Note (optional)",
+      "review": "Review Customer Charge",
+      "confirm": "Confirm Customer Charge",
+      "cancel": "Cancel",
+      "dialogTitle": "Confirm Customer Charge",
+      "dialogSubtitle": "Review the amount that will be charged to the customer.",
+      "gpsPending": "Official confirmation is required before a customer charge can be added.",
+      "destinationReconciliation": "This charge will be added to the current contract reconciliation.",
+      "destinationPostClose": "This contract is closed. A post-close receivable will be created without changing the original reconciliation.",
+      "postCloseCreated": "Post-Close Receivable Created",
+      "postCloseBadge": "Post-Close Charge",
+      "unavailable": "This liability is not currently available for a customer charge.",
+      "viewOnly": "You can view this liability, but you cannot confirm a customer charge.",
+      "locked": "Locked",
+      "lockedAmount": "The customer charge is locked.",
+      "added": "Added to Reconciliation",
+      "addedShort": "Added to Reconciliation",
+      "belongsToReconciliation": "This amount now belongs to the contract reconciliation.",
+      "loading": "Checking reconciliation status…",
+      "minimumHint": "Minimum customer charge: {amount}",
+      "reasonSuggestion": {
+        "administrationFee": "Administration Fee",
+        "processingFee": "Processing Fee",
+        "serviceFee": "Service Fee",
+        "other": "Other"
+      },
+      "belowOfficial": "Customer charge cannot be lower than the official amount.",
+      "reasonRequired": "A reason is required when the customer charge is higher than the official amount.",
+      "invalidAmount": "Enter a whole AED amount.",
+      "alreadyCharged": "This liability already has a confirmed customer charge.",
+      "notEligible": "This liability cannot be charged to the customer yet.",
+      "forbidden": "You do not have permission to confirm a customer charge.",
+      "generic": "The customer charge could not be confirmed. Try again."
     }
   }
 }

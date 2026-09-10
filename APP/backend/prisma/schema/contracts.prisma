@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
 // Diamond rental contracts. Contract is the single rental aggregate — there is
 // no parallel Rental model. Vehicle.operationalStatus is synchronized from
-// this domain (RENTED at Car-Out, AVAILABLE at CLOSE only).
+// this domain (RENTED at Car-Out, AVAILABLE at Car-In). Close does not release
+// the vehicle.
 // ---------------------------------------------------------------------------
 
 enum ContractStatus {
@@ -136,6 +137,9 @@ model Contract {
   /// TARS integration metadata only. Contract lifecycle never depends on it.
   tarsIntegration      TarsContractIntegration?
   tarsOperations       TarsOperation[]
+  roadLiabilities      RoadLiability[]
+  customerCharges      RoadLiabilityCustomerCharge[]
+  postCloseReceivables ContractPostCloseReceivable[]
 
   @@index([vehicleId, status])
   @@index([customerId])
@@ -328,16 +332,28 @@ model ContractReconciliation {
 }
 
 model ContractReconciliationLine {
-  id                String                         @id @default(uuid())
-  reconciliationId  String
-  reconciliation    ContractReconciliation         @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
-  type              ContractReconciliationLineType
-  description       String
-  amount            Int
+  id                     String                         @id @default(uuid())
+  reconciliationId       String
+  reconciliation         ContractReconciliation         @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  type                   ContractReconciliationLineType
+  description            String
+  /// Final customer charge. For RoadLiability-backed lines this is customerChargeAmount, not the official RTA/Salik amount.
+  amount                 Int
   /// Opaque reference into Salik/Violations/Finance — no engine lives here.
-  externalReference String?
-  sourceDomain      String?
-  createdAt         DateTime                       @default(now())
+  externalReference      String?
+  sourceDomain           String?
+  /// Unique double-charge guard. One RoadLiability may back at most one line.
+  roadLiabilityId        String?                        @unique
+  roadLiability          RoadLiability?                 @relation(fields: [roadLiabilityId], references: [id], onDelete: Restrict)
+  officialAmountSnapshot Int?
+  adjustmentAmount       Int?
+  adjustmentReason       String?
+  adjustmentNote         String?
+  confirmedByUserId      Int?
+  confirmedBy            User?                          @relation("ContractReconciliationLineConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  confirmedAt            DateTime?
+  customerCharge         RoadLiabilityCustomerCharge?
+  createdAt              DateTime                       @default(now())
 
   @@index([reconciliationId])
   @@map("contract_reconciliation_lines")

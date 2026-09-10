@@ -43,6 +43,8 @@ const idle: SimulationSnapshot = {
     reference: null,
   },
   tarsPreset: null,
+  gpsOverlay: null,
+  roadLiabilitiesOverlay: null,
 };
 
 const realContext: PublicRentalContext = {
@@ -314,6 +316,12 @@ describe("reset and persistence", () => {
     assert.equal(storeSource.includes("sessionStorage"), false);
     assert.equal(storeSource.includes("zustand/middleware"), false);
     assert.equal(storeSource.includes("persist("), false);
+    assert.ok(storeSource.includes("gpsOverlay"));
+    assert.ok(storeSource.includes("simulateGps"));
+    assert.ok(storeSource.includes("roadLiabilitiesOverlay"));
+    assert.ok(storeSource.includes("simulateRoadLiabilities"));
+    assert.equal(storeSource.includes("gps.api"), false);
+    assert.equal(/method:\s*"(POST|PUT|PATCH|DELETE)"/.test(storeSource), false);
   });
 });
 

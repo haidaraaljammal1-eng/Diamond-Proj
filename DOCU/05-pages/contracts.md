@@ -94,9 +94,9 @@ Labels: Awaiting Customer / Form Completed / Signed / Ready for Car-Out / Active
 
 ## Detail drawer
 
-Row click opens the Shared Drawer. `GET /contracts/:id` shows number, status, vehicle, customer, pricing, period, payment, Car-Out/In, reconciliation, renewals, timeline. Empty fields are omitted.
+Row click opens the Shared Drawer. `GET /contracts/:id` shows number, status, vehicle, customer, pricing, period, payment, Car-Out/In, reconciliation, renewals, timeline, optional GPS Salik informational flag, and compact post-close receivables. Empty fields are omitted.
 
-Timeline is derived from `contract.status` only (done / current / upcoming).
+Timeline is derived from `contract.status` only (done / current / upcoming). REVIEW copy is financial review after return, not current possession.
 
 ## TARS integration status
 
@@ -138,11 +138,13 @@ ACTIVE → `POST /contracts/:id/return-link` → RETOUT. Vehicle stays RENTED. R
 
 ## Car-In
 
-Staff operational action on RETOUT via `POST /contracts/:id/car-in` (`contracts.return`). Same fields as Backend `CarInSchema`: optional `occurredAt`, `mileageIn`, `fuelIn`, notes, eight inspection photos. RETOUT → REVIEW. Vehicle stays RENTED. Car-In never closes the contract. Public `POST /contracts/return/:token/car-in` remains for the hashed token path.
+Staff operational action on RETOUT via `POST /contracts/:id/car-in` (`contracts.return`). Same fields as Backend `CarInSchema`: optional `occurredAt`, `mileageIn`, `fuelIn`, notes, eight inspection photos. RETOUT → REVIEW. Vehicle RENTED → AVAILABLE. Car-In never closes the contract. Public `POST /contracts/return/:token/car-in` remains for the hashed token path.
+
+Drawer Car-In copy: Vehicle returned / حالة الحيازة: انتهت. GPS Salik is a small informational champagne flag (`hasSalikGpsSignal`), never “waiting for a violation”. Compact Post-Close Charges appear when receivables exist.
 
 ## Reconciliation / Close
 
-REVIEW → line items (`DAMAGE` / `FUEL` / `LATE` / `SALIK` / `VIOLATION` / `OTHER`). The dialog lists every category and opens with empty Salik and Violation rows (amount / reference / note) so those settlement types are visible immediately — no live engines and no invented amounts. Totals come from the Backend after save (`chargesTotal`, `finalAmount`). Close uses Shared confirmation Dialog and is available only when Backend `canClose` is true (REVIEW + Car-In + approved reconciliation). REVIEW → CLOSED; Vehicle → AVAILABLE.
+REVIEW → line items (`DAMAGE` / `FUEL` / `LATE` / `SALIK` / `VIOLATION` / `OTHER`). The dialog lists every category and opens with empty Salik and Violation rows (amount / reference / note) so those settlement types are visible immediately — no live engines and no invented amounts. Totals come from the Backend after save (`chargesTotal`, `finalAmount`). Close uses Shared confirmation Dialog and is available only when Backend `canClose` is true (REVIEW + Car-In + approved reconciliation). REVIEW → CLOSED. Close does not release the vehicle; Fleet trusts refreshed backend state (a newer rental may already be RENTED).
 
 ## Overlay stacking
 

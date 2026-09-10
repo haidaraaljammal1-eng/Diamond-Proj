@@ -3,14 +3,20 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 
-const RUN = process.env.RUN_INTEGRATION === "true";
+/**
+ * Requires RUN_INTEGRATION=true and TEST_DATABASE_URL pointing at disposable
+ * haidara_test — never Development haidara.
+ */
+const RUN =
+  process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
 
 if (!RUN) {
   test(
-    "maintenance integration skipped (set RUN_INTEGRATION=true + a test DATABASE_URL)",
+    "maintenance integration skipped (set RUN_INTEGRATION=true and TEST_DATABASE_URL)",
     { skip: true },
   );
 } else {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL!;
   let app: FastifyInstance;
   let prisma: PrismaClient;
   const run = Date.now().toString(36).toUpperCase();
@@ -22,8 +28,13 @@ if (!RUN) {
     email: `maint-reader-${run}@example.test`,
     password: "maint-reader-pass-123",
   };
+  const stranger = {
+    email: `maint-stranger-${run}@example.test`,
+    password: "maint-stranger-pass-123",
+  };
   let adminToken = "";
   let readerToken = "";
+  let strangerToken = "";
   let availableVehicleId = 0;
   let rentedVehicleId = 0;
   let serviceVehicleId = 0;
@@ -117,13 +128,19 @@ if (!RUN) {
   }
 
   before(async () => {
+    const { env } = await import("src/config/env");
+    if (!/haidara_test(?:\?|$)/.test(env.DATABASE_URL)) {
+      throw new Error("maintenance integration refuses to run unless DATABASE_URL is haidara_test");
+    }
     const { buildApp } = await import("src/app");
     app = await buildApp();
     prisma = app.prisma;
     await seedUser(admin.email, admin.password, `maint_admin_${run}`, ADMIN_PERMS);
     await seedUser(reader.email, reader.password, `maint_reader_${run}`, ["maintenance.read"]);
+    await seedUser(stranger.email, stranger.password, `maint_stranger_${run}`, ["vehicles.read"]);
     adminToken = await login(admin);
     readerToken = await login(reader);
+    strangerToken = await login(stranger);
 
     availableVehicleId = (
       await createVehicle({
@@ -177,6 +194,27 @@ if (!RUN) {
       where: { id: availableVehicleId },
     });
     assert.equal(vehicle.operationalStatus, "SERVICE");
+  });
+
+  test("GET /maintenance list includes the Vehicle projection used by cards", async () => {
+    const listRes = await app.inject({
+      method: "GET",
+      url: "/maintenance?status=in_service",
+      headers: auth(adminToken),
+    });
+    assert.equal(listRes.statusCode, 200, listRes.body);
+    const row = listRes.json().data.find(
+      (order: { vehicleId: number }) => order.vehicleId === availableVehicleId,
+    );
+    assert.ok(row);
+    assert.ok(row.vehicle);
+    assert.equal(row.vehicle.id, availableVehicleId);
+    assert.equal(typeof row.vehicle.displayName, "string");
+    assert.ok(row.vehicle.displayName.length > 0);
+    assert.equal(typeof row.vehicle.plateNumber, "string");
+    assert.ok("primaryImageUrl" in row.vehicle);
+    assert.ok("modelYear" in row.vehicle);
+    assert.ok("color" in row.vehicle);
   });
 
   test("AVAILABLE + scheduled keeps vehicle AVAILABLE", async () => {
@@ -480,6 +518,22 @@ if (!RUN) {
     assert.equal(res.statusCode, 403, res.body);
   });
 
+  test("user without maintenance.read cannot list or open orders", async () => {
+    const listRes = await app.inject({
+      method: "GET",
+      url: "/maintenance",
+      headers: auth(strangerToken),
+    });
+    assert.equal(listRes.statusCode, 403, listRes.body);
+
+    const detailRes = await app.inject({
+      method: "GET",
+      url: "/maintenance/1",
+      headers: auth(strangerToken),
+    });
+    assert.equal(detailRes.statusCode, 403, detailRes.body);
+  });
+
   test("create maintenance without cost succeeds with null cost", async () => {
     const vehicle = await createVehicle({
       vehicleName: "Cost Null Vehicle",
@@ -621,6 +675,12 @@ if (!RUN) {
     assert.equal(row.cost, 500);
     assert.equal(row.workshopName, "Quick Tyres");
     assert.equal(row.issueDescription, "History record test.");
+    assert.ok(row.vehicle);
+    assert.equal(row.vehicle.id, vehicle.id);
+    assert.equal(row.vehicle.plateNumber, `M ${run} HS`);
+    assert.equal(row.vehicle.modelYear, 2021);
+    assert.equal(row.vehicle.color, "Red");
+    assert.match(String(row.vehicle.displayName), /History Vehicle/);
   });
 
   test("null costs do not break summary aggregation", async () => {

@@ -205,7 +205,9 @@
     "passwordMismatch": "كلمتا المرور غير متطابقتين",
     "invalidYear": "أدخل سنة صنع صالحة",
     "invalidRate": "أدخل مبلغًا صالحًا (0 أو أكثر)",
-    "identityOrPassport": "أدخل رقم الهوية أو رقم جواز السفر"
+    "identityOrPassport": "أدخل رقم الهوية أو رقم جواز السفر",
+    "invalidNonnegative": "أدخل رقماً صالحاً (0 أو أكثر)",
+    "scheduledRequired": "أدخل تاريخاً ووقتاً صالحين"
   },
   "Roles": {
     "crumbs": "الإدارة · التحكم في الوصول",
@@ -658,7 +660,7 @@
       "PAID": "جاهز للتسليم",
       "ACTIVE": "نشط",
       "RETOUT": "قيد الإرجاع",
-      "REVIEW": "بانتظار المطابقة",
+      "REVIEW": "مراجعة التسوية",
       "CLOSED": "مغلق"
     },
     "search": {
@@ -743,7 +745,14 @@
       "method": "الطريقة",
       "carOut": "التسليم",
       "carIn": "الإرجاع",
+      "carInReturned": "تم إرجاع السيارة",
+      "custodyEnded": "حالة الحيازة: انتهت",
       "reconciliation": "المطابقة",
+      "postClose": "مطالبات لاحقة",
+      "postCloseOpen": "مفتوحة",
+      "gpsSalikTitle": "رصد GPS مروراً محتملاً عبر سالك",
+      "gpsSalikBody": "تم رصد عبور محتمل خلال فترة الإيجار. هذا تنبيه معلوماتي فقط ولا يمثل رسماً مؤكداً.",
+      "gpsSalikClosed": "لم يُؤكد رسم سالك رسمي بعد.",
       "renewals": "التجديدات",
       "renewalState": {
         "pending": "قيد الانتظار",
@@ -762,12 +771,12 @@
       "paidHint": "تم تأكيد الدفع — جاهز للتسليم",
       "carOut": "التسليم",
       "carOutHint": "تم تسليم السيارة",
-      "return": "الإرجاع",
-      "returnHint": "تم إصدار رابط الإرجاع",
-      "review": "المراجعة",
-      "reviewHint": "تم الإرجاع — بانتظار المطابقة",
+      "return": "إرجاع السيارة",
+      "returnHint": "انتهت حيازة العميل عند الإرجاع",
+      "review": "مراجعة التسوية",
+      "reviewHint": "السيارة أُرجعت — المراجعة المالية ما زالت مفتوحة",
       "closed": "مغلق",
-      "closedHint": "أُغلق العقد وأُفرجت السيارة"
+      "closedHint": "أُغلق العقد. السيارة أُفرجت عند الإرجاع."
     },
     "tars": {
       "title": "حالة الربط مع TARS",
@@ -850,7 +859,7 @@
     },
     "carIn": {
       "title": "استلام المركبة",
-      "description": "سجّل حالة المركبة وبياناتها عند الإرجاع وأرفق صور الفحص المطلوبة.",
+      "description": "سجّل حالة المركبة عند الإرجاع. تصبح المركبة متاحة فوراً. هذا لا يغلق العقد.",
       "mileage": "عداد الدخول",
       "fuel": "الوقود",
       "notes": "ملاحظات (اختياري)",
@@ -898,8 +907,8 @@
     },
     "close": {
       "title": "إغلاق العقد؟",
-      "description": "إغلاق {number}؟ ستعود السيارة متاحة.",
-      "descriptionGeneric": "إغلاق هذا العقد؟ ستعود السيارة متاحة.",
+      "description": "إغلاق {number}؟ تنتهي المراجعة المالية. السيارة أُفرجت عند الإرجاع.",
+      "descriptionGeneric": "إغلاق هذا العقد؟ السيارة أُفرجت عند الإرجاع.",
       "confirm": "إغلاق العقد"
     },
     "pagination": {
@@ -1150,6 +1159,223 @@
       "CONTRACT_RENEWAL_OFFER_REQUIRED": "عرض التمديد غير متاح. يرجى التواصل مع المكتب."
     }
   },
+  "Maintenance": {
+    "crumbs": "الأسطول · الصيانة",
+    "title": "مركز الصيانة",
+    "subtitle": "متابعة ورش السيارات — الجدولة والتقدم والتكاليف وجاهزية الاستلام",
+    "add": "+ إضافة سيارة إلى الصيانة",
+    "refresh": "تحديث",
+    "loading": "جارٍ تحميل الصيانة…",
+    "noPlate": "بدون لوحة",
+    "vehicleUnknown": "سيارة",
+    "kpi": {
+      "inService": "في الورشة",
+      "inServiceNoteEmpty": "لا سيارات في الورشة",
+      "inServiceNoteOverdue": "{count} متأخرة",
+      "scheduled": "مجدولة",
+      "scheduledNote": "مواعيد قادمة",
+      "ready": "جاهزة للاستلام",
+      "readyNote": "بانتظار الاستلام من الورشة",
+      "cost": "تكلفة الصيانة",
+      "costNote": "إجمالي أوامر العمل"
+    },
+    "overdue": {
+      "title": "تنبيه — {count} صيانة متأخرة عن الموعد",
+      "body": "السيارات معطّلة من الأسطول حتى الاستلام — راجع الورشة لتحديث الموعد.",
+      "show": "عرض المتأخرة"
+    },
+    "status": {
+      "scheduled": "مجدولة",
+      "in_service": "في الصيانة",
+      "ready_for_pickup": "جاهزة للاستلام",
+      "completed": "مكتملة",
+      "cancelled": "ملغاة",
+      "overdue": "متأخرة"
+    },
+    "type": {
+      "mechanical": "ميكانيكية",
+      "electrical": "كهرباء",
+      "tires": "إطارات",
+      "air_conditioning": "مكيف",
+      "body": "هيكل وسمكرة",
+      "periodic": "دورية",
+      "other": "أخرى"
+    },
+    "search": {
+      "inputLabel": "بحث في الصيانة",
+      "placeholder": "ابحث بالسيارة أو اللوحة أو العطل أو الورشة…",
+      "button": "بحث",
+      "clear": "مسح البحث"
+    },
+    "vehicleSearch": {
+      "inputLabel": "بحث عن سيارة متاحة",
+      "placeholder": "ابحث بالاسم أو رقم اللوحة…",
+      "loading": "جارٍ تحميل السيارات…",
+      "empty": "لا توجد سيارات متاحة."
+    },
+    "filters": {
+      "all": "الكل",
+      "in_service": "في الورشة",
+      "scheduled": "مجدولة",
+      "ready_for_pickup": "جاهزة للاستلام",
+      "overdue": "متأخرة",
+      "completed": "مكتملة",
+      "statusGroup": "حالة الصيانة",
+      "typeLabel": "نوع الصيانة",
+      "typeAll": "كل الأنواع",
+      "sortLabel": "الترتيب",
+      "clear": "مسح الفلاتر",
+      "activeCount": "{count} فلتر نشط",
+      "results": "{count} أمر",
+      "sort": {
+        "newest": "الأحدث",
+        "scheduledAt": "موعد الجدولة",
+        "expectedCompletion": "الاستلام المتوقع"
+      }
+    },
+    "card": {
+      "started": "بدأت {date}",
+      "notStarted": "لم تبدأ",
+      "eta": "ETA: {date}",
+      "etaUnknown": "ETA: —",
+      "costPending": "التكلفة لاحقاً"
+    },
+    "actions": {
+      "start": "بدء الصيانة",
+      "ready": "جاهزة للاستلام",
+      "complete": "إنهاء الصيانة",
+      "edit": "تعديل",
+      "cancel": "إلغاء",
+      "details": "تفاصيل"
+    },
+    "form": {
+      "close": "إغلاق",
+      "cancel": "إلغاء",
+      "submit": "إضافة",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ…",
+      "createTitle": "إضافة سيارة إلى الصيانة",
+      "createDescription": "حدّد السيارة بدقة، صف ما حدث، ثم ابدأ الآن أو جدول لموعد لاحق.",
+      "editTitle": "تعديل الصيانة",
+      "vehicle": "السيارة",
+      "issue": "ماذا حدث للسيارة؟",
+      "issuePlaceholder": "صف العطل أو سبب الصيانة...",
+      "type": "نوع الصيانة",
+      "entry": "دخول الصيانة",
+      "entryNow": "الآن",
+      "entryScheduled": "جدولة لوقت لاحق",
+      "scheduledDate": "التاريخ",
+      "scheduledTime": "الوقت",
+      "workshop": "الورشة / مركز الخدمة",
+      "workshopPlaceholder": "اسم الورشة",
+      "odometer": "العداد الحالي",
+      "odometerPlaceholder": "كم",
+      "expectedDate": "الاستلام المتوقع",
+      "expectedTime": "الوقت",
+      "cost": "التكلفة",
+      "costPlaceholder": "درهم",
+      "costHint": "اختيارية — يمكن إضافتها لاحقاً",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "ملاحظات داخلية"
+    },
+    "complete": {
+      "title": "إنهاء الصيانة",
+      "description": "إنهاء صيانة {name} ({plate}) يعيد السيارة إلى الأسطول المتاح.",
+      "descriptionGeneric": "إنهاء الصيانة يعيد السيارة إلى حالة الأسطول المتاحة.",
+      "confirm": "إنهاء وإرجاع للأسطول"
+    },
+    "cancel": {
+      "title": "إلغاء الصيانة المجدولة",
+      "description": "إلغاء الصيانة المجدولة لـ {name}؟ تبقى السيارة متاحة.",
+      "descriptionGeneric": "إلغاء هذه الصيانة المجدولة؟",
+      "confirm": "إلغاء الصيانة"
+    },
+    "detail": {
+      "title": "تفاصيل الصيانة",
+      "loading": "جارٍ تحميل التفاصيل…",
+      "id": "أمر العمل",
+      "status": "الحالة",
+      "vehicle": "السيارة",
+      "plate": "اللوحة",
+      "scheduledAt": "موعد الجدولة",
+      "startedAt": "بدأت في",
+      "readyAt": "جاهزة في",
+      "completedAt": "اكتملت في",
+      "expectedAt": "الاستلام المتوقع"
+    },
+    "history": {
+      "title": "سجل الصيانة",
+      "loading": "جارٍ تحميل السجل…",
+      "errorTitle": "تعذر تحميل سجل الصيانة",
+      "id": "الرقم",
+      "vehicle": "السيارة",
+      "type": "النوع",
+      "workshop": "الورشة",
+      "odometer": "العداد",
+      "cost": "التكلفة",
+      "status": "الحالة",
+      "completed": "الاكتمال",
+      "km": "{value} كم"
+    },
+    "empty": {
+      "active": {
+        "title": "لا توجد سيارات حالياً في الصيانة.",
+        "description": "أضف سيارة عندما تحتاج إلى الورشة."
+      },
+      "scheduled": {
+        "title": "لا توجد صيانة مجدولة.",
+        "description": "يمكن جدولة زيارة ورشة لاحقة من هذه الصفحة."
+      },
+      "inService": {
+        "title": "لا توجد سيارات في الورشة.",
+        "description": "أوامر الصيانة الجارية تظهر هنا."
+      },
+      "ready": {
+        "title": "لا توجد سيارات جاهزة للاستلام.",
+        "description": "الأوامر الجاهزة تظهر هنا."
+      },
+      "history": {
+        "title": "لا توجد سجلات صيانة مكتملة بعد.",
+        "description": "أوامر العمل المكتملة تصبح سجلاً في هذه الصفحة."
+      },
+      "search": {
+        "title": "لا توجد نتائج بحث.",
+        "description": "جرّب لوحة أو سيارة أو ورشة أخرى."
+      }
+    },
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي",
+      "status": "صفحة {page} من {pages}"
+    },
+    "notice": {
+      "created": "تم إنشاء أمر الصيانة.",
+      "updated": "تم تحديث أمر الصيانة.",
+      "completed": "اكتملت الصيانة — السيارة متاحة الآن.",
+      "cancelled": "أُلغيت الصيانة المجدولة."
+    },
+    "denied": {
+      "title": "لا تملك صلاحية الوصول إلى هذه الصفحة",
+      "description": "عرض مركز الصيانة يتطلب صلاحية maintenance.read. اطلب من المسؤول منحها."
+    },
+    "error": {
+      "title": "تعذر تحميل الصيانة",
+      "generic": "حدث خطأ. حاول مرة أخرى.",
+      "retry": "إعادة المحاولة",
+      "FORBIDDEN": "حسابك غير مسموح له بعرض الصيانة.",
+      "UNAUTHORIZED": "انتهت جلستك. سجّل الدخول مرة أخرى.",
+      "NETWORK_ERROR": "خطأ في الاتصال بالشبكة.",
+      "VEHICLE_NOT_AVAILABLE_FOR_MAINTENANCE": "هذه السيارة لم تعد متاحة للصيانة. اختر سيارة أخرى.",
+      "ACTIVE_MAINTENANCE_EXISTS": "هذه السيارة لديها أمر صيانة نشط بالفعل.",
+      "MAINTENANCE_INVALID_TRANSITION": "تغيرت حالة أمر الصيانة. حدّث الصفحة وحاول مرة أخرى.",
+      "MAINTENANCE_SCHEDULED_AT_REQUIRED": "تاريخ ووقت الجدولة مطلوبان.",
+      "MAINTENANCE_SCHEDULED_AT_MUST_BE_FUTURE": "يجب أن يكون موعد الجدولة في المستقبل.",
+      "MAINTENANCE_COMPLETED_IMMUTABLE": "لا يمكن تعديل الصيانة المكتملة.",
+      "MAINTENANCE_NOT_FOUND": "لم يتم العثور على أمر الصيانة.",
+      "VEHICLE_NOT_FOUND": "لم يتم العثور على السيارة.",
+      "CONFLICT": "تعذر تنفيذ الإجراء لأن السجل تغيّر."
+    }
+  },
   "DemoSimulation": {
     "simulate": "محاكاة",
     "badge": "وضع المحاكاة",
@@ -1174,6 +1400,320 @@
       "syncing": "جارٍ المزامنة",
       "synced": "تمت المزامنة",
       "partialFailure": "فشل جزئي"
+    },
+    "gps": {
+      "run": "محاكاة GPS"
+    },
+    "violations": {
+      "run": "محاكاة المخالفات وسالك"
+    }
+  },
+  "Gps": {
+    "crumbs": "العمليات · التتبع",
+    "title": "مركز عمليات GPS",
+    "subtitle": "مواقع الأسطول الحية والحركة وسياق التأجير.",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
+    "noPlate": "بدون لوحة",
+    "noUpdate": "لا يوجد تحديث GPS",
+    "kpi": {
+      "tracked": "المركبات المتتبعة",
+      "trackedNote": "ارتباطات GPS النشطة",
+      "online": "متصلة",
+      "onlineNote": "مواقع GPS حديثة",
+      "moving": "متحركة",
+      "parkedCount": "{count} متوقفة",
+      "offline": "غير متصلة",
+      "offlineNote": "موقع قديم"
+    },
+    "provider": {
+      "title": "مزود GPS غير متصل حالياً",
+      "body": "سيتم عرض المواقع الحية للمركبات فور ربط مزود التتبع."
+    },
+    "status": {
+      "moving": "متحركة",
+      "parked": "متوقفة",
+      "online": "متصلة",
+      "offline": "غير متصلة",
+      "no_data": "لا توجد بيانات GPS",
+      "unassigned": "جهاز GPS غير مربوط",
+      "not_configured": "مزود GPS غير متصل"
+    },
+    "operational": {
+      "available": "متاحة",
+      "rented": "مؤجرة",
+      "service": "صيانة"
+    },
+    "rental": {
+      "paid": "مدفوعة",
+      "active": "نشطة",
+      "retout": "مرتجعة",
+      "review": "مراجعة"
+    },
+    "search": {
+      "inputLabel": "بحث المركبات",
+      "placeholder": "ابحث بالاسم أو اللوحة…",
+      "button": "بحث",
+      "clear": "مسح البحث"
+    },
+    "filters": {
+      "all": "الكل",
+      "tracking": "حالة التتبع",
+      "operational": "الحالة التشغيلية"
+    },
+    "panel": {
+      "title": "الأسطول",
+      "results": "{count} مركبة",
+      "loading": "جاري تحميل المركبات…",
+      "empty": "لا توجد مركبات مطابقة لهذه عوامل التصفية."
+    },
+    "pagination": {
+      "label": "صفحات المركبات",
+      "previous": "السابق",
+      "next": "التالي",
+      "page": "صفحة {page} من {totalPages}"
+    },
+    "map": {
+      "empty": "لا توجد مواقع GPS حقيقية متاحة حالياً",
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "fit": "ملاءمة المركبات",
+      "recenter": "إعادة التمركز"
+    },
+    "detail": {
+      "title": "تتبع المركبة",
+      "close": "إغلاق",
+      "loading": "جاري تحميل بيانات GPS…",
+      "vehicle": "المركبة",
+      "gps": "GPS",
+      "rental": "التأجير الحالي",
+      "year": "السنة",
+      "type": "النوع",
+      "color": "اللون",
+      "coordinates": "الإحداثيات",
+      "noCoordinates": "لا توجد بيانات GPS لهذه المركبة.",
+      "speed": "السرعة",
+      "speedValue": "{value} كم/س",
+      "heading": "الاتجاه",
+      "accuracy": "الدقة",
+      "accuracyValue": "{value} م",
+      "capturedAt": "وقت الالتقاط",
+      "receivedAt": "وقت الاستلام",
+      "contract": "العقد",
+      "customer": "العميل",
+      "rentalStatus": "حالة التأجير",
+      "start": "البداية",
+      "end": "النهاية",
+      "viewContract": "عرض العقد"
+    },
+    "denied": {
+      "title": "تتبع GPS غير متاح",
+      "description": "هذه الصفحة تتطلب صلاحية gps.read."
+    },
+    "error": {
+      "generic": "تعذر تحميل بيانات GPS. حاول مرة أخرى."
+    }
+  },
+  "RoadLiabilities": {
+    "crumbs": "العمليات · الالتزامات المرورية",
+    "title": "المخالفات وسالك",
+    "subtitle": "متابعة الالتزامات المرورية وربطها بالمركبات والعقود والعملاء.",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
+    "noPlate": "بدون لوحة",
+    "noVehicle": "بدون مركبة",
+    "noCustomer": "بدون عميل",
+    "noContract": "بدون عقد",
+    "kpi": {
+      "collectibleAmount": "المبلغ المستحق للتحصيل",
+      "awaiting": "بانتظار التأكيد",
+      "needsAttention": "تحتاج مراجعة",
+      "settled": "تمت التسوية"
+    },
+    "queues": {
+      "label": "طوابير العمل",
+      "all": "الكل",
+      "collectible": "مستحق للتحصيل",
+      "needs_attention": "يحتاج مراجعة",
+      "settled": "تمت التسوية"
+    },
+    "channel": {
+      "RTA": "RTA",
+      "SALIK": "سالك"
+    },
+    "workState": {
+      "awaiting_confirmation": "بانتظار التأكيد",
+      "awaiting_confirmation_salik": "بانتظار تأكيد سالك",
+      "collectible": "مستحقة للتحصيل",
+      "needs_contract": "تحتاج ربط بعقد",
+      "ambiguous_match": "تحتاج مراجعة الربط",
+      "attribution_pending": "بانتظار تحديد العقد",
+      "disputed": "محل اعتراض",
+      "settled": "تمت التسوية",
+      "rejected": "مرفوضة",
+      "void": "ملغاة",
+      "not_ready": "غير جاهزة للتحصيل"
+    },
+    "type": {
+      "rta_violation": "مخالفة RTA",
+      "salik_toll": "رسوم سالك",
+      "salik_violation": "مخالفة سالك"
+    },
+    "source": {
+      "RTA": "RTA",
+      "SALIK": "سالك",
+      "GPS_INFERENCE": "رصد GPS",
+      "TARS": "TARS",
+      "unknown": "مصدر غير معروف"
+    },
+    "confirmation": {
+      "pending_confirmation": "بانتظار التأكيد",
+      "confirmed": "مؤكدة",
+      "rejected": "مرفوضة"
+    },
+    "attribution": {
+      "matched": "مرتبطة بالعقد",
+      "unmatched": "غير مرتبطة بعقد",
+      "ambiguous": "تحتاج مراجعة الربط",
+      "unresolved": "بانتظار تحديد العقد",
+      "matchedNote": "تم الربط وفق فترة حيازة المركبة.",
+      "unmatchedNote": "لم يتم العثور على عقد يغطي وقت الحدث.",
+      "ambiguousNote": "تم العثور على أكثر من احتمال للربط، ولم يتم اختيار عقد تلقائياً.",
+      "unresolvedNote": "لم يُحسم ربط العقد بعد."
+    },
+    "collection": {
+      "not_ready": "غير جاهزة للتحصيل",
+      "open": "مستحقة للتحصيل",
+      "settled": "تمت التسوية",
+      "disputed": "محل اعتراض",
+      "void": "ملغاة"
+    },
+    "amount": {
+      "awaiting": "بانتظار المبلغ الرسمي"
+    },
+    "prediction": {
+      "detectedByGps": "رُصد عبر GPS",
+      "rowHint": "رُصد عبر GPS · بانتظار التأكيد الرسمي",
+      "confirmedAfterGps": "رصد GPS ← تأكيد سالك"
+    },
+    "search": {
+      "inputLabel": "البحث في الالتزامات المرورية",
+      "placeholder": "ابحث بالمركبة أو اللوحة أو العقد أو العميل أو المرجع...",
+      "button": "بحث",
+      "clear": "مسح البحث"
+    },
+    "filters": {
+      "all": "الكل",
+      "channel": "الجهة",
+      "advanced": "فلاتر متقدمة",
+      "advancedWithCount": "فلاتر متقدمة ({count})",
+      "clearAdvanced": "مسح الفلاتر المتقدمة",
+      "type": "نوع الحدث",
+      "source": "مصدر الرصد",
+      "confirmation": "حالة التأكيد",
+      "attribution": "حالة الربط",
+      "collection": "حالة التحصيل",
+      "dateRange": "تاريخ الحدث"
+    },
+    "columns": {
+      "authority": "الجهة / النوع",
+      "source": "المصدر / النوع",
+      "vehicle": "المركبة",
+      "party": "العقد / العميل",
+      "occurred": "وقت الحدث",
+      "amount": "المبلغ",
+      "status": "الحالة"
+    },
+    "list": {
+      "loading": "جارٍ تحميل الالتزامات…",
+      "results": "{count} التزام"
+    },
+    "pagination": {
+      "label": "صفحات الالتزامات",
+      "previous": "السابق",
+      "next": "التالي",
+      "page": "صفحة {page} من {totalPages}"
+    },
+    "empty": {
+      "title": "لا توجد التزامات مرورية مسجلة حالياً",
+      "description": "ستظهر هنا بيانات سالك ومخالفات RTA تلقائياً عند توفرها من المصادر المرتبطة."
+    },
+    "detail": {
+      "title": "الالتزام المروري",
+      "close": "إغلاق",
+      "loading": "جارٍ تحميل الالتزام…",
+      "overview": "نظرة عامة",
+      "eventStatus": "حالة الحدث",
+      "confirmation": "التأكيد",
+      "attribution": "الربط",
+      "collection": "التحصيل",
+      "type": "النوع",
+      "source": "المصدر",
+      "occurred": "وقت الحدث",
+      "location": "الموقع",
+      "reference": "المرجع",
+      "vehicle": "المركبة",
+      "contract": "العقد والعميل",
+      "contractNumber": "العقد",
+      "contractStatus": "حالة العقد",
+      "customer": "العميل",
+      "provenance": "مصدر البيانات",
+      "viewContract": "عرض العقد",
+      "viewGps": "عرض GPS"
+    },
+    "provenance": {
+      "empty": "لا توجد مشاهدات مصدر مسجلة لهذا الالتزام.",
+      "authoritative": "تأكيد رسمي",
+      "prediction": "توقع"
+    },
+    "denied": {
+      "title": "صفحة المخالفات وسالك غير متاحة",
+      "description": "هذه الصفحة تتطلب صلاحية violations.read."
+    },
+    "error": {
+      "generic": "تعذر تحميل الالتزامات المرورية. حاول مرة أخرى."
+    },
+    "charge": {
+      "section": "المبلغ على العميل",
+      "officialAmount": "المبلغ الرسمي",
+      "officialHint": "المبلغ الرسمي صادر عن الجهة المختصة ولا يمكن تعديله.",
+      "suggested": "المبلغ المقترح على العميل",
+      "customerCharge": "المبلغ على العميل",
+      "additional": "الزيادة",
+      "reason": "سبب الزيادة",
+      "note": "ملاحظة (اختياري)",
+      "review": "مراجعة المبلغ على العميل",
+      "confirm": "تثبيت المبلغ على العميل",
+      "cancel": "إلغاء",
+      "dialogTitle": "تثبيت المبلغ على العميل",
+      "dialogSubtitle": "راجع المبلغ الذي سيتم تحميله على العميل.",
+      "gpsPending": "بانتظار التأكيد الرسمي قبل إضافة أي مبلغ على العميل.",
+      "destinationReconciliation": "سيتم إضافة المبلغ إلى التسوية الحالية للعقد.",
+      "destinationPostClose": "العقد مغلق. سيتم إنشاء مطالبة مالية لاحقة دون تعديل التسوية الأصلية.",
+      "postCloseCreated": "تم إنشاء مطالبة لاحقة",
+      "postCloseBadge": "مطالبة لاحقة",
+      "unavailable": "هذه المطالبة غير متاحة حالياً للتثبيت على العميل.",
+      "viewOnly": "يمكنك عرض هذا الالتزام، ولا يمكنك تثبيت المبلغ على العميل.",
+      "locked": "مثبّت",
+      "lockedAmount": "تم تثبيت المبلغ",
+      "added": "تمت إضافتها إلى التسوية",
+      "addedShort": "تمت إضافتها للتسوية",
+      "belongsToReconciliation": "أصبح هذا المبلغ جزءاً من تسوية العقد.",
+      "loading": "جارٍ التحقق من حالة التسوية…",
+      "minimumHint": "الحد الأدنى للمبلغ على العميل: {amount}",
+      "reasonSuggestion": {
+        "administrationFee": "رسوم إدارية",
+        "processingFee": "رسوم معالجة",
+        "serviceFee": "رسوم خدمة",
+        "other": "أخرى"
+      },
+      "belowOfficial": "لا يمكن أن يكون المبلغ على العميل أقل من المبلغ الرسمي.",
+      "reasonRequired": "سبب الزيادة مطلوب عندما يكون المبلغ على العميل أعلى من المبلغ الرسمي.",
+      "invalidAmount": "أدخل مبلغاً صحيحاً بالدرهم.",
+      "alreadyCharged": "تم تثبيت مبلغ العميل لهذا الالتزام مسبقاً.",
+      "notEligible": "لا يمكن تثبيت هذا الالتزام على العميل حالياً.",
+      "forbidden": "ليست لديك صلاحية تثبيت المبلغ على العميل.",
+      "generic": "تعذر تثبيت المبلغ على العميل. حاول مرة أخرى."
     }
   }
 }

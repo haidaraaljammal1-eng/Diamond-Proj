@@ -1,6 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import type { ContractDetail, ContractListItem } from "src/modules/contracts/contracts.schema";
+import {
+  EMPTY_ROAD_LIABILITY_SIGNALS,
+  type ContractRoadLiabilitySignals,
+} from "src/modules/contracts/contract-road-liability-signals";
 
 const DETAIL_INCLUDE = {
   vehicle: { include: { model: { select: { name: true } } } },
@@ -24,6 +28,10 @@ const DETAIL_INCLUDE = {
   },
   reconciliation: { include: { lines: { orderBy: { createdAt: "asc" as const } } } },
   renewals: { orderBy: { createdAt: "asc" as const } },
+  postCloseReceivables: {
+    orderBy: { createdAt: "desc" as const },
+    include: { roadLiability: { select: { type: true } } },
+  },
 } satisfies Prisma.ContractInclude;
 
 export type ContractDetailRow = Prisma.ContractGetPayload<{ include: typeof DETAIL_INCLUDE }>;
@@ -53,6 +61,7 @@ export function toListItem(row: {
   createdAt: Date;
   vehicle: ContractDetailRow["vehicle"];
   customer: { name: string } | null;
+  hasSalikGpsSignal?: boolean;
 }): ContractListItem {
   return {
     id: row.id,
@@ -70,6 +79,7 @@ export function toListItem(row: {
     startAt: row.startAt,
     endAt: row.endAt,
     createdAt: row.createdAt,
+    hasSalikGpsSignal: row.hasSalikGpsSignal ?? false,
   };
 }
 
@@ -86,7 +96,26 @@ function actionsFor(row: ContractDetailRow): ContractDetail["actions"] {
   };
 }
 
-export function toDetail(row: ContractDetailRow): ContractDetail {
+function toPostCloseSummary(row: ContractDetailRow): ContractDetail["postCloseReceivables"] {
+  const items = row.postCloseReceivables.map((item) => ({
+    id: item.id,
+    amount: item.amount,
+    currency: item.currency,
+    status: item.status,
+    roadLiabilityType: item.roadLiability.type,
+    createdAt: item.createdAt,
+  }));
+  return {
+    count: items.length,
+    openAmount: items.filter((item) => item.status === "OPEN").reduce((sum, item) => sum + item.amount, 0),
+    items,
+  };
+}
+
+export function toDetail(
+  row: ContractDetailRow,
+  signals: ContractRoadLiabilitySignals = EMPTY_ROAD_LIABILITY_SIGNALS,
+): ContractDetail {
   const payment = row.payments[0] ?? null;
   return {
     id: row.id,
@@ -178,6 +207,10 @@ export function toDetail(row: ContractDetailRow): ContractDetail {
             amount: l.amount,
             externalReference: l.externalReference,
             sourceDomain: l.sourceDomain,
+            roadLiabilityId: l.roadLiabilityId ?? null,
+            officialAmountSnapshot: l.officialAmountSnapshot ?? null,
+            adjustmentAmount: l.adjustmentAmount ?? null,
+            adjustmentReason: l.adjustmentReason ?? null,
           })),
         }
       : null,
@@ -191,5 +224,7 @@ export function toDetail(row: ContractDetailRow): ContractDetail {
       approvedAt: r.approvedAt,
     })),
     actions: actionsFor(row),
+    roadLiabilitySignals: signals,
+    postCloseReceivables: toPostCloseSummary(row),
   };
 }

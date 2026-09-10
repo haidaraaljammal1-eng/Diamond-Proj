@@ -67,6 +67,9 @@ export function ContractsTable({
                   <span className={styles.number} dir="ltr">
                     {contract.contractNumber}
                   </span>
+                  {contract.hasSalikGpsSignal ? (
+                    <span className={styles.gpsDot} title={t("detail.gpsSalikTitle")} data-testid="contract-gps-salik-dot" />
+                  ) : null}
                 </td>
                 <td>
                   {contract.customerName ? (

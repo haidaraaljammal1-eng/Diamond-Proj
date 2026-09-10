@@ -71,7 +71,7 @@ Base path: `/maintenance` (admin autoload).
 
 | Method | Path | Permission | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/maintenance` | `maintenance.read` | List/search/filter orders |
+| `GET` | `/maintenance` | `maintenance.read` | List/search/filter orders. Each row includes the Vehicle projection (`id`, `displayName`, `vehicleName`, `plateNumber`, `modelYear`, `color`, `operationalStatus`, `primaryImageUrl`) from one Prisma include — not a per-row detail fetch. |
 | `GET` | `/maintenance/summary` | `maintenance.read` | KPI counts |
 | `GET` | `/maintenance/:id` | `maintenance.read` | Order detail + vehicle projection |
 | `POST` | `/maintenance` | `maintenance.manage` | Add vehicle to maintenance |
