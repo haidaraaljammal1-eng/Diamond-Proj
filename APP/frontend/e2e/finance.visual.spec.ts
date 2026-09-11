@@ -48,7 +48,7 @@ async function createExpenseViaUi(page: Page, description: string, amount = "80"
 
 async function openExpenseFromLedger(page: Page, description: string) {
   const ledger = page.getByTestId("finance-ledger");
-  await ledger.getByLabel(/نوع الحركة|Movement type/).click();
+    await ledger.getByLabel(/^(الحركة|Movement)$/).click();
   await page.getByRole("option", { name: /^(مصروف|Expense)$/ }).click();
   await expect(ledger.getByText(description)).toBeVisible({ timeout: 30_000 });
   await ledger
@@ -82,6 +82,8 @@ test.describe("Finance V1", () => {
     await expect(page.getByText("Revenue")).toHaveCount(0);
     await expect(page.getByText("Profit")).toHaveCount(0);
     await expect(page.getByTestId("finance-open-receivables")).toBeVisible();
+    await expect(page.getByTestId("finance-open-receivables").getByText("UNPAID", { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("finance-open-receivables").getByText("PROCESSING", { exact: true })).toHaveCount(0);
     await expect(page.getByTestId("finance-analytics")).toBeVisible();
     await expect(page.getByTestId("finance-ledger")).toBeVisible();
     await expect(page.getByTestId("finance-add-expense")).toBeVisible();
@@ -117,6 +119,7 @@ test.describe("Finance V1", () => {
     await expect(page.getByRole("heading", { name: "Finance", exact: true })).toBeVisible();
     await expect(page.getByTestId("finance-kpis")).toBeVisible();
     await expect(page.getByTestId("finance-open-receivables")).toBeVisible();
+    await expect(page.getByTestId("finance-open-receivables").getByText("UNPAID", { exact: true })).toHaveCount(0);
     await expect(page.getByTestId("finance-analytics")).toBeVisible();
     await expect(page.getByTestId("finance-ledger")).toBeVisible();
 
@@ -129,8 +132,7 @@ test.describe("Finance V1", () => {
     await expect(page.getByText("Select date range", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Date range" }).click();
     await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Clear", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Clear", exact: true }).click();
+    await page.getByRole("button", { name: "Clear", exact: true }).last().click();
     expect(missing).toEqual([]);
   });
 

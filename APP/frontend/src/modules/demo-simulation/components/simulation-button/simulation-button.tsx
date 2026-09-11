@@ -14,12 +14,18 @@ interface SimulationButtonProps {
   surface: SimulationSurface;
   onGpsSimulate?: () => void;
   onViolationsSimulate?: () => void;
+  onFinanceSimulate?: () => void;
+  onFinanceReset?: () => void;
+  onFinanceDisable?: () => void;
 }
 
 export function SimulationButton({
   surface,
   onGpsSimulate,
   onViolationsSimulate,
+  onFinanceSimulate,
+  onFinanceReset,
+  onFinanceDisable,
 }: SimulationButtonProps) {
   const t = useTranslations("DemoSimulation");
   const simulation = useDemoSimulation();
@@ -115,6 +121,37 @@ export function SimulationButton({
           </Button>
         </div>
       ) : null}
+      {surface === "finance" ? (
+        <div className={styles.actions}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="simulate-finance-run"
+            onClick={() => run(() => onFinanceSimulate?.())}
+          >
+            {t("finance.run")}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="simulate-finance-reset"
+            onClick={() => run(() => onFinanceReset?.())}
+          >
+            {t("reset")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="simulate-finance-disable"
+            onClick={() => run(() => onFinanceDisable?.())}
+          >
+            {t("disable")}
+          </Button>
+        </div>
+      ) : null}
       {surface === "tars" ? (
         <div className={styles.actions}>
           <Button type="button" variant="secondary" size="sm" data-testid="simulate-tars-notStarted" onClick={() => run(() => simulation.simulateTars("notStarted"))}>
@@ -131,9 +168,11 @@ export function SimulationButton({
           </Button>
         </div>
       ) : null}
-      <Button type="button" variant="ghost" size="sm" className={styles.reset} data-testid="simulate-reset" onClick={() => run(() => simulation.reset())}>
-        {t("reset")}
-      </Button>
+      {surface !== "finance" ? (
+        <Button type="button" variant="ghost" size="sm" className={styles.reset} data-testid="simulate-reset" onClick={() => run(() => simulation.reset())}>
+          {t("reset")}
+        </Button>
+      ) : null}
     </Popover>
   );
 }

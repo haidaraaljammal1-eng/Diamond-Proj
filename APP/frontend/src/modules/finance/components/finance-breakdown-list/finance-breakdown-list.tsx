@@ -14,12 +14,14 @@ export interface FinanceBreakdownListProps {
   items: FinanceBreakdownItem[];
   emptyLabel: string;
   countLabel?: (count: number) => string;
+  testIdPrefix?: string;
 }
 
 export function FinanceBreakdownList({
   items,
   emptyLabel,
   countLabel,
+  testIdPrefix,
 }: FinanceBreakdownListProps) {
   if (items.length === 0) {
     return <p className={styles.empty}>{emptyLabel}</p>;
@@ -30,7 +32,11 @@ export function FinanceBreakdownList({
   return (
     <div className={styles.list}>
       {items.map((item) => (
-        <div key={item.key} className={styles.row}>
+        <div
+          key={item.key}
+          className={styles.row}
+          data-testid={testIdPrefix ? `${testIdPrefix}-${item.key}` : undefined}
+        >
           <div className={styles.meta}>
             <span className={styles.label}>{item.label}</span>
             <span className={styles.amount} dir="ltr">{formatFinanceAed(item.amount)}</span>

@@ -8,15 +8,17 @@ import type { SelectOption } from "@/shared/components/ui/select";
 import type { PageMeta } from "../../api/finance.api.types";
 import type {
   LedgerDirection,
+  LedgerDisplaySource,
   LedgerEntryDto,
-  LedgerKind,
-  LedgerSourceType,
 } from "../../types/finance.types";
 import {
   formatVehicleLabel,
-  ledgerKindLabel,
+  LEDGER_DISPLAY_SOURCES,
   ledgerMovementLabel,
+  ledgerSourceFromKind,
+  ledgerSourceLabel,
 } from "../../utils/finance-labels";
+import { isSimulatedFinanceId } from "../../utils/finance-simulation";
 import { formatSignedFinanceAed } from "../../utils/format-finance-money";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
 import styles from "./finance-ledger.module.css";
@@ -26,13 +28,13 @@ export interface FinanceLedgerProps {
   meta: PageMeta | null;
   search: string;
   direction: LedgerDirection | null;
-  kind: LedgerKind | null;
+  displaySource: LedgerDisplaySource | null;
   loading: boolean;
   error: unknown;
   onSearch: (value: string) => void;
   onClearSearch: () => void;
   onDirectionChange: (value: LedgerDirection | null) => void;
-  onKindChange: (value: LedgerKind | null) => void;
+  onSourceChange: (value: LedgerDisplaySource | null) => void;
   onClearFilters: () => void;
   onPageChange: (page: number) => void;
   onRetry: () => void;
@@ -52,13 +54,13 @@ export function FinanceLedger({
   meta,
   search,
   direction,
-  kind,
+  displaySource,
   loading,
   error,
   onSearch,
   onClearSearch,
   onDirectionChange,
-  onKindChange,
+  onSourceChange,
   onClearFilters,
   onPageChange,
   onRetry,
@@ -73,23 +75,15 @@ export function FinanceLedger({
     value,
     label:
       value === "ALL"
-        ? t("ledger.directionAll")
+        ? t("ledger.movementAll")
         : ledgerMovementLabel(value, t),
   }));
 
-  const kindOptions: SelectOption<string>[] = [
-    { value: "ALL", label: t("ledger.kindAll") },
-    ...[
-      "RENTAL_PAYMENT",
-      "RENEWAL_PAYMENT",
-      "RECONCILIATION_PAYMENT",
-      "POST_CLOSE_RECEIVABLE_PAYMENT",
-      "MAINTENANCE_EXPENSE",
-      "MANUAL_EXPENSE",
-      "MANUAL_EXPENSE_REVERSAL",
-    ].map((value) => ({
+  const sourceOptions: SelectOption<string>[] = [
+    { value: "ALL", label: t("ledger.sourceAll") },
+    ...LEDGER_DISPLAY_SOURCES.map((value) => ({
       value,
-      label: ledgerKindLabel(value, t),
+      label: ledgerSourceLabel(value, t),
     })),
   ];
 
@@ -99,9 +93,21 @@ export function FinanceLedger({
     return styles.amountCollection;
   };
 
+  const movementClass = (entry: LedgerEntryDto) => {
+    if (entry.direction === "EXPENSE") return styles.movementExpense;
+    if (entry.direction === "EXPENSE_REVERSAL") return styles.movementReversal;
+    return styles.movementCollection;
+  };
+
   const referenceLabel = (entry: LedgerEntryDto) => {
-    if (entry.description) return entry.description;
-    return ledgerKindLabel(entry.kind, t);
+    const description = entry.description?.trim();
+    const reference = entry.reference?.trim();
+    if (description && reference && entry.direction === "EXPENSE_REVERSAL") {
+      return `${description} · ${reference}`;
+    }
+    if (description) return description;
+    const source = ledgerSourceFromKind(entry.kind);
+    return source ? ledgerSourceLabel(source, t) : entry.kind;
   };
 
   const contractVehicleLabel = (entry: LedgerEntryDto) => {
@@ -109,6 +115,44 @@ export function FinanceLedger({
     const vehicle = formatVehicleLabel(entry.vehicle);
     if (contract && vehicle) return `${contract} · ${vehicle}`;
     return contract ?? vehicle ?? "—";
+  };
+
+  const sourceOf = (entry: LedgerEntryDto) => ledgerSourceFromKind(entry.kind);
+
+  const renderAction = (entry: LedgerEntryDto) => {
+    if (entry.manualExpenseId) {
+      return (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          data-testid="finance-view-expense"
+          onClick={() => onViewExpense(entry.manualExpenseId!)}
+        >
+          {t("ledger.view")}
+        </Button>
+      );
+    }
+    if (entry.contract?.id && !isSimulatedFinanceId(entry.contract.id)) {
+      return (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => onViewContract(entry.contract!.id)}
+        >
+          {t("ledger.view")}
+        </Button>
+      );
+    }
+    if (entry.contract?.id) {
+      return (
+        <Button type="button" variant="secondary" size="sm" disabled title={t("simulation.viewDisabled")}>
+          {t("ledger.view")}
+        </Button>
+      );
+    }
+    return "—";
   };
 
   return (
@@ -138,20 +182,26 @@ export function FinanceLedger({
           onChange={(value) =>
             onDirectionChange(value === "ALL" ? null : (value as LedgerDirection))
           }
-          aria-label={t("ledger.directionLabel")}
+          aria-label={t("ledger.movementLabel")}
         />
         <Select
           variant="ghost"
           size="sm"
-          options={kindOptions}
-          value={kind ?? "ALL"}
+          options={sourceOptions}
+          value={displaySource ?? "ALL"}
           onChange={(value) =>
-            onKindChange(value === "ALL" ? null : (value as LedgerKind))
+            onSourceChange(value === "ALL" ? null : (value as LedgerDisplaySource))
           }
-          aria-label={t("ledger.kindLabel")}
+          aria-label={t("ledger.sourceLabel")}
         />
-        <Button type="button" variant="secondary" size="sm" onClick={onClearFilters}>
-          {t("clearFilters")}
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          data-testid="finance-ledger-clear"
+          onClick={onClearFilters}
+        >
+          {t("clear")}
         </Button>
       </div>
 
@@ -162,6 +212,12 @@ export function FinanceLedger({
             {t("retry")}
           </Button>
         </div>
+      ) : null}
+
+      {meta ? (
+        <p className={styles.count} data-testid="finance-ledger-count">
+          {t("ledger.movementCount", { count: meta.total })}
+        </p>
       ) : null}
 
       <div className={styles.tableWrap}>
@@ -176,62 +232,91 @@ export function FinanceLedger({
             {t("ledger.empty")}
           </p>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{t("ledger.columns.date")}</th>
-                <th>{t("ledger.columns.movement")}</th>
-                <th>{t("ledger.columns.source")}</th>
-                <th>{t("ledger.columns.reference")}</th>
-                <th className={styles.hideMd}>{t("ledger.columns.contractVehicle")}</th>
-                <th>{t("ledger.columns.amount")}</th>
-                <th>{t("ledger.columns.action")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((entry) => (
-                <tr key={entry.id} data-testid="finance-ledger-row">
-                  <td>
-                    {format.dateTime(new Date(entry.occurredAt), {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </td>
-                  <td>{ledgerMovementLabel(entry.direction, t)}</td>
-                  <td>{ledgerKindLabel(entry.kind, t)}</td>
-                  <td>{referenceLabel(entry)}</td>
-                  <td className={styles.hideMd} dir="ltr">{contractVehicleLabel(entry)}</td>
-                  <td className={amountClass(entry)} dir="ltr">
-                    {formatSignedFinanceAed(entry.amount, entry.direction)}
-                  </td>
-                  <td>
-                    {entry.manualExpenseId ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        data-testid="finance-view-expense"
-                        onClick={() => onViewExpense(entry.manualExpenseId!)}
-                      >
-                        {t("ledger.view")}
-                      </Button>
-                    ) : entry.contract?.id ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onViewContract(entry.contract!.id)}
-                      >
-                        {t("ledger.view")}
-                      </Button>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+          <>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{t("ledger.columns.date")}</th>
+                  <th>{t("ledger.columns.movement")}</th>
+                  <th>{t("ledger.columns.source")}</th>
+                  <th>{t("ledger.columns.reference")}</th>
+                  <th className={styles.hideMd}>{t("ledger.columns.contractVehicle")}</th>
+                  <th>{t("ledger.columns.amount")}</th>
+                  <th>{t("ledger.columns.action")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((entry) => {
+                  const source = sourceOf(entry);
+                  return (
+                    <tr
+                      key={entry.id}
+                      data-testid="finance-ledger-row"
+                      data-movement={entry.direction}
+                      data-source={source ?? ""}
+                      data-kind={entry.kind}
+                    >
+                      <td>
+                        {format.dateTime(new Date(entry.occurredAt), {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                      <td>
+                        <span className={movementClass(entry)} data-testid="finance-ledger-movement">
+                          {ledgerMovementLabel(entry.direction, t)}
+                        </span>
+                      </td>
+                      <td data-testid="finance-ledger-source">
+                        {source ? ledgerSourceLabel(source, t) : entry.kind}
+                      </td>
+                      <td>{referenceLabel(entry)}</td>
+                      <td className={styles.hideMd} dir="ltr">{contractVehicleLabel(entry)}</td>
+                      <td className={amountClass(entry)} dir="ltr" data-testid="finance-ledger-amount">
+                        {formatSignedFinanceAed(entry.amount, entry.direction)}
+                      </td>
+                      <td>{renderAction(entry)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div className={styles.cards}>
+              {items.map((entry) => {
+                const source = sourceOf(entry);
+                return (
+                  <article
+                    key={`card-${entry.id}`}
+                    className={styles.card}
+                    data-testid="finance-ledger-card"
+                    data-movement={entry.direction}
+                    data-source={source ?? ""}
+                    data-kind={entry.kind}
+                  >
+                    <div className={styles.cardDate}>
+                      {format.dateTime(new Date(entry.occurredAt), {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </div>
+                    <div className={styles.cardMeta}>
+                      <span className={movementClass(entry)} data-testid="finance-ledger-movement">
+                        {ledgerMovementLabel(entry.direction, t)}
+                      </span>
+                      <span data-testid="finance-ledger-source">
+                        {source ? ledgerSourceLabel(source, t) : entry.kind}
+                      </span>
+                    </div>
+                    <div>{referenceLabel(entry)}</div>
+                    <div className={amountClass(entry)} dir="ltr" data-testid="finance-ledger-amount">
+                      {formatSignedFinanceAed(entry.amount, entry.direction)}
+                    </div>
+                    <div>{renderAction(entry)}</div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 

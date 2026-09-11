@@ -105,6 +105,7 @@ export function FinanceAnalyticsSection({
               items={outstandingItems}
               emptyLabel={t("analytics.outstandingEmpty")}
               countLabel={(count) => t("analytics.items", { count })}
+              testIdPrefix="finance-outstanding-breakdown"
             />
           </Card>
 
@@ -114,6 +115,7 @@ export function FinanceAnalyticsSection({
             <FinanceBreakdownList
               items={expenseItems}
               emptyLabel={t("analytics.expenseEmpty")}
+              testIdPrefix="finance-expense-breakdown"
             />
           </Card>
         </div>

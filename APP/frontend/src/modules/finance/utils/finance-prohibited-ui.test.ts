@@ -50,4 +50,13 @@ describe("Finance prohibited UI", () => {
     assert.equal(source.includes("/finance/income"), false);
     assert.equal(source.includes('method: "DELETE"'), false);
   });
+
+  it("does not render raw Open Receivable paymentState enums", () => {
+    const source = readFileSync(
+      join(financeDir, "components/finance-open-receivables/finance-open-receivables.tsx"),
+      "utf8",
+    );
+    assert.equal(source.includes("{row.paymentState}"), false);
+    assert.ok(source.includes("receivablePaymentStateLabel"));
+  });
 });

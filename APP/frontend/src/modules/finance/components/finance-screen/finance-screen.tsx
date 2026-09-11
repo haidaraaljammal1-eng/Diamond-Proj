@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
+import { SimulationButton, useDemoSimulation } from "@/modules/demo-simulation";
 import { Button } from "@/shared/components/ui/button";
 import { PageHeader } from "@/shared/components/ui/page-header";
 import { AddExpenseDialog } from "../../forms/add-expense/add-expense-dialog";
@@ -15,6 +16,8 @@ import {
   useFinanceOverview,
   useFinanceReceivables,
 } from "../../hooks/use-finance";
+import { useFinanceStore } from "../../stores/finance.store";
+import { isSimulatedFinanceId, buildFinanceSimulationOverlay } from "../../utils/finance-simulation";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
 import { ExpenseDetailDrawer } from "../expense-detail-drawer/expense-detail-drawer";
 import { FinanceAnalyticsSection } from "../finance-analytics/finance-analytics";
@@ -32,6 +35,10 @@ export function FinanceScreen() {
   const receivables = useFinanceReceivables();
   const ledger = useFinanceLedger();
   const expense = useFinanceExpense();
+  const simulation = useDemoSimulation();
+  const resetLedgerFilters = useFinanceStore((s) => s.resetLedgerFilters);
+  const resetReceivablesFilters = useFinanceStore((s) => s.resetReceivablesFilters);
+  const setOverviewQuery = useFinanceStore((s) => s.setOverviewQuery);
 
   const [addOpen, setAddOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
@@ -50,6 +57,33 @@ export function FinanceScreen() {
     router.push(`/${locale}/contracts`);
   };
 
+  const enableFinanceSimulation = () => {
+    simulation.simulateFinance(buildFinanceSimulationOverlay());
+    resetLedgerFilters();
+    resetReceivablesFilters();
+    setOverviewQuery({ preset: "month", customFrom: "", customTo: "" });
+  };
+
+  const resetFinanceSimulation = () => {
+    simulation.simulateFinance(buildFinanceSimulationOverlay());
+    resetLedgerFilters();
+    resetReceivablesFilters();
+    setOverviewQuery({ preset: "month", customFrom: "", customTo: "" });
+  };
+
+  const disableFinanceSimulation = () => {
+    simulation.clearFinanceOverlay();
+    void overview.refresh();
+  };
+
+  const openContract = (id: string) => {
+    if (isSimulatedFinanceId(id)) {
+      showNotice(t("simulation.viewDisabled"));
+      return;
+    }
+    setContractId(id);
+  };
+
   const openExpenseDetail = (id: string) => {
     setExpenseDrawerOpen(true);
     void expense.fetchDetail(id);
@@ -63,6 +97,12 @@ export function FinanceScreen() {
       actions={
         overview.isAllowed ? (
           <div className={styles.headerActions}>
+            <SimulationButton
+              surface="finance"
+              onFinanceSimulate={enableFinanceSimulation}
+              onFinanceReset={resetFinanceSimulation}
+              onFinanceDisable={disableFinanceSimulation}
+            />
             <Button
               type="button"
               variant="secondary"
@@ -72,7 +112,7 @@ export function FinanceScreen() {
             >
               {t("refresh")}
             </Button>
-            {overview.canManageExpenses ? (
+            {overview.canManageExpenses && !overview.simulationActive ? (
               <Button
                 type="button"
                 variant="primary"
@@ -106,6 +146,13 @@ export function FinanceScreen() {
   return (
     <div className={styles.screen} data-testid="finance-screen">
       {header}
+
+      {overview.simulationActive ? (
+        <div className={styles.simBanner} data-testid="finance-simulation-banner">
+          <strong>{t("simulation.banner")}</strong>
+          <span>{t("simulation.bannerHint")}</span>
+        </div>
+      ) : null}
 
       <FinancePeriodControl
         preset={overview.overviewQuery.preset}
@@ -141,7 +188,7 @@ export function FinanceScreen() {
         onSortChange={receivables.setSort}
         onPageChange={receivables.setPage}
         onRetry={() => void overview.refresh()}
-        onViewContract={setContractId}
+        onViewContract={openContract}
       />
 
       <FinanceAnalyticsSection
@@ -156,17 +203,17 @@ export function FinanceScreen() {
         meta={ledger.meta}
         search={ledger.query.search}
         direction={ledger.query.direction}
-        kind={ledger.query.kind}
+        displaySource={ledger.query.displaySource}
         loading={ledger.isLoading}
         error={ledger.error}
         onSearch={ledger.applySearch}
         onClearSearch={ledger.clearSearch}
         onDirectionChange={ledger.setDirection}
-        onKindChange={ledger.setKind}
+        onSourceChange={ledger.setSource}
         onClearFilters={ledger.clearFilters}
         onPageChange={ledger.setPage}
         onRetry={() => void overview.refresh()}
-        onViewContract={setContractId}
+        onViewContract={openContract}
         onViewExpense={openExpenseDetail}
       />
 
@@ -181,7 +228,8 @@ export function FinanceScreen() {
         detail={expense.detail}
         loading={expense.isDetailLoading}
         error={expense.detailError}
-        canManage={overview.canManageExpenses}
+        canManage={overview.canManageExpenses && !overview.simulationActive}
+        demoOnly={Boolean(expense.detailId && isSimulatedFinanceId(expense.detailId))}
         onClose={() => {
           setExpenseDrawerOpen(false);
           expense.clearDetail();

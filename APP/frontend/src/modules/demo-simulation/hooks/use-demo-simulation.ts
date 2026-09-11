@@ -21,6 +21,7 @@ export function useDemoSimulation() {
     tarsPreset: store.tarsPreset,
     gpsOverlay: store.gpsOverlay,
     roadLiabilitiesOverlay: store.roadLiabilitiesOverlay,
+    financeOverlay: store.financeOverlay,
   };
 
   return {
@@ -40,6 +41,8 @@ export function useDemoSimulation() {
     simulateRoadLiabilities: store.simulateRoadLiabilities,
     attachSimulatedRoadLiabilityCharge: store.attachSimulatedRoadLiabilityCharge,
     clearRoadLiabilitiesOverlay: store.clearRoadLiabilitiesOverlay,
+    simulateFinance: store.simulateFinance,
+    clearFinanceOverlay: store.clearFinanceOverlay,
     clearRentalOverlay: store.clearRentalOverlay,
     reset: store.reset,
   };

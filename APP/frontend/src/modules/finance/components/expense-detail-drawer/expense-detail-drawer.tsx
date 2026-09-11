@@ -18,6 +18,7 @@ export interface ExpenseDetailDrawerProps {
   loading: boolean;
   error: unknown;
   canManage: boolean;
+  demoOnly?: boolean;
   onClose: () => void;
   onRetry: () => void;
   onVoid: () => void;
@@ -40,6 +41,7 @@ export function ExpenseDetailDrawer({
   loading,
   error,
   canManage,
+  demoOnly = false,
   onClose,
   onRetry,
   onVoid,
@@ -69,6 +71,11 @@ export function ExpenseDetailDrawer({
 
       {detail ? (
         <div className={styles.body} data-testid="finance-expense-detail">
+          {demoOnly ? (
+            <p className={styles.demoNote} data-testid="finance-expense-demo-note">
+              {t("simulation.demoDetailNote")}
+            </p>
+          ) : null}
           <Kv label={t("expense.amount")} value={formatFinanceAed(detail.amount)} ltr />
           <Kv
             label={t("expense.category")}

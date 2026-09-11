@@ -2,6 +2,7 @@
 
 ## 2026-09-11
 
+- Finance ledger Movement vs Source semantics: Source is origin (Rental Payment, Maintenance, Manual Expense, …); Expense Reversal is a Movement, not a Source. Frontend-only Finance Demo Simulation overlay (`NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`) derives KPIs/breakdowns from one fixture set and never writes to Finance/Stripe/DB. See `DOCU/05-pages/finance.md`.
 - Finance Frontend V1: `/[locale]/finance` administrative operations center (`finance.read`) — KPIs, Open Receivables, analytics, ledger, manual expense add/void/correct (`finance.manage_expenses`). Backend-authoritative totals; Stripe-only collections; no invoices/deposit/manual income. See `DOCU/05-pages/finance.md`.
 - Finance Manual Expense forms pass relative FormError keys (`required`, `wholeAed`, `positiveAmount`, `tooLong`) — never `validation.*` prefixes.
 - Finance Backend V1: `FinancialLedgerEntry` + `ManualExpense`; Stripe-only Collected; Open Receivables projection; summary/ledger/analytics APIs; maintenance completion expense recognition; manual expense void/correct. Permissions `finance.read` / `finance.manage_expenses`. See `DOCU/05-pages/finance-backend.md`.

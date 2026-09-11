@@ -1,6 +1,10 @@
-.body {
-  display: grid;
-  gap: 12px;
+.demoNote {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f3ead6;
+  color: #5a4a2d;
+  font-size: 0.8rem;
 }
 
 .kv {

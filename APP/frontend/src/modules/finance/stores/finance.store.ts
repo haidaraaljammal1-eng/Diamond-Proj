@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
@@ -90,6 +91,10 @@ interface FinanceState {
   clearCorrectExpenseError: () => void;
 }
 
+function isFinanceSimulating(): boolean {
+  return Boolean(useDemoSimulationStore.getState().financeOverlay);
+}
+
 let overviewInFlight: Promise<void> | null = null;
 let receivablesInFlight: Promise<void> | null = null;
 let ledgerInFlight: Promise<void> | null = null;
@@ -123,6 +128,7 @@ function buildLedgerQueryFromOverview(
     search: "",
     from: period.from,
     to: period.to,
+    displaySource: null,
     kind: null,
     sourceType: null,
     direction: null,
@@ -132,6 +138,16 @@ function buildLedgerQueryFromOverview(
 
 export const useFinanceStore = create<FinanceState>((set, get) => {
   async function fetchOverview(): Promise<void> {
+    if (isFinanceSimulating()) {
+      set({
+        summaryStatus: "ready",
+        analyticsStatus: "ready",
+        summaryError: null,
+        analyticsError: null,
+        lastUpdatedAt: new Date().toISOString(),
+      });
+      return;
+    }
     const { overviewQuery } = get();
     const period = resolveFinancePeriodRange(
       overviewQuery.preset,
@@ -176,6 +192,10 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
   }
 
   async function fetchReceivables(): Promise<void> {
+    if (isFinanceSimulating()) {
+      set({ receivablesStatus: "ready", receivablesError: null });
+      return;
+    }
     const { receivablesQuery } = get();
     set({ receivablesStatus: "loading", receivablesError: null });
     try {
@@ -195,6 +215,10 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
   }
 
   async function fetchLedger(): Promise<void> {
+    if (isFinanceSimulating()) {
+      set({ ledgerStatus: "ready", ledgerError: null });
+      return;
+    }
     const { ledgerQuery } = get();
     set({ ledgerStatus: "loading", ledgerError: null });
     try {
@@ -335,6 +359,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
       const ledgerQuery = {
         ...buildLedgerQueryFromOverview(get().overviewQuery),
         search: "",
+        displaySource: null,
         kind: null,
         sourceType: null,
         direction: null,
@@ -350,6 +375,14 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     },
 
     fetchExpenseDetail: async (id) => {
+      if (isFinanceSimulating()) {
+        set({
+          expenseDetailId: id,
+          expenseDetailStatus: "ready",
+          expenseDetailError: null,
+        });
+        return;
+      }
       set({
         expenseDetailId: id,
         expenseDetailStatus: "loading",
@@ -386,6 +419,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     },
 
     createExpense: async (payload) => {
+      if (isFinanceSimulating()) return false;
       set({ isCreatingExpense: true, createExpenseError: null });
       try {
         await createManualExpense(payload);
@@ -402,6 +436,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     },
 
     voidExpense: async (id, payload) => {
+      if (isFinanceSimulating()) return false;
       set({ isVoidingExpense: true, voidExpenseError: null });
       try {
         const detail = await voidManualExpense(id, payload);
@@ -423,6 +458,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     },
 
     correctExpense: async (id, payload) => {
+      if (isFinanceSimulating()) return false;
       set({ isCorrectingExpense: true, correctExpenseError: null });
       try {
         const detail = await correctManualExpense(id, payload);
@@ -451,56 +487,5 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
 });
 
 export async function loadFinancePageData(): Promise<void> {
-  const store = useFinanceStore.getState();
-  await Promise.all([
-    store.loadOverview(),
-    (async () => {
-      if (receivablesInFlight) return receivablesInFlight;
-      receivablesInFlight = (async () => {
-        const { receivablesQuery } = useFinanceStore.getState();
-        useFinanceStore.setState({ receivablesStatus: "loading", receivablesError: null });
-        try {
-          const result = await getOpenReceivables(receivablesQuery);
-          useFinanceStore.setState({
-            receivables: result.data,
-            receivablesMeta: result.meta,
-            receivablesStatus: "ready",
-            receivablesError: null,
-          });
-        } catch (error) {
-          useFinanceStore.setState({
-            receivablesStatus: "error",
-            receivablesError: normalizeApiError(error),
-          });
-        }
-      })().finally(() => {
-        receivablesInFlight = null;
-      });
-      return receivablesInFlight;
-    })(),
-    (async () => {
-      if (ledgerInFlight) return ledgerInFlight;
-      ledgerInFlight = (async () => {
-        const { ledgerQuery } = useFinanceStore.getState();
-        useFinanceStore.setState({ ledgerStatus: "loading", ledgerError: null });
-        try {
-          const result = await getFinanceLedger(ledgerQuery);
-          useFinanceStore.setState({
-            ledger: result.data,
-            ledgerMeta: result.meta,
-            ledgerStatus: "ready",
-            ledgerError: null,
-          });
-        } catch (error) {
-          useFinanceStore.setState({
-            ledgerStatus: "error",
-            ledgerError: normalizeApiError(error),
-          });
-        }
-      })().finally(() => {
-        ledgerInFlight = null;
-      });
-      return ledgerInFlight;
-    })(),
-  ]);
+  await useFinanceStore.getState().refreshAll();
 }

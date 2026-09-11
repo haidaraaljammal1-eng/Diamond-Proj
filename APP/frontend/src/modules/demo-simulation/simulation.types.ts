@@ -1,5 +1,6 @@
 import type { SimulatedGpsOverlay } from "@/modules/gps/utils/gps-simulation";
 import type { SimulatedRoadLiabilitiesOverlay } from "@/modules/road-liabilities/utils/road-liability-simulation";
+import type { FinanceSimulationOverlay } from "@/modules/finance/utils/finance-simulation";
 
 export type SimulatedLicenseScenario = "valid" | "expired" | "unreadable";
 export type SimulatedPaymentScenario = "success" | "failed" | "pending";
@@ -9,7 +10,7 @@ export type SimulatedTarsPreset =
   | "synced"
   | "partialFailure";
 
-export type SimulationSurface = "license" | "contract" | "payment" | "tars" | "gps" | "violations";
+export type SimulationSurface = "license" | "contract" | "payment" | "tars" | "gps" | "violations" | "finance";
 
 export interface SimulatedLicenseState {
   verifying: boolean;
@@ -49,6 +50,7 @@ export interface SimulationSnapshot {
   tarsPreset: SimulatedTarsPreset | null;
   gpsOverlay: SimulatedGpsOverlay | null;
   roadLiabilitiesOverlay: SimulatedRoadLiabilitiesOverlay | null;
+  financeOverlay: FinanceSimulationOverlay | null;
 }
 
 export const DEMO_SIMULATION_DELAYS = {

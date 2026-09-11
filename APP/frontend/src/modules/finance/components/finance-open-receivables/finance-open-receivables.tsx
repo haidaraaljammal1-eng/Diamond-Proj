@@ -14,8 +14,10 @@ import type {
 import { formatObligationAge } from "../../utils/finance-age";
 import {
   formatVehicleLabel,
+  receivablePaymentStateLabel,
   receivableSourceLabel,
 } from "../../utils/finance-labels";
+import { isSimulatedFinanceId } from "../../utils/finance-simulation";
 import { formatFinanceAed } from "../../utils/format-finance-money";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
 import styles from "./finance-open-receivables.module.css";
@@ -158,7 +160,11 @@ export function FinanceOpenReceivables({
             </thead>
             <tbody>
               {items.map((row) => (
-                <tr key={`${row.sourceType}-${row.sourceId}`} data-testid="finance-receivable-row">
+                <tr
+                  key={`${row.sourceType}-${row.sourceId}`}
+                  data-testid="finance-receivable-row"
+                  data-source={row.sourceType}
+                >
                   <td>{receivableSourceLabel(row.sourceType, t)}</td>
                   <td dir="ltr">{row.contractNumber}</td>
                   <td className={styles.hideMd}>{row.customer?.name ?? "—"}</td>
@@ -171,7 +177,12 @@ export function FinanceOpenReceivables({
                   <td className={styles.hideMd}>
                     {formatObligationAge(row.obligationCreatedAt, new Date(), t)}
                   </td>
-                  <td className={styles.hideMd}>{row.paymentState}</td>
+                  <td
+                    className={styles.hideMd}
+                    data-testid="finance-receivable-payment-state"
+                  >
+                    {receivablePaymentStateLabel(row.paymentState, t)}
+                  </td>
                   <td className={styles.amount} dir="ltr">
                     {formatFinanceAed(row.outstandingAmount)}
                   </td>
@@ -180,6 +191,12 @@ export function FinanceOpenReceivables({
                       type="button"
                       variant="secondary"
                       size="sm"
+                      disabled={isSimulatedFinanceId(row.contractId)}
+                      title={
+                        isSimulatedFinanceId(row.contractId)
+                          ? t("simulation.viewDisabled")
+                          : undefined
+                      }
                       onClick={() => onViewContract(row.contractId)}
                     >
                       {t("receivables.view")}

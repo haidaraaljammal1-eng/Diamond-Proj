@@ -30,6 +30,15 @@ export type LedgerSourceType =
   | "MAINTENANCE_ORDER"
   | "MANUAL_EXPENSE";
 
+/** Origin of a ledger row — never a movement label such as Expense Reversal. */
+export type LedgerDisplaySource =
+  | "RENTAL_PAYMENT"
+  | "RENEWAL_PAYMENT"
+  | "RECONCILIATION_PAYMENT"
+  | "POST_CLOSE_RECEIVABLE_PAYMENT"
+  | "MAINTENANCE_EXPENSE"
+  | "MANUAL_EXPENSE";
+
 export type FinancePeriodPreset = "today" | "week" | "month" | "custom";
 
 export interface FinancePeriodRange {
@@ -116,6 +125,8 @@ export interface LedgerEntryDto {
   contractPaymentId: string | null;
   maintenanceOrderId: number | null;
   manualExpenseId: string | null;
+  vendorName?: string | null;
+  reference?: string | null;
 }
 
 export interface ManualExpenseAttachmentDto {
@@ -185,6 +196,8 @@ export interface LedgerQuery {
   search: string;
   from: string;
   to: string;
+  /** UI Source filter (origin). Mapped to backend `kind` / `sourceType` at request time. */
+  displaySource: LedgerDisplaySource | null;
   kind: LedgerKind | null;
   sourceType: LedgerSourceType | null;
   direction: LedgerDirection | null;

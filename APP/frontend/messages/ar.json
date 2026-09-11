@@ -1412,9 +1412,10 @@
   },
   "DemoSimulation": {
     "simulate": "محاكاة",
-    "badge": "وضع المحاكاة",
+    "badge": "محاكاة تجريبية",
     "hint": "عرض تجريبي — لا يتم تنفيذ عمليات خارجية فعلية.",
     "reset": "إعادة ضبط المحاكاة",
+    "disable": "إيقاف المحاكاة",
     "scenarios": "سيناريوهات العرض",
     "license": {
       "valid": "رخصة صالحة",
@@ -1440,6 +1441,9 @@
     },
     "violations": {
       "run": "محاكاة المخالفات وسالك"
+    },
+    "finance": {
+      "run": "محاكاة تجريبية"
     }
   },
   "Gps": {
@@ -1788,7 +1792,7 @@
       "subtitle": "المبالغ المؤكدة على العملاء والتي لم يتم تحصيلها بعد.",
       "searchLabel": "بحث في المستحقات",
       "searchPlaceholder": "عقد، عميل، مركبة…",
-      "sourceLabel": "نوع المصدر",
+      "sourceLabel": "المصدر",
       "sourceAll": "كل المصادر",
       "sortLabel": "الترتيب",
       "sort": {
@@ -1817,6 +1821,14 @@
       "RECONCILIATION": "تسوية الإرجاع",
       "POST_CLOSE_RECEIVABLE": "مطالبة بعد الإغلاق"
     },
+    "receivablePaymentState": {
+      "UNPAID": "بانتظار الدفع",
+      "PENDING": "دفع قيد الانتظار",
+      "PROCESSING": "جارٍ معالجة الدفع",
+      "CONFIRMED": "تم تأكيد الدفع",
+      "FAILED": "فشل الدفع",
+      "CANCELLED": "أُلغي الدفع"
+    },
     "analytics": {
       "trendTitle": "الحركة المالية",
       "trendSubtitle": "الفترة المحددة",
@@ -1835,21 +1847,26 @@
       "title": "سجل الحركة المالية",
       "subtitle": "سجل موثق للمبالغ المحصلة ومصروفات الشركة.",
       "searchLabel": "بحث في السجل",
-      "searchPlaceholder": "عقد، وصف، عميل…",
-      "directionLabel": "نوع الحركة",
+      "searchPlaceholder": "عقد، عميل، مركبة، لوحة، وصف…",
+      "movementLabel": "الحركة",
+      "movementAll": "كل الحركات",
+      "sourceLabel": "المصدر",
+      "sourceAll": "كل المصادر",
+      "directionLabel": "الحركة",
       "directionAll": "كل الحركات",
-      "kindLabel": "نوع المصدر",
+      "kindLabel": "المصدر",
       "kindAll": "كل المصادر",
       "empty": "لا توجد حركات في هذه الفترة.",
       "view": "عرض",
+      "movementCount": "{count} حركة مالية",
       "columns": {
         "date": "التاريخ",
         "movement": "الحركة",
         "source": "المصدر",
-        "reference": "المرجع",
+        "reference": "الوصف / المرجع",
         "contractVehicle": "العقد / المركبة",
         "amount": "المبلغ",
-        "action": "إجراء"
+        "action": "الإجراء"
       }
     },
     "ledgerMovement": {
@@ -1857,14 +1874,28 @@
       "EXPENSE": "مصروف",
       "EXPENSE_REVERSAL": "إلغاء مصروف"
     },
+    "ledgerSource": {
+      "RENTAL_PAYMENT": "دفعة إيجار",
+      "RENEWAL_PAYMENT": "دفعة تجديد",
+      "RECONCILIATION_PAYMENT": "تسوية الإرجاع",
+      "POST_CLOSE_RECEIVABLE_PAYMENT": "مطالبة بعد الإغلاق",
+      "MAINTENANCE_EXPENSE": "صيانة",
+      "MANUAL_EXPENSE": "مصروف يدوي"
+    },
     "ledgerKind": {
       "RENTAL_PAYMENT": "دفعة إيجار",
       "RENEWAL_PAYMENT": "دفعة تجديد",
-      "RECONCILIATION_PAYMENT": "دفعة تسوية",
-      "POST_CLOSE_RECEIVABLE_PAYMENT": "دفعة بعد الإغلاق",
+      "RECONCILIATION_PAYMENT": "تسوية الإرجاع",
+      "POST_CLOSE_RECEIVABLE_PAYMENT": "مطالبة بعد الإغلاق",
       "MAINTENANCE_EXPENSE": "صيانة",
       "MANUAL_EXPENSE": "مصروف يدوي",
-      "MANUAL_EXPENSE_REVERSAL": "إلغاء مصروف"
+      "MANUAL_EXPENSE_REVERSAL": "مصروف يدوي"
+    },
+    "simulation": {
+      "banner": "محاكاة تجريبية",
+      "bannerHint": "قيم عرض فقط — ليست أموال الشركة الحقيقية.",
+      "viewDisabled": "عرض تجريبي فقط — هذا الصف ليس عقداً حقيقياً.",
+      "demoDetailNote": "محاكاة تجريبية — لا تُرسل عمليات المصروف."
     },
     "expenseCategory": {
       "MAINTENANCE": "الصيانة",

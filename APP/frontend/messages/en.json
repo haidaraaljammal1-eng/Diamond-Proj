@@ -1412,9 +1412,10 @@
   },
   "DemoSimulation": {
     "simulate": "Simulate",
-    "badge": "Simulation Mode",
+    "badge": "DEMO SIMULATION",
     "hint": "Demo environment — no external transactions are performed.",
     "reset": "Reset Simulation",
+    "disable": "Disable Simulation",
     "scenarios": "Presentation scenarios",
     "license": {
       "valid": "Valid",
@@ -1440,6 +1441,9 @@
     },
     "violations": {
       "run": "Simulate Violations & Salik"
+    },
+    "finance": {
+      "run": "Demo Simulation"
     }
   },
   "Gps": {
@@ -1788,8 +1792,8 @@
       "subtitle": "Customer obligations still awaiting Stripe payment.",
       "searchLabel": "Search receivables",
       "searchPlaceholder": "Contract, customer, vehicle…",
-      "sourceLabel": "Source type",
-      "sourceAll": "All sources",
+      "sourceLabel": "Source",
+      "sourceAll": "All Sources",
       "sortLabel": "Sort",
       "sort": {
         "obligationCreatedAt:desc": "Newest",
@@ -1817,6 +1821,14 @@
       "RECONCILIATION": "Return Reconciliation",
       "POST_CLOSE_RECEIVABLE": "Post-Close Charge"
     },
+    "receivablePaymentState": {
+      "UNPAID": "Awaiting Payment",
+      "PENDING": "Pending Payment",
+      "PROCESSING": "Processing Payment",
+      "CONFIRMED": "Payment Confirmed",
+      "FAILED": "Payment Failed",
+      "CANCELLED": "Payment Cancelled"
+    },
     "analytics": {
       "trendTitle": "Financial Trend",
       "trendSubtitle": "Selected period",
@@ -1835,18 +1847,23 @@
       "title": "Financial Ledger",
       "subtitle": "A traceable record of collected money and company expenses.",
       "searchLabel": "Search ledger",
-      "searchPlaceholder": "Contract, description, customer…",
-      "directionLabel": "Movement type",
-      "directionAll": "All movements",
-      "kindLabel": "Source type",
-      "kindAll": "All sources",
+      "searchPlaceholder": "Contract, customer, vehicle, plate, description…",
+      "movementLabel": "Movement",
+      "movementAll": "All Movements",
+      "sourceLabel": "Source",
+      "sourceAll": "All Sources",
+      "directionLabel": "Movement",
+      "directionAll": "All Movements",
+      "kindLabel": "Source",
+      "kindAll": "All Sources",
       "empty": "No ledger entries in this period.",
       "view": "View",
+      "movementCount": "{count} movements",
       "columns": {
         "date": "Date",
         "movement": "Movement",
         "source": "Source",
-        "reference": "Reference",
+        "reference": "Description / Reference",
         "contractVehicle": "Contract / Vehicle",
         "amount": "Amount",
         "action": "Action"
@@ -1857,14 +1874,28 @@
       "EXPENSE": "Expense",
       "EXPENSE_REVERSAL": "Expense Reversal"
     },
+    "ledgerSource": {
+      "RENTAL_PAYMENT": "Rental Payment",
+      "RENEWAL_PAYMENT": "Renewal Payment",
+      "RECONCILIATION_PAYMENT": "Return Reconciliation",
+      "POST_CLOSE_RECEIVABLE_PAYMENT": "Post-Close Charge",
+      "MAINTENANCE_EXPENSE": "Maintenance",
+      "MANUAL_EXPENSE": "Manual Expense"
+    },
     "ledgerKind": {
       "RENTAL_PAYMENT": "Rental Payment",
       "RENEWAL_PAYMENT": "Renewal Payment",
-      "RECONCILIATION_PAYMENT": "Reconciliation Payment",
-      "POST_CLOSE_RECEIVABLE_PAYMENT": "Post-Close Payment",
+      "RECONCILIATION_PAYMENT": "Return Reconciliation",
+      "POST_CLOSE_RECEIVABLE_PAYMENT": "Post-Close Charge",
       "MAINTENANCE_EXPENSE": "Maintenance",
       "MANUAL_EXPENSE": "Manual Expense",
-      "MANUAL_EXPENSE_REVERSAL": "Expense Reversal"
+      "MANUAL_EXPENSE_REVERSAL": "Manual Expense"
+    },
+    "simulation": {
+      "banner": "DEMO SIMULATION",
+      "bannerHint": "Presentation values only — not real company money.",
+      "viewDisabled": "Demo only — this row is not a real contract.",
+      "demoDetailNote": "Demo simulation — no expense mutations are sent."
     },
     "expenseCategory": {
       "MAINTENANCE": "Maintenance",

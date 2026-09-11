@@ -45,6 +45,7 @@ const idle: SimulationSnapshot = {
   tarsPreset: null,
   gpsOverlay: null,
   roadLiabilitiesOverlay: null,
+  financeOverlay: null,
 };
 
 const realContext: PublicRentalContext = {
@@ -318,6 +319,8 @@ describe("reset and persistence", () => {
     assert.ok(storeSource.includes("simulateGps"));
     assert.ok(storeSource.includes("roadLiabilitiesOverlay"));
     assert.ok(storeSource.includes("simulateRoadLiabilities"));
+    assert.ok(storeSource.includes("financeOverlay"));
+    assert.ok(storeSource.includes("simulateFinance"));
     assert.equal(storeSource.includes("gps.api"), false);
     assert.equal(/method:\s*"(POST|PUT|PATCH|DELETE)"/.test(storeSource), false);
   });

@@ -87,6 +87,63 @@
   animation: shimmer 1.2s infinite;
 }
 
+.count {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.movementCollection,
+.movementExpense,
+.movementReversal {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.movementCollection {
+  color: #2f6b3f;
+  background: #e7f3ea;
+}
+
+.movementExpense {
+  color: #7a3b2d;
+  background: #f7ebe6;
+}
+
+.movementReversal {
+  color: #5a4a2d;
+  background: #f3ead6;
+  border: 1px solid #c9a15c;
+}
+
+.cards {
+  display: none;
+}
+
+.card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid #ece4d4;
+}
+
+.cardDate {
+  font-size: 0.78rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .pagination {
   display: flex;
   justify-content: space-between;
@@ -99,5 +156,15 @@
 @media (max-width: 900px) {
   .hideMd {
     display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .table {
+    display: none;
+  }
+
+  .cards {
+    display: grid;
   }
 }

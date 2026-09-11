@@ -21,8 +21,8 @@ export function resolveFinancePeriodRange(
   preset: FinancePeriodPreset,
   customFrom?: string,
   customTo?: string,
+  now: Date = new Date(),
 ): FinancePeriodRange {
-  const now = new Date();
 
   if (preset === "custom" && customFrom && customTo) {
     const from = startOfDay(parseCalendarDate(customFrom));

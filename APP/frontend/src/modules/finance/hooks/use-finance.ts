@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { useLocale } from "next-intl";
 import { usePermissions } from "@/modules/auth";
+import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
   FINANCE_MANAGE_EXPENSES_PERMISSION,
@@ -19,15 +21,23 @@ import type {
   FinancePeriodPreset,
   FinanceSummaryDto,
   LedgerDirection,
+  LedgerDisplaySource,
   LedgerEntryDto,
-  LedgerKind,
-  LedgerSourceType,
   ManualExpenseDetailDto,
   OpenReceivableDto,
   OpenReceivableSourceType,
   ReceivableSortKey,
   VoidManualExpensePayload,
 } from "../types/finance.types";
+import { toLedgerApiFilters } from "../utils/finance-labels";
+import { resolveFinancePeriodRange } from "../utils/finance-period";
+import {
+  deriveFinanceAnalytics,
+  deriveFinanceSummary,
+  filterSimulatedLedger,
+  filterSimulatedReceivables,
+  isSimulatedFinanceId,
+} from "../utils/finance-simulation";
 
 export function useFinanceOverview() {
   const { hasPermission } = usePermissions();
@@ -46,27 +56,45 @@ export function useFinanceOverview() {
   const lastUpdatedAt = useFinanceStore((s) => s.lastUpdatedAt);
   const refreshAll = useFinanceStore((s) => s.refreshAll);
   const setOverviewQuery = useFinanceStore((s) => s.setOverviewQuery);
+  const overlay = useDemoSimulationStore((s) => s.financeOverlay);
+  const simulationEnabledActive = useDemoSimulationStore((s) => s.active);
+  const simulationActive = Boolean(overlay) && simulationEnabledActive;
 
   useEffect(() => {
     if (isAllowed) void loadFinancePageData();
   }, [isAllowed]);
 
+  const period = resolveFinancePeriodRange(
+    overviewQuery.preset,
+    overviewQuery.customFrom,
+    overviewQuery.customTo,
+  );
+  const displaySummary = overlay
+    ? deriveFinanceSummary(overlay, period.from, period.to)
+    : summary;
+  const displayAnalytics = overlay
+    ? deriveFinanceAnalytics(overlay, period.from, period.to)
+    : analytics;
+
   return useMemo(
     () => ({
       isAllowed,
       canManageExpenses,
-      summary,
-      analytics,
+      simulationActive,
+      summary: displaySummary,
+      analytics: displayAnalytics,
       overviewQuery,
-      lastUpdatedAt,
+      lastUpdatedAt: overlay ? overlay.generatedAt : lastUpdatedAt,
       isSummaryLoading:
-        summaryStatus === "loading" || (isAllowed && summaryStatus === "idle"),
+        !overlay &&
+        (summaryStatus === "loading" || (isAllowed && summaryStatus === "idle")),
       isAnalyticsLoading:
-        analyticsStatus === "loading" || (isAllowed && analyticsStatus === "idle"),
-      isSummaryReady: summaryStatus === "ready",
-      isAnalyticsReady: analyticsStatus === "ready",
-      summaryError: summaryStatus === "error" ? summaryError : null,
-      analyticsError: analyticsStatus === "error" ? analyticsError : null,
+        !overlay &&
+        (analyticsStatus === "loading" || (isAllowed && analyticsStatus === "idle")),
+      isSummaryReady: Boolean(overlay) || summaryStatus === "ready",
+      isAnalyticsReady: Boolean(overlay) || analyticsStatus === "ready",
+      summaryError: overlay ? null : summaryStatus === "error" ? summaryError : null,
+      analyticsError: overlay ? null : analyticsStatus === "error" ? analyticsError : null,
       refresh: refreshAll,
       setPeriodPreset: (preset: FinancePeriodPreset) => {
         setOverviewQuery({ preset });
@@ -78,10 +106,12 @@ export function useFinanceOverview() {
     [
       isAllowed,
       canManageExpenses,
-      summary,
-      analytics,
+      simulationActive,
+      displaySummary,
+      displayAnalytics,
       overviewQuery,
       lastUpdatedAt,
+      overlay,
       summaryStatus,
       analyticsStatus,
       summaryError,
@@ -100,15 +130,17 @@ export function useFinanceReceivables() {
   const error = useFinanceStore((s) => s.receivablesError);
   const setReceivablesQuery = useFinanceStore((s) => s.setReceivablesQuery);
   const resetReceivablesFilters = useFinanceStore((s) => s.resetReceivablesFilters);
+  const overlay = useDemoSimulationStore((s) => s.financeOverlay);
+  const simulated = overlay ? filterSimulatedReceivables(overlay, query) : null;
 
   return useMemo(
     () => ({
-      items: receivables,
-      meta,
+      items: simulated ? simulated.data : receivables,
+      meta: simulated ? simulated.meta : meta,
       query,
-      isLoading: status === "loading" || status === "idle",
-      isReady: status === "ready",
-      error: status === "error" ? error : null,
+      isLoading: !overlay && (status === "loading" || status === "idle"),
+      isReady: Boolean(overlay) || status === "ready",
+      error: overlay ? null : status === "error" ? error : null,
       applySearch: (search: string) => {
         setReceivablesQuery({ search: search.trim(), page: 1 });
       },
@@ -127,9 +159,11 @@ export function useFinanceReceivables() {
       clearFilters: resetReceivablesFilters,
     }),
     [
+      simulated,
       receivables,
       meta,
       query,
+      overlay,
       status,
       error,
       setReceivablesQuery,
@@ -139,6 +173,7 @@ export function useFinanceReceivables() {
 }
 
 export function useFinanceLedger() {
+  const locale = useLocale();
   const ledger = useFinanceStore((s) => s.ledger);
   const meta = useFinanceStore((s) => s.ledgerMeta);
   const query = useFinanceStore((s) => s.ledgerQuery);
@@ -146,15 +181,17 @@ export function useFinanceLedger() {
   const error = useFinanceStore((s) => s.ledgerError);
   const setLedgerQuery = useFinanceStore((s) => s.setLedgerQuery);
   const resetLedgerFilters = useFinanceStore((s) => s.resetLedgerFilters);
+  const overlay = useDemoSimulationStore((s) => s.financeOverlay);
+  const simulated = overlay ? filterSimulatedLedger(overlay, query, locale) : null;
 
   return useMemo(
     () => ({
-      items: ledger,
-      meta,
+      items: simulated ? simulated.data : ledger,
+      meta: simulated ? simulated.meta : meta,
       query,
-      isLoading: status === "loading" || status === "idle",
-      isReady: status === "ready",
-      error: status === "error" ? error : null,
+      isLoading: !overlay && (status === "loading" || status === "idle"),
+      isReady: Boolean(overlay) || status === "ready",
+      error: overlay ? null : status === "error" ? error : null,
       applySearch: (search: string) => {
         setLedgerQuery({ search: search.trim(), page: 1 });
       },
@@ -162,20 +199,29 @@ export function useFinanceLedger() {
         setLedgerQuery({ search: "", page: 1 });
       },
       setDirection: (direction: LedgerDirection | null) => {
-        setLedgerQuery({ direction, page: 1 });
+        const mapped = toLedgerApiFilters(direction, query.displaySource);
+        setLedgerQuery({ ...mapped, page: 1 });
       },
-      setKind: (kind: LedgerKind | null) => {
-        setLedgerQuery({ kind, page: 1 });
-      },
-      setSourceType: (sourceType: LedgerSourceType | null) => {
-        setLedgerQuery({ sourceType, page: 1 });
+      setSource: (source: LedgerDisplaySource | null) => {
+        const mapped = toLedgerApiFilters(query.direction, source);
+        setLedgerQuery({ displaySource: source, ...mapped, page: 1 });
       },
       setPage: (page: number) => {
         setLedgerQuery({ page });
       },
       clearFilters: resetLedgerFilters,
     }),
-    [ledger, meta, query, status, error, setLedgerQuery, resetLedgerFilters],
+    [
+      simulated,
+      ledger,
+      meta,
+      query,
+      overlay,
+      status,
+      error,
+      setLedgerQuery,
+      resetLedgerFilters,
+    ],
   );
 }
 
@@ -199,14 +245,24 @@ export function useFinanceExpense() {
   const clearVoidExpenseError = useFinanceStore((s) => s.clearVoidExpenseError);
   const clearCorrectExpenseError = useFinanceStore((s) => s.clearCorrectExpenseError);
 
+  const overlay = useDemoSimulationStore((s) => s.financeOverlay);
+  const overlayDetail =
+    overlay && detailId && overlay.expenses[detailId] ? overlay.expenses[detailId] : null;
+
   return useMemo(
     () => ({
-      detail,
+      detail: overlayDetail ?? detail,
       detailId,
       isDetailLoading:
-        detailStatus === "loading" || (detailId != null && detailStatus === "idle"),
-      isDetailReady: detailStatus === "ready",
-      detailError: detailStatus === "error" ? detailError : null,
+        !overlayDetail &&
+        (detailStatus === "loading" || (detailId != null && detailStatus === "idle")),
+      isDetailReady: Boolean(overlayDetail) || detailStatus === "ready",
+      detailError:
+        overlayDetail || (detailId && isSimulatedFinanceId(detailId))
+          ? null
+          : detailStatus === "error"
+            ? detailError
+            : null,
       fetchDetail: fetchExpenseDetail,
       clearDetail: clearExpenseDetail,
       createExpense,
@@ -223,6 +279,7 @@ export function useFinanceExpense() {
       clearCorrectError: clearCorrectExpenseError,
     }),
     [
+      overlayDetail,
       detail,
       detailId,
       detailStatus,

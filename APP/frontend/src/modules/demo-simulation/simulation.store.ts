@@ -15,6 +15,7 @@ import type { SimulatedRoadLiabilitiesOverlay } from "@/modules/road-liabilities
 import {
   applySimulatedChargeReview,
 } from "@/modules/road-liabilities/utils/road-liability-simulation";
+import type { FinanceSimulationOverlay } from "@/modules/finance/utils/finance-simulation";
 import type { ConfirmRoadLiabilityChargePayload } from "@/modules/road-liabilities/types/road-liability-charge-review.types";
 import type { PublicRentalFormValues } from "@/modules/public-rental/schemas/public-rental-form.schema";
 import { licenseSimulationResult, paymentSimulationPhase } from "./simulation.utils";
@@ -36,6 +37,8 @@ interface DemoSimulationState extends SimulationSnapshot {
     payload: ConfirmRoadLiabilityChargePayload,
   ) => void;
   clearRoadLiabilitiesOverlay: () => void;
+  simulateFinance: (overlay: FinanceSimulationOverlay) => void;
+  clearFinanceOverlay: () => void;
   clearRentalOverlay: () => void;
   reset: () => void;
 }
@@ -68,12 +71,24 @@ const empty: SimulationSnapshot = {
   tarsPreset: null,
   gpsOverlay: null,
   roadLiabilitiesOverlay: null,
+  financeOverlay: null,
 };
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function isOccupied(state: SimulationSnapshot): boolean {
+  return (
+    state.tarsPreset != null ||
+    state.flowStep != null ||
+    state.license.status != null ||
+    state.gpsOverlay != null ||
+    state.roadLiabilitiesOverlay != null ||
+    state.financeOverlay != null
+  );
 }
 
 /** In-memory presentation state. Never persist. */
@@ -221,23 +236,28 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
   clearRoadLiabilitiesOverlay() {
     set({
       roadLiabilitiesOverlay: null,
-      active:
-        get().tarsPreset != null ||
-        get().flowStep != null ||
-        get().license.status != null ||
-        get().gpsOverlay != null,
+      active: isOccupied({ ...get(), roadLiabilitiesOverlay: null }),
+    });
+  },
+
+  simulateFinance(overlay) {
+    set({
+      active: true,
+      financeOverlay: overlay,
+    });
+  },
+
+  clearFinanceOverlay() {
+    set({
+      financeOverlay: null,
+      active: isOccupied({ ...get(), financeOverlay: null }),
     });
   },
 
   clearGpsOverlay() {
-    const gpsCleared = null;
     set({
-      gpsOverlay: gpsCleared,
-      active:
-        get().tarsPreset != null ||
-        get().flowStep != null ||
-        get().license.status != null ||
-        get().roadLiabilitiesOverlay != null,
+      gpsOverlay: null,
+      active: isOccupied({ ...get(), gpsOverlay: null }),
     });
   },
 
@@ -252,10 +272,17 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
       formPending: false,
       acceptPending: false,
       payment: idlePayment,
-      active:
-        get().tarsPreset != null ||
-        get().gpsOverlay != null ||
-        get().roadLiabilitiesOverlay != null,
+      active: isOccupied({
+        ...get(),
+        generation,
+        flowStep: null,
+        contractStatus: null,
+        license: idleLicense,
+        customer: null,
+        formPending: false,
+        acceptPending: false,
+        payment: idlePayment,
+      }),
     });
   },
 
