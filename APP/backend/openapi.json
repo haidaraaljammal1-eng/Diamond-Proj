@@ -96370,45 +96370,9 @@
     "/dashboard/overview": {
       "get": {
         "operationId": "getDashboardOverview",
-        "summary": "Home dashboard overview (aggregated, permission-gated, branch-scoped)",
+        "summary": "Home dashboard overview (last 7 days, permission-gated)",
         "tags": [
           "Dashboard"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "MONTH",
-                "QUARTER",
-                "YEAR",
-                "CUSTOM"
-              ]
-            },
-            "in": "query",
-            "name": "periodType",
-            "required": false
-          },
-          {
-            "schema": {},
-            "in": "query",
-            "name": "from",
-            "required": false
-          },
-          {
-            "schema": {},
-            "in": "query",
-            "name": "to",
-            "required": false
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "name": "branchIds",
-            "required": false
-          }
         ],
         "responses": {
           "200": {
@@ -96421,7 +96385,11 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "period": {
+                        "generatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "range": {
                           "type": "object",
                           "properties": {
                             "from": {
@@ -96431,27 +96399,11 @@
                             "to": {
                               "type": "string",
                               "format": "date-time"
-                            },
-                            "previousFrom": {
-                              "nullable": true,
-                              "type": "string",
-                              "format": "date-time"
-                            },
-                            "previousTo": {
-                              "nullable": true,
-                              "type": "string",
-                              "format": "date-time"
-                            },
-                            "type": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "from",
-                            "to",
-                            "previousFrom",
-                            "previousTo",
-                            "type"
+                            "to"
                           ],
                           "additionalProperties": false
                         },
@@ -96479,520 +96431,331 @@
                           ],
                           "additionalProperties": false
                         },
-                        "scope": {
-                          "type": "object",
-                          "properties": {
-                            "allBranches": {
-                              "type": "boolean"
-                            },
-                            "branchIds": {
-                              "type": "array",
-                              "items": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              }
-                            }
-                          },
-                          "required": [
-                            "allBranches",
-                            "branchIds"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "generatedAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
                         "kpis": {
+                          "type": "object",
+                          "properties": {
+                            "activeRentals": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "fleetTotal": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "fleetRented": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "fleetAvailable": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "fleetService": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "pendingLinks": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "deliveriesToday": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "readyForDelivery": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "contractsTotal": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "activeRentals",
+                            "fleetTotal",
+                            "fleetRented",
+                            "fleetAvailable",
+                            "fleetService",
+                            "pendingLinks",
+                            "deliveriesToday",
+                            "readyForDelivery",
+                            "contractsTotal"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "weeklyFinance": {
                           "nullable": true,
                           "type": "object",
                           "properties": {
-                            "period": {
-                              "type": "object",
-                              "properties": {
-                                "from": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "to": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "type": {
-                                  "type": "string"
-                                },
-                                "previousFrom": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "previousTo": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                }
-                              },
-                              "required": [
-                                "from",
-                                "to"
-                              ],
-                              "additionalProperties": false
+                            "from": {
+                              "type": "string",
+                              "format": "date-time"
                             },
-                            "kpis": {
+                            "to": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "collected": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "expenses": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "netMovement": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "breakdown": {
                               "type": "array",
                               "items": {
                                 "type": "object",
                                 "properties": {
-                                  "code": {
-                                    "type": "string"
-                                  },
-                                  "name": {
-                                    "type": "string"
-                                  },
-                                  "unit": {
-                                    "type": "string"
-                                  },
-                                  "currentValue": {
-                                    "nullable": true,
-                                    "type": "number"
-                                  },
-                                  "previousValue": {
-                                    "nullable": true,
-                                    "type": "number"
-                                  },
-                                  "change": {
-                                    "nullable": true,
-                                    "type": "number"
-                                  },
-                                  "changeDirection": {
+                                  "key": {
                                     "type": "string",
                                     "enum": [
-                                      "UP",
-                                      "DOWN",
-                                      "FLAT"
+                                      "RENTAL_PAYMENT",
+                                      "RENEWAL_PAYMENT",
+                                      "RECONCILIATION_PAYMENT",
+                                      "POST_CLOSE_RECEIVABLE_PAYMENT",
+                                      "MAINTENANCE_EXPENSE",
+                                      "MANUAL_EXPENSE"
                                     ]
                                   },
-                                  "targetValue": {
-                                    "nullable": true,
-                                    "type": "number"
-                                  },
-                                  "targetStatus": {
+                                  "direction": {
                                     "type": "string",
                                     "enum": [
-                                      "ACHIEVED",
-                                      "NEAR_TARGET",
-                                      "BELOW_TARGET",
-                                      "UNAVAILABLE"
+                                      "COLLECTION",
+                                      "EXPENSE"
                                     ]
                                   },
-                                  "unavailableReason": {
-                                    "nullable": true,
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "code",
-                                  "name",
-                                  "unit",
-                                  "currentValue",
-                                  "previousValue",
-                                  "change",
-                                  "changeDirection",
-                                  "targetValue",
-                                  "targetStatus",
-                                  "unavailableReason"
-                                ],
-                                "additionalProperties": false
-                              }
-                            }
-                          },
-                          "required": [
-                            "period",
-                            "kpis"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "callCenterToday": {
-                          "nullable": true,
-                          "type": "object",
-                          "properties": {
-                            "callsToday": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "customersFollowedUpToday": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "pendingQueue": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "dueCallbacks": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "unreachableCount": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "complaintRequests": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "averageCallDurationSeconds": {
-                              "nullable": true,
-                              "type": "number"
-                            }
-                          },
-                          "required": [
-                            "callsToday",
-                            "customersFollowedUpToday",
-                            "pendingQueue",
-                            "dueCallbacks",
-                            "unreachableCount",
-                            "complaintRequests",
-                            "averageCallDurationSeconds"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "callCenterPeriod": {
-                          "nullable": true,
-                          "type": "object",
-                          "properties": {
-                            "period": {
-                              "type": "object",
-                              "properties": {
-                                "from": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "to": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "type": {
-                                  "type": "string"
-                                },
-                                "previousFrom": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "previousTo": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                }
-                              },
-                              "required": [
-                                "from",
-                                "to"
-                              ],
-                              "additionalProperties": false
-                            },
-                            "calls": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "completedCalls": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "completionRate": {
-                              "nullable": true,
-                              "type": "number"
-                            },
-                            "averageDurationSeconds": {
-                              "nullable": true,
-                              "type": "number"
-                            },
-                            "outcomes": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "outcome": {
-                                    "nullable": true,
-                                    "type": "string"
-                                  },
-                                  "count": {
+                                  "amount": {
                                     "type": "integer",
                                     "minimum": -9007199254740991,
                                     "maximum": 9007199254740991
                                   }
                                 },
                                 "required": [
-                                  "outcome",
-                                  "count"
+                                  "key",
+                                  "direction",
+                                  "amount"
                                 ],
                                 "additionalProperties": false
                               }
-                            },
-                            "callbacks": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "unreachable": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "complaintRequests": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
-                            "period",
-                            "calls",
-                            "completedCalls",
-                            "completionRate",
-                            "averageDurationSeconds",
-                            "outcomes",
-                            "callbacks",
-                            "unreachable",
-                            "complaintRequests"
+                            "from",
+                            "to",
+                            "collected",
+                            "expenses",
+                            "netMovement",
+                            "currency",
+                            "breakdown"
                           ],
                           "additionalProperties": false
                         },
-                        "complaintsNow": {
+                        "weeklyRentalActivity": {
                           "nullable": true,
-                          "type": "object",
-                          "properties": {
-                            "openCount": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "lateCount": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "closedThisMonth": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "averageClosureDurationHours": {
-                              "nullable": true,
-                              "type": "number"
-                            },
-                            "openedFromCallCenter": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "openedAutomatically": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "escalatedCount": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "openCount",
-                            "lateCount",
-                            "closedThisMonth",
-                            "averageClosureDurationHours",
-                            "openedFromCallCenter",
-                            "openedAutomatically",
-                            "escalatedCount"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "complaintsPeriod": {
-                          "nullable": true,
-                          "type": "object",
-                          "properties": {
-                            "period": {
-                              "type": "object",
-                              "properties": {
-                                "from": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "to": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "type": {
-                                  "type": "string"
-                                },
-                                "previousFrom": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "previousTo": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                }
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "date": {
+                                "type": "string"
                               },
-                              "required": [
-                                "from",
-                                "to"
-                              ],
-                              "additionalProperties": false
+                              "rented": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "returned": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
                             },
-                            "opened": {
+                            "required": [
+                              "date",
+                              "rented",
+                              "returned"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "fleetStatus": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "total": {
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             },
-                            "closed": {
+                            "available": {
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             },
-                            "escalated": {
+                            "rented": {
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             },
-                            "reopened": {
+                            "service": {
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
-                            },
-                            "late": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "averageClosureDurationHours": {
-                              "nullable": true,
-                              "type": "number"
                             }
                           },
                           "required": [
-                            "period",
-                            "opened",
-                            "closed",
-                            "escalated",
-                            "reopened",
-                            "late",
-                            "averageClosureDurationHours"
+                            "total",
+                            "available",
+                            "rented",
+                            "service"
                           ],
                           "additionalProperties": false
                         },
-                        "overdueComplaints": {
+                        "todayDeliveries": {
                           "nullable": true,
                           "type": "array",
                           "items": {
                             "type": "object",
                             "properties": {
                               "id": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              },
-                              "publicNumber": {
                                 "type": "string"
                               },
-                              "category": {
+                              "contractNumber": {
+                                "type": "string"
+                              },
+                              "customerName": {
                                 "nullable": true,
                                 "type": "string"
                               },
-                              "priority": {
+                              "vehicleName": {
                                 "type": "string"
                               },
-                              "lifecycleStatus": {
-                                "type": "string"
-                              },
-                              "isLate": {
-                                "type": "boolean"
-                              },
-                              "isEscalated": {
-                                "type": "boolean"
-                              },
-                              "resolutionDueAt": {
-                                "nullable": true,
+                              "startAt": {
                                 "type": "string",
                                 "format": "date-time"
                               },
-                              "remainingMinutes": {
-                                "nullable": true,
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "AWAITING",
+                                  "FORM",
+                                  "SIGNED",
+                                  "PAID",
+                                  "ACTIVE",
+                                  "RETOUT",
+                                  "REVIEW",
+                                  "CLOSED"
+                                ]
                               }
                             },
                             "required": [
                               "id",
-                              "publicNumber",
-                              "category",
-                              "priority",
-                              "lifecycleStatus",
-                              "isLate",
-                              "isEscalated",
-                              "resolutionDueAt",
-                              "remainingMinutes"
+                              "contractNumber",
+                              "customerName",
+                              "vehicleName",
+                              "startAt",
+                              "status"
                             ],
                             "additionalProperties": false
                           }
                         },
-                        "entityCounts": {
-                          "type": "object",
-                          "properties": {
-                            "purchaseExperiences": {
-                              "nullable": true,
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "purchaseExperiences"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "urgentItems": {
+                        "recentContracts": {
+                          "nullable": true,
                           "type": "array",
                           "items": {
                             "type": "object",
                             "properties": {
-                              "kind": {
+                              "id": {
                                 "type": "string"
                               },
-                              "count": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
+                              "contractNumber": {
+                                "type": "string"
+                              },
+                              "customerName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "vehicleName": {
+                                "type": "string"
+                              },
+                              "employeeName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "AWAITING",
+                                  "FORM",
+                                  "SIGNED",
+                                  "PAID",
+                                  "ACTIVE",
+                                  "RETOUT",
+                                  "REVIEW",
+                                  "CLOSED"
+                                ]
                               }
                             },
                             "required": [
-                              "kind",
-                              "count"
+                              "id",
+                              "contractNumber",
+                              "customerName",
+                              "vehicleName",
+                              "employeeName",
+                              "status"
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "gpsOnline": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
-                        "period",
-                        "today",
-                        "scope",
                         "generatedAt",
+                        "range",
+                        "today",
                         "kpis",
-                        "callCenterToday",
-                        "callCenterPeriod",
-                        "complaintsNow",
-                        "complaintsPeriod",
-                        "overdueComplaints",
-                        "entityCounts",
-                        "urgentItems"
+                        "weeklyFinance",
+                        "weeklyRentalActivity",
+                        "fleetStatus",
+                        "todayDeliveries",
+                        "recentContracts",
+                        "gpsOnline"
                       ],
                       "additionalProperties": false
                     }
@@ -101576,7 +101339,8 @@
               "enum": [
                 "COLLECTION",
                 "EXPENSE",
-                "EXPENSE_REVERSAL"
+                "EXPENSE_REVERSAL",
+                "VOIDED"
               ]
             },
             "in": "query",
@@ -101719,6 +101483,14 @@
                           "manualExpenseId": {
                             "nullable": true,
                             "type": "string"
+                          },
+                          "manualExpenseStatus": {
+                            "nullable": true,
+                            "type": "string",
+                            "enum": [
+                              "ACTIVE",
+                              "VOID"
+                            ]
                           }
                         },
                         "required": [
@@ -101737,7 +101509,8 @@
                           "description",
                           "contractPaymentId",
                           "maintenanceOrderId",
-                          "manualExpenseId"
+                          "manualExpenseId",
+                          "manualExpenseStatus"
                         ],
                         "additionalProperties": false
                       }
@@ -103058,6 +102831,156 @@
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "correctionHistory": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "changedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "changedBy": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "name": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "field": {
+                                      "type": "string"
+                                    },
+                                    "before": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "after": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "field",
+                                    "before",
+                                    "after"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "changedAt",
+                              "changedBy",
+                              "changes"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -103078,7 +103001,8 @@
                         "voidReason",
                         "createdBy",
                         "voidedBy",
-                        "createdAt"
+                        "createdAt",
+                        "correctionHistory"
                       ],
                       "additionalProperties": false
                     }
@@ -103686,6 +103610,156 @@
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "correctionHistory": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "changedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "changedBy": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "name": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "field": {
+                                      "type": "string"
+                                    },
+                                    "before": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "after": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "field",
+                                    "before",
+                                    "after"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "changedAt",
+                              "changedBy",
+                              "changes"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -103706,7 +103780,8 @@
                         "voidReason",
                         "createdBy",
                         "voidedBy",
-                        "createdAt"
+                        "createdAt",
+                        "correctionHistory"
                       ],
                       "additionalProperties": false
                     }
@@ -104334,6 +104409,156 @@
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "correctionHistory": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "changedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "changedBy": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "name": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "field": {
+                                      "type": "string"
+                                    },
+                                    "before": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "after": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "field",
+                                    "before",
+                                    "after"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "changedAt",
+                              "changedBy",
+                              "changes"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -104354,7 +104579,8 @@
                         "voidReason",
                         "createdBy",
                         "voidedBy",
-                        "createdAt"
+                        "createdAt",
+                        "correctionHistory"
                       ],
                       "additionalProperties": false
                     }
@@ -104765,7 +104991,7 @@
     "/finance/expenses/{id}/correct": {
       "post": {
         "operationId": "correctManualExpense",
-        "summary": "Correct a manual expense through void + replacement",
+        "summary": "Correct a manual expense in place",
         "tags": [
           "Finance"
         ],
@@ -104802,40 +105028,33 @@
                     "maxLength": 500
                   },
                   "vehicleId": {
+                    "nullable": true,
                     "type": "integer",
                     "minimum": 0,
                     "exclusiveMinimum": true,
                     "maximum": 9007199254740991
                   },
                   "vendorName": {
+                    "nullable": true,
                     "type": "string",
                     "maxLength": 200
                   },
                   "receiptNumber": {
+                    "nullable": true,
                     "type": "string",
                     "maxLength": 100
                   },
-                  "attachmentId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
                   "note": {
+                    "nullable": true,
                     "type": "string",
                     "maxLength": 1000
-                  },
-                  "voidReason": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 500
                   }
                 },
                 "required": [
                   "amount",
                   "category",
                   "recognizedAt",
-                  "description",
-                  "voidReason"
+                  "description"
                 ]
               }
             }
@@ -105034,6 +105253,156 @@
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "correctionHistory": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "changedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "changedBy": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "name": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "field": {
+                                      "type": "string"
+                                    },
+                                    "before": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "after": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "vehicleName": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "plateNumber": {
+                                              "nullable": true,
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "vehicleName",
+                                            "plateNumber"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "field",
+                                    "before",
+                                    "after"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "changedAt",
+                              "changedBy",
+                              "changes"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -105054,7 +105423,8 @@
                         "voidReason",
                         "createdBy",
                         "voidedBy",
-                        "createdAt"
+                        "createdAt",
+                        "correctionHistory"
                       ],
                       "additionalProperties": false
                     }

@@ -6,8 +6,8 @@
 export const PERMISSIONS = {
   // --- Home dashboard (product) ---
   // Read the aggregated home dashboard. Sub-sections are additionally gated by
-  // their own domain read permissions inside the aggregator (executive/complaints/
-  // call-center/campaigns/…), so a limited user still sees only what they may see.
+  // their own domain read permissions inside the aggregator (finance / vehicles /
+  // contracts / gps / maintenance), so a limited user still sees only what they may see.
   DASHBOARD_READ: "dashboard.read",
 
   USERS_READ: "users.read",

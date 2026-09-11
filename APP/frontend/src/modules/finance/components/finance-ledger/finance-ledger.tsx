@@ -7,19 +7,22 @@ import { Select } from "@/shared/components/ui/select";
 import type { SelectOption } from "@/shared/components/ui/select";
 import type { PageMeta } from "../../api/finance.api.types";
 import type {
-  LedgerDirection,
   LedgerDisplaySource,
   LedgerEntryDto,
+  LedgerMovementFilter,
 } from "../../types/finance.types";
 import {
   formatVehicleLabel,
   LEDGER_DISPLAY_SOURCES,
+  isVoidedOriginalExpenseRow,
   ledgerMovementLabel,
+  ledgerRowMovementKey,
+  ledgerRowMovementLabel,
   ledgerSourceFromKind,
   ledgerSourceLabel,
 } from "../../utils/finance-labels";
 import { isSimulatedFinanceId } from "../../utils/finance-simulation";
-import { formatSignedFinanceAed } from "../../utils/format-finance-money";
+import { formatOperationalLedgerAmount } from "../../utils/format-finance-money";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
 import styles from "./finance-ledger.module.css";
 
@@ -27,13 +30,13 @@ export interface FinanceLedgerProps {
   items: LedgerEntryDto[];
   meta: PageMeta | null;
   search: string;
-  direction: LedgerDirection | null;
+  direction: LedgerMovementFilter | null;
   displaySource: LedgerDisplaySource | null;
   loading: boolean;
   error: unknown;
   onSearch: (value: string) => void;
   onClearSearch: () => void;
-  onDirectionChange: (value: LedgerDirection | null) => void;
+  onDirectionChange: (value: LedgerMovementFilter | null) => void;
   onSourceChange: (value: LedgerDisplaySource | null) => void;
   onClearFilters: () => void;
   onPageChange: (page: number) => void;
@@ -42,11 +45,11 @@ export interface FinanceLedgerProps {
   onViewExpense: (expenseId: string) => void;
 }
 
-const DIRECTION_OPTIONS: Array<LedgerDirection | "ALL"> = [
+const DIRECTION_OPTIONS: Array<LedgerMovementFilter | "ALL"> = [
   "ALL",
   "COLLECTION",
   "EXPENSE",
-  "EXPENSE_REVERSAL",
+  "VOIDED",
 ];
 
 export function FinanceLedger({
@@ -88,14 +91,16 @@ export function FinanceLedger({
   ];
 
   const amountClass = (entry: LedgerEntryDto) => {
+    if (isVoidedOriginalExpenseRow(entry)) return styles.amountVoided;
     if (entry.direction === "EXPENSE") return styles.amountExpense;
-    if (entry.direction === "EXPENSE_REVERSAL") return styles.amountReversal;
+    if (entry.direction === "EXPENSE_REVERSAL") return styles.amountVoided;
     return styles.amountCollection;
   };
 
   const movementClass = (entry: LedgerEntryDto) => {
+    if (isVoidedOriginalExpenseRow(entry)) return styles.movementVoided;
     if (entry.direction === "EXPENSE") return styles.movementExpense;
-    if (entry.direction === "EXPENSE_REVERSAL") return styles.movementReversal;
+    if (entry.direction === "EXPENSE_REVERSAL") return styles.movementVoided;
     return styles.movementCollection;
   };
 
@@ -180,7 +185,7 @@ export function FinanceLedger({
           options={directionOptions}
           value={direction ?? "ALL"}
           onChange={(value) =>
-            onDirectionChange(value === "ALL" ? null : (value as LedgerDirection))
+            onDirectionChange(value === "ALL" ? null : (value as LedgerMovementFilter))
           }
           aria-label={t("ledger.movementLabel")}
         />
@@ -234,15 +239,30 @@ export function FinanceLedger({
         ) : (
           <>
             <table className={styles.table}>
+              <colgroup>
+                <col className={styles.colDate} />
+                <col className={styles.colMovement} />
+                <col className={styles.colSource} />
+                <col className={styles.colReference} />
+                <col className={`${styles.colContract} ${styles.hideMd}`} />
+                <col className={styles.colAmount} />
+                <col className={styles.colAction} />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{t("ledger.columns.date")}</th>
-                  <th>{t("ledger.columns.movement")}</th>
-                  <th>{t("ledger.columns.source")}</th>
-                  <th>{t("ledger.columns.reference")}</th>
-                  <th className={styles.hideMd}>{t("ledger.columns.contractVehicle")}</th>
-                  <th>{t("ledger.columns.amount")}</th>
-                  <th>{t("ledger.columns.action")}</th>
+                  <th className={styles.colDate}>{t("ledger.columns.date")}</th>
+                  <th className={styles.colMovement}>{t("ledger.columns.movement")}</th>
+                  <th className={styles.colSource}>{t("ledger.columns.source")}</th>
+                  <th className={styles.colReference}>{t("ledger.columns.reference")}</th>
+                  <th className={`${styles.colContract} ${styles.hideMd}`}>
+                    {t("ledger.columns.contractVehicle")}
+                  </th>
+                  <th className={`${styles.colAmount} ${styles.amountCell}`}>
+                    {t("ledger.columns.amount")}
+                  </th>
+                  <th className={`${styles.colAction} ${styles.actionCell}`}>
+                    {t("ledger.columns.action")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -252,30 +272,36 @@ export function FinanceLedger({
                     <tr
                       key={entry.id}
                       data-testid="finance-ledger-row"
-                      data-movement={entry.direction}
+                      data-movement={ledgerRowMovementKey(entry)}
                       data-source={source ?? ""}
                       data-kind={entry.kind}
                     >
-                      <td>
+                      <td className={`${styles.colDate} ${styles.cellClip}`}>
                         {format.dateTime(new Date(entry.occurredAt), {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
                       </td>
-                      <td>
+                      <td className={styles.colMovement}>
                         <span className={movementClass(entry)} data-testid="finance-ledger-movement">
-                          {ledgerMovementLabel(entry.direction, t)}
+                          {ledgerRowMovementLabel(entry, t)}
                         </span>
                       </td>
-                      <td data-testid="finance-ledger-source">
+                      <td className={`${styles.colSource} ${styles.cellClip}`} data-testid="finance-ledger-source">
                         {source ? ledgerSourceLabel(source, t) : entry.kind}
                       </td>
-                      <td>{referenceLabel(entry)}</td>
-                      <td className={styles.hideMd} dir="ltr">{contractVehicleLabel(entry)}</td>
-                      <td className={amountClass(entry)} dir="ltr" data-testid="finance-ledger-amount">
-                        {formatSignedFinanceAed(entry.amount, entry.direction)}
+                      <td className={`${styles.colReference} ${styles.cellClip}`}>{referenceLabel(entry)}</td>
+                      <td className={`${styles.colContract} ${styles.hideMd} ${styles.cellClip}`} dir="ltr">
+                        {contractVehicleLabel(entry)}
                       </td>
-                      <td>{renderAction(entry)}</td>
+                      <td
+                        className={`${styles.colAmount} ${styles.amountCell} ${amountClass(entry)}`}
+                        dir="ltr"
+                        data-testid="finance-ledger-amount"
+                      >
+                        {formatOperationalLedgerAmount(entry.amount, entry)}
+                      </td>
+                      <td className={`${styles.colAction} ${styles.actionCell}`}>{renderAction(entry)}</td>
                     </tr>
                   );
                 })}
@@ -289,7 +315,7 @@ export function FinanceLedger({
                     key={`card-${entry.id}`}
                     className={styles.card}
                     data-testid="finance-ledger-card"
-                    data-movement={entry.direction}
+                    data-movement={ledgerRowMovementKey(entry)}
                     data-source={source ?? ""}
                     data-kind={entry.kind}
                   >
@@ -301,7 +327,7 @@ export function FinanceLedger({
                     </div>
                     <div className={styles.cardMeta}>
                       <span className={movementClass(entry)} data-testid="finance-ledger-movement">
-                        {ledgerMovementLabel(entry.direction, t)}
+                        {ledgerRowMovementLabel(entry, t)}
                       </span>
                       <span data-testid="finance-ledger-source">
                         {source ? ledgerSourceLabel(source, t) : entry.kind}
@@ -309,7 +335,7 @@ export function FinanceLedger({
                     </div>
                     <div>{referenceLabel(entry)}</div>
                     <div className={amountClass(entry)} dir="ltr" data-testid="finance-ledger-amount">
-                      {formatSignedFinanceAed(entry.amount, entry.direction)}
+                      {formatOperationalLedgerAmount(entry.amount, entry)}
                     </div>
                     <div>{renderAction(entry)}</div>
                   </article>

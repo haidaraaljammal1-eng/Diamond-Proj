@@ -26,7 +26,6 @@
     "home": "الرئيسية",
     "admin": "الإدارة",
     "dashboard": "لوحة التحكم",
-    "operations": "مركز العمليات",
     "cars": "السيارات",
     "gps": "تتبع GPS",
     "maintenance": "مركز الصيانة",
@@ -39,7 +38,7 @@
     "roles": "الأدوار والصلاحيات"
   },
   "Shell": {
-    "brand": "DIAMOND ELITE",
+    "brand": "DIAMOND",
     "brandSub": "RENT CAR · DUBAI",
     "searchPlaceholder": "ابحث في النظام…",
     "searchLabel": "بحث عام",
@@ -56,14 +55,9 @@
     "navigationActionNote": "ستُفعَّل في مرحلة لاحقة",
     "breadcrumbLabel": "مسار الصفحة",
     "breadcrumbHome": "الرئيسية",
-    "quickAction": "عقد جديد",
-    "quickActionShort": "جديد",
     "logout": "تسجيل الخروج",
     "logoutBusy": "جارٍ تسجيل الخروج...",
     "onlineStatus": "متصل الآن",
-    "fleetStatLabel": "سيارة مستأجرة حاليًا",
-    "fleetStatOverdue": "متأخرة",
-    "fleetStatMaintenance": "صيانة",
     "notificationsLabel": "الإشعارات",
     "notificationsMarkAllRead": "تحديد الكل كمقروء",
     "notificationsEmpty": "لا إشعارات جديدة",
@@ -85,12 +79,13 @@
     "generateNewLink": "+ توليد رابط جديد",
     "generateLink": "+ توليد رابط",
     "latestContracts": "أحدث العقود",
-    "fromAllStaff": "من كل الموظفين",
     "issuedBy": "بواسطة {name}",
+    "customerPending": "العميل قيد الإكمال",
     "quickAccess": "وصول سريع",
+    "loading": "جاري تحميل لوحة التحكم…",
     "kpi": {
-      "activeContracts": "عقود نشطة",
-      "activeContractsNote": "▲ {count} إيجار جارٍ",
+      "activeRentals": "الإيجارات النشطة",
+      "activeRentalsNote": "بحوزة العملاء الآن",
       "fleet": "الأسطول",
       "fleetNote": "سيارة مؤجرة الآن",
       "pendingLinks": "روابط بانتظار",
@@ -98,23 +93,14 @@
       "deliveriesToday": "تسليمات اليوم",
       "deliveriesTodayNote": "{count} جاهزة للتسليم الآن"
     },
-    "status": {
-      "awaiting": "بانتظار العميل",
-      "form": "فتح النموذج",
-      "signed": "موقّع",
-      "paid": "مدفوع",
-      "active": "نشط",
-      "retout": "قيد الإرجاع",
-      "review": "Reconciliation & Contract Closure",
-      "closed": "مغلق"
-    },
     "quick": {
       "carsMeta": "الأسطول · توليد رابط",
       "contractsMeta": "{count} عقد · عرض الكل",
-      "messagesUnread": "{count} رسائل جديدة",
-      "messagesEmpty": "لا رسائل جديدة",
+      "contractsView": "عرض كل العقود",
       "gpsMeta": "{count} سيارة على الخريطة الآن",
-      "maintenanceMeta": "{count} سيارة داخل الورشة"
+      "gpsView": "خريطة الأسطول",
+      "maintenanceMeta": "{count} سيارة داخل الورشة",
+      "maintenanceView": "مركز الصيانة"
     },
     "empty": {
       "title": "لا توجد عقود بعد",
@@ -123,6 +109,15 @@
     "denied": {
       "title": "لا تملك صلاحية عرض لوحة التحكم",
       "description": "تحتاج صلاحية dashboard.read — راجع مدير النظام."
+    },
+    "restricted": {
+      "title": "لا توجد أقسام تشغيلية متاحة",
+      "description": "يمكنك فتح لوحة التحكم، لكن صلاحيات النطاق اللازمة لهذه الأقسام غير ممنوحة لحسابك."
+    },
+    "error": {
+      "title": "تعذر تحميل لوحة التحكم",
+      "description": "حدث خطأ أثناء تحميل البيانات التشغيلية. حاول مرة أخرى.",
+      "retry": "إعادة المحاولة"
     },
     "deliveries": {
       "title": "تسليمات اليوم",
@@ -133,39 +128,35 @@
       "title": "حالة الأسطول",
       "utilization": "الإشغال {percent}%",
       "count": "{count} سيارة",
-      "rented": "مؤجّرة",
+      "rented": "مؤجرة",
       "rentedNote": "مع العملاء الآن",
       "available": "متاحة",
       "availableNote": "جاهزة للتأجير فوراً",
-      "service": "في الصيانة",
+      "service": "صيانة",
       "serviceNote": "خارج الخدمة حتى الاستلام"
     },
     "weekly": {
-      "title": "حركة الأسبوع",
-      "subtitle": "الإيرادات مقابل المصروفات خلال آخر 7 أيام",
-      "revenue": "إيراد",
-      "expense": "مصروف",
-      "net": "الصافي"
-    },
-    "week": {
-      "day1": "الاثنين",
-      "day2": "الثلاثاء",
-      "day3": "الأربعاء",
-      "day4": "الخميس",
-      "day5": "الجمعة",
-      "yesterday": "أمس",
-      "today": "اليوم"
+      "title": "حركة الإيجار الأسبوعية",
+      "subtitle": "آخر 7 أيام",
+      "rented": "تم التأجير",
+      "returned": "تم الإرجاع",
+      "empty": "لا توجد حركة إيجار خلال آخر 7 أيام"
     },
     "expenses": {
-      "title": "بنية المصروفات",
-      "subtitle": "توزيع مصروفات آخر 7 أيام على الفئات التشغيلية",
-      "centerLabel": "مصروفات 7 أيام"
+      "title": "الملخص المالي الأسبوعي",
+      "subtitle": "آخر 7 أيام",
+      "collected": "تم التحصيل",
+      "expenses": "المصروفات",
+      "netMovement": "صافي الحركة",
+      "collection": "تحصيل",
+      "expense": "مصروف",
+      "empty": "لا توجد حركة مالية خلال آخر 7 أيام"
     },
-    "expenseCategory": {
-      "maintenance": "صيانة وتصليح",
-      "operations": "تشغيل وتنظيف",
-      "administrative": "إداري",
-      "fuel": "وقود"
+    "simulation": {
+      "button": "محاكاة",
+      "badge": "محاكاة تجريبية",
+      "reset": "إعادة ضبط المحاكاة",
+      "disable": "عرض البيانات الفعلية"
     }
   },
   "Select": {
@@ -1872,7 +1863,8 @@
     "ledgerMovement": {
       "COLLECTION": "تحصيل من العميل",
       "EXPENSE": "مصروف",
-      "EXPENSE_REVERSAL": "إلغاء مصروف"
+      "EXPENSE_REVERSAL": "إلغاء مصروف",
+      "VOIDED": "ملغى"
     },
     "ledgerSource": {
       "RENTAL_PAYMENT": "دفعة إيجار",
@@ -1945,11 +1937,13 @@
       "status": "الحالة",
       "statusActive": "نشط",
       "statusVoid": "ملغى",
+      "correctedExpense": "مصروف مصحح",
       "createdBy": "أنشأه",
       "createdAt": "تاريخ الإنشاء",
       "voidReason": "سبب الإلغاء",
       "voidedBy": "ألغاه",
       "voidedAt": "تاريخ الإلغاء",
+      "voidedEffect": "تم عكس الأثر المالي لهذا المصروف.",
       "correctionOf": "تصحيح لـ",
       "voidAction": "إلغاء المصروف",
       "correctAction": "تصحيح المصروف",
@@ -1957,14 +1951,22 @@
       "voidDescription": "سيبقى السجل المالي الأصلي محفوظاً، وسيتم إنشاء حركة عكسية لإلغاء أثره المالي.",
       "voidConfirm": "إلغاء المصروف",
       "correctTitle": "تصحيح المصروف",
-      "correctDescription": "سيتم إلغاء المصروف الأصلي وإنشاء سجل مصحح جديد.",
+      "correctDescription": "يتم تحديث هذا المصروف في نفس السجل. تبقى الحالة نشطة ويُحفظ إدخال في سجل التعديلات.",
       "correctConfirm": "حفظ التصحيح",
+      "correctionHistory": "سجل التعديلات",
+      "correctedBy": "تم التعديل بواسطة",
+      "correctedAt": "تاريخ التعديل",
+      "previousValue": "القيمة السابقة",
+      "newValue": "القيمة الجديدة",
       "createSuccess": "تم تسجيل المصروف.",
       "voidSuccess": "تم إلغاء المصروف.",
       "correctSuccess": "تم تصحيح المصروف."
     },
     "errors": {
-      "generic": "تعذر تحميل بيانات المالية. حاول مرة أخرى."
+      "generic": "تعذر تحميل بيانات المالية. حاول مرة أخرى.",
+      "FINANCE_EXPENSE_NO_CHANGES": "لا توجد تغييرات للحفظ.",
+      "FINANCE_EXPENSE_NOT_ACTIVE": "لا يمكن تصحيح مصروف ملغى.",
+      "FINANCE_EXPENSE_NOT_FOUND": "تعذر العثور على هذا المصروف."
     }
   }
 }

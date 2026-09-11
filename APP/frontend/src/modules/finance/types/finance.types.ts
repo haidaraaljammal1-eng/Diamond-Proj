@@ -16,6 +16,9 @@ export type ManualExpenseCategory =
 
 export type LedgerDirection = "COLLECTION" | "EXPENSE" | "EXPENSE_REVERSAL";
 
+/** Operational Movement filter — VOIDED is UI-only; accounting direction stays EXPENSE. */
+export type LedgerMovementFilter = LedgerDirection | "VOIDED";
+
 export type LedgerKind =
   | "RENTAL_PAYMENT"
   | "RENEWAL_PAYMENT"
@@ -127,6 +130,8 @@ export interface LedgerEntryDto {
   manualExpenseId: string | null;
   vendorName?: string | null;
   reference?: string | null;
+  /** Present when the row is tied to a ManualExpense. VOID originals are not active Expense. */
+  manualExpenseStatus?: "ACTIVE" | "VOID" | null;
 }
 
 export interface ManualExpenseAttachmentDto {
@@ -160,6 +165,30 @@ export interface ManualExpenseDetailDto {
   createdBy: { id: number; name: string | null; email: string };
   voidedBy: { id: number; name: string | null; email: string } | null;
   createdAt: string;
+  correctionHistory: ManualExpenseRevisionDto[];
+}
+
+export type ManualExpenseChangeField =
+  | "amount"
+  | "category"
+  | "recognizedAt"
+  | "description"
+  | "vehicle"
+  | "vendorName"
+  | "receiptNumber"
+  | "note";
+
+export interface ManualExpenseFieldChangeDto {
+  field: ManualExpenseChangeField | string;
+  before: unknown;
+  after: unknown;
+}
+
+export interface ManualExpenseRevisionDto {
+  id: string;
+  changedAt: string;
+  changedBy: { id: number; name: string | null; email: string };
+  changes: ManualExpenseFieldChangeDto[];
 }
 
 export interface CreateManualExpensePayload {
@@ -178,8 +207,15 @@ export interface VoidManualExpensePayload {
   voidReason: string;
 }
 
-export interface CorrectManualExpensePayload extends CreateManualExpensePayload {
-  voidReason: string;
+export interface CorrectManualExpensePayload {
+  amount: number;
+  category: ManualExpenseCategory;
+  recognizedAt: string;
+  description: string;
+  vehicleId?: number | null;
+  vendorName?: string | null;
+  receiptNumber?: string | null;
+  note?: string | null;
 }
 
 export interface OpenReceivablesQuery {
@@ -200,7 +236,7 @@ export interface LedgerQuery {
   displaySource: LedgerDisplaySource | null;
   kind: LedgerKind | null;
   sourceType: LedgerSourceType | null;
-  direction: LedgerDirection | null;
+  direction: LedgerMovementFilter | null;
   sort: string;
 }
 

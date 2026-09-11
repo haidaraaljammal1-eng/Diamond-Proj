@@ -130,22 +130,19 @@ describe("finance expense validation keys", () => {
     );
   });
 
-  it("requires a void reason on void and correct", () => {
+  it("requires a void reason on standalone Void only", () => {
     assert.equal(
       issueFor(voidExpenseFormSchema.safeParse({ voidReason: "" }), "voidReason"),
-      "required",
-    );
-    assert.equal(
-      issueFor(
-        correctExpenseFormSchema.safeParse({ ...validAdd, voidReason: "" }),
-        "voidReason",
-      ),
       "required",
     );
     assert.equal(
       issueFor(voidExpenseFormSchema.safeParse({ voidReason: "x".repeat(501) }), "voidReason"),
       "tooLong",
     );
+    const correct = correctExpenseFormSchema.safeParse(validAdd);
+    assert.equal(correct.success, true);
+    assert.equal("voidReason" in (correct.success ? correct.data : {}), false);
+    assert.equal("voidReason" in correctExpenseFormSchema.shape, false);
   });
 
   it("zodResolver emits the same relative keys FormError expects", async () => {
@@ -154,15 +151,22 @@ describe("finance expense validation keys", () => {
       await resolverMessage(addExpenseFormSchema, { ...validAdd, amount: "80.5" }, "amount"),
       "wholeAed",
     );
-    assert.equal(
-      await resolverMessage(correctExpenseFormSchema, { ...validAdd, voidReason: "" }, "voidReason"),
-      "required",
-    );
+    assert.equal(await resolverMessage(correctExpenseFormSchema, { ...validAdd }, "voidReason"), undefined);
     assert.equal(await resolverMessage(voidExpenseFormSchema, { voidReason: "" }, "voidReason"), "required");
     assert.equal(
       await resolverMessage(voidExpenseFormSchema, { voidReason: "x".repeat(501) }, "voidReason"),
       "tooLong",
     );
+  });
+
+  it("correct dialog has no Void Reason field", () => {
+    const dialog = readFileSync(
+      path.join(import.meta.dirname, "../correct-expense/correct-expense-dialog.tsx"),
+      "utf8",
+    );
+    assert.equal(dialog.includes("voidReason"), false);
+    assert.equal(dialog.includes("correctionAuditReason"), false);
+    assert.equal(dialog.includes("toCorrectManualExpensePayload"), true);
   });
 
   it("finance module sources never pass validation.* prefixed FormError messages", () => {

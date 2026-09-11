@@ -10,6 +10,7 @@ import {
 } from "./finance-labels.ts";
 import { resolveFinancePeriodRange } from "./finance-period.ts";
 import {
+  applySimulatedManualExpenseCorrection,
   buildFinanceSimulationOverlay,
   deriveFinanceAnalytics,
   deriveFinanceSummary,
@@ -23,7 +24,7 @@ const t = (key: string) => {
   const labels: Record<string, string> = {
     "ledgerMovement.COLLECTION": "Customer Collection",
     "ledgerMovement.EXPENSE": "Expense",
-    "ledgerMovement.EXPENSE_REVERSAL": "Expense Reversal",
+    "ledgerMovement.VOIDED": "Voided",
     "ledgerSource.RENTAL_PAYMENT": "Rental Payment",
     "ledgerSource.RENEWAL_PAYMENT": "Renewal Payment",
     "ledgerSource.RECONCILIATION_PAYMENT": "Return Reconciliation",
@@ -37,11 +38,11 @@ const t = (key: string) => {
 const NOW = new Date(2026, 8, 11, 12, 0, 0, 0);
 
 describe("ledger column semantics", () => {
-  it("maps Expense Reversal movement with Manual Expense source", () => {
-    assert.equal(ledgerMovementLabel("EXPENSE_REVERSAL", t), "Expense Reversal");
+  it("maps voided Manual Expense as Voided with Manual Expense source", () => {
+    assert.equal(ledgerMovementLabel("VOIDED", t), "Voided");
     assert.equal(ledgerSourceFromKind("MANUAL_EXPENSE_REVERSAL"), "MANUAL_EXPENSE");
     assert.equal(ledgerSourceLabel("MANUAL_EXPENSE", t), "Manual Expense");
-    assert.notEqual(ledgerSourceFromKind("MANUAL_EXPENSE_REVERSAL"), "EXPENSE_REVERSAL");
+    assert.notEqual(ledgerSourceFromKind("MANUAL_EXPENSE_REVERSAL"), "VOIDED");
     assert.notEqual(ledgerKindLabel("MANUAL_EXPENSE_REVERSAL", t), "Expense Reversal");
   });
 
@@ -90,10 +91,10 @@ describe("ledger filter mapping", () => {
       sourceType: null,
       direction: "EXPENSE",
     });
-    assert.deepEqual(toLedgerApiFilters("EXPENSE_REVERSAL", "MANUAL_EXPENSE"), {
-      kind: "MANUAL_EXPENSE_REVERSAL",
+    assert.deepEqual(toLedgerApiFilters("VOIDED", "MANUAL_EXPENSE"), {
+      kind: "MANUAL_EXPENSE",
       sourceType: null,
-      direction: "EXPENSE_REVERSAL",
+      direction: "VOIDED",
     });
     assert.deepEqual(toLedgerApiFilters(null, "MANUAL_EXPENSE"), {
       kind: null,
@@ -109,12 +110,11 @@ describe("ledger filter mapping", () => {
 });
 
 describe("signed amount presentation", () => {
-  it("prefixes collection, expense, and reversal without relabeling reversal as collection", () => {
+  it("prefixes collection and expense without using +AED for a voided operational row", () => {
     assert.equal(formatSignedFinanceAed(1500, "COLLECTION"), "+ AED 1,500");
     assert.equal(formatSignedFinanceAed(850, "EXPENSE"), "- AED 850");
-    assert.equal(formatSignedFinanceAed(100, "EXPENSE_REVERSAL"), "+ AED 100");
-    assert.equal(ledgerMovementLabel("EXPENSE_REVERSAL", t), "Expense Reversal");
-    assert.notEqual(ledgerMovementLabel("EXPENSE_REVERSAL", t), "Customer Collection");
+    assert.equal(ledgerMovementLabel("VOIDED", t), "Voided");
+    assert.notEqual(ledgerMovementLabel("VOIDED", t), "Customer Collection");
   });
 });
 
@@ -201,6 +201,102 @@ describe("finance simulation fixtures", () => {
     assert.notEqual(gross - reverse, -20);
   });
 
+  it("shows a standalone voided cleaning row and one active in-place corrected expense", () => {
+    const week = resolveFinancePeriodRange("week", undefined, undefined, NOW);
+    const operational = filterSimulatedLedger(
+      overlay,
+      {
+        search: "",
+        from: week.from,
+        to: week.to,
+        direction: null,
+        displaySource: "MANUAL_EXPENSE",
+        page: 1,
+        pageSize: 50,
+        sort: "occurredAt:desc",
+      },
+      "en",
+    );
+    const cleaning = operational.data.filter((row) => row.category === "VEHICLE_CLEANING");
+    assert.equal(
+      cleaning.some((row) => row.kind === "MANUAL_EXPENSE_REVERSAL"),
+      false,
+    );
+    assert.ok(
+      cleaning.some(
+        (row) => row.amount === 100 && row.manualExpenseStatus === "VOID" && row.kind === "MANUAL_EXPENSE",
+      ),
+    );
+    assert.ok(
+      cleaning.some(
+        (row) => row.amount === 80 && row.manualExpenseStatus === "ACTIVE" && row.kind === "MANUAL_EXPENSE",
+      ),
+    );
+  });
+
+  it("applies simulated correction in place with history and no replacement movement", () => {
+    const activeCleaning = overlay.movements.find(
+      (row) => row.amount === 80 && row.kind === "MANUAL_EXPENSE" && row.manualExpenseId,
+    );
+    assert.ok(activeCleaning?.manualExpenseId);
+    const id = activeCleaning.manualExpenseId!;
+    const existing = overlay.expenses[id];
+    assert.equal(existing.correctionOfExpenseId, null);
+    assert.ok(existing.correctionHistory.some((revision) =>
+      revision.changes.some((change) => change.field === "amount" && change.before === 100 && change.after === 80),
+    ));
+
+    const beforeCount = overlay.movements.length;
+    const result = applySimulatedManualExpenseCorrection(overlay, id, {
+      amount: 70,
+      category: existing.category,
+      recognizedAt: existing.recognizedAt,
+      description: existing.description,
+      vehicleId: existing.vehicle?.id ?? null,
+      vendorName: existing.vendorName,
+      receiptNumber: existing.receiptNumber,
+      note: existing.note,
+    });
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.detail.id, id);
+    assert.equal(result.detail.amount, 70);
+    assert.equal(result.detail.status, "ACTIVE");
+    assert.equal(result.overlay.movements.length, beforeCount);
+    assert.equal(
+      result.overlay.movements.filter((row) => row.manualExpenseId === id && row.kind === "MANUAL_EXPENSE").length,
+      1,
+    );
+    assert.equal(result.overlay.movements.some((row) => row.kind === "MANUAL_EXPENSE" && row.amount === 70), true);
+    assert.equal(result.detail.correctionHistory[0]?.changes[0]?.before, 80);
+    assert.equal(result.detail.correctionHistory[0]?.changes[0]?.after, 70);
+    assert.ok(result.detail.correctionHistory.length >= 2);
+
+    const noChange = applySimulatedManualExpenseCorrection(result.overlay, id, {
+      amount: 70,
+      category: existing.category,
+      recognizedAt: existing.recognizedAt,
+      description: existing.description,
+      vehicleId: existing.vehicle?.id ?? null,
+      vendorName: existing.vendorName,
+      receiptNumber: existing.receiptNumber,
+      note: existing.note,
+    });
+    assert.equal(noChange.ok, false);
+    if (!noChange.ok) assert.equal(noChange.reason, "FINANCE_EXPENSE_NO_CHANGES");
+
+    const voided = Object.values(overlay.expenses).find((expense) => expense.status === "VOID");
+    assert.ok(voided);
+    const voidedResult = applySimulatedManualExpenseCorrection(overlay, voided.id, {
+      amount: 1,
+      category: "PARKING",
+      recognizedAt: voided.recognizedAt,
+      description: "nope",
+    });
+    assert.equal(voidedResult.ok, false);
+    if (!voidedResult.ok) assert.equal(voidedResult.reason, "FINANCE_EXPENSE_NOT_ACTIVE");
+  });
+
   it("matches outstanding and expense breakdowns to KPIs and reduces cleaning by reversal", () => {
     const month = resolveFinancePeriodRange("month", undefined, undefined, NOW);
     const summary = deriveFinanceSummary(overlay, month.from, month.to);
@@ -251,14 +347,36 @@ describe("finance simulation fixtures", () => {
 
     const expenses = filterSimulatedLedger(overlay, { ...base, direction: "EXPENSE" }, "en");
     assert.ok(expenses.data.every((row) => row.direction === "EXPENSE"));
-
-    const reversals = filterSimulatedLedger(
-      overlay,
-      { ...base, direction: "EXPENSE_REVERSAL" },
-      "en",
+    assert.equal(
+      expenses.data.some((row) => row.kind === "MANUAL_EXPENSE" && row.manualExpenseStatus === "VOID"),
+      false,
     );
-    assert.equal(reversals.meta.total, 1);
-    assert.equal(reversals.data[0]?.kind, "MANUAL_EXPENSE_REVERSAL");
+    assert.equal(
+      expenses.data.some((row) => row.kind === "MANUAL_EXPENSE" && row.amount === 100),
+      false,
+    );
+
+    const all = filterSimulatedLedger(overlay, { ...base, direction: null }, "en");
+    assert.ok(
+      all.data.some(
+        (row) =>
+          row.kind === "MANUAL_EXPENSE" &&
+          row.amount === 100 &&
+          row.manualExpenseStatus === "VOID",
+      ),
+    );
+    assert.equal(
+      all.data.some((row) => row.kind === "MANUAL_EXPENSE_REVERSAL"),
+      false,
+    );
+
+    const voided = filterSimulatedLedger(overlay, { ...base, direction: "VOIDED" }, "en");
+    assert.ok(voided.meta.total >= 1);
+    assert.ok(voided.data.every((row) => row.kind === "MANUAL_EXPENSE" && row.manualExpenseStatus === "VOID"));
+    assert.equal(
+      voided.data.some((row) => row.kind === "MANUAL_EXPENSE_REVERSAL"),
+      false,
+    );
 
     for (const source of [
       "RENTAL_PAYMENT",
@@ -322,15 +440,23 @@ describe("finance simulation fixtures", () => {
       manual.data.some((row) => row.kind === "MANUAL_EXPENSE_REVERSAL"),
       false,
     );
+    assert.equal(
+      manual.data.some((row) => row.manualExpenseStatus === "VOID"),
+      false,
+    );
 
-    const reversalCombo = filterSimulatedLedger(
+    const voidedCombo = filterSimulatedLedger(
       overlay,
-      { ...base, direction: "EXPENSE_REVERSAL", displaySource: "MANUAL_EXPENSE" },
+      { ...base, direction: "VOIDED", displaySource: "MANUAL_EXPENSE" },
       "en",
     );
-    assert.equal(reversalCombo.meta.total, 1);
-    assert.equal(reversalCombo.data[0]?.direction, "EXPENSE_REVERSAL");
-    assert.equal(ledgerSourceFromKind(reversalCombo.data[0]!.kind), "MANUAL_EXPENSE");
+    assert.ok(voidedCombo.meta.total >= 1);
+    assert.ok(
+      voidedCombo.data.every(
+        (row) => row.kind === "MANUAL_EXPENSE" && row.manualExpenseStatus === "VOID",
+      ),
+    );
+    assert.equal(ledgerSourceFromKind(voidedCombo.data[0]!.kind), "MANUAL_EXPENSE");
 
     const search = filterSimulatedLedger(
       overlay,

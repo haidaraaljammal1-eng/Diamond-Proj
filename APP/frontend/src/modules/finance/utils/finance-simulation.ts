@@ -4,18 +4,19 @@ import type {
   FinanceOutstandingBreakdownDto,
   FinanceSummaryDto,
   FinanceTrendPointDto,
-  LedgerDirection,
   LedgerDisplaySource,
   LedgerEntryDto,
   LedgerKind,
+  LedgerMovementFilter,
   LedgerQuery,
   ManualExpenseCategory,
   ManualExpenseDetailDto,
+  CorrectManualExpensePayload,
   OpenReceivableDto,
   OpenReceivableSourceType,
   OpenReceivablesQuery,
 } from "../types/finance.types";
-import { ledgerSourceFromKind } from "./finance-labels.ts";
+import { ledgerSourceFromKind, isHiddenTechnicalReversalRow, isVoidedOriginalExpenseRow } from "./finance-labels.ts";
 
 const SIM_LEDGER_PAGE_SIZE = 25;
 const SIM_RECEIVABLES_PAGE_SIZE = 20;
@@ -103,10 +104,13 @@ function movement(
     descriptions: BilingualText;
   },
 ): SimulatedLedgerEntry {
+  const isManual =
+    partial.kind === "MANUAL_EXPENSE" || partial.kind === "MANUAL_EXPENSE_REVERSAL";
   return {
     currency: "AED",
     vendorName: partial.vendorName ?? null,
     reference: partial.reference ?? null,
+    manualExpenseStatus: isManual ? (partial.manualExpenseStatus ?? "ACTIVE") : null,
     ...partial,
     description: partial.descriptions.en,
   };
@@ -147,6 +151,7 @@ function expenseDetail(
     createdBy: DEMO_STAFF,
     voidedBy: extras.voidedBy ?? null,
     createdAt: recognizedAt,
+    correctionHistory: extras.correctionHistory ?? [],
   };
 }
 
@@ -310,6 +315,7 @@ export function buildFinanceSimulationOverlay(
       contractPaymentId: null,
       maintenanceOrderId: null,
       manualExpenseId: originalExpenseId,
+      manualExpenseStatus: "VOID",
       vendorName: "Pearl Valet",
       reference: originalRef,
     }),
@@ -590,8 +596,22 @@ export function buildFinanceSimulationOverlay(
       {
         vendorName: "Pearl Valet",
         receiptNumber: "EXP-SIM-CLEAN-80",
-        correctionOfExpenseId: originalExpenseId,
         note: "Corrected cleaning amount",
+        correctionHistory: [
+          {
+            id: `${SIMULATED_FINANCE_PREFIX}rev-clean-1`,
+            changedAt: iso(todayCleaning),
+            changedBy: DEMO_STAFF,
+            changes: [
+              { field: "amount", before: 100, after: 80 },
+              {
+                field: "description",
+                before: "Vehicle cleaning",
+                after: "Vehicle cleaning — Range Rover Vogue",
+              },
+            ],
+          },
+        ],
       },
     ),
     [originalExpenseId]: expenseDetail(
@@ -839,9 +859,15 @@ export function filterSimulatedLedger(
     locale,
   );
 
-  if (query.direction) {
-    rows = rows.filter((entry) => entry.direction === query.direction);
+  if (query.direction === "VOIDED") {
+    rows = rows.filter((entry) => isVoidedOriginalExpenseRow(entry));
+  } else if (query.direction) {
+    rows = rows.filter((entry) => {
+      if (isVoidedOriginalExpenseRow(entry)) return false;
+      return entry.direction === query.direction;
+    });
   }
+  rows = rows.filter((entry) => !isHiddenTechnicalReversalRow(entry));
   if (query.displaySource) {
     rows = rows.filter(
       (entry) => ledgerSourceFromKind(entry.kind) === query.displaySource,
@@ -915,10 +941,14 @@ export function filterSimulatedReceivables(
 }
 
 export function matchesMovementFilter(
-  entry: Pick<LedgerEntryDto, "direction">,
-  movement: LedgerDirection | null,
+  entry: Pick<LedgerEntryDto, "kind" | "direction" | "manualExpenseStatus">,
+  movement: LedgerMovementFilter | null,
 ): boolean {
-  return !movement || entry.direction === movement;
+  if (isHiddenTechnicalReversalRow(entry)) return false;
+  if (!movement) return true;
+  if (movement === "VOIDED") return isVoidedOriginalExpenseRow(entry);
+  if (isVoidedOriginalExpenseRow(entry)) return false;
+  return entry.direction === movement;
 }
 
 export function matchesSourceFilter(
@@ -926,6 +956,123 @@ export function matchesSourceFilter(
   source: LedgerDisplaySource | null,
 ): boolean {
   return !source || ledgerSourceFromKind(entry.kind) === source;
+}
+
+export function applySimulatedManualExpenseCorrection(
+  overlay: FinanceSimulationOverlay,
+  id: string,
+  payload: CorrectManualExpensePayload,
+  at: Date = new Date(),
+):
+  | { ok: true; overlay: FinanceSimulationOverlay; detail: ManualExpenseDetailDto }
+  | {
+      ok: false;
+      reason: "FINANCE_EXPENSE_NOT_FOUND" | "FINANCE_EXPENSE_NOT_ACTIVE" | "FINANCE_EXPENSE_NO_CHANGES";
+    } {
+  const existing = overlay.expenses[id];
+  if (!existing) return { ok: false, reason: "FINANCE_EXPENSE_NOT_FOUND" };
+  if (existing.status !== "ACTIVE") return { ok: false, reason: "FINANCE_EXPENSE_NOT_ACTIVE" };
+
+  const nextVehicle =
+    payload.vehicleId === undefined
+      ? existing.vehicle
+      : payload.vehicleId == null
+        ? null
+        : payload.vehicleId === VOGUE.id
+          ? VOGUE
+          : { id: payload.vehicleId, vehicleName: null, plateNumber: null };
+  const nextRecognizedAt = payload.recognizedAt;
+  const sameMinute =
+    Math.floor(new Date(payload.recognizedAt).getTime() / 60_000) ===
+    Math.floor(new Date(existing.recognizedAt).getTime() / 60_000);
+
+  const changes: ManualExpenseDetailDto["correctionHistory"][number]["changes"] = [];
+  if (payload.amount !== existing.amount) {
+    changes.push({ field: "amount", before: existing.amount, after: payload.amount });
+  }
+  if (payload.category !== existing.category) {
+    changes.push({ field: "category", before: existing.category, after: payload.category });
+  }
+  if (!sameMinute) {
+    changes.push({
+      field: "recognizedAt",
+      before: existing.recognizedAt,
+      after: nextRecognizedAt,
+    });
+  }
+  if (payload.description !== existing.description) {
+    changes.push({
+      field: "description",
+      before: existing.description,
+      after: payload.description,
+    });
+  }
+  if ((nextVehicle?.id ?? null) !== (existing.vehicle?.id ?? null)) {
+    changes.push({ field: "vehicle", before: existing.vehicle, after: nextVehicle });
+  }
+  const nextVendor =
+    payload.vendorName === undefined ? existing.vendorName : payload.vendorName;
+  if (nextVendor !== existing.vendorName) {
+    changes.push({ field: "vendorName", before: existing.vendorName, after: nextVendor });
+  }
+  const nextReceipt =
+    payload.receiptNumber === undefined ? existing.receiptNumber : payload.receiptNumber;
+  if (nextReceipt !== existing.receiptNumber) {
+    changes.push({ field: "receiptNumber", before: existing.receiptNumber, after: nextReceipt });
+  }
+  const nextNote = payload.note === undefined ? existing.note : payload.note;
+  if (nextNote !== existing.note) {
+    changes.push({ field: "note", before: existing.note, after: nextNote });
+  }
+
+  if (changes.length === 0) return { ok: false, reason: "FINANCE_EXPENSE_NO_CHANGES" };
+
+  const revision = {
+    id: `${SIMULATED_FINANCE_PREFIX}rev-${id}-${at.getTime()}`,
+    changedAt: iso(at),
+    changedBy: DEMO_STAFF,
+    changes,
+  };
+  const detail: ManualExpenseDetailDto = {
+    ...existing,
+    amount: payload.amount,
+    category: payload.category,
+    recognizedAt: sameMinute ? existing.recognizedAt : nextRecognizedAt,
+    description: payload.description,
+    vehicle: nextVehicle,
+    vendorName: nextVendor,
+    receiptNumber: nextReceipt,
+    note: nextNote,
+    status: "ACTIVE",
+    correctionHistory: [revision, ...(existing.correctionHistory ?? [])],
+  };
+
+  const movements = overlay.movements.map((entry) => {
+    if (entry.manualExpenseId !== id || entry.kind !== "MANUAL_EXPENSE") return entry;
+    return {
+      ...entry,
+      amount: detail.amount,
+      occurredAt: detail.recognizedAt,
+      vehicle: detail.vehicle,
+      category: detail.category,
+      vendorName: detail.vendorName,
+      descriptions: {
+        en: detail.description,
+        ar: detail.description,
+      },
+      description: detail.description,
+    };
+  });
+
+  return {
+    ok: true,
+    overlay: {
+      ...overlay,
+      movements,
+      expenses: { ...overlay.expenses, [id]: detail },
+    },
+    detail,
+  };
 }
 
 export function shouldSkipFinanceMutation(simulationActive: boolean): boolean {

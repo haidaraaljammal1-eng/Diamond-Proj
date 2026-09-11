@@ -43,7 +43,7 @@ No sidebar/navigation/permission/business logic lives here.
 | `header/app-header.tsx` | Demo `#topbar` capsule (brand, role segment, user chip, language) |
 | `sidebar/sidebar.tsx` | Demo `#rail` icon dock, render-only |
 | `sidebar/sidebar-item.tsx` | `.navit` item (link/action, active state, badge) |
-| `sidebar/sidebar-footer.tsx` | `.railfoot` (admin only) |
+| `sidebar/sidebar-brand.tsx` | Crystal mark + `DIAMOND` wordmark |
 | `content/app-content.tsx` | `#main` area + centered `.wrap` |
 | `store/app-shell.store.ts` | Zustand UI-only state (mobile drawer) |
 | `index.ts` | Public API — import `AppShell` only |
@@ -54,8 +54,10 @@ AppShell owns no API, no business logic, no page data.
 
 `src/modules/navigation/` — centralized and typed:
 
-- `navigation.config.ts` — single source; mirrors the Demo rail exactly
+- `navigation.config.ts` — single source for the operational rail
   (labels, icons, order, `adminOnly`, WhatsApp `action`, badge).
+  There is no Operations Center item, New Contract shortcut, or sidebar
+  fleet-status summary.
 - `navigation.types.ts` — typed config + `UseNavigationResult`.
 - `navigation.icons.tsx` — Demo SVGs, extracted verbatim (viewBoxes, stroke).
 - `hooks/use-navigation.ts` — active item from the URL (never stored),
@@ -117,6 +119,9 @@ of the Demo layout, so the shell defines none.
 ## Shared Pieces
 
 - `shared/components/ui/brand-logo` — the single Diamond crystal mark.
+- Rail wordmark is `DIAMOND` with subtitle `RENT CAR · DUBAI`. The header does
+  not repeat the wordmark except below the mobile drawer breakpoint, where the
+  mark returns to the bar.
 - Shared Button is not reused for shell controls because the Demo topbar/rail
   controls are distinct shell primitives (documented visual extracts).
 

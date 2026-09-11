@@ -1,5 +1,9 @@
 import { z } from "zod";
-import type { CreateManualExpensePayload, ManualExpenseCategory } from "../../types/finance.types";
+import type {
+  CorrectManualExpensePayload,
+  CreateManualExpensePayload,
+  ManualExpenseCategory,
+} from "../../types/finance.types";
 
 /** Relative FormError keys — never `validation.*` prefixes. */
 const required = { message: "required" as const };
@@ -30,18 +34,24 @@ export const voidExpenseFormSchema = z.object({
   voidReason: z.string().trim().min(1, required).max(500, tooLong),
 });
 
-export const correctExpenseFormSchema = addExpenseFormSchema.extend({
-  voidReason: z.string().trim().min(1, required).max(500, tooLong),
-});
+/** Correct Expense validates editable fields only — no void-reason field. */
+export const correctExpenseFormSchema = addExpenseFormSchema;
 
 export type AddExpenseFormValues = z.infer<typeof addExpenseFormSchema>;
 export type VoidExpenseFormValues = z.infer<typeof voidExpenseFormSchema>;
 export type CorrectExpenseFormValues = z.infer<typeof correctExpenseFormSchema>;
 
+export function toDatetimeLocalValue(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export const EMPTY_ADD_EXPENSE_VALUES: AddExpenseFormValues = {
   amount: "",
   category: "VEHICLE_CLEANING",
-  recognizedAt: new Date().toISOString().slice(0, 16),
+  recognizedAt: toDatetimeLocalValue(new Date().toISOString()),
   description: "",
   vehicleId: "",
   vendorName: "",
@@ -65,4 +75,19 @@ export function toCreateManualExpensePayload(
   if (values.attachmentId) payload.attachmentId = values.attachmentId;
   if (values.note?.trim()) payload.note = values.note.trim();
   return payload;
+}
+
+export function toCorrectManualExpensePayload(
+  values: CorrectExpenseFormValues,
+): CorrectManualExpensePayload {
+  return {
+    amount: Number(values.amount),
+    category: values.category as ManualExpenseCategory,
+    recognizedAt: new Date(values.recognizedAt).toISOString(),
+    description: values.description.trim(),
+    vehicleId: values.vehicleId ? Number(values.vehicleId) : null,
+    vendorName: values.vendorName?.trim() ? values.vendorName.trim() : null,
+    receiptNumber: values.receiptNumber?.trim() ? values.receiptNumber.trim() : null,
+    note: values.note?.trim() ? values.note.trim() : null,
+  };
 }

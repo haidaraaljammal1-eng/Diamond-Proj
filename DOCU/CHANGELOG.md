@@ -1,7 +1,15 @@
 # Changelog
 
+## 2026-09-12
+
+- Sidebar cleanup: brand wordmark is `DIAMOND` (ELITE removed); New Contract shortcut and the mock fleet-status block are gone from the rail; Operations Center is removed from navigation, i18n, and frontend routing (no dedicated page or backend module existed). Dashboard Quick Access, GPS, Contracts, Maintenance, Finance, and remaining rail items are unchanged. See `DOCU/00-system-overview/app-shell-architecture.md`.
+
 ## 2026-09-11
 
+- Dashboard weekly charts use the last 7 consecutive calendar days (weekends included, zero-activity days retained). The financial donut is interactive (hover/tap slice detail from existing Finance breakdown). Optional frontend-only Dashboard Simulation (`NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`) is a removable overlay and does not change Real-mode APIs. See `DOCU/05-pages/dashboard.md` and `DOCU/05-pages/dashboard-backend.md`.
+- Dashboard is a live operational aggregation (`GET /dashboard/overview`): KPI, fleet, weekly finance donut, Car-Out/Car-In rental activity, today’s deliveries, and permission-aware Quick Access. Demo dashboard fixtures are removed. See `DOCU/05-pages/dashboard.md` and `DOCU/05-pages/dashboard-backend.md`.
+- Finance Manual Expense Correct is an in-place update of the same record (same ID, ACTIVE) with immutable Correction History inside expense details. Void remains a separate cancellation workflow. Financial Ledger header/body share one column definition. See `DOCU/05-pages/finance.md`.
+- Finance ledger table order: Financial Ledger now sits above analytics / Open Receivables (Open Receivables moved to the former ledger position). Voided Manual Expense is shown as a single operational row (**Voided / ملغى**, Source Manual Expense, original amount struck through). The technical reversal stays in backend accounting and is hidden from the main Ledger. Expense filter = active expenses; Voided filter = voided Manual Expenses. Standalone Void still requires a reason. Ledger read projection exposes `manualExpenseStatus` and omits `MANUAL_EXPENSE_REVERSAL` from the operational list without changing financial totals. See `DOCU/05-pages/finance.md`.
 - Finance ledger Movement vs Source semantics: Source is origin (Rental Payment, Maintenance, Manual Expense, …); Expense Reversal is a Movement, not a Source. Frontend-only Finance Demo Simulation overlay (`NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`) derives KPIs/breakdowns from one fixture set and never writes to Finance/Stripe/DB. See `DOCU/05-pages/finance.md`.
 - Finance Frontend V1: `/[locale]/finance` administrative operations center (`finance.read`) — KPIs, Open Receivables, analytics, ledger, manual expense add/void/correct (`finance.manage_expenses`). Backend-authoritative totals; Stripe-only collections; no invoices/deposit/manual income. See `DOCU/05-pages/finance.md`.
 - Finance Manual Expense forms pass relative FormError keys (`required`, `wholeAed`, `positiveAmount`, `tooLong`) — never `validation.*` prefixes.

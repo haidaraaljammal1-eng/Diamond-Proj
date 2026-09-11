@@ -21,7 +21,8 @@ import {
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
 import {
   correctExpenseFormSchema,
-  toCreateManualExpensePayload,
+  toCorrectManualExpensePayload,
+  toDatetimeLocalValue,
   type CorrectExpenseFormValues,
 } from "../add-expense/add-expense.schema";
 import styles from "../add-expense/add-expense-dialog.module.css";
@@ -70,7 +71,6 @@ function CorrectExpenseDialogForm({
       receiptNumber: "",
       attachmentId: "",
       note: "",
-      voidReason: "",
     },
   });
 
@@ -80,14 +80,13 @@ function CorrectExpenseDialogForm({
     form.reset({
       amount: String(expense.amount),
       category: expense.category,
-      recognizedAt: expense.recognizedAt.slice(0, 16),
+      recognizedAt: toDatetimeLocalValue(expense.recognizedAt),
       description: expense.description,
       vehicleId: expense.vehicle ? String(expense.vehicle.id) : "",
       vendorName: expense.vendorName ?? "",
       receiptNumber: expense.receiptNumber ?? "",
       attachmentId: expense.attachment?.id ?? "",
       note: expense.note ?? "",
-      voidReason: "",
     });
   }, [expense, clearCorrectError, form]);
 
@@ -102,11 +101,7 @@ function CorrectExpenseDialogForm({
 
   const handleSubmit = async (values: CorrectExpenseFormValues) => {
     if (!expense) return;
-    const base = toCreateManualExpensePayload(values);
-    const ok = await correctExpense(expense.id, {
-      ...base,
-      voidReason: values.voidReason.trim(),
-    });
+    const ok = await correctExpense(expense.id, toCorrectManualExpensePayload(values));
     if (ok) {
       onSuccess?.();
       onClose();
@@ -261,22 +256,6 @@ function CorrectExpenseDialogForm({
             aria-describedby="finance-correct-note-error"
           />
           <FormError id="finance-correct-note-error" message={form.formState.errors.note?.message} />
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="finance-correct-void-reason">
-            {t("expense.voidReason")}
-          </label>
-          <Input
-            id="finance-correct-void-reason"
-            {...form.register("voidReason")}
-            aria-invalid={Boolean(form.formState.errors.voidReason)}
-            aria-describedby="finance-correct-void-reason-error"
-          />
-          <FormError
-            id="finance-correct-void-reason-error"
-            message={form.formState.errors.voidReason?.message}
-          />
         </div>
 
         <div className={styles.actions}>

@@ -1,39 +1,47 @@
 import type { FastifyInstance } from "fastify";
+import { env } from "src/config/env";
 import { hasPermission, type AuthUser } from "src/lib/context/auth-context";
 import { PERMISSIONS } from "src/constants/permissions";
-import { createReportsService, type PeriodQuery } from "src/modules/reports/reports.service";
-import { createComplaintsService } from "src/modules/complaints/complaints.service";
-import { createCallCenterService } from "src/modules/call-center/call-center.service";
-import { loadReportConfig } from "src/modules/reports/reports.config";
-import { resolveBusinessDay } from "src/modules/reports/periods";
+import { FINANCE_CURRENCY } from "src/modules/finance/finance.constants";
+import { createFinanceAnalyticsService } from "src/modules/finance/finance-analytics.service";
+import { createGpsService } from "src/modules/gps/gps.service";
+import { createVehiclesService } from "src/modules/vehicles/vehicles.service";
+import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
+import {
+  resolveBusinessDay,
+  resolveLastNCalendarDays,
+} from "src/modules/reports/periods";
+import {
+  ACTIVE_RENTAL_STATUSES,
+  DASHBOARD_RECENT_CONTRACTS_LIMIT,
+  DASHBOARD_WEEK_DAYS,
+  PENDING_LINK_STATUSES,
+  READY_FOR_DELIVERY_STATUS,
+  TODAY_DELIVERY_STATUSES,
+} from "src/modules/dashboard/dashboard.constants";
+import { buildWeeklyRentalActivity } from "src/modules/dashboard/dashboard.projection";
 
 const P = PERMISSIONS;
 
+const VEHICLE_NAME_SELECT = {
+  vehicleName: true,
+  modelYear: true,
+  plateNumber: true,
+  model: { select: { name: true } },
+} as const;
+
 /**
- * Home dashboard aggregator. Composes EXISTING domain services (reports /
- * complaints / call-center) so every KPI is single-sourced with the
- * reports/analytics pages — the dashboard never re-derives a metric. Each section
- * is permission-gated and error-isolated: a section the viewer can't see, or one
- * that throws, becomes `null` (rendered as "—"/hidden by the client), never a
- * fabricated number.
- *
- * Branch scope: period sections use the reports scope (userBranchAssignment +
- * reports.view_all_branches); the live "now" sections (complaints/call-center overview)
- * each resolve their own domain scope. A request can only NARROW scope, never widen it.
+ * Diamond home dashboard aggregator. Composes existing domain services and
+ * bounded Prisma counts — never HTTP calls to /finance, /contracts, or
+ * /vehicles. Each section is permission-gated and error-isolated.
  */
 export function createDashboardService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
-  const reports = createReportsService(fastify);
-  const complaints = createComplaintsService(fastify);
-  const callCenter = createCallCenterService(fastify);
+  const vehicles = createVehiclesService(fastify);
+  const financeAnalytics = createFinanceAnalyticsService(prisma);
+  const gps = createGpsService(fastify);
 
-  async function countPurchaseExperiences(eff: { all: boolean; ids: number[] }, from: Date, to: Date) {
-    return prisma.purchaseExperience.count({ where: { createdAt: { gte: from, lt: to }, ...(eff.all ? {} : { branchId: { in: eff.ids } }) } });
-  }
-
-  async function overview(query: PeriodQuery, viewer: AuthUser) {
-    /** Run a section only if the viewer holds its gate permission; swallow errors to null
-     *  (error isolation). Defined per-request so viewer is never shared across requests. */
+  async function overview(viewer: AuthUser, now = new Date()) {
     const runSection = async <T>(label: string, perm: string, fn: () => Promise<T>): Promise<T | null> => {
       if (!hasPermission(viewer, perm)) return null;
       try {
@@ -44,63 +52,152 @@ export function createDashboardService(fastify: FastifyInstance) {
       }
     };
 
-    // Resolve the reports scope + period ONCE (drives the entity counts).
-    const scope = await reports.resolveScope(viewer);
-    const eff = reports.effectiveBranchIds(scope, query.branchIds);
-    const { period } = await reports.resolvePeriodQuery(query);
-    const cur = period.current;
+    const offsetMinutes = env.BUSINESS_TIMEZONE_OFFSET_MINUTES;
+    const week = resolveLastNCalendarDays(now, offsetMinutes, DASHBOARD_WEEK_DAYS);
+    const today = resolveBusinessDay(now, offsetMinutes);
 
-    // "Today" = the BUSINESS-timezone calendar day, resolved once and shared by every
-    // today-counter so the whole card reads the same day. Persistence stays UTC.
-    const reportConfig = await loadReportConfig(fastify);
-    const today = resolveBusinessDay(new Date(), reportConfig.timezoneOffsetMinutes);
-
-    const [
-      kpis,
-      complaintsPeriod, complaintsNow, overdue,
-      callCenterToday, callCenterPeriod,
-      purchaseExperiences,
-    ] = await Promise.all([
-      runSection("kpis", P.REPORTS_EXECUTIVE_READ, () => reports.executiveKpis(query, viewer)),
-      runSection("complaintsPeriod", P.REPORTS_COMPLAINTS_READ, () => reports.complaintOverview(query, viewer)),
-      runSection("complaintsNow", P.COMPLAINTS_READ, () => complaints.overview(viewer)),
-      runSection("overdue", P.COMPLAINTS_READ, () => complaints.list({ page: 1, pageSize: 5, isLate: true, isEscalated: undefined, lifecycleStatus: "OPEN", sort: "slaResolutionDueAt:asc" }, viewer)),
-      runSection("callCenterToday", P.CALL_CENTER_QUEUE_READ, () => callCenter.overview(viewer)),
-      runSection("callCenterPeriod", P.REPORTS_CALL_CENTER_READ, () => reports.callCenterPerformance(query, viewer)),
-      runSection("purchaseExperiences", P.PURCHASE_EXPERIENCES_READ, () => countPurchaseExperiences(eff, cur.from, cur.to)),
-    ]);
-
-    const overdueComplaints = overdue
-      ? overdue.data.map((c) => ({
-          id: c.id, publicNumber: c.publicNumber, category: c.category?.name ?? null,
-          priority: c.priority, lifecycleStatus: c.lifecycleStatus, isLate: c.sla.isLate, isEscalated: c.isEscalated,
-          resolutionDueAt: c.sla.resolutionDueAt, remainingMinutes: c.sla.remainingMinutes,
-        }))
-      : null;
-
-    // "Needs attention today" — derived from already-fetched sections (NOT a new domain).
-    const urgentItems: { kind: string; count: number }[] = [];
-    if (complaintsNow) {
-      if (complaintsNow.lateCount > 0) urgentItems.push({ kind: "OVERDUE_COMPLAINTS", count: complaintsNow.lateCount });
-      if (complaintsNow.escalatedCount > 0) urgentItems.push({ kind: "ESCALATED_COMPLAINTS", count: complaintsNow.escalatedCount });
-    }
-    if (callCenterToday && callCenterToday.dueCallbacks > 0) {
-      urgentItems.push({ kind: "DUE_CALLBACKS", count: callCenterToday.dueCallbacks });
-    }
+    const [fleetStatus, contractKpis, weeklyFinance, weeklyRentalActivity, todayDeliveries, recentContracts, gpsOnline] =
+      await Promise.all([
+        runSection("fleetStatus", P.VEHICLES_READ, () => vehicles.activeFleetStatusCounts()),
+        runSection("kpis", P.CONTRACTS_READ, async () => {
+          const [activeRentals, pendingLinks, deliveries, readyForDelivery, contractsTotal] = await Promise.all([
+            prisma.contract.count({ where: { status: { in: [...ACTIVE_RENTAL_STATUSES] } } }),
+            prisma.contract.count({ where: { status: { in: [...PENDING_LINK_STATUSES] } } }),
+            prisma.contract.count({
+              where: {
+                status: { in: [...TODAY_DELIVERY_STATUSES] },
+                startAt: { gte: today.from, lt: today.to },
+              },
+            }),
+            prisma.contract.count({
+              where: {
+                status: READY_FOR_DELIVERY_STATUS,
+                startAt: { gte: today.from, lt: today.to },
+              },
+            }),
+            prisma.contract.count(),
+          ]);
+          return { activeRentals, pendingLinks, deliveriesToday: deliveries, readyForDelivery, contractsTotal };
+        }),
+        runSection("weeklyFinance", P.FINANCE_READ, async () => {
+          const period = { from: week.from, to: week.to };
+          const [collected, expenses, breakdown] = await Promise.all([
+            financeAnalytics.sumCollected(period),
+            financeAnalytics.sumExpenses(period),
+            financeAnalytics.movementBreakdown(period),
+          ]);
+          return {
+            from: week.from,
+            to: week.to,
+            collected,
+            expenses,
+            netMovement: collected - expenses,
+            currency: FINANCE_CURRENCY,
+            breakdown: breakdown.filter((slice) => slice.amount > 0),
+          };
+        }),
+        runSection("weeklyRentalActivity", P.CONTRACTS_READ, async () => {
+          const [outs, ins] = await Promise.all([
+            prisma.contractCarOut.findMany({
+              where: { occurredAt: { gte: week.from, lt: week.to } },
+              select: { occurredAt: true },
+            }),
+            prisma.contractCarIn.findMany({
+              where: { occurredAt: { gte: week.from, lt: week.to } },
+              select: { occurredAt: true },
+            }),
+          ]);
+          return buildWeeklyRentalActivity(
+            week.days,
+            outs.map((row) => row.occurredAt),
+            ins.map((row) => row.occurredAt),
+            offsetMinutes,
+          );
+        }),
+        runSection("todayDeliveries", P.CONTRACTS_READ, async () => {
+          const rows = await prisma.contract.findMany({
+            where: {
+              status: { in: [...TODAY_DELIVERY_STATUSES] },
+              startAt: { gte: today.from, lt: today.to },
+            },
+            orderBy: { startAt: "asc" },
+            select: {
+              id: true,
+              contractNumber: true,
+              status: true,
+              startAt: true,
+              customer: { select: { name: true } },
+              vehicle: { select: VEHICLE_NAME_SELECT },
+            },
+          });
+          return rows.map((row) => ({
+            id: row.id,
+            contractNumber: row.contractNumber,
+            customerName: row.customer?.name ?? null,
+            vehicleName: vehicleDisplayName({
+              vehicleName: row.vehicle.vehicleName,
+              modelName: row.vehicle.model?.name ?? null,
+              modelYear: row.vehicle.modelYear,
+              plateNumber: row.vehicle.plateNumber,
+            }),
+            startAt: row.startAt!,
+            status: row.status,
+          }));
+        }),
+        runSection("recentContracts", P.CONTRACTS_READ, async () => {
+          const rows = await prisma.contract.findMany({
+            orderBy: { createdAt: "desc" },
+            take: DASHBOARD_RECENT_CONTRACTS_LIMIT,
+            select: {
+              id: true,
+              contractNumber: true,
+              status: true,
+              customer: { select: { name: true } },
+              createdBy: { select: { name: true } },
+              vehicle: { select: VEHICLE_NAME_SELECT },
+            },
+          });
+          return rows.map((row) => ({
+            id: row.id,
+            contractNumber: row.contractNumber,
+            customerName: row.customer?.name ?? null,
+            vehicleName: vehicleDisplayName({
+              vehicleName: row.vehicle.vehicleName,
+              modelName: row.vehicle.model?.name ?? null,
+              modelYear: row.vehicle.modelYear,
+              plateNumber: row.vehicle.plateNumber,
+            }),
+            employeeName: row.createdBy.name ?? null,
+            status: row.status,
+          }));
+        }),
+        runSection("gpsOnline", P.GPS_READ, async () => {
+          const summary = await gps.summary();
+          return summary.online;
+        }),
+      ]);
 
     return {
-      period: { from: cur.from, to: cur.to, previousFrom: period.previous.from, previousTo: period.previous.to, type: period.type },
-      today: { from: today.from, to: today.to, offsetMinutes: reportConfig.timezoneOffsetMinutes },
-      scope: { allBranches: eff.all, branchIds: eff.ids },
-      generatedAt: new Date(),
-      kpis,
-      callCenterToday,
-      callCenterPeriod,
-      complaintsNow,
-      complaintsPeriod,
-      overdueComplaints,
-      entityCounts: { purchaseExperiences: purchaseExperiences ?? null },
-      urgentItems,
+      generatedAt: now,
+      range: { from: week.from, to: week.to },
+      today: { from: today.from, to: today.to, offsetMinutes },
+      kpis: {
+        activeRentals: contractKpis?.activeRentals ?? null,
+        fleetTotal: fleetStatus?.total ?? null,
+        fleetRented: fleetStatus?.rented ?? null,
+        fleetAvailable: fleetStatus?.available ?? null,
+        fleetService: fleetStatus?.service ?? null,
+        pendingLinks: contractKpis?.pendingLinks ?? null,
+        deliveriesToday: contractKpis?.deliveriesToday ?? null,
+        readyForDelivery: contractKpis?.readyForDelivery ?? null,
+        contractsTotal: contractKpis?.contractsTotal ?? null,
+      },
+      weeklyFinance,
+      weeklyRentalActivity,
+      fleetStatus,
+      todayDeliveries,
+      recentContracts,
+      gpsOnline,
     };
   }
 

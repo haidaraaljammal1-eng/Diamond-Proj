@@ -1,28 +1,62 @@
 import type { FinancialLedgerKind, ManualExpenseCategory, PrismaClient } from "@prisma/client";
 import { env } from "src/config/env";
-import type { Period } from "src/modules/reports/periods";
+import {
+  businessDayKey,
+  enumerateBusinessDays,
+  type Period,
+} from "src/modules/reports/periods";
 import {
   COLLECTION_LEDGER_KINDS,
   EXPENSE_LEDGER_KINDS,
   FINANCE_CURRENCY,
 } from "src/modules/finance/finance.constants";
 
-function dayKey(date: Date, offsetMinutes: number): string {
-  const shifted = new Date(date.getTime() + offsetMinutes * 60_000);
-  const y = shifted.getUTCFullYear();
-  const m = String(shifted.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(shifted.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+export const FINANCE_MOVEMENT_BREAKDOWN_KEYS = [
+  "RENTAL_PAYMENT",
+  "RENEWAL_PAYMENT",
+  "RECONCILIATION_PAYMENT",
+  "POST_CLOSE_RECEIVABLE_PAYMENT",
+  "MAINTENANCE_EXPENSE",
+  "MANUAL_EXPENSE",
+] as const;
+
+export type FinanceMovementBreakdownKey = (typeof FINANCE_MOVEMENT_BREAKDOWN_KEYS)[number];
+
+export interface FinanceMovementSlice {
+  key: FinanceMovementBreakdownKey;
+  direction: "COLLECTION" | "EXPENSE";
+  amount: number;
 }
 
-function enumerateDays(period: Period, offsetMinutes: number): string[] {
-  const days: string[] = [];
-  const cursor = new Date(period.from);
-  while (cursor < period.to) {
-    days.push(dayKey(cursor, offsetMinutes));
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return days;
+const COLLECTION_BREAKDOWN_KEYS: FinanceMovementBreakdownKey[] = [
+  "RENTAL_PAYMENT",
+  "RENEWAL_PAYMENT",
+  "RECONCILIATION_PAYMENT",
+  "POST_CLOSE_RECEIVABLE_PAYMENT",
+];
+
+/** Net Manual Expense for a window: current amount minus any void reversal. */
+export function assembleFinanceMovementBreakdown(
+  amountByKind: ReadonlyMap<string, number>,
+): FinanceMovementSlice[] {
+  const manualNet =
+    (amountByKind.get("MANUAL_EXPENSE") ?? 0) -
+    (amountByKind.get("MANUAL_EXPENSE_REVERSAL") ?? 0);
+
+  const slices: FinanceMovementSlice[] = [
+    ...COLLECTION_BREAKDOWN_KEYS.map((key) => ({
+      key,
+      direction: "COLLECTION" as const,
+      amount: amountByKind.get(key) ?? 0,
+    })),
+    {
+      key: "MAINTENANCE_EXPENSE",
+      direction: "EXPENSE",
+      amount: amountByKind.get("MAINTENANCE_EXPENSE") ?? 0,
+    },
+    { key: "MANUAL_EXPENSE", direction: "EXPENSE", amount: manualNet },
+  ];
+  return slices.filter((slice) => slice.amount !== 0);
 }
 
 export function createFinanceAnalyticsService(prisma: PrismaClient) {
@@ -70,12 +104,12 @@ export function createFinanceAnalyticsService(prisma: PrismaClient) {
       });
 
       const buckets = new Map<string, { collected: number; expenses: number }>();
-      for (const day of enumerateDays(period, offsetMinutes)) {
+      for (const day of enumerateBusinessDays(period, offsetMinutes)) {
         buckets.set(day, { collected: 0, expenses: 0 });
       }
 
       for (const entry of entries) {
-        const key = dayKey(entry.occurredAt, offsetMinutes);
+        const key = businessDayKey(entry.occurredAt, offsetMinutes);
         const bucket = buckets.get(key);
         if (!bucket) continue;
         if ((COLLECTION_LEDGER_KINDS as FinancialLedgerKind[]).includes(entry.kind)) {
@@ -138,6 +172,19 @@ export function createFinanceAnalyticsService(prisma: PrismaClient) {
       ].filter((row) => row.amount !== 0);
 
       return rows;
+    },
+
+    async movementBreakdown(period: Period): Promise<FinanceMovementSlice[]> {
+      const groups = await prisma.financialLedgerEntry.groupBy({
+        by: ["kind"],
+        where: { occurredAt: { gte: period.from, lt: period.to } },
+        _sum: { amount: true },
+      });
+      const amountByKind = new Map<string, number>();
+      for (const group of groups) {
+        amountByKind.set(group.kind, group._sum.amount ?? 0);
+      }
+      return assembleFinanceMovementBreakdown(amountByKind);
     },
 
     currency: FINANCE_CURRENCY,

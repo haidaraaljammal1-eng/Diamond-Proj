@@ -58,7 +58,7 @@ Staff-recorded company expenses outside other Diamond modules.
 
 - Categories: `VEHICLE_CLEANING`, `FUEL`, `PARKING`, `GOVERNMENT_FEES`, `OFFICE_ADMIN`, `MARKETING`, `OPERATIONS`, `OTHER`
 - Lifecycle: `ACTIVE` → `VOID` (no hard delete)
-- Correction: void original + reversal ledger + new expense with `correctionOfExpenseId`
+- Correction: in-place update of the same `ManualExpense` (status stays `ACTIVE`) + immutable `ManualExpenseRevision` history. No VOID, no `MANUAL_EXPENSE_REVERSAL`, no replacement row. The existing `manual-expense:<id>:create` ledger projection is updated in place when amount, date, or vehicle change.
 - Optional `attachmentId` (receipt evidence via shared Attachment model)
 - **No Manual Income**
 

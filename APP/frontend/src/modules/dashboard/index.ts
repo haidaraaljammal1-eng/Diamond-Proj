@@ -4,10 +4,8 @@ export {
   DASHBOARD_PAGE_PERMISSIONS,
   DASHBOARD_READ_PERMISSION,
 } from "./dashboard.permissions";
+export { DASHBOARD_QUICK_ACCESS, GENERATE_RENTAL_LINK_HREF } from "./utils/dashboard.routes";
 export type {
-  ContractStatus,
-  DashboardOverview,
-  DashboardScope,
-  RecentContract,
-  VehicleStatus,
+  DashboardOverviewDto,
+  DashboardQuickAccessItem,
 } from "./types/dashboard.types";

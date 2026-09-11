@@ -83,6 +83,10 @@ export async function recordMaintenanceExpenseLedger(tx: Tx, maintenanceOrderId:
   });
 }
 
+export function manualExpenseCreateDedupeKey(expenseId: string): string {
+  return `manual-expense:${expenseId}:create`;
+}
+
 export async function recordManualExpenseLedger(
   tx: Tx,
   expense: { id: string; amount: number; recognizedAt: Date; vehicleId: number | null },
@@ -91,13 +95,34 @@ export async function recordManualExpenseLedger(
     kind: "MANUAL_EXPENSE",
     sourceType: "MANUAL_EXPENSE",
     sourceId: expense.id,
-    dedupeKey: `manual-expense:${expense.id}:create`,
+    dedupeKey: manualExpenseCreateDedupeKey(expense.id),
     amount: expense.amount,
     currency: FINANCE_CURRENCY,
     occurredAt: expense.recognizedAt,
     vehicleId: expense.vehicleId,
     manualExpenseId: expense.id,
   });
+}
+
+/** Rebuildable projection: keep the same create row, update current values. */
+export async function reprojectManualExpenseLedger(
+  tx: Tx,
+  expense: { id: string; amount: number; recognizedAt: Date; vehicleId: number | null },
+): Promise<void> {
+  const result = await tx.financialLedgerEntry.updateMany({
+    where: {
+      dedupeKey: manualExpenseCreateDedupeKey(expense.id),
+      kind: "MANUAL_EXPENSE",
+    },
+    data: {
+      amount: expense.amount,
+      occurredAt: expense.recognizedAt,
+      vehicleId: expense.vehicleId,
+    },
+  });
+  if (result.count === 0) {
+    await recordManualExpenseLedger(tx, expense);
+  }
 }
 
 export async function recordManualExpenseReversalLedger(

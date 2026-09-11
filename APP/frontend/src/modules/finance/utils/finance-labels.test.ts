@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   expenseCategoryLabel,
+  isHiddenTechnicalReversalRow,
+  isVoidedOriginalExpenseRow,
   ledgerMovementLabel,
+  ledgerRowMovementKey,
   ledgerSourceFromKind,
   receivablePaymentStateLabel,
   receivableSourceLabel,
@@ -18,8 +22,8 @@ describe("finance labels", () => {
   });
 
   it("maps ledger movement directions without income wording", () => {
-    assert.equal(ledgerMovementLabel("EXPENSE_REVERSAL", t), "ledgerMovement.EXPENSE_REVERSAL");
-    assert.notEqual(ledgerMovementLabel("EXPENSE_REVERSAL", t), "Income");
+    assert.equal(ledgerMovementLabel("VOIDED", t), "ledgerMovement.VOIDED");
+    assert.notEqual(ledgerMovementLabel("VOIDED", t), "Income");
   });
 
   it("maps manual expense categories", () => {
@@ -32,6 +36,53 @@ describe("finance labels", () => {
     assert.equal(ledgerSourceFromKind("MANUAL_EXPENSE_REVERSAL"), "MANUAL_EXPENSE");
     assert.equal(ledgerSourceFromKind("MANUAL_EXPENSE"), "MANUAL_EXPENSE");
     assert.equal(ledgerSourceFromKind("RENTAL_PAYMENT"), "RENTAL_PAYMENT");
+  });
+
+  it("does not treat a voided original Manual Expense as an active Expense movement", () => {
+    const voided = {
+      kind: "MANUAL_EXPENSE",
+      direction: "EXPENSE" as const,
+      manualExpenseStatus: "VOID" as const,
+    };
+    assert.equal(isVoidedOriginalExpenseRow(voided), true);
+    assert.equal(ledgerRowMovementKey(voided), "VOIDED");
+    assert.equal(
+      isVoidedOriginalExpenseRow({ kind: "MANUAL_EXPENSE", manualExpenseStatus: "ACTIVE" }),
+      false,
+    );
+    assert.equal(
+      isVoidedOriginalExpenseRow({ kind: "MANUAL_EXPENSE_REVERSAL", manualExpenseStatus: "VOID" }),
+      false,
+    );
+    assert.equal(isHiddenTechnicalReversalRow({ kind: "MANUAL_EXPENSE_REVERSAL" }), true);
+    assert.equal(isHiddenTechnicalReversalRow({ kind: "MANUAL_EXPENSE" }), false);
+  });
+});
+
+describe("voided amount styling", () => {
+  it("uses strikethrough and muted color, not collection green", () => {
+    const css = readFileSync(new URL("../components/finance-ledger/finance-ledger.module.css", import.meta.url), "utf8");
+    assert.match(css, /\.amountVoided[\s\S]*?text-decoration:\s*line-through/);
+    const voidedBlock = css.split(".amountVoided")[1]?.split("}")[0] ?? "";
+    assert.equal(voidedBlock.includes("#2f6b3f"), false);
+  });
+
+  it("shares one column definition for ledger header and body", () => {
+    const css = readFileSync(new URL("../components/finance-ledger/finance-ledger.module.css", import.meta.url), "utf8");
+    const tsx = readFileSync(new URL("../components/finance-ledger/finance-ledger.tsx", import.meta.url), "utf8");
+    assert.match(css, /table-layout:\s*fixed/);
+    assert.match(css, /--ledger-col-date/);
+    assert.match(css, /--ledger-col-movement/);
+    assert.match(css, /--ledger-col-source/);
+    assert.match(css, /--ledger-col-reference/);
+    assert.match(css, /--ledger-col-contract/);
+    assert.match(css, /--ledger-col-amount/);
+    assert.match(css, /--ledger-col-action/);
+    assert.match(tsx, /<colgroup>/);
+    assert.match(tsx, /styles\.colAmount/);
+    assert.match(tsx, /styles\.colAction/);
+    assert.equal((tsx.match(/styles\.colAmount/g) ?? []).length >= 3, true);
+    assert.equal((tsx.match(/styles\.colAction/g) ?? []).length >= 3, true);
   });
 });
 

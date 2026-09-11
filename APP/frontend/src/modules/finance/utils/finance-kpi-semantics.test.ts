@@ -33,7 +33,7 @@ describe("Finance KPI semantics", () => {
     const finance = en.Finance as Record<string, Record<string, string>>;
     assert.equal(finance.ledgerMovement.COLLECTION, "Customer Collection");
     assert.equal(finance.ledgerMovement.EXPENSE, "Expense");
-    assert.equal(finance.ledgerMovement.EXPENSE_REVERSAL, "Expense Reversal");
+    assert.equal(finance.ledgerMovement.VOIDED, "Voided");
     assert.equal(finance.ledgerSource.RENTAL_PAYMENT, "Rental Payment");
     assert.equal(finance.ledgerSource.RECONCILIATION_PAYMENT, "Return Reconciliation");
     assert.equal(finance.ledgerSource.POST_CLOSE_RECEIVABLE_PAYMENT, "Post-Close Charge");
@@ -61,5 +61,32 @@ describe("Finance KPI semantics", () => {
       assert.notEqual(arStates[key], key);
       assert.notEqual(arStates[key], "مستحق التحصيل");
     }
+  });
+
+  it("keeps correction history labels aligned in EN and AR", () => {
+    const rootDir = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
+    const ar = JSON.parse(readFileSync(join(rootDir, "messages/ar.json"), "utf8")) as {
+      Finance: { expense: Record<string, string>; errors: Record<string, string> };
+    };
+    const expense = en.Finance.expense as Record<string, string>;
+    const arExpense = ar.Finance.expense;
+    assert.equal(expense.correctAction, "Correct Expense");
+    assert.equal(arExpense.correctAction, "تصحيح المصروف");
+    assert.equal(expense.correctionHistory, "Correction History");
+    assert.equal(arExpense.correctionHistory, "سجل التعديلات");
+    assert.equal(expense.correctedBy, "Corrected by");
+    assert.equal(arExpense.correctedBy, "تم التعديل بواسطة");
+    assert.equal(expense.correctedAt, "Corrected at");
+    assert.equal(arExpense.correctedAt, "تاريخ التعديل");
+    assert.equal(expense.previousValue, "Previous value");
+    assert.equal(arExpense.previousValue, "القيمة السابقة");
+    assert.equal(expense.newValue, "New value");
+    assert.equal(arExpense.newValue, "القيمة الجديدة");
+    assert.equal(expense.statusVoid, "Voided");
+    assert.equal(arExpense.statusVoid, "ملغى");
+    const errors = en.Finance.errors as Record<string, string>;
+    const arErrors = ar.Finance.errors;
+    assert.deepEqual(Object.keys(errors).sort(), Object.keys(arErrors).sort());
+    assert.equal(errors.FINANCE_EXPENSE_NO_CHANGES.includes("FINANCE_"), false);
   });
 });

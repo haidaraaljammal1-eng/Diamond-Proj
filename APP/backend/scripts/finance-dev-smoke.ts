@@ -98,12 +98,12 @@ async function main() {
     category: "OPERATIONS",
     recognizedAt: new Date().toISOString(),
     description: "Corrected dev smoke expense",
-    voidReason: "Amount correction smoke",
   });
   console.log(`POST correct -> ${correction.status}`);
 
-  const replacementId = (correction.json.data as { id: string }).id;
-  await request("POST", `/finance/expenses/${replacementId}/void`, token, {
+  const correctedId = (correction.json.data as { id: string }).id;
+  if (correctedId !== baseId) process.exit(1);
+  await request("POST", `/finance/expenses/${correctedId}/void`, token, {
     voidReason: "Dev smoke cleanup after correction",
   });
 

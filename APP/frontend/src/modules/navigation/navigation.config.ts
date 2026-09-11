@@ -7,17 +7,18 @@ import { FINANCE_PAGE_PERMISSIONS } from "@/modules/finance/finance.permissions"
 import type { NavigationConfig } from "./navigation.types";
 
 /**
- * Central navigation configuration — mirrors the Diamond Demo rail exactly
+ * Central navigation configuration — Diamond operational rail
  * (order, labels, icons, admin-only owners, WhatsApp action, badge).
  *
  * Permission notes:
  * - `dashboard.read`, the Staff entry (`users.read`), the Roles entry
  *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`),
  *   Contracts (`contracts.read`), Maintenance (`maintenance.read`),
- *   GPS (`gps.read`), and Violations & Salik (`violations.read`) map to
- *   permissions that exist in the Backend catalog.
- * - Every other Demo page still has NO matching Backend permission, so it
- *   intentionally declares none (never invented).
+ *   GPS (`gps.read`), Violations & Salik (`violations.read`), and
+ *   Finance (`finance.read`) map to permissions that exist in the Backend
+ *   catalog.
+ * - Remaining Demo pages with no matching Backend permission declare none
+ *   (never invented).
  * - `adminOnly` mirrors the Demo `adminonly` owner/employee behavior.
  */
 export const navigationConfig: NavigationConfig = [
@@ -32,14 +33,6 @@ export const navigationConfig: NavigationConfig = [
         href: "/dashboard",
         icon: "dashboard",
         permission: "dashboard.read",
-      },
-      {
-        key: "operations",
-        type: "link",
-        labelKey: "operations",
-        href: "/operations",
-        icon: "operations",
-        adminOnly: true,
       },
       {
         key: "cars",

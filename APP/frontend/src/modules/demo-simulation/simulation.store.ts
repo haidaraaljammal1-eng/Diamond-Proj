@@ -38,6 +38,9 @@ interface DemoSimulationState extends SimulationSnapshot {
   ) => void;
   clearRoadLiabilitiesOverlay: () => void;
   simulateFinance: (overlay: FinanceSimulationOverlay) => void;
+  patchFinanceOverlay: (
+    updater: (overlay: FinanceSimulationOverlay) => FinanceSimulationOverlay,
+  ) => void;
   clearFinanceOverlay: () => void;
   clearRentalOverlay: () => void;
   reset: () => void;
@@ -245,6 +248,12 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
       active: true,
       financeOverlay: overlay,
     });
+  },
+
+  patchFinanceOverlay(updater) {
+    const overlay = get().financeOverlay;
+    if (!overlay) return;
+    set({ financeOverlay: updater(overlay) });
   },
 
   clearFinanceOverlay() {

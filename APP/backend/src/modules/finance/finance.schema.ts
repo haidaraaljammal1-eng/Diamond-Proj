@@ -62,7 +62,7 @@ export const LedgerListQuerySchema = PaginationQuerySchema.extend({
     ])
     .optional(),
   sourceType: z.enum(["CONTRACT_PAYMENT", "MAINTENANCE_ORDER", "MANUAL_EXPENSE"]).optional(),
-  direction: z.enum(["COLLECTION", "EXPENSE", "EXPENSE_REVERSAL"]).optional(),
+  direction: z.enum(["COLLECTION", "EXPENSE", "EXPENSE_REVERSAL", "VOIDED"]).optional(),
   sort: z.string().optional(),
 });
 
@@ -99,6 +99,8 @@ export const LedgerEntrySchema = z.object({
   contractPaymentId: z.string().nullable(),
   maintenanceOrderId: z.number().int().nullable(),
   manualExpenseId: z.string().nullable(),
+  /** Read projection: VOID originals are not active Expense movements. */
+  manualExpenseStatus: z.enum(["ACTIVE", "VOID"]).nullable(),
 });
 
 export const OpenReceivableSchema = z.object({
@@ -162,8 +164,15 @@ export const VoidManualExpenseSchema = z.object({
   voidReason: z.string().trim().min(1).max(500),
 });
 
-export const CorrectManualExpenseSchema = CreateManualExpenseSchema.extend({
-  voidReason: z.string().trim().min(1).max(500),
+export const CorrectManualExpenseSchema = z.object({
+  amount: wholeAed,
+  category: ManualExpenseCategorySchema,
+  recognizedAt: z.coerce.date(),
+  description: z.string().trim().min(1).max(500),
+  vehicleId: z.number().int().positive().nullable().optional(),
+  vendorName: z.string().trim().max(200).nullable().optional(),
+  receiptNumber: z.string().trim().max(100).nullable().optional(),
+  note: z.string().trim().max(1000).nullable().optional(),
 });
 
 export const ManualExpenseDetailSchema = z.object({
@@ -209,4 +218,42 @@ export const ManualExpenseDetailSchema = z.object({
     })
     .nullable(),
   createdAt: z.date(),
+  correctionHistory: z.array(
+    z.object({
+      id: z.string(),
+      changedAt: z.date(),
+      changedBy: z.object({
+        id: z.number().int(),
+        name: z.string().nullable(),
+        email: z.string(),
+      }),
+      changes: z.array(
+        z.object({
+          field: z.string(),
+          before: z.union([
+            z.string(),
+            z.number(),
+            z.boolean(),
+            z.null(),
+            z.object({
+              id: z.number().int(),
+              vehicleName: z.string().nullable(),
+              plateNumber: z.string().nullable(),
+            }),
+          ]),
+          after: z.union([
+            z.string(),
+            z.number(),
+            z.boolean(),
+            z.null(),
+            z.object({
+              id: z.number().int(),
+              vehicleName: z.string().nullable(),
+              plateNumber: z.string().nullable(),
+            }),
+          ]),
+        }),
+      ),
+    }),
+  ),
 });

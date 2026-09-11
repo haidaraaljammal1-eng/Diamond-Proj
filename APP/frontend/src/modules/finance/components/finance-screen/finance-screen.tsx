@@ -174,30 +174,6 @@ export function FinanceScreen() {
 
       <FinanceKpis summary={overview.summary} loading={overview.isSummaryLoading} />
 
-      <FinanceOpenReceivables
-        items={receivables.items}
-        meta={receivables.meta}
-        search={receivables.query.search}
-        sourceType={receivables.query.sourceType}
-        sort={receivables.query.sort}
-        loading={receivables.isLoading}
-        error={receivables.error}
-        onSearch={receivables.applySearch}
-        onClearSearch={receivables.clearSearch}
-        onSourceTypeChange={receivables.setSourceType}
-        onSortChange={receivables.setSort}
-        onPageChange={receivables.setPage}
-        onRetry={() => void overview.refresh()}
-        onViewContract={openContract}
-      />
-
-      <FinanceAnalyticsSection
-        analytics={overview.analytics}
-        loading={overview.isAnalyticsLoading}
-        error={overview.analyticsError}
-        onRetry={() => void overview.refresh()}
-      />
-
       <FinanceLedger
         items={ledger.items}
         meta={ledger.meta}
@@ -217,6 +193,30 @@ export function FinanceScreen() {
         onViewExpense={openExpenseDetail}
       />
 
+      <FinanceAnalyticsSection
+        analytics={overview.analytics}
+        loading={overview.isAnalyticsLoading}
+        error={overview.analyticsError}
+        onRetry={() => void overview.refresh()}
+      />
+
+      <FinanceOpenReceivables
+        items={receivables.items}
+        meta={receivables.meta}
+        search={receivables.query.search}
+        sourceType={receivables.query.sourceType}
+        sort={receivables.query.sort}
+        loading={receivables.isLoading}
+        error={receivables.error}
+        onSearch={receivables.applySearch}
+        onClearSearch={receivables.clearSearch}
+        onSourceTypeChange={receivables.setSourceType}
+        onSortChange={receivables.setSort}
+        onPageChange={receivables.setPage}
+        onRetry={() => void overview.refresh()}
+        onViewContract={openContract}
+      />
+
       <AddExpenseDialog
         open={addOpen}
         onClose={() => setAddOpen(false)}
@@ -228,7 +228,7 @@ export function FinanceScreen() {
         detail={expense.detail}
         loading={expense.isDetailLoading}
         error={expense.detailError}
-        canManage={overview.canManageExpenses && !overview.simulationActive}
+        canManage={overview.canManageExpenses}
         demoOnly={Boolean(expense.detailId && isSimulatedFinanceId(expense.detailId))}
         onClose={() => {
           setExpenseDrawerOpen(false);

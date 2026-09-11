@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Drawer } from "@/shared/components/ui/drawer";
-import type { ManualExpenseDetailDto } from "../../types/finance.types";
+import type { ManualExpenseCategory, ManualExpenseDetailDto } from "../../types/finance.types";
 import {
   expenseCategoryLabel,
   formatVehicleLabel,
@@ -23,6 +23,50 @@ export interface ExpenseDetailDrawerProps {
   onRetry: () => void;
   onVoid: () => void;
   onCorrect: () => void;
+}
+
+function isVehicleSnap(
+  value: unknown,
+): value is { id: number; vehicleName: string | null; plateNumber: string | null } {
+  return typeof value === "object" && value !== null && "id" in value;
+}
+
+function formatChangeValue(
+  field: string,
+  value: unknown,
+  t: (key: string) => string,
+  format: ReturnType<typeof useFormatter>,
+): string {
+  if (value == null || value === "") return "—";
+  if (field === "amount" && typeof value === "number") return formatFinanceAed(value);
+  if (field === "category" && typeof value === "string") {
+    return expenseCategoryLabel(value as ManualExpenseCategory, t);
+  }
+  if (field === "recognizedAt" && typeof value === "string") {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return format.dateTime(date, { dateStyle: "medium", timeStyle: "short" });
+  }
+  if (field === "vehicle") {
+    return isVehicleSnap(value) ? formatVehicleLabel(value) || "—" : "—";
+  }
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return "—";
+}
+
+const CHANGE_FIELD_KEYS: Record<string, string> = {
+  amount: "expense.amount",
+  category: "expense.category",
+  recognizedAt: "expense.date",
+  description: "expense.description",
+  vehicle: "expense.vehicle",
+  vendorName: "expense.vendor",
+  receiptNumber: "expense.receiptNumber",
+  note: "expense.note",
+};
+
+function changeFieldLabel(field: string, t: (key: string) => string): string {
+  return t(CHANGE_FIELD_KEYS[field] ?? "expense.description");
 }
 
 function Kv({ label, value, ltr }: { label: string; value?: string | null; ltr?: boolean }) {
@@ -118,6 +162,7 @@ export function ExpenseDetailDrawer({
           />
           {detail.status === "VOID" ? (
             <>
+              <p className={styles.demoNote}>{t("expense.voidedEffect")}</p>
               <Kv label={t("expense.voidReason")} value={detail.voidReason} />
               <Kv
                 label={t("expense.voidedBy")}
@@ -136,12 +181,38 @@ export function ExpenseDetailDrawer({
               />
             </>
           ) : null}
-          {detail.correctionOfExpenseId ? (
-            <Kv
-              label={t("expense.correctionOf")}
-              value={detail.correctionOfExpenseId}
-              ltr
-            />
+
+          {(detail.correctionHistory ?? []).length > 0 ? (
+            <section className={styles.history} data-testid="finance-correction-history">
+              <h3 className={styles.historyTitle}>{t("expense.correctionHistory")}</h3>
+              {(detail.correctionHistory ?? []).map((revision) => (
+                <article key={revision.id} className={styles.historyItem}>
+                  <p className={styles.historyWhen}>
+                    {format.dateTime(new Date(revision.changedAt), {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                  <p className={styles.historyWho}>
+                    {t("expense.correctedBy")}: {revision.changedBy.name ?? revision.changedBy.email}
+                  </p>
+                  <ul className={styles.historyChanges}>
+                    {revision.changes.map((change) => (
+                      <li key={`${revision.id}-${change.field}`}>
+                        <span className={styles.historyField}>
+                          {changeFieldLabel(change.field, t)}
+                        </span>
+                        <p className={styles.historyValues} dir="auto">
+                          {formatChangeValue(change.field, change.before, t, format)}
+                          {" → "}
+                          {formatChangeValue(change.field, change.after, t, format)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </section>
           ) : null}
 
           {canManage && detail.status === "ACTIVE" ? (
@@ -155,15 +226,17 @@ export function ExpenseDetailDrawer({
               >
                 {t("expense.correctAction")}
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                data-testid="finance-void-expense"
-                onClick={onVoid}
-              >
-                {t("expense.voidAction")}
-              </Button>
+              {demoOnly ? null : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  data-testid="finance-void-expense"
+                  onClick={onVoid}
+                >
+                  {t("expense.voidAction")}
+                </Button>
+              )}
             </div>
           ) : null}
         </div>

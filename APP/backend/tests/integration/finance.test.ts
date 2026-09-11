@@ -320,7 +320,8 @@ if (!RUN) {
     assert.equal(afterVoid.expenses - expensesBefore, 0);
   });
 
-  test("manual expense correction preserves audit trail and net expense", async () => {
+  test("manual expense correction updates the same record in place", async () => {
+    const expensesBefore = (await financeSummary()).expenses;
     const createRes = await app.inject({
       method: "POST",
       url: "/finance/expenses",
@@ -342,19 +343,316 @@ if (!RUN) {
         category: "VEHICLE_CLEANING",
         recognizedAt: "2026-08-01T10:00:00.000Z",
         description: "Corrected entry",
-        voidReason: "Amount correction",
       },
     });
     assert.equal(corrected.statusCode, 200, corrected.body);
-    assert.equal(corrected.json().data.amount, 80);
-    assert.equal(corrected.json().data.correctionOfExpenseId, expenseId);
+    const body = corrected.json().data;
+    assert.equal(body.id, expenseId);
+    assert.equal(body.amount, 80);
+    assert.equal(body.status, "ACTIVE");
+    assert.equal(body.correctionOfExpenseId, null);
+    assert.equal(body.correctionHistory.length, 1);
+    assert.deepEqual(
+      body.correctionHistory[0].changes.map((change: { field: string }) => change.field).sort(),
+      ["amount", "description"],
+    );
+    assert.equal(body.correctionHistory[0].changedBy.id, adminUserId);
 
-    const original = await prisma.manualExpense.findUniqueOrThrow({ where: { id: expenseId } });
-    assert.equal(original.status, "VOID");
-    const ledger = await prisma.financialLedgerEntry.findMany({
-      where: { manualExpenseId: { in: [expenseId, corrected.json().data.id] } },
+    const row = await prisma.manualExpense.findUniqueOrThrow({ where: { id: expenseId } });
+    assert.equal(row.status, "ACTIVE");
+    assert.equal(row.amount, 80);
+    const replacements = await prisma.manualExpense.count({
+      where: { correctionOfExpenseId: expenseId },
     });
-    assert.equal(ledger.length, 3);
+    assert.equal(replacements, 0);
+    const ledger = await prisma.financialLedgerEntry.findMany({
+      where: { manualExpenseId: expenseId },
+    });
+    assert.equal(ledger.length, 1);
+    assert.equal(ledger[0]?.kind, "MANUAL_EXPENSE");
+    assert.equal(ledger[0]?.amount, 80);
+    assert.equal((await financeSummary()).expenses - expensesBefore, 80);
+  });
+
+  test("description-only correction preserves other fields", async () => {
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/finance/expenses",
+      headers: auth(token),
+      payload: {
+        amount: 65,
+        category: "FUEL",
+        recognizedAt: "2026-08-02T10:00:00.000Z",
+        description: "Fuel",
+        vehicleId,
+        vendorName: "ADNOC",
+        receiptNumber: "R-65",
+        note: "Keep note",
+      },
+    });
+    const expenseId = createRes.json().data.id as string;
+    const corrected = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 65,
+        category: "FUEL",
+        recognizedAt: "2026-08-02T10:00:00.000Z",
+        description: "Fuel top-up",
+        vehicleId,
+        vendorName: "ADNOC",
+        receiptNumber: "R-65",
+        note: "Keep note",
+      },
+    });
+    assert.equal(corrected.statusCode, 200, corrected.body);
+    const body = corrected.json().data;
+    assert.equal(body.id, expenseId);
+    assert.equal(body.amount, 65);
+    assert.equal(body.category, "FUEL");
+    assert.equal(body.vendorName, "ADNOC");
+    assert.equal(body.receiptNumber, "R-65");
+    assert.equal(body.note, "Keep note");
+    assert.equal(body.vehicle.id, vehicleId);
+    assert.deepEqual(
+      body.correctionHistory[0].changes.map((change: { field: string }) => change.field),
+      ["description"],
+    );
+  });
+
+  test("multiple corrections stay immutable on the same expense", async () => {
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/finance/expenses",
+      headers: auth(token),
+      payload: {
+        amount: 100,
+        category: "PARKING",
+        recognizedAt: "2026-08-03T10:00:00.000Z",
+        description: "Parking",
+      },
+    });
+    const expenseId = createRes.json().data.id as string;
+    const first = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 90,
+        category: "PARKING",
+        recognizedAt: "2026-08-03T10:00:00.000Z",
+        description: "Parking",
+      },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 80,
+        category: "PARKING",
+        recognizedAt: "2026-08-03T10:00:00.000Z",
+        description: "Parking",
+      },
+    });
+    assert.equal(first.statusCode, 200, first.body);
+    assert.equal(second.statusCode, 200, second.body);
+    const history = second.json().data.correctionHistory as Array<{
+      changes: Array<{ field: string; before: number; after: number }>;
+    }>;
+    assert.equal(second.json().data.id, expenseId);
+    assert.equal(second.json().data.amount, 80);
+    assert.equal(history.length, 2);
+    assert.equal(history[0]?.changes[0]?.before, 90);
+    assert.equal(history[0]?.changes[0]?.after, 80);
+    assert.equal(history[1]?.changes[0]?.before, 100);
+    assert.equal(history[1]?.changes[0]?.after, 90);
+  });
+
+  test("category correction moves expense breakdown to the new category only", async () => {
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/finance/expenses",
+      headers: auth(token),
+      payload: {
+        amount: 40,
+        category: "VEHICLE_CLEANING",
+        recognizedAt: "2026-08-04T10:00:00.000Z",
+        description: "Ops recode",
+      },
+    });
+    const expenseId = createRes.json().data.id as string;
+    const corrected = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 40,
+        category: "OPERATIONS",
+        recognizedAt: "2026-08-04T10:00:00.000Z",
+        description: "Ops recode",
+      },
+    });
+    assert.equal(corrected.statusCode, 200, corrected.body);
+    const analytics = await app.inject({
+      method: "GET",
+      url: `/finance/analytics?from=2026-08-04T00:00:00.000Z&to=2026-08-05T00:00:00.000Z`,
+      headers: auth(token),
+    });
+    assert.equal(analytics.statusCode, 200, analytics.body);
+    const breakdown = analytics.json().data.expenseBreakdown as Array<{
+      category: string;
+      amount: number;
+    }>;
+    const cleaning = breakdown.find((row) => row.category === "VEHICLE_CLEANING");
+    const operations = breakdown.find((row) => row.category === "OPERATIONS");
+    assert.equal(cleaning?.amount ?? 0, 0);
+    assert.equal(operations?.amount, 40);
+  });
+
+  test("date correction follows the corrected recognizedAt period", async () => {
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/finance/expenses",
+      headers: auth(token),
+      payload: {
+        amount: 25,
+        category: "OTHER",
+        recognizedAt: "2026-08-10T10:00:00.000Z",
+        description: "Date move",
+      },
+    });
+    const expenseId = createRes.json().data.id as string;
+    const corrected = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 25,
+        category: "OTHER",
+        recognizedAt: "2026-08-08T10:00:00.000Z",
+        description: "Date move",
+      },
+    });
+    assert.equal(corrected.statusCode, 200, corrected.body);
+    const oldPeriod = await app.inject({
+      method: "GET",
+      url: `/finance/summary?from=2026-08-10T00:00:00.000Z&to=2026-08-11T00:00:00.000Z`,
+      headers: auth(token),
+    });
+    const newPeriod = await app.inject({
+      method: "GET",
+      url: `/finance/summary?from=2026-08-08T00:00:00.000Z&to=2026-08-09T00:00:00.000Z`,
+      headers: auth(token),
+    });
+    assert.equal(oldPeriod.json().data.expenses, 0);
+    assert.equal(newPeriod.json().data.expenses, 25);
+    const ledger = await prisma.financialLedgerEntry.findMany({
+      where: { manualExpenseId: expenseId, kind: "MANUAL_EXPENSE" },
+    });
+    assert.equal(ledger.length, 1);
+    assert.equal(ledger[0]?.occurredAt.toISOString(), "2026-08-08T10:00:00.000Z");
+  });
+
+  test("voided expenses cannot be corrected and no-change submissions are rejected", async () => {
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/finance/expenses",
+      headers: auth(token),
+      payload: {
+        amount: 15,
+        category: "OFFICE_ADMIN",
+        recognizedAt: "2026-08-11T10:00:00.000Z",
+        description: "Stationery",
+      },
+    });
+    const expenseId = createRes.json().data.id as string;
+    const unchanged = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 15,
+        category: "OFFICE_ADMIN",
+        recognizedAt: "2026-08-11T10:00:00.000Z",
+        description: "Stationery",
+      },
+    });
+    assert.equal(unchanged.statusCode, 422);
+    assert.equal(unchanged.json().error.context.reason, "FINANCE_EXPENSE_NO_CHANGES");
+    const revisions = await prisma.manualExpenseRevision.count({
+      where: { manualExpenseId: expenseId },
+    });
+    assert.equal(revisions, 0);
+
+    const voidRes = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/void`,
+      headers: auth(token),
+      payload: { voidReason: "Entered twice" },
+    });
+    assert.equal(voidRes.statusCode, 200, voidRes.body);
+    assert.equal(voidRes.json().data.status, "VOID");
+    assert.equal(voidRes.json().data.voidReason, "Entered twice");
+
+    const voidedCorrect = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 10,
+        category: "OFFICE_ADMIN",
+        recognizedAt: "2026-08-11T10:00:00.000Z",
+        description: "Stationery",
+      },
+    });
+    assert.equal(voidedCorrect.statusCode, 409);
+    assert.equal(voidedCorrect.json().error.context.reason, "FINANCE_EXPENSE_NOT_ACTIVE");
+  });
+
+  test("later void preserves correction history and reverses the current amount", async () => {
+    const expensesBefore = (await financeSummary()).expenses;
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/finance/expenses",
+      headers: auth(token),
+      payload: {
+        amount: 100,
+        category: "MARKETING",
+        recognizedAt: "2026-08-12T10:00:00.000Z",
+        description: "Ads",
+      },
+    });
+    const expenseId = createRes.json().data.id as string;
+    await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/correct`,
+      headers: auth(token),
+      payload: {
+        amount: 80,
+        category: "MARKETING",
+        recognizedAt: "2026-08-12T10:00:00.000Z",
+        description: "Ads",
+      },
+    });
+    const voidRes = await app.inject({
+      method: "POST",
+      url: `/finance/expenses/${expenseId}/void`,
+      headers: auth(token),
+      payload: { voidReason: "Duplicate ads" },
+    });
+    assert.equal(voidRes.statusCode, 200, voidRes.body);
+    assert.equal(voidRes.json().data.status, "VOID");
+    assert.equal(voidRes.json().data.correctionHistory.length, 1);
+    assert.equal(voidRes.json().data.voidReason, "Duplicate ads");
+    const ledger = await prisma.financialLedgerEntry.findMany({
+      where: { manualExpenseId: expenseId },
+    });
+    assert.equal(ledger.length, 2);
+    assert.ok(ledger.some((row) => row.kind === "MANUAL_EXPENSE" && row.amount === 80));
+    assert.ok(ledger.some((row) => row.kind === "MANUAL_EXPENSE_REVERSAL" && row.amount === 80));
+    assert.equal((await financeSummary()).expenses - expensesBefore, 0);
   });
 
   test("reconciliation outstanding and settlement avoid double counting", async () => {

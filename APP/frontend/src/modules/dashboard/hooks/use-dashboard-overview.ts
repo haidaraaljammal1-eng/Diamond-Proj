@@ -1,73 +1,60 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect } from "react";
 import { useAuth, usePermissions } from "@/modules/auth";
-import { SYSTEM_ADMIN_ROLE } from "@/modules/navigation";
+import { CONTRACTS_MANAGE_PERMISSION, CONTRACTS_READ_PERMISSION } from "@/modules/contracts/contracts.permissions";
+import { VEHICLES_READ_PERMISSION } from "@/modules/vehicles/vehicles.permissions";
+import { GPS_READ_PERMISSION } from "@/modules/gps/gps.permissions";
+import { MAINTENANCE_READ_PERMISSION } from "@/modules/maintenance/maintenance.permissions";
+import { FINANCE_READ_PERMISSION } from "@/modules/finance/finance.permissions";
 import { DASHBOARD_PAGE_PERMISSIONS } from "../dashboard.permissions";
-import {
-  DEMO_CONTRACTS,
-  DEMO_EXPENSE_CATEGORIES,
-  DEMO_EMPLOYEES,
-  DEMO_SELF_EMPLOYEE_ID,
-  DEMO_UNREAD_MESSAGES,
-  DEMO_VEHICLES,
-  DEMO_WEEK,
-} from "../data/dashboard.demo-data";
-import { buildDashboardOverview } from "../utils/dashboard.selectors";
-import type { DashboardOverview, DashboardScope } from "../types/dashboard.types";
+import { DASHBOARD_QUICK_ACCESS } from "../utils/dashboard.routes";
+import { useDashboardStore } from "../stores/dashboard.store";
 
-export interface UseDashboardOverviewResult {
-  overview: DashboardOverview;
-  /** Demo owner view (`role === 'owner'`) — office-wide sections. */
-  isOwner: boolean;
-  /** Backend `dashboard.read`. */
-  isAllowed: boolean;
-  isLoading: boolean;
-  /** Session display name for the greeting. */
-  viewerName: string | null;
-}
-
-/**
- * The Dashboard's single UI facade.
- *
- * Today it derives every section from the Demo fixtures (see
- * `data/dashboard.demo-data`), because the Backend has no Diamond rental
- * domain yet. When `GET /dashboard/overview` returns those sections, this hook
- * is the only file that changes: swap the fixture source for the API/store
- * call and keep returning `DashboardOverview`.
- */
-export function useDashboardOverview(): UseDashboardOverviewResult {
-  const { user, isLoading } = useAuth();
+export function useDashboardOverview() {
+  const { user, isLoading: authLoading } = useAuth();
   const { hasPermission } = usePermissions();
+  const overview = useDashboardStore((s) => s.overview);
+  const status = useDashboardStore((s) => s.status);
+  const error = useDashboardStore((s) => s.error);
+  const load = useDashboardStore((s) => s.load);
+  const refresh = useDashboardStore((s) => s.refresh);
 
-  const isOwner = (user?.roles ?? []).includes(SYSTEM_ADMIN_ROLE);
   const isAllowed = DASHBOARD_PAGE_PERMISSIONS.every((permission) =>
     hasPermission(permission),
   );
+  const canReadContracts = hasPermission(CONTRACTS_READ_PERMISSION);
+  const canReadVehicles = hasPermission(VEHICLES_READ_PERMISSION);
+  const canReadFinance = hasPermission(FINANCE_READ_PERMISSION);
+  const canReadGps = hasPermission(GPS_READ_PERMISSION);
+  const canReadMaintenance = hasPermission(MAINTENANCE_READ_PERMISSION);
+  const canGenerateLink =
+    hasPermission(VEHICLES_READ_PERMISSION) &&
+    hasPermission(CONTRACTS_MANAGE_PERMISSION);
 
-  const overview = useMemo(() => {
-    const scope: DashboardScope = isOwner
-      ? { kind: "office" }
-      : { kind: "own", employeeId: DEMO_SELF_EMPLOYEE_ID };
+  const quickAccess = DASHBOARD_QUICK_ACCESS.filter((item) =>
+    hasPermission(item.permission),
+  );
 
-    return buildDashboardOverview(
-      {
-        vehicles: DEMO_VEHICLES,
-        employees: DEMO_EMPLOYEES,
-        contracts: DEMO_CONTRACTS,
-        unreadMessages: DEMO_UNREAD_MESSAGES,
-        week: DEMO_WEEK,
-        expenseCategories: DEMO_EXPENSE_CATEGORIES,
-      },
-      scope,
-    );
-  }, [isOwner]);
+  useEffect(() => {
+    if (isAllowed) void load();
+  }, [isAllowed, load]);
 
   return {
     overview,
-    isOwner,
+    status,
+    error,
     isAllowed,
-    isLoading,
+    isLoading: authLoading || (isAllowed && status === "loading" && overview == null),
+    isAuthLoading: authLoading,
     viewerName: user?.name ?? null,
+    canReadContracts,
+    canReadVehicles,
+    canReadFinance,
+    canReadGps,
+    canReadMaintenance,
+    canGenerateLink,
+    quickAccess,
+    refresh,
   };
 }

@@ -2,6 +2,7 @@ import type {
   LedgerDirection,
   LedgerDisplaySource,
   LedgerKind,
+  LedgerMovementFilter,
   LedgerSourceType,
   ManualExpenseCategory,
   OpenReceivableSourceType,
@@ -81,21 +82,18 @@ export function ledgerSourceLabel(
 
 /** Map independent Movement + Source UI filters onto existing ledger query params. */
 export function toLedgerApiFilters(
-  movement: LedgerDirection | null,
+  movement: LedgerMovementFilter | null,
   source: LedgerDisplaySource | null,
 ): {
   kind: LedgerKind | null;
   sourceType: LedgerSourceType | null;
-  direction: LedgerDirection | null;
+  direction: LedgerMovementFilter | null;
 } {
+  if (movement === "VOIDED") {
+    return { kind: "MANUAL_EXPENSE", sourceType: null, direction: "VOIDED" };
+  }
+
   if (source === "MANUAL_EXPENSE") {
-    if (movement === "EXPENSE_REVERSAL") {
-      return {
-        kind: "MANUAL_EXPENSE_REVERSAL",
-        sourceType: null,
-        direction: "EXPENSE_REVERSAL",
-      };
-    }
     if (movement === "EXPENSE") {
       return { kind: "MANUAL_EXPENSE", sourceType: null, direction: "EXPENSE" };
     }
@@ -117,10 +115,43 @@ export function toLedgerApiFilters(
 }
 
 export function ledgerMovementLabel(
-  direction: LedgerDirection,
+  movement: LedgerMovementFilter,
   t: LabelTranslator,
 ): string {
-  return t(`ledgerMovement.${direction}`);
+  return t(`ledgerMovement.${movement}`);
+}
+
+/** Original MANUAL_EXPENSE row after void — kept for audit, not an active Expense movement. */
+export function isVoidedOriginalExpenseRow(entry: {
+  kind: string;
+  manualExpenseStatus?: "ACTIVE" | "VOID" | null;
+}): boolean {
+  return entry.kind === "MANUAL_EXPENSE" && entry.manualExpenseStatus === "VOID";
+}
+
+/** Technical reversal — required for accounting, hidden from the operational Ledger. */
+export function isHiddenTechnicalReversalRow(entry: { kind: string }): boolean {
+  return entry.kind === "MANUAL_EXPENSE_REVERSAL";
+}
+
+export function ledgerRowMovementKey(entry: {
+  kind: string;
+  direction: LedgerDirection;
+  manualExpenseStatus?: "ACTIVE" | "VOID" | null;
+}): LedgerMovementFilter {
+  return isVoidedOriginalExpenseRow(entry) ? "VOIDED" : entry.direction;
+}
+
+export function ledgerRowMovementLabel(
+  entry: {
+    kind: string;
+    direction: LedgerDirection;
+    manualExpenseStatus?: "ACTIVE" | "VOID" | null;
+  },
+  t: LabelTranslator,
+): string {
+  if (isVoidedOriginalExpenseRow(entry)) return t("ledgerMovement.VOIDED");
+  return ledgerMovementLabel(entry.direction, t);
 }
 
 export function expenseCategoryLabel(

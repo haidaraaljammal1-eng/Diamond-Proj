@@ -94,6 +94,7 @@ model ManualExpense {
   createdAt             DateTime              @default(now())
 
   ledgerEntries FinancialLedgerEntry[]
+  revisions     ManualExpenseRevision[]
 
   @@index([recognizedAt])
   @@index([status])
@@ -101,4 +102,20 @@ model ManualExpense {
   @@index([vehicleId])
   @@index([createdByUserId])
   @@map("manual_expenses")
+}
+
+/// Immutable in-place correction history. Never used for VOID.
+model ManualExpenseRevision {
+  id              String        @id @default(uuid())
+  manualExpenseId String
+  manualExpense   ManualExpense @relation(fields: [manualExpenseId], references: [id], onDelete: Cascade)
+  changedByUserId Int
+  changedBy       User          @relation("ManualExpenseRevisionChangedBy", fields: [changedByUserId], references: [id], onDelete: Restrict)
+  changedAt       DateTime      @default(now())
+  /// Only fields that actually changed: `{ field: { before, after } }`.
+  changes         Json
+
+  @@index([manualExpenseId, changedAt])
+  @@index([changedByUserId])
+  @@map("manual_expense_revisions")
 }

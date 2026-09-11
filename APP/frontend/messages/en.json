@@ -26,7 +26,6 @@
     "home": "Home",
     "admin": "Administration",
     "dashboard": "Dashboard",
-    "operations": "Operations Center",
     "cars": "Vehicles",
     "gps": "GPS Tracking",
     "maintenance": "Maintenance Center",
@@ -39,7 +38,7 @@
     "roles": "Roles & permissions"
   },
   "Shell": {
-    "brand": "DIAMOND ELITE",
+    "brand": "DIAMOND",
     "brandSub": "RENT CAR · DUBAI",
     "searchPlaceholder": "Search Diamond…",
     "searchLabel": "Global search",
@@ -56,14 +55,9 @@
     "navigationActionNote": "Will be enabled in a later phase",
     "breadcrumbLabel": "Breadcrumb",
     "breadcrumbHome": "Home",
-    "quickAction": "New contract",
-    "quickActionShort": "New",
     "logout": "Log out",
     "logoutBusy": "Logging out...",
     "onlineStatus": "Online now",
-    "fleetStatLabel": "cars rented now",
-    "fleetStatOverdue": "overdue",
-    "fleetStatMaintenance": "in service",
     "notificationsLabel": "Notifications",
     "notificationsMarkAllRead": "Mark all as read",
     "notificationsEmpty": "No new notifications",
@@ -85,12 +79,13 @@
     "generateNewLink": "+ Generate New Link",
     "generateLink": "+ Generate Link",
     "latestContracts": "Latest Contracts",
-    "fromAllStaff": "From all staff",
     "issuedBy": "by {name}",
+    "customerPending": "Customer pending",
     "quickAccess": "Quick Access",
+    "loading": "Loading dashboard…",
     "kpi": {
-      "activeContracts": "Active Contracts",
-      "activeContractsNote": "▲ {count} rental in progress",
+      "activeRentals": "Active Rentals",
+      "activeRentalsNote": "Currently with customers",
       "fleet": "Fleet",
       "fleetNote": "Cars rented now",
       "pendingLinks": "Pending Links",
@@ -98,23 +93,14 @@
       "deliveriesToday": "Deliveries Today",
       "deliveriesTodayNote": "{count} ready to hand over"
     },
-    "status": {
-      "awaiting": "Awaiting customer",
-      "form": "Form opened",
-      "signed": "Signed",
-      "paid": "Paid",
-      "active": "Active",
-      "retout": "Being returned",
-      "review": "Reconciliation & Contract Closure",
-      "closed": "Closed"
-    },
     "quick": {
       "carsMeta": "Fleet · Generate link",
       "contractsMeta": "{count} contracts · View all",
-      "messagesUnread": "{count} new messages",
-      "messagesEmpty": "No new messages",
+      "contractsView": "View all contracts",
       "gpsMeta": "{count} cars on the map now",
-      "maintenanceMeta": "{count} cars in the workshop"
+      "gpsView": "Fleet map",
+      "maintenanceMeta": "{count} cars in the workshop",
+      "maintenanceView": "Maintenance center"
     },
     "empty": {
       "title": "No contracts yet",
@@ -124,10 +110,19 @@
       "title": "You cannot view the dashboard",
       "description": "The dashboard.read permission is required — contact your system administrator."
     },
+    "restricted": {
+      "title": "No operational widgets available",
+      "description": "Your account can open the dashboard, but it does not include the domain permissions needed for these sections."
+    },
+    "error": {
+      "title": "The dashboard could not be loaded",
+      "description": "Something went wrong while loading live operational data. Please try again.",
+      "retry": "Try again"
+    },
     "deliveries": {
-      "title": "Deliveries Today",
+      "title": "Today's Deliveries",
       "ready": "{count} ready to hand over",
-      "empty": "No hand-overs scheduled today"
+      "empty": "No deliveries scheduled today"
     },
     "fleet": {
       "title": "Fleet Status",
@@ -137,35 +132,31 @@
       "rentedNote": "With customers now",
       "available": "Available",
       "availableNote": "Ready to rent immediately",
-      "service": "In maintenance",
+      "service": "Maintenance",
       "serviceNote": "Out of service until pick-up"
     },
     "weekly": {
-      "title": "This Week",
-      "subtitle": "Revenue against expenses over the last 7 days",
-      "revenue": "Revenue",
-      "expense": "Expense",
-      "net": "Net"
-    },
-    "week": {
-      "day1": "Monday",
-      "day2": "Tuesday",
-      "day3": "Wednesday",
-      "day4": "Thursday",
-      "day5": "Friday",
-      "yesterday": "Yesterday",
-      "today": "Today"
+      "title": "Weekly Rental Activity",
+      "subtitle": "Last 7 Days",
+      "rented": "Rented",
+      "returned": "Returned",
+      "empty": "No rental movement in the last 7 days"
     },
     "expenses": {
-      "title": "Expense Structure",
-      "subtitle": "Last 7 days of spending across operational categories",
-      "centerLabel": "7-day expenses"
+      "title": "Weekly Financial Summary",
+      "subtitle": "Last 7 Days",
+      "collected": "Collected",
+      "expenses": "Expenses",
+      "netMovement": "Net Movement",
+      "collection": "Collection",
+      "expense": "Expense",
+      "empty": "No financial movement in the last 7 days"
     },
-    "expenseCategory": {
-      "maintenance": "Maintenance & repair",
-      "operations": "Operations & cleaning",
-      "administrative": "Administrative",
-      "fuel": "Fuel"
+    "simulation": {
+      "button": "Simulation",
+      "badge": "DEMO SIMULATION",
+      "reset": "Reset Simulation",
+      "disable": "Show live data"
     }
   },
   "Select": {
@@ -1872,7 +1863,8 @@
     "ledgerMovement": {
       "COLLECTION": "Customer Collection",
       "EXPENSE": "Expense",
-      "EXPENSE_REVERSAL": "Expense Reversal"
+      "EXPENSE_REVERSAL": "Expense Reversal",
+      "VOIDED": "Voided"
     },
     "ledgerSource": {
       "RENTAL_PAYMENT": "Rental Payment",
@@ -1944,12 +1936,14 @@
       "detailLoading": "Loading expense…",
       "status": "Status",
       "statusActive": "Active",
-      "statusVoid": "Void",
+      "statusVoid": "Voided",
+      "correctedExpense": "Corrected Expense",
       "createdBy": "Created by",
       "createdAt": "Created at",
       "voidReason": "Void reason",
       "voidedBy": "Voided by",
       "voidedAt": "Voided at",
+      "voidedEffect": "The financial effect of this expense was reversed.",
       "correctionOf": "Correction of",
       "voidAction": "Void Expense",
       "correctAction": "Correct Expense",
@@ -1957,14 +1951,22 @@
       "voidDescription": "The original financial record will remain in the audit history and a reversal will be created.",
       "voidConfirm": "Void expense",
       "correctTitle": "Correct Expense",
-      "correctDescription": "The original expense will be voided and a corrected record will be created.",
+      "correctDescription": "Update this expense in place. Status stays active and a correction history entry is recorded.",
       "correctConfirm": "Save correction",
+      "correctionHistory": "Correction History",
+      "correctedBy": "Corrected by",
+      "correctedAt": "Corrected at",
+      "previousValue": "Previous value",
+      "newValue": "New value",
       "createSuccess": "Expense recorded.",
       "voidSuccess": "Expense voided.",
       "correctSuccess": "Expense corrected."
     },
     "errors": {
-      "generic": "Finance data could not be loaded. Try again."
+      "generic": "Finance data could not be loaded. Try again.",
+      "FINANCE_EXPENSE_NO_CHANGES": "No changes to save.",
+      "FINANCE_EXPENSE_NOT_ACTIVE": "A voided expense cannot be corrected.",
+      "FINANCE_EXPENSE_NOT_FOUND": "This expense could not be found."
     }
   }
 }

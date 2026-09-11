@@ -43,6 +43,54 @@ export function resolveBusinessDay(now: Date, offsetMinutes: number): Period {
   };
 }
 
+/** Business-timezone calendar day key `YYYY-MM-DD` for a UTC instant. */
+export function businessDayKey(date: Date, offsetMinutes: number): string {
+  const { y, m, d } = localYmd(date, offsetMinutes);
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/** Inclusive business-day keys for `[from, to)` in the configured timezone. */
+export function enumerateBusinessDays(period: Period, offsetMinutes: number): string[] {
+  const days: string[] = [];
+  const cursor = new Date(period.from);
+  while (cursor < period.to) {
+    days.push(businessDayKey(cursor, offsetMinutes));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return days;
+}
+
+/**
+ * Rolling window of `dayCount` consecutive calendar days in the BUSINESS
+ * timezone, ending today (`to` exclusive = start of tomorrow).
+ *
+ * "Business" here means the configured reporting timezone — NOT weekdays.
+ * Saturday and Sunday are included. Days with no activity still appear.
+ */
+export function resolveLastNCalendarDays(
+  now: Date,
+  offsetMinutes: number,
+  dayCount: number,
+): Period & { days: string[] } {
+  const today = resolveBusinessDay(now, offsetMinutes);
+  const { y, m, d } = localYmd(now, offsetMinutes);
+  const from = utcFromLocalMidnight(y, m, d - (dayCount - 1), offsetMinutes);
+  const period = { from, to: today.to };
+  return { ...period, days: enumerateBusinessDays(period, offsetMinutes) };
+}
+
+/**
+ * Alias of `resolveLastNCalendarDays`. The historical name refers to the
+ * business timezone, not a working-day skip. Prefer `resolveLastNCalendarDays`.
+ */
+export function resolveLastNBusinessDays(
+  now: Date,
+  offsetMinutes: number,
+  dayCount: number,
+): Period & { days: string[] } {
+  return resolveLastNCalendarDays(now, offsetMinutes, dayCount);
+}
+
 export function resolvePeriod(type: PeriodType, now: Date, offsetMinutes: number, customFrom?: Date, customTo?: Date): ResolvedPeriod {
   const { y, m } = localYmd(now, offsetMinutes);
   if (type === "MONTH") {

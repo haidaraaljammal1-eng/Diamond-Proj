@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 test.use({ channel: "chrome" });
-test.describe.configure({ timeout: 120_000 });
+test.describe.configure({ timeout: 180_000 });
 
 const email = process.env.PLAYWRIGHT_LOGIN_EMAIL ?? "admin@diamond.test";
 const password = process.env.PLAYWRIGHT_LOGIN_PASSWORD ?? "Diamond123!";
@@ -58,16 +58,32 @@ test.describe("Finance demo simulation", () => {
 
     await enableFinanceSimulation(page);
     await expect(page.getByTestId("finance-add-expense")).toHaveCount(0);
-    await page.screenshot({ path: "e2e/__screens__/finance/ar-desktop-sim-1440.png" });
+    await page.screenshot({
+      path: "e2e/__screens__/finance/ar-desktop-sim-1440.png",
+      animations: "disabled",
+      timeout: 15_000,
+    });
     await page.setViewportSize({ width: 1366, height: 768 });
-    await page.screenshot({ path: "e2e/__screens__/finance/ar-desktop-sim-1366.png" });
+    await page.screenshot({
+      path: "e2e/__screens__/finance/ar-desktop-sim-1366.png",
+      animations: "disabled",
+      timeout: 15_000,
+    });
     await page.setViewportSize({ width: 430, height: 844 });
     await expect(page.getByTestId("finance-ledger-card").first()).toBeVisible();
     await expect(page.getByTestId("finance-ledger-card").first().getByTestId("finance-ledger-movement")).toBeVisible();
     await expect(page.getByTestId("finance-ledger-card").first().getByTestId("finance-ledger-source")).toBeVisible();
-    await page.screenshot({ path: "e2e/__screens__/finance/ar-mobile-sim-430.png" });
+    await page.screenshot({
+      path: "e2e/__screens__/finance/ar-mobile-sim-430.png",
+      animations: "disabled",
+      timeout: 15_000,
+    });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: "e2e/__screens__/finance/ar-mobile-sim-390.png" });
+    await page.screenshot({
+      path: "e2e/__screens__/finance/ar-mobile-sim-390.png",
+      animations: "disabled",
+      timeout: 15_000,
+    });
     await page.setViewportSize({ width: 1440, height: 900 });
 
     await expect(page.getByTestId("finance-kpi-outstanding")).toContainText("AED 2,540");
@@ -117,15 +133,50 @@ test.describe("Finance demo simulation", () => {
 
     await page.getByTestId("finance-ledger-clear").click();
 
-    await selectLedgerFilter(page, /^(الحركة|Movement)$/, /^(إلغاء مصروف|Expense Reversal)$/);
+    await selectLedgerFilter(page, /^(الحركة|Movement)$/, /^(مصروف|Expense)$/);
+    await selectLedgerFilter(page, /^(المصدر|Source)$/, /^(مصروف يدوي|Manual Expense)$/);
+    const manualExpenseRows = page.locator('[data-testid="finance-ledger-row"]');
+    await expect(manualExpenseRows.first()).toBeVisible();
+    const manualExpenseCount = await manualExpenseRows.count();
+    for (let index = 0; index < manualExpenseCount; index += 1) {
+      await expect(manualExpenseRows.nth(index)).toHaveAttribute("data-movement", "EXPENSE");
+      await expect(manualExpenseRows.nth(index).getByTestId("finance-ledger-source")).toContainText(
+        "مصروف يدوي",
+      );
+      await expect(manualExpenseRows.nth(index).getByTestId("finance-ledger-amount")).toContainText(
+        "- AED",
+      );
+    }
+
+    await page.getByTestId("finance-ledger-clear").click();
+    const ledger = page.getByTestId("finance-ledger");
+    await ledger.getByTestId("finance-ledger-search").fill("EXP-SIM-CLEAN-100");
+    await ledger.getByTestId("data-search-submit").click();
+    const auditOriginal = ledger.locator(
+      '[data-testid="finance-ledger-row"][data-movement="VOIDED"]',
+    );
+    await expect(auditOriginal).toBeVisible();
+    await expect(auditOriginal.getByTestId("finance-ledger-movement")).toContainText("ملغى");
+    await expect(auditOriginal.getByTestId("finance-ledger-source")).toContainText("مصروف يدوي");
+    await expect(auditOriginal.getByTestId("finance-ledger-amount")).toContainText("AED 100");
+    await expect(auditOriginal.getByTestId("finance-ledger-amount")).not.toContainText("+ AED");
+    await expect(auditOriginal.getByTestId("finance-ledger-amount")).not.toContainText("- AED");
+    await expect(
+      ledger.locator('[data-testid="finance-ledger-row"][data-movement="EXPENSE_REVERSAL"]'),
+    ).toHaveCount(0);
+
+    await page.getByTestId("finance-ledger-clear").click();
+
+    await selectLedgerFilter(page, /^(الحركة|Movement)$/, /^(ملغى|Voided)$/);
     await selectLedgerFilter(page, /^(المصدر|Source)$/, /^(مصروف يدوي|Manual Expense)$/);
     await expect(page.locator('[data-testid="finance-ledger-row"]')).toHaveCount(1);
-    const reversal = page.locator('[data-testid="finance-ledger-row"]');
-    await expect(reversal).toHaveAttribute("data-movement", "EXPENSE_REVERSAL");
-    await expect(reversal.getByTestId("finance-ledger-movement")).toContainText("إلغاء مصروف");
-    await expect(reversal.getByTestId("finance-ledger-source")).toContainText("مصروف يدوي");
-    await expect(reversal.getByTestId("finance-ledger-amount")).toContainText("+ AED");
-    await expect(reversal.getByTestId("finance-ledger-movement")).not.toContainText("تحصيل من العميل");
+    const voided = page.locator('[data-testid="finance-ledger-row"]');
+    await expect(voided).toHaveAttribute("data-movement", "VOIDED");
+    await expect(voided.getByTestId("finance-ledger-movement")).toContainText("ملغى");
+    await expect(voided.getByTestId("finance-ledger-source")).toContainText("مصروف يدوي");
+    await expect(voided.getByTestId("finance-ledger-amount")).toContainText("AED 100");
+    await expect(voided.getByTestId("finance-ledger-amount")).not.toContainText("+ AED");
+    await expect(voided.getByTestId("finance-ledger-movement")).not.toContainText("تحصيل من العميل");
 
     await page.getByTestId("finance-period-today").click();
     await expect(page.getByTestId("finance-kpi-collected")).toContainText("AED 1,500");
@@ -175,6 +226,10 @@ test.describe("Finance demo simulation", () => {
     await expect(page.getByText("Customer Collection").first()).toBeVisible();
     await expect(page.getByTestId("finance-receivable-payment-state").first()).toHaveText("Awaiting Payment");
     await expect(page.getByTestId("finance-open-receivables").getByText("UNPAID", { exact: true })).toHaveCount(0);
-    await page.screenshot({ path: "e2e/__screens__/finance/en-desktop-sim.png" });
+    await page.screenshot({
+      path: "e2e/__screens__/finance/en-desktop-sim.png",
+      animations: "disabled",
+      timeout: 15_000,
+    });
   });
 });

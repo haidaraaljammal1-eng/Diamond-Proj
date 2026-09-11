@@ -1,4 +1,4 @@
-import type { ManualExpense, ManualExpenseCategory, FinancialLedgerKind } from "@prisma/client";
+import type { ManualExpense, ManualExpenseCategory, FinancialLedgerKind, Prisma } from "@prisma/client";
 import type { OpenReceivableSourceType } from "src/modules/finance/finance.constants";
 
 export interface CustomerSummary {
@@ -69,10 +69,73 @@ export function manualExpenseCategoryLabel(category: ManualExpenseCategory): str
   return category;
 }
 
+export const MANUAL_EXPENSE_CHANGE_FIELDS = [
+  "amount",
+  "category",
+  "recognizedAt",
+  "description",
+  "vehicle",
+  "vendorName",
+  "receiptNumber",
+  "note",
+] as const;
+
+export type ManualExpenseChangeField = (typeof MANUAL_EXPENSE_CHANGE_FIELDS)[number];
+
+export type ManualExpenseChangeValue =
+  | string
+  | number
+  | boolean
+  | { id: number; vehicleName: string | null; plateNumber: string | null }
+  | null;
+
+export interface ManualExpenseFieldChange {
+  field: ManualExpenseChangeField;
+  before: ManualExpenseChangeValue;
+  after: ManualExpenseChangeValue;
+}
+
+function toChangeValue(value: unknown): ManualExpenseChangeValue {
+  if (value == null) return null;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "object" && !Array.isArray(value) && "id" in value) {
+    const vehicle = value as { id: unknown; vehicleName?: unknown; plateNumber?: unknown };
+    if (typeof vehicle.id === "number") {
+      return {
+        id: vehicle.id,
+        vehicleName: typeof vehicle.vehicleName === "string" ? vehicle.vehicleName : null,
+        plateNumber: typeof vehicle.plateNumber === "string" ? vehicle.plateNumber : null,
+      };
+    }
+  }
+  return null;
+}
+
+export function toCorrectionHistoryChanges(raw: Prisma.JsonValue): ManualExpenseFieldChange[] {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+  const entries: ManualExpenseFieldChange[] = [];
+  for (const field of MANUAL_EXPENSE_CHANGE_FIELDS) {
+    const value = (raw as Record<string, unknown>)[field];
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const pair = value as { before?: unknown; after?: unknown };
+    if (!("before" in pair) && !("after" in pair)) continue;
+    entries.push({
+      field,
+      before: toChangeValue(pair.before),
+      after: toChangeValue(pair.after),
+    });
+  }
+  return entries;
+}
+
+type ExpenseStaff = { id: number; name: string | null; email: string };
+
 export function toManualExpenseDetail(
   expense: ManualExpense & {
-    createdBy: { id: number; name: string | null; email: string };
-    voidedBy: { id: number; name: string | null; email: string } | null;
+    createdBy: ExpenseStaff;
+    voidedBy: ExpenseStaff | null;
     vehicle: { id: number; vehicleName: string | null; plateNumber: string | null } | null;
     attachment: {
       id: string;
@@ -82,6 +145,12 @@ export function toManualExpenseDetail(
       createdAt: Date;
     } | null;
     correctionOfExpense: { id: string } | null;
+    revisions?: Array<{
+      id: string;
+      changedAt: Date;
+      changes: Prisma.JsonValue;
+      changedBy: ExpenseStaff;
+    }>;
   },
 ) {
   return {
@@ -121,5 +190,15 @@ export function toManualExpenseDetail(
         }
       : null,
     createdAt: expense.createdAt,
+    correctionHistory: (expense.revisions ?? []).map((revision) => ({
+      id: revision.id,
+      changedAt: revision.changedAt,
+      changedBy: {
+        id: revision.changedBy.id,
+        name: revision.changedBy.name,
+        email: revision.changedBy.email,
+      },
+      changes: toCorrectionHistoryChanges(revision.changes),
+    })),
   };
 }

@@ -12,6 +12,8 @@ export interface ListRowProps {
   trailing?: ReactNode;
   /** Hover affordance. Only pass it when the row really is actionable. */
   interactive?: boolean;
+  /** Makes the row a button. Implies `interactive`. */
+  onClick?: () => void;
   className?: string;
 }
 
@@ -26,14 +28,16 @@ export function ListRow({
   meta,
   trailing,
   interactive = false,
+  onClick,
   className,
 }: ListRowProps) {
-  return (
-    <div
-      className={[styles.row, interactive ? styles.interactive : "", className]
-        .filter(Boolean)
-        .join(" ")}
-    >
+  const isInteractive = interactive || Boolean(onClick);
+  const classNames = [styles.row, isInteractive ? styles.interactive : "", className]
+    .filter(Boolean)
+    .join(" ");
+
+  const body = (
+    <>
       {icon ? (
         <span className={styles.icon} aria-hidden="true">
           {icon}
@@ -44,6 +48,16 @@ export function ListRow({
         {meta ? <span className={styles.meta}>{meta}</span> : null}
       </span>
       {trailing ? <span className={styles.trailing}>{trailing}</span> : null}
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" className={classNames} onClick={onClick}>
+        {body}
+      </button>
+    );
+  }
+
+  return <div className={classNames}>{body}</div>;
 }

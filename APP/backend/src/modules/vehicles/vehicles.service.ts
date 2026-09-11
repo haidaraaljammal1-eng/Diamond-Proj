@@ -400,5 +400,22 @@ export function createVehiclesService(fastify: FastifyInstance) {
     return toVehiclePublic(row);
   }
 
-  return { list, listFilterOptions, get, create, update, setActive };
+  async function activeFleetStatusCounts() {
+    const rows = await prisma.vehicle.groupBy({
+      by: ["operationalStatus"],
+      where: { isActive: true },
+      _count: { _all: true },
+    });
+    const fleet = { available: 0, rented: 0, service: 0, total: 0 };
+    for (const row of rows) {
+      const count = row._count._all;
+      fleet.total += count;
+      if (row.operationalStatus === "AVAILABLE") fleet.available = count;
+      else if (row.operationalStatus === "RENTED") fleet.rented = count;
+      else if (row.operationalStatus === "SERVICE") fleet.service = count;
+    }
+    return fleet;
+  }
+
+  return { list, listFilterOptions, get, create, update, setActive, activeFleetStatusCounts };
 }

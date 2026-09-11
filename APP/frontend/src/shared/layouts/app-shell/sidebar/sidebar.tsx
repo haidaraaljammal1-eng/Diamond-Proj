@@ -13,10 +13,8 @@ import {
   useAppShellStore,
 } from "../store/app-shell.store";
 import { SidebarItem } from "./sidebar-item";
-import { SidebarFleetStat } from "./sidebar-fleet-stat";
 import { SidebarAccount } from "./sidebar-account";
 import { SidebarBrand } from "./sidebar-brand";
-import { SidebarQuickAction } from "./sidebar-quick-action";
 import styles from "./sidebar.module.css";
 
 /** Below this width the rail becomes an overlay drawer (Demo breakpoint). */
@@ -31,9 +29,9 @@ const DRAWER_QUERY = "(max-width: 900px)";
  * interactions of the rail itself: drawer close, expand/collapse shortcut and
  * the off-screen state of the mobile drawer.
  *
- * The rail heads with the Diamond brand and the primary quick action; the
- * expand/collapse control sits in the header instead, so it keeps one screen
- * position while the rail edge moves.
+ * The rail heads with the Diamond brand; the expand/collapse control sits in
+ * the header instead, so it keeps one screen position while the rail edge
+ * moves.
  */
 export function Sidebar() {
   const t = useTranslations("Shell");
@@ -92,7 +90,6 @@ export function Sidebar() {
           href={hrefFor("/dashboard")}
           onNavigate={closeMobileSidebar}
         />
-        <SidebarQuickAction />
         <div className={styles.headDivider} aria-hidden="true" />
       </div>
 
@@ -119,10 +116,8 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* Pinned to the rail's bottom edge together: the fleet KPI, then the
-          account row last. */}
+      {/* Pinned to the rail's bottom edge: the account row. */}
       <div className={styles.bottomGroup}>
-        <SidebarFleetStat />
         <SidebarAccount />
       </div>
     </nav>

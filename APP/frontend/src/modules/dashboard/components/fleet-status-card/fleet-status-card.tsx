@@ -5,22 +5,22 @@ import { Card } from "@/shared/components/ui/card";
 import { Chip } from "@/shared/components/ui/chip";
 import { ListRow } from "@/shared/components/ui/list-row";
 import { NAVIGATION_ICONS } from "@/modules/navigation";
-import type { FleetBreakdown } from "../../types/dashboard.types";
+import { fleetUtilizationPercent } from "../../utils/dashboard.selectors";
+import type { FleetStatusDto } from "../../types/dashboard.types";
 import styles from "./fleet-status-card.module.css";
 
 export interface FleetStatusCardProps {
-  fleet: FleetBreakdown;
-  fleetTotal: number;
+  fleet: FleetStatusDto | null;
 }
 
-/** Fleet split by vehicle status, with the office utilization rate. */
-export function FleetStatusCard({ fleet, fleetTotal }: FleetStatusCardProps) {
+export function FleetStatusCard({ fleet }: FleetStatusCardProps) {
   const t = useTranslations("Dashboard");
   const CarsIcon = NAVIGATION_ICONS.cars;
   const MaintenanceIcon = NAVIGATION_ICONS.maintenance;
 
-  const utilization =
-    fleetTotal > 0 ? Math.round((fleet.rented / fleetTotal) * 100) : 0;
+  if (!fleet) return null;
+
+  const utilization = fleetUtilizationPercent(fleet);
 
   const rows = [
     {

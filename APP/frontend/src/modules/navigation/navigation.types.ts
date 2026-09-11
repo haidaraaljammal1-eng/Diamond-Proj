@@ -1,7 +1,7 @@
 /**
  * Navigation types — Diamond Rent Car
  *
- * The config mirrors the Demo rail exactly. Items are:
+ * The config is the single source for the Diamond operational rail. Items are:
  * - `link`   → a route navigation item (`href` without locale prefix).
  * - `action` → a Demo control that is not a page route (e.g. WhatsApp dock).
  *
@@ -17,7 +17,6 @@ export const SYSTEM_ADMIN_ROLE = "system_admin";
 export type NavigationTranslationKey =
   | "home"
   | "dashboard"
-  | "operations"
   | "cars"
   | "gps"
   | "maintenance"
@@ -34,7 +33,6 @@ export type NavigationItemType = "link" | "action";
 
 export type NavigationIconKey =
   | "dashboard"
-  | "operations"
   | "cars"
   | "gps"
   | "maintenance"

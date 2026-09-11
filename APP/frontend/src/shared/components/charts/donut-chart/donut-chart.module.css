@@ -55,7 +55,32 @@
   color: var(--diamond-muted);
 }
 
-.legendRow:last-child {
+.legendButton {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: 6px;
+  padding-inline: 4px;
+}
+
+.legendButton:hover,
+.legendButton:focus-visible,
+.legendRowActive {
+  background: rgba(201, 161, 92, 0.08);
+}
+
+.legendButton:focus-visible {
+  outline: 1px solid var(--diamond-gold-lo);
+  outline-offset: 1px;
+}
+
+.legend > li:last-child .legendRow,
+.legend > .legendRow:last-child {
   border-bottom: none;
 }
 

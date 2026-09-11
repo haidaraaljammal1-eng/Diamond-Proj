@@ -66,7 +66,7 @@ export function createFinanceService(fastify: FastifyInstance) {
       search?: string;
       kind?: FinancialLedgerKind;
       sourceType?: FinancialLedgerSourceType;
-      direction?: "COLLECTION" | "EXPENSE" | "EXPENSE_REVERSAL";
+      direction?: "COLLECTION" | "EXPENSE" | "EXPENSE_REVERSAL" | "VOIDED";
       sort?: string;
     }) {
       const period = query.from || query.to || query.periodType
@@ -77,17 +77,34 @@ export function createFinanceService(fastify: FastifyInstance) {
         direction: "desc",
       });
 
-      const where = {
-        ...(period ? { occurredAt: { gte: period.from, lt: period.to } } : {}),
-        ...(query.kind ? { kind: query.kind } : {}),
-        ...(query.sourceType ? { sourceType: query.sourceType } : {}),
-        ...(query.direction === "COLLECTION"
+      const directionWhere =
+        query.direction === "COLLECTION"
           ? { kind: { in: COLLECTION_LEDGER_KINDS } }
           : query.direction === "EXPENSE"
-            ? { kind: { in: EXPENSE_LEDGER_KINDS } }
-            : query.direction === "EXPENSE_REVERSAL"
-              ? { kind: "MANUAL_EXPENSE_REVERSAL" as const }
-              : {}),
+            ? {
+                kind: { in: EXPENSE_LEDGER_KINDS },
+                NOT: {
+                  AND: [
+                    { kind: "MANUAL_EXPENSE" as const },
+                    { manualExpense: { status: "VOID" as const } },
+                  ],
+                },
+              }
+            : query.direction === "VOIDED"
+              ? {
+                  kind: "MANUAL_EXPENSE" as const,
+                  manualExpense: { status: "VOID" as const },
+                }
+              : query.direction === "EXPENSE_REVERSAL"
+                ? { kind: "MANUAL_EXPENSE_REVERSAL" as const }
+                : query.kind && query.kind !== "MANUAL_EXPENSE_REVERSAL"
+                  ? { kind: query.kind }
+                  : { kind: { not: "MANUAL_EXPENSE_REVERSAL" as const } };
+
+      const where = {
+        ...(period ? { occurredAt: { gte: period.from, lt: period.to } } : {}),
+        ...(query.sourceType ? { sourceType: query.sourceType } : {}),
+        ...directionWhere,
         ...(query.search?.trim()
           ? {
               OR: [
@@ -125,6 +142,7 @@ export function createFinanceService(fastify: FastifyInstance) {
                   description: true,
                   vendorName: true,
                   receiptNumber: true,
+                  status: true,
                 },
               },
               maintenanceOrder: {
@@ -181,6 +199,7 @@ export function createFinanceService(fastify: FastifyInstance) {
               contractPaymentId: row.contractPaymentId,
               maintenanceOrderId: row.maintenanceOrderId,
               manualExpenseId: row.manualExpenseId,
+              manualExpenseStatus: row.manualExpense?.status ?? null,
             };
           });
         },

@@ -166,7 +166,7 @@ export default async function financeRoutes(fastify: FastifyInstance) {
     "/expenses/:id/correct",
     {
       schema: {
-        summary: "Correct a manual expense through void + replacement",
+        summary: "Correct a manual expense in place",
         operationId: "correctManualExpense",
         tags: T,
         permissions: [PERMISSIONS.FINANCE_MANAGE_EXPENSES],

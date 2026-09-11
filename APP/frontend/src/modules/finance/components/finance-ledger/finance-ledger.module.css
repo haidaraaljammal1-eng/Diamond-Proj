@@ -32,10 +32,27 @@
 }
 
 .table {
+  --ledger-col-date: 15%;
+  --ledger-col-movement: 12%;
+  --ledger-col-source: 13%;
+  --ledger-col-reference: 22%;
+  --ledger-col-contract: 16%;
+  --ledger-col-amount: 12%;
+  --ledger-col-action: 10%;
   width: 100%;
+  min-width: 64rem;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.82rem;
 }
+
+.colDate { width: var(--ledger-col-date); }
+.colMovement { width: var(--ledger-col-movement); }
+.colSource { width: var(--ledger-col-source); }
+.colReference { width: var(--ledger-col-reference); }
+.colContract { width: var(--ledger-col-contract); }
+.colAmount { width: var(--ledger-col-amount); }
+.colAction { width: var(--ledger-col-action); }
 
 .table th,
 .table td {
@@ -43,6 +60,23 @@
   border-bottom: 1px solid #ece4d4;
   text-align: start;
   vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellClip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amountCell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.actionCell {
+  white-space: nowrap;
 }
 
 .table th {
@@ -71,6 +105,13 @@
   white-space: nowrap;
 }
 
+.amountVoided {
+  color: var(--diamond-muted, #6f6556);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: line-through;
+}
+
 .empty,
 .error {
   padding: 18px;
@@ -95,7 +136,8 @@
 
 .movementCollection,
 .movementExpense,
-.movementReversal {
+.movementReversal,
+.movementVoided {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
@@ -119,6 +161,12 @@
   color: #5a4a2d;
   background: #f3ead6;
   border: 1px solid #c9a15c;
+}
+
+.movementVoided {
+  color: #6f6556;
+  background: #eee8dc;
+  border: 1px dashed #c4b69a;
 }
 
 .cards {
@@ -154,7 +202,9 @@
 }
 
 @media (max-width: 900px) {
-  .hideMd {
+  .hideMd,
+  .colContract {
+    width: 0;
     display: none;
   }
 }

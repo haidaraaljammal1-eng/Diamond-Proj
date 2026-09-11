@@ -2,8 +2,7 @@
 
 import { create } from "zustand";
 import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
-import { normalizeApiError } from "@/infrastructure/api/errors";
-import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { ApiRequestError, normalizeApiError } from "@/infrastructure/api/errors";
 import {
   correctManualExpense,
   createManualExpense,
@@ -33,6 +32,7 @@ import type {
   VoidManualExpensePayload,
 } from "../types/finance.types";
 import { resolveFinancePeriodRange } from "../utils/finance-period";
+import { applySimulatedManualExpenseCorrection } from "../utils/finance-simulation";
 
 export type FinanceLoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -98,6 +98,7 @@ function isFinanceSimulating(): boolean {
 let overviewInFlight: Promise<void> | null = null;
 let receivablesInFlight: Promise<void> | null = null;
 let ledgerInFlight: Promise<void> | null = null;
+let ledgerFetchQueued = false;
 let expenseDetailInFlight: Promise<void> | null = null;
 
 const DEFAULT_OVERVIEW_QUERY: FinanceOverviewQuery = {
@@ -237,6 +238,21 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     }
   }
 
+  function enqueueLedgerFetch(): Promise<void> {
+    if (ledgerInFlight) {
+      ledgerFetchQueued = true;
+      return ledgerInFlight;
+    }
+    ledgerInFlight = fetchLedger().finally(() => {
+      ledgerInFlight = null;
+      if (ledgerFetchQueued) {
+        ledgerFetchQueued = false;
+        void enqueueLedgerFetch();
+      }
+    });
+    return ledgerInFlight;
+  }
+
   return {
     overviewQuery: DEFAULT_OVERVIEW_QUERY,
     summary: null,
@@ -285,13 +301,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
           });
           return receivablesInFlight;
         })(),
-        (async () => {
-          if (ledgerInFlight) return ledgerInFlight;
-          ledgerInFlight = fetchLedger().finally(() => {
-            ledgerInFlight = null;
-          });
-          return ledgerInFlight;
-        })(),
+        enqueueLedgerFetch(),
       ]);
     },
 
@@ -313,13 +323,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
       };
       set({ overviewQuery, ledgerQuery });
       void get().loadOverview();
-      void (async () => {
-        if (ledgerInFlight) return ledgerInFlight;
-        ledgerInFlight = fetchLedger().finally(() => {
-          ledgerInFlight = null;
-        });
-        return ledgerInFlight;
-      })();
+      void enqueueLedgerFetch();
     },
 
     setReceivablesQuery: (partial) => {
@@ -346,13 +350,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
 
     setLedgerQuery: (partial) => {
       set({ ledgerQuery: { ...get().ledgerQuery, ...partial } });
-      void (async () => {
-        if (ledgerInFlight) return ledgerInFlight;
-        ledgerInFlight = fetchLedger().finally(() => {
-          ledgerInFlight = null;
-        });
-        return ledgerInFlight;
-      })();
+      void enqueueLedgerFetch();
     },
 
     resetLedgerFilters: () => {
@@ -365,13 +363,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
         direction: null,
       };
       set({ ledgerQuery });
-      void (async () => {
-        if (ledgerInFlight) return ledgerInFlight;
-        ledgerInFlight = fetchLedger().finally(() => {
-          ledgerInFlight = null;
-        });
-        return ledgerInFlight;
-      })();
+      void enqueueLedgerFetch();
     },
 
     fetchExpenseDetail: async (id) => {
@@ -458,7 +450,47 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     },
 
     correctExpense: async (id, payload) => {
-      if (isFinanceSimulating()) return false;
+      if (isFinanceSimulating()) {
+        const overlay = useDemoSimulationStore.getState().financeOverlay;
+        if (!overlay) return false;
+        set({ isCorrectingExpense: true, correctExpenseError: null });
+        const result = applySimulatedManualExpenseCorrection(overlay, id, payload);
+        if (!result.ok) {
+          const status =
+            result.reason === "FINANCE_EXPENSE_NO_CHANGES"
+              ? 422
+              : result.reason === "FINANCE_EXPENSE_NOT_FOUND"
+                ? 404
+                : 409;
+          const code =
+            result.reason === "FINANCE_EXPENSE_NO_CHANGES"
+              ? "VALIDATION_ERROR"
+              : result.reason === "FINANCE_EXPENSE_NOT_FOUND"
+                ? "NOT_FOUND"
+                : "CONFLICT";
+          set({
+            isCorrectingExpense: false,
+            correctExpenseError: new ApiRequestError(
+              {
+                code,
+                message: result.reason,
+                context: { reason: result.reason },
+              },
+              status,
+            ),
+          });
+          return false;
+        }
+        useDemoSimulationStore.getState().patchFinanceOverlay(() => result.overlay);
+        set({
+          isCorrectingExpense: false,
+          correctExpenseError: null,
+          expenseDetail: result.detail,
+          expenseDetailId: result.detail.id,
+          expenseDetailStatus: "ready",
+        });
+        return true;
+      }
       set({ isCorrectingExpense: true, correctExpenseError: null });
       try {
         const detail = await correctManualExpense(id, payload);

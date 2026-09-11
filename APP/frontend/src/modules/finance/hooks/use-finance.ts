@@ -20,9 +20,9 @@ import type {
   FinanceAnalyticsDto,
   FinancePeriodPreset,
   FinanceSummaryDto,
-  LedgerDirection,
   LedgerDisplaySource,
   LedgerEntryDto,
+  LedgerMovementFilter,
   ManualExpenseDetailDto,
   OpenReceivableDto,
   OpenReceivableSourceType,
@@ -198,7 +198,7 @@ export function useFinanceLedger() {
       clearSearch: () => {
         setLedgerQuery({ search: "", page: 1 });
       },
-      setDirection: (direction: LedgerDirection | null) => {
+      setDirection: (direction: LedgerMovementFilter | null) => {
         const mapped = toLedgerApiFilters(direction, query.displaySource);
         setLedgerQuery({ ...mapped, page: 1 });
       },
