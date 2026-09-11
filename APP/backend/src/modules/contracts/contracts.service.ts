@@ -51,6 +51,7 @@ import {
 import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
 import { createDrivingLicenseOcrProvider } from "src/modules/contracts/ocr/ocr-provider.factory";
 import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
+import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
 import { createFilesService } from "src/modules/files/files.service";
 import type { MultipartFile } from "@fastify/multipart";
 import type {
@@ -100,24 +101,31 @@ type RenewalHistoryRow = {
   previousEndAt: Date;
   newEndAt: Date;
   approvedAt: Date | null;
+  appliedAt: Date | null;
 };
 
-function toPublicRenewal(row: RenewalHistoryRow, confirmed: boolean) {
+function toPublicRenewal(row: RenewalHistoryRow) {
   return {
     additionalDays: row.additionalDays,
     additionalAmount: row.additionalAmount,
     previousEndAt: row.previousEndAt,
     newEndAt: row.newEndAt,
-    confirmed,
+    confirmed: row.appliedAt != null,
+    awaitingPayment:
+      row.approvedAt != null && row.appliedAt == null && row.additionalAmount > 0,
   };
 }
 
 function pickPublicRenewal(renewals: RenewalHistoryRow[], preferConfirmed: boolean) {
   const pending = renewals.find((row) => row.approvedAt == null);
-  if (!preferConfirmed && pending) return toPublicRenewal(pending, false);
-  const latestApproved = renewals.find((row) => row.approvedAt != null);
-  if (latestApproved) return toPublicRenewal(latestApproved, true);
-  if (pending) return toPublicRenewal(pending, false);
+  if (!preferConfirmed && pending) return toPublicRenewal(pending);
+  const awaitingPayment = renewals.find(
+    (row) => row.approvedAt != null && row.appliedAt == null,
+  );
+  if (awaitingPayment) return toPublicRenewal(awaitingPayment);
+  const latestApplied = renewals.find((row) => row.appliedAt != null);
+  if (latestApplied) return toPublicRenewal(latestApplied);
+  if (pending) return toPublicRenewal(pending);
   return null;
 }
 
@@ -125,6 +133,7 @@ export function createContractsService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
   const files = createFilesService(fastify);
   const customerCharges = createRoadLiabilityCustomerChargeService(fastify);
+  const paymentService = createContractPaymentService(prisma);
 
   async function decorateDetail(row: Awaited<ReturnType<typeof loadDetail>>, db: typeof prisma | Tx = prisma) {
     const signals = await loadSalikGpsSignals(db, [row.id]);
@@ -220,7 +229,6 @@ export function createContractsService(fastify: FastifyInstance) {
           currency: CONTRACT_CURRENCY,
           startAt,
           endAt,
-          depositAmount: input.depositAmount ?? null,
         },
       });
       await emit(tx, "contract.created", created.id, { vehicleId: input.vehicleId });
@@ -355,68 +363,12 @@ export function createContractsService(fastify: FastifyInstance) {
   }
 
   async function confirmPayment(
-    contractId: string,
-    input: z.infer<typeof ConfirmPaymentSchema>,
-    actorUserId: number,
-    idempotencyKey?: string,
-  ) {
-    const run = async () =>
-      withTransaction(prisma, async (tx) => {
-        const contract = await tx.contract.findUnique({ where: { id: contractId } });
-        if (!contract) throw contractError.notFound();
-        if (contract.status === "PAID" || contract.status === "ACTIVE") {
-          return decorateDetail(
-            await tx.contract.findUniqueOrThrow({
-              where: { id: contractId },
-              include: CONTRACT_DETAIL_INCLUDE,
-            }),
-          );
-        }
-        assertTransition(contract.status, "PAID");
-        await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
-
-        await tx.contractPayment.create({
-          data: {
-            contractId,
-            amount: input.amount ?? contract.agreedAmount,
-            currency: contract.currency,
-            method: input.method,
-            status: "CONFIRMED",
-            externalReference: input.externalReference ?? null,
-            confirmedAt: new Date(),
-            createdByUserId: actorUserId,
-          },
-        });
-        await tx.contract.update({
-          where: { id: contractId },
-          data: { status: "PAID", revision: { increment: 1 } },
-        });
-        await completeRentalLinks(tx, contractId);
-        await emit(tx, "contract.paid", contractId, { vehicleId: contract.vehicleId });
-        return decorateDetail(
-          await tx.contract.findUniqueOrThrow({
-            where: { id: contractId },
-            include: CONTRACT_DETAIL_INCLUDE,
-          }),
-        );
-      });
-
-    if (!idempotencyKey) return run();
-    const outcome = await runIdempotent(
-      prisma,
-      {
-        scope: `contract:payment:${contractId}`,
-        key: idempotencyKey,
-        fingerprint: fingerprintIdempotentPayload({
-          method: input.method,
-          amount: input.amount ?? null,
-          externalReference: input.externalReference ?? null,
-        }),
-      },
-      run,
-    );
-    if (outcome.deduped) return get(contractId);
-    return outcome.result!;
+    _contractId: string,
+    _input: z.infer<typeof ConfirmPaymentSchema>,
+    _actorUserId: number,
+    _idempotencyKey?: string,
+  ): Promise<Awaited<ReturnType<typeof get>>> {
+    throw contractError.manualPaymentDisabled();
   }
 
   async function carOut(
@@ -445,7 +397,7 @@ export function createContractsService(fastify: FastifyInstance) {
         await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
 
         const confirmed = await tx.contractPayment.findFirst({
-          where: { contractId, status: "CONFIRMED" },
+          where: { contractId, purpose: "RENTAL", status: "CONFIRMED" },
         });
         if (!confirmed) throw contractError.paymentRequired();
 
@@ -618,7 +570,6 @@ export function createContractsService(fastify: FastifyInstance) {
           rentalDays: contract.rentalDays,
           startAt: contract.startAt,
           endAt: contract.endAt,
-          depositAmount: contract.depositAmount,
           currency: contract.currency,
         },
       });
@@ -818,10 +769,10 @@ export function createContractsService(fastify: FastifyInstance) {
             where: { reconciliationId: contract.reconciliation.id, roadLiabilityId: { not: null } },
           })
         : [];
-      const totals = reconciliationTotalsFromLines(
-        [...preservedLiabilityLines, ...input.lines],
-        contract.depositAmount ?? 0,
-      );
+      const totals = reconciliationTotalsFromLines([
+        ...preservedLiabilityLines,
+        ...input.lines,
+      ]);
       const now = new Date();
 
       if (contract.reconciliation) {
@@ -832,6 +783,8 @@ export function createContractsService(fastify: FastifyInstance) {
           where: { id: contract.reconciliation.id },
           data: {
             ...totals,
+            depositAmount: 0,
+            deductions: 0,
             approvedAt: now,
             approvedByUserId: actorUserId,
             lines: { create: input.lines },
@@ -842,6 +795,8 @@ export function createContractsService(fastify: FastifyInstance) {
           data: {
             contractId,
             ...totals,
+            depositAmount: 0,
+            deductions: 0,
             approvedAt: now,
             approvedByUserId: actorUserId,
             lines: { create: input.lines },
@@ -969,6 +924,12 @@ export function createContractsService(fastify: FastifyInstance) {
         assertTransition(contract.status, "CLOSED");
         if (!contract.carIn) throw contractError.carInRequired();
         if (!contract.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+        if (
+          contract.reconciliation.finalAmount > 0 &&
+          !contract.reconciliation.settledAt
+        ) {
+          throw contractError.reconciliationPaymentRequired();
+        }
 
         const now = new Date();
         await tx.contract.update({
@@ -1016,9 +977,9 @@ export function createContractsService(fastify: FastifyInstance) {
 
         const previousEndAt = contract.endAt ?? derivedEndAt(contract.startAt, contract.rentalDays);
         const newEndAt = derivedEndAt(previousEndAt, input.additionalDays, previousEndAt);
-        await tx.contractRenewal.deleteMany({ where: { contractId, approvedAt: null } });
+        await tx.contractRenewal.deleteMany({ where: { contractId, appliedAt: null } });
         await revokeUnusedRenewalLinks(tx, contractId);
-        await tx.contractRenewal.create({
+        const renewal = await tx.contractRenewal.create({
           data: {
             contractId,
             additionalDays: input.additionalDays,
@@ -1029,16 +990,9 @@ export function createContractsService(fastify: FastifyInstance) {
             createdByUserId: actorUserId,
           },
         });
-        await tx.contract.update({
-          where: { id: contractId },
-          data: {
-            rentalDays: contract.rentalDays + input.additionalDays,
-            agreedAmount: contract.agreedAmount + input.additionalAmount,
-            endAt: newEndAt,
-            revision: { increment: 1 },
-          },
-        });
-        await emit(tx, "contract.renewed", contractId, { additionalDays: input.additionalDays });
+        if (input.additionalAmount <= 0) {
+          await paymentService.applyZeroAmountSettlement(tx, "RENEWAL", renewal.id);
+        }
         return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
@@ -1104,17 +1058,10 @@ export function createContractsService(fastify: FastifyInstance) {
         where: { id: pending.id },
         data: { approvedAt: new Date() },
       });
-      await tx.contract.update({
-        where: { id: contract.id },
-        data: {
-          rentalDays: contract.rentalDays + pending.additionalDays,
-          agreedAmount: contract.agreedAmount + pending.additionalAmount,
-          endAt: pending.newEndAt,
-          revision: { increment: 1 },
-        },
-      });
-      await emit(tx, "contract.renewed", contract.id, { additionalDays: pending.additionalDays });
-      await markLinkUsed(tx, lockedLink.id);
+      if (pending.additionalAmount <= 0) {
+        await paymentService.applyZeroAmountSettlement(tx, "RENEWAL", pending.id);
+        await markLinkUsed(tx, lockedLink.id);
+      }
 
       const fresh = await tx.contract.findUniqueOrThrow({
         where: { id: contract.id },
@@ -1134,7 +1081,6 @@ export function createContractsService(fastify: FastifyInstance) {
       currency: string;
       startAt: Date | null;
       endAt: Date | null;
-      depositAmount: number | null;
       termsVersion: string;
       vehicle: {
         vehicleName: string | null;
@@ -1156,7 +1102,6 @@ export function createContractsService(fastify: FastifyInstance) {
       currency: row.currency,
       startAt: row.startAt,
       endAt: row.endAt,
-      depositAmount: row.depositAmount,
       termsVersion: row.termsVersion,
       vehicle: {
         displayName: vehicleDisplayName({
@@ -1169,7 +1114,12 @@ export function createContractsService(fastify: FastifyInstance) {
         color: row.vehicle.color,
         modelYear: row.vehicle.modelYear,
       },
-      ...(renewal === undefined ? {} : { renewal }),
+      ...(renewal === undefined
+        ? {}
+        : {
+            renewal,
+            payment: { providerAvailable: createPaymentProvider().configured },
+          }),
     };
   }
 
@@ -1280,120 +1230,35 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
-  async function applyProviderPaymentStatus(
-    tx: Parameters<Parameters<typeof withTransaction>[1]>[0],
-    paymentId: string,
-  ) {
-    const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
-    if (!payment?.providerReference) return payment;
-    if (payment.status !== "PENDING" && payment.status !== "PROCESSING") return payment;
-    const result = await createPaymentProvider().getPaymentStatus(payment.providerReference);
-    if (result.status === "UNKNOWN") return payment;
-    if (result.status === "CONFIRMED") {
-      const contract = await tx.contract.findUnique({ where: { id: payment.contractId } });
-      if (!contract) throw contractError.notFound();
-      await tx.contractPayment.update({
-        where: { id: payment.id },
-        data: {
-          status: "CONFIRMED",
-          providerStatus: result.providerStatus ?? "CONFIRMED",
-          confirmedAt: new Date(),
-        },
-      });
-      if (contract.status === "SIGNED") {
-        assertTransition("SIGNED", "PAID");
-        await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
-        await tx.contract.update({
-          where: { id: contract.id },
-          data: { status: "PAID", revision: { increment: 1 } },
-        });
-        await completeRentalLinks(tx, contract.id);
-        await emit(tx, "payment.confirmed", contract.id, {
-          paymentId: payment.id,
-          dedupe: payment.id,
-        });
-        await emit(tx, "contract.paid", contract.id, { vehicleId: contract.vehicleId });
-      }
-      return tx.contractPayment.findUnique({ where: { id: payment.id } });
-    }
-    if (result.status === "FAILED" || result.status === "CANCELLED") {
-      await tx.contractPayment.update({
-        where: { id: payment.id },
-        data: {
-          status: result.status,
-          providerStatus: result.providerStatus ?? result.status,
-          failedAt: new Date(),
-        },
-      });
-      await emit(tx, "payment.failed", payment.contractId, {
-        paymentId: payment.id,
-        status: result.status,
-        dedupe: payment.id,
-      });
-    }
-    return tx.contractPayment.findUnique({ where: { id: payment.id } });
-  }
-
   async function startCardPayment(token: string, idempotencyKey?: string) {
-    const provider = createPaymentProvider();
-    if (!provider.configured) throw contractError.paymentProviderNotConfigured();
+    const run = async () => {
+      const link = await resolveContractLink(prisma, token, "RENTAL");
+      const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
 
-    const run = async () =>
-      withTransaction(prisma, async (tx) => {
-        const link = await resolveContractLink(tx, token, "RENTAL");
-        await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, link.contractId);
-        const contract = await tx.contract.findUnique({ where: { id: link.contractId } });
-        if (!contract) throw contractError.notFound();
-        if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
-        if (contract.agreedAmount <= 0) throw contractError.paymentNotAllowed();
+      const verification = await latestLicense(prisma, contract.id);
+      assertLicenseProgress(verification?.status, verification?.expiryDate);
 
-        const verification = await latestLicense(tx, contract.id);
-        assertLicenseProgress(verification?.status, verification?.expiryDate);
-
-        const active = await tx.contractPayment.findFirst({
-          where: { contractId: contract.id, status: { in: ["PENDING", "PROCESSING"] } },
-        });
-        if (active) throw contractError.paymentAlreadyProcessing();
-
-        const created = await provider.createPayment({
-          contractId: contract.id,
-          amount: contract.agreedAmount,
-          currency: contract.currency,
-        });
-        if (!created.ok) throw contractError.paymentProviderNotConfigured();
-
-        const statusToken = generateOpaqueToken(32);
-        const payment = await tx.contractPayment.create({
-          data: {
-            contractId: contract.id,
-            amount: contract.agreedAmount,
-            currency: contract.currency,
-            method: "CARD",
-            status: "PROCESSING",
-            provider: created.provider,
-            providerReference: created.providerReference,
-            providerStatus: created.providerStatus,
-            processingStartedAt: new Date(),
-            statusTokenHash: hashToken(statusToken),
-            statusTokenExpiresAt: expiryFromNow(PAYMENT_STATUS_TOKEN_TTL_SECONDS),
-          },
-        });
-        await emit(tx, "payment.started", contract.id, { paymentId: payment.id, dedupe: payment.id });
-        await emit(tx, "payment.pending", contract.id, {
-          paymentId: payment.id,
-          dedupe: `${payment.id}:pending`,
-        });
-        return {
-          payment: {
-            status: payment.status,
-            amount: payment.amount,
-            currency: payment.currency,
-            method: payment.method,
-          },
-          statusToken,
-          providerAvailable: true,
-        };
+      const result = await paymentService.startPayment({
+        purpose: "RENTAL",
+        targetId: contract.id,
+        validate: async (tx, obligation) => {
+          if (obligation.amount <= 0) throw contractError.paymentNotAllowed();
+        },
       });
+      return {
+        payment: {
+          status: result.payment.status,
+          amount: result.payment.amount,
+          currency: result.payment.currency,
+          method: "CARD" as const,
+        },
+        checkoutUrl: result.payment.checkoutUrl,
+        statusToken: result.statusToken,
+        providerAvailable: result.providerAvailable,
+      };
+    };
 
     if (!idempotencyKey) return run();
     const outcome = await runIdempotent(
@@ -1408,7 +1273,7 @@ export function createContractsService(fastify: FastifyInstance) {
     if (outcome.deduped) {
       const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
       const payment = await prisma.contractPayment.findFirst({
-        where: { contractId: link.contractId, method: "CARD" },
+        where: { contractId: link.contractId, purpose: "RENTAL" },
         orderBy: { createdAt: "desc" },
       });
       if (!payment) throw contractError.paymentAttemptNotFound();
@@ -1419,30 +1284,133 @@ export function createContractsService(fastify: FastifyInstance) {
           currency: payment.currency,
           method: payment.method,
         },
+        checkoutUrl: payment.checkoutUrl,
         statusToken: null,
-        providerAvailable: true,
+        providerAvailable: createPaymentProvider().configured,
       };
     }
     return outcome.result!;
   }
 
-  async function getPaymentStatusByToken(statusToken: string) {
-    const digest = hashToken(statusToken);
-    return withTransaction(prisma, async (tx) => {
-      const payment = await tx.contractPayment.findUnique({
-        where: { statusTokenHash: digest },
-      });
-      if (!payment) throw contractError.paymentStatusTokenInvalid();
-      if (!payment.statusTokenExpiresAt || payment.statusTokenExpiresAt.getTime() <= Date.now()) {
-        throw contractError.paymentStatusTokenExpired();
-      }
-      const updated = (await applyProviderPaymentStatus(tx, payment.id)) ?? payment;
-      const contract = await tx.contract.findUnique({
-        where: { id: updated.contractId },
-        select: { status: true },
-      });
-      return { status: updated.status, contractStatus: contract?.status ?? null };
+  async function startReconciliationPayment(contractId: string, actorUserId: number) {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      include: { reconciliation: true },
     });
+    if (!contract) throw contractError.notFound();
+    if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
+    if (!contract.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+    if (contract.reconciliation.finalAmount <= 0) {
+      await withTransaction(prisma, async (tx) => {
+        await paymentService.applyZeroAmountSettlement(
+          tx,
+          "RECONCILIATION",
+          contract.reconciliation!.id,
+        );
+      });
+      return {
+        payment: {
+          status: "CONFIRMED" as const,
+          amount: 0,
+          currency: contract.currency,
+          purpose: "RECONCILIATION" as const,
+          checkoutUrl: null,
+          checkoutExpiresAt: null,
+        },
+        checkoutUrl: null,
+        statusToken: null,
+        providerAvailable: createPaymentProvider().configured,
+        noPaymentRequired: true,
+      };
+    }
+    const result = await paymentService.startPayment({
+      purpose: "RECONCILIATION",
+      targetId: contract.reconciliation.id,
+      createdByUserId: actorUserId,
+      validate: async (tx) => {
+        const row = await tx.contract.findUnique({
+          where: { id: contractId },
+          include: { reconciliation: true },
+        });
+        if (!row?.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+      },
+    });
+    return {
+      payment: result.payment,
+      checkoutUrl: result.payment.checkoutUrl,
+      statusToken: result.statusToken,
+      providerAvailable: result.providerAvailable,
+    };
+  }
+
+  async function startPostClosePayment(
+    contractId: string,
+    receivableId: string,
+    actorUserId: number,
+  ) {
+    const receivable = await prisma.contractPostCloseReceivable.findFirst({
+      where: { id: receivableId, contractId },
+    });
+    if (!receivable) throw contractError.notFound();
+    if (receivable.status !== "OPEN") throw contractError.paymentAlreadySettled();
+
+    const result = await paymentService.startPayment({
+      purpose: "POST_CLOSE_RECEIVABLE",
+      targetId: receivable.id,
+      createdByUserId: actorUserId,
+    });
+    return {
+      payment: result.payment,
+      checkoutUrl: result.payment.checkoutUrl,
+      statusToken: result.statusToken,
+      providerAvailable: result.providerAvailable,
+    };
+  }
+
+  async function startRenewalPaymentPublic(token: string) {
+    const link = await resolveContractLink(prisma, token, "RENEWAL", { allowCompleted: true });
+    const renewal = await prisma.contractRenewal.findFirst({
+      where: {
+        contractId: link.contractId,
+        approvedAt: { not: null },
+        appliedAt: null,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!renewal) throw contractError.renewalOfferRequired();
+    if (renewal.additionalAmount <= 0) throw contractError.paymentNotAllowed();
+
+    const result = await paymentService.startPayment({
+      purpose: "RENEWAL",
+      targetId: renewal.id,
+      validate: async (tx) => {
+        const row = await tx.contractRenewal.findUnique({ where: { id: renewal.id } });
+        if (!row?.approvedAt) throw contractError.renewalOfferRequired();
+        if (row.appliedAt) throw contractError.paymentAlreadySettled();
+      },
+    });
+
+    if (result.payment.status === "CONFIRMED") {
+      await withTransaction(prisma, async (tx) => {
+        await markLinkUsed(tx, link.id);
+      });
+    }
+
+    return {
+      payment: {
+        status: result.payment.status,
+        amount: result.payment.amount,
+        currency: result.payment.currency,
+        method: "CARD" as const,
+      },
+      checkoutUrl: result.payment.checkoutUrl,
+      statusToken: result.statusToken,
+      providerAvailable: result.providerAvailable,
+    };
+  }
+
+  async function getPaymentStatusByToken(statusToken: string) {
+    return paymentService.getPaymentStatusByToken(statusToken);
   }
 
   async function getPublic(type: "RENTAL" | "RETURN" | "RENEWAL", token: string) {
@@ -1516,6 +1484,9 @@ export function createContractsService(fastify: FastifyInstance) {
     uploadDrivingLicense,
     getPaymentContext,
     startCardPayment,
+    startReconciliationPayment,
+    startPostClosePayment,
+    startRenewalPaymentPublic,
     getPaymentStatusByToken,
     openInspectionStream,
   };

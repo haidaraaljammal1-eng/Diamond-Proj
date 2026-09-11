@@ -177,7 +177,6 @@ export function GpsScreen() {
         contractId={contractId}
         onClose={() => setContractId(null)}
         onGenerateRentalLink={goContracts}
-        onConfirmPayment={goContracts}
         onCarOut={goContracts}
         onCarIn={goContracts}
         onReturnLink={goContracts}

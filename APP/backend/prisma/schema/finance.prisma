@@ -1,0 +1,104 @@
+// ---------------------------------------------------------------------------
+// Finance V1 — immutable ledger read model + manual company expenses.
+// Obligations stay in Contract/Renewal/Reconciliation/PostClose domains.
+// Customer collections stay in ContractPayment (trusted Stripe only).
+// ---------------------------------------------------------------------------
+
+enum FinancialLedgerKind {
+  RENTAL_PAYMENT
+  RENEWAL_PAYMENT
+  RECONCILIATION_PAYMENT
+  POST_CLOSE_RECEIVABLE_PAYMENT
+  MAINTENANCE_EXPENSE
+  MANUAL_EXPENSE
+  MANUAL_EXPENSE_REVERSAL
+}
+
+enum FinancialLedgerSourceType {
+  CONTRACT_PAYMENT
+  MAINTENANCE_ORDER
+  MANUAL_EXPENSE
+}
+
+enum ManualExpenseCategory {
+  VEHICLE_CLEANING
+  FUEL
+  PARKING
+  GOVERNMENT_FEES
+  OFFICE_ADMIN
+  MARKETING
+  OPERATIONS
+  OTHER
+}
+
+enum ManualExpenseStatus {
+  ACTIVE
+  VOID
+}
+
+model FinancialLedgerEntry {
+  id                 String                    @id @default(uuid())
+  kind               FinancialLedgerKind
+  sourceType         FinancialLedgerSourceType
+  sourceId           String
+  dedupeKey          String                    @unique
+  amount             Int
+  currency           String                    @default("AED")
+  occurredAt         DateTime
+  contractId         String?
+  customerId         Int?
+  vehicleId          Int?
+  contractPaymentId  String?
+  maintenanceOrderId Int?
+  manualExpenseId    String?
+  createdAt          DateTime                  @default(now())
+
+  contractPayment  ContractPayment? @relation(fields: [contractPaymentId], references: [id], onDelete: Restrict)
+  maintenanceOrder MaintenanceOrder? @relation(fields: [maintenanceOrderId], references: [id], onDelete: Restrict)
+  manualExpense    ManualExpense?    @relation(fields: [manualExpenseId], references: [id], onDelete: Restrict)
+
+  @@index([occurredAt])
+  @@index([kind])
+  @@index([sourceType])
+  @@index([contractId])
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([manualExpenseId])
+  @@map("financial_ledger_entries")
+}
+
+model ManualExpense {
+  id                    String                @id @default(uuid())
+  amount                Int
+  currency              String                @default("AED")
+  category              ManualExpenseCategory
+  recognizedAt          DateTime
+  description           String
+  vehicleId             Int?
+  vehicle               Vehicle?              @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  vendorName            String?
+  receiptNumber         String?
+  attachmentId          String?
+  attachment            Attachment?           @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
+  note                  String?
+  status                ManualExpenseStatus   @default(ACTIVE)
+  correctionOfExpenseId String?
+  correctionOfExpense   ManualExpense?        @relation("ManualExpenseCorrection", fields: [correctionOfExpenseId], references: [id], onDelete: SetNull)
+  corrections           ManualExpense[]       @relation("ManualExpenseCorrection")
+  voidedAt              DateTime?
+  voidedByUserId        Int?
+  voidedBy              User?                 @relation("ManualExpenseVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
+  voidReason            String?
+  createdByUserId       Int
+  createdBy             User                  @relation("ManualExpenseCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt             DateTime              @default(now())
+
+  ledgerEntries FinancialLedgerEntry[]
+
+  @@index([recognizedAt])
+  @@index([status])
+  @@index([category])
+  @@index([vehicleId])
+  @@index([createdByUserId])
+  @@map("manual_expenses")
+}

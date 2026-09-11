@@ -142,7 +142,6 @@ export function RoadLiabilitiesScreen() {
         contractId={contractId}
         onClose={() => setContractId(null)}
         onGenerateRentalLink={goContracts}
-        onConfirmPayment={goContracts}
         onCarOut={goContracts}
         onCarIn={goContracts}
         onReturnLink={goContracts}

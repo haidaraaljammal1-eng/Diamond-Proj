@@ -32,7 +32,6 @@ const RENTAL = {
     rentalDays: 7,
     agreedAmount: 3500,
     currency: "AED",
-    depositAmount: 1500,
     startAt: "2026-09-12T08:00:00.000Z",
     endAt: "2026-09-19T08:00:00.000Z",
     actualPickupAt: null,

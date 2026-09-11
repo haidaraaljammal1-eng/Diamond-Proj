@@ -108,7 +108,7 @@ Public token routes live under `routes/public/` with an empty public hook — **
 
 ## Payment foundation
 
-`ContractPayment`: amount, currency, method (`BANK_TRANSFER | CARD | MANUAL`), status (`PENDING | PROCESSING | CONFIRMED | FAILED | CANCELLED`), optional `externalReference`, plus provider reference fields and a hashed payment-status token. Staff `POST .../payment/confirm` remains the manual/bank SIGNED → PAID path. Electronic card payment uses `PaymentProvider` (Stripe adapter is not live; no fake success). Public card POST never accepts amount. Redirect URLs are not confirmation. Details: `DOCU/05-pages/public-rental-flow.md`.
+`ContractPayment`: amount, currency, method (`BANK_TRANSFER | CARD | MANUAL`), status (`PENDING | PROCESSING | CONFIRMED | FAILED | CANCELLED`), `purpose` (`RENTAL | RENEWAL | RECONCILIATION | POST_CLOSE_RECEIVABLE`), `targetId`, provider/checkout fields, and a hashed payment-status token. V1 customer collection is Stripe Checkout only (`PaymentProvider`). Staff `POST .../payment/confirm` is disabled (`MANUAL_PAYMENT_DISABLED`); historical `MANUAL` / `BANK_TRANSFER` rows remain readable. Public card POST never accepts amount. Redirect URLs are not confirmation. Close requires settled reconciliation when `finalAmount > 0`. Details: `DOCU/05-pages/payments-backend.md` and `DOCU/05-pages/public-rental-flow.md`.
 
 ## Car-Out / Car-In
 
@@ -121,6 +121,8 @@ GPS Salik intelligence is a derived Contract projection (`roadLiabilitySignals`)
 Car-Out is the future TARS `HANDOVER` integration checkpoint and Car-In the future `RETURN_DOCUMENTATION` checkpoint. Neither calls TARS today, and the sequencing is unconfirmed. See `DOCU/04-api-contracts/tars-integration.md`.
 
 ## Reconciliation
+
+Diamond V1 does not use rental deposits. Reconciliation `finalAmount` equals `chargesTotal`. No deposit collection, deduction, credit, or refund exists.
 
 Staff-owned settlement at Contract status **REVIEW** (after Car-In). Line types: DAMAGE, FUEL, LATE, SALIK, VIOLATION, OTHER.
 
@@ -193,7 +195,7 @@ List query: `search` (number, plate, vehicle name, customer name/phone), `status
 | GET | `/contracts/renew/:token` |
 | POST | `/contracts/renew/:token/confirm` |
 
-`POST /contracts/:id/renewal-link` is ACTIVE-only. It upserts a pending `ContractRenewal` (the stored offer) and issues an opaque hashed RENEWAL token (`CONTRACT_LINK_TTL_SECONDS.RENEWAL` = 48h). Prior unused RENEWAL links are revoked. Public `GET /contracts/renew/:token` returns `PublicContractView` plus optional `renewal` (`additionalDays`, `additionalAmount`, `previousEndAt`, `newEndAt`, `confirmed`). Used RENEWAL tokens may be re-read (`allowCompleted`) for the success reload. Public `POST /contracts/renew/:token/confirm` ignores client days/amount and applies the pending offer on the **same** Contract. The Contract stays ACTIVE; Vehicle stays RENTED; no second Contract is created. Staff `POST /contracts/:id/renew` still applies immediately, deletes pending offers, and revokes unused RENEWAL links. Duplicate public confirm is idempotent (same totals, same contract number). No TARS renewal execution. No payment/Stripe on renewal.
+`POST /contracts/:id/renewal-link` is ACTIVE-only. It upserts a pending `ContractRenewal` (the stored offer) and issues an opaque hashed RENEWAL token (`CONTRACT_LINK_TTL_SECONDS.RENEWAL` = 48h). Prior unused RENEWAL links are revoked. Public `GET /contracts/renew/:token` returns `PublicContractView` plus optional `renewal` (`additionalDays`, `additionalAmount`, `previousEndAt`, `newEndAt`, `confirmed`, `awaitingPayment`) and `payment.providerAvailable`. Used RENEWAL tokens may be re-read (`allowCompleted`) for the success reload. Public `POST /contracts/renew/:token/confirm` approves the stored offer (`approvedAt`). When `additionalAmount > 0`, terms apply only after `POST /contracts/renew/:token/payment` is confirmed by Stripe. Zero additional amount applies without payment. The Contract stays ACTIVE; Vehicle stays RENTED; no second Contract is created. Staff `POST /contracts/:id/renew` still applies immediately, deletes pending offers, and revokes unused RENEWAL links. No TARS renewal execution.
 
 ## Errors
 

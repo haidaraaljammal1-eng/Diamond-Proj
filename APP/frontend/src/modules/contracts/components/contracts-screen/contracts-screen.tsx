@@ -13,7 +13,6 @@ import { ContractFilters } from "../contract-filters/contract-filters";
 import { ContractsTable } from "../contracts-table/contracts-table";
 import { ContractDetailDrawer } from "../contract-detail/contract-detail-drawer";
 import { ContractLinkResultDialog } from "../contract-link-result/contract-link-result-dialog";
-import { PaymentConfirmDialog } from "../../forms/payment/payment-confirm-dialog";
 import { CarOutDialog } from "../../forms/car-out/car-out-dialog";
 import { CarInDialog } from "../../forms/car-in/car-in-dialog";
 import { RenewDialog } from "../../forms/renew/renew-dialog";
@@ -46,10 +45,6 @@ export function ContractsScreen() {
   const { generateRentalLink, generateReturnLink } = useContract();
 
   const [drawerId, setDrawerId] = useState<string | null>(null);
-  const [paymentTarget, setPaymentTarget] = useState<{
-    id: string;
-    agreedAmount: number;
-  } | null>(null);
   const [carOutId, setCarOutId] = useState<string | null>(null);
   const [carInId, setCarInId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
@@ -118,7 +113,7 @@ export function ContractsScreen() {
     (contract: ContractListItemDto) => {
       if (contract.status === "AWAITING" || contract.status === "FORM" || contract.status === "SIGNED") {
         if (contract.status === "SIGNED") {
-          setPaymentTarget({ id: contract.id, agreedAmount: contract.agreedAmount });
+          setDrawerId(contract.id);
           return;
         }
         void generateRentalLink(contract.id);
@@ -276,10 +271,6 @@ export function ContractsScreen() {
         contractId={drawerId}
         onClose={() => setDrawerId(null)}
         onGenerateRentalLink={(id) => void generateRentalLink(id)}
-        onConfirmPayment={(id) => {
-          const row = contracts.find((item) => item.id === id);
-          setPaymentTarget({ id, agreedAmount: row?.agreedAmount ?? 0 });
-        }}
         onCarOut={setCarOutId}
         onCarIn={setCarInId}
         onReturnLink={(id) => void generateReturnLink(id)}
@@ -288,11 +279,6 @@ export function ContractsScreen() {
         onCloseContract={(id) => setCloseTarget({ id })}
       />
 
-      <PaymentConfirmDialog
-        contractId={paymentTarget?.id ?? null}
-        amount={paymentTarget?.agreedAmount ?? 0}
-        onClose={() => setPaymentTarget(null)}
-      />
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
       <CarInDialog contractId={carInId} onClose={() => setCarInId(null)} />
       <RenewDialog contractId={renewId} onClose={() => setRenewId(null)} />

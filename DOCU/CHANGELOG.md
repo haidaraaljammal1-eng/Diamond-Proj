@@ -1,7 +1,16 @@
 # Changelog
 
+## 2026-09-11
+
+- Finance Frontend V1: `/[locale]/finance` administrative operations center (`finance.read`) — KPIs, Open Receivables, analytics, ledger, manual expense add/void/correct (`finance.manage_expenses`). Backend-authoritative totals; Stripe-only collections; no invoices/deposit/manual income. See `DOCU/05-pages/finance.md`.
+- Finance Manual Expense forms pass relative FormError keys (`required`, `wholeAed`, `positiveAmount`, `tooLong`) — never `validation.*` prefixes.
+- Finance Backend V1: `FinancialLedgerEntry` + `ManualExpense`; Stripe-only Collected; Open Receivables projection; summary/ledger/analytics APIs; maintenance completion expense recognition; manual expense void/correct. Permissions `finance.read` / `finance.manage_expenses`. See `DOCU/05-pages/finance-backend.md`.
+- Unified Stripe payment foundation verification: dedicated reconciliation/post-close/security integration tests; public renewal payment UX; TARS integration tests use test payment provider double; manual `payment/confirm` hidden from active OpenAPI; historical `MANUAL` rows preserved. See `DOCU/05-pages/payments-backend.md`.
+- Unified Stripe payment foundation (Phase 2): shared payment engine for rental, renewal, reconciliation, and post-close receivable; Stripe Checkout + webhook idempotency; manual `payment/confirm` disabled; renewal applies only after payment; close blocked until reconciliation settled. See `DOCU/05-pages/payments-backend.md`.
+
 ## 2026-09-10
 
+- Diamond V1 deposit removal: rental deposits are out of scope. Reconciliation `finalAmount` equals `chargesTotal`; no deposit collection, deduction, credit, or refund. Legacy DB columns remain but are ignored in active API/UI. See `DOCU/05-pages/contracts-backend.md` and `DOCU/05-pages/contracts.md`.
 - Vehicle custody vs Contract lifecycle: Car-In ends possession (RETOUT → REVIEW and Vehicle RENTED → AVAILABLE). REVIEW is financial review, not currentRental. Close no longer releases the vehicle. Late official RTA/Salik on CLOSED Contracts create Post-Close Receivables without reopening the Contract. One `RoadLiabilityCustomerCharge` per liability. GPS Salik Contract flag is derived and informational. See `DOCU/05-pages/contracts-backend.md`, `DOCU/05-pages/violations-salik.md`, and `DOCU/05-pages/gps.md`.
 - Violations & Salik customer charge review (frontend): staff confirm the customer charge from the Liability Drawer; official amount stays read-only; increase requires a reason; backend creates one locked reconciliation line **or** a post-close receivable. GPS predictions and users without `violations.charge` cannot confirm. See `DOCU/05-pages/violations-salik.md`.
 - Road Liability → Reconciliation customer charge review (backend): official RTA/Salik amount stays immutable; staff may increase customer charge before attach; unique `roadLiabilityId` + idempotent confirm-charge; new manual SALIK/VIOLATION lines rejected. See `DOCU/05-pages/violations-salik.md` and `DOCU/05-pages/contracts-backend.md`.

@@ -148,10 +148,15 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
     set({ payPending: true, error: null });
     try {
       const attempt = await startPublicRentalPayment(token, crypto.randomUUID());
+      const checkoutUrl = attempt.checkoutUrl ?? null;
       set({
         payPending: false,
         statusToken: attempt.statusToken ?? get().statusToken,
       });
+      if (checkoutUrl && typeof window !== "undefined") {
+        window.location.assign(checkoutUrl);
+        return true;
+      }
       await get().load(token);
       return true;
     } catch (error) {

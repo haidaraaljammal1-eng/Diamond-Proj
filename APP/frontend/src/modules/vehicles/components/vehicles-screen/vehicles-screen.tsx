@@ -25,7 +25,6 @@ import {
 } from "../../utils/vehicles-pagination";
 import { CarOutDialog } from "@/modules/contracts/forms/car-out/car-out-dialog";
 import { CarInDialog } from "@/modules/contracts/forms/car-in/car-in-dialog";
-import { PaymentConfirmDialog } from "@/modules/contracts/forms/payment/payment-confirm-dialog";
 import { RenewDialog } from "@/modules/contracts/forms/renew/renew-dialog";
 import { ContractLinkResultDialog } from "@/modules/contracts/components/contract-link-result/contract-link-result-dialog";
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
@@ -71,7 +70,6 @@ export function VehiclesScreen() {
   const [contractDrawerId, setContractDrawerId] = useState<string | null>(null);
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeId, setCloseId] = useState<string | null>(null);
-  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
 
   const filterLabels = useMemo(
@@ -336,18 +334,12 @@ export function VehiclesScreen() {
 
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
       <CarInDialog contractId={carInId} onClose={() => setCarInId(null)} />
-      <PaymentConfirmDialog
-        contractId={paymentId}
-        amount={0}
-        onClose={() => setPaymentId(null)}
-      />
       <RenewDialog contractId={renewId} onClose={() => setRenewId(null)} />
       <ContractLinkResultDialog />
       <ContractDetailDrawer
         contractId={contractDrawerId}
         onClose={() => setContractDrawerId(null)}
         onGenerateRentalLink={(id) => void generateRentalLink(id)}
-        onConfirmPayment={setPaymentId}
         onCarOut={setCarOutId}
         onCarIn={setCarInId}
         onReturnLink={(id) => void generateReturnLink(id)}

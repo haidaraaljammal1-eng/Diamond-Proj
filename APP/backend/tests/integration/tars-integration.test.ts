@@ -5,6 +5,12 @@ import type { PrismaClient } from "@prisma/client";
 import { AppError } from "src/lib/errors/app-error";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
 import { setTarsProviderForTests } from "src/modules/integrations/tars/tars.provider";
+import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
+import {
+  confirmPaymentViaWebhook,
+  confirmRentalPaymentViaStatusToken,
+  createFakePaymentProvider,
+} from "../helpers/fake-payment-provider";
 import type { DrivingLicenseOcrProvider } from "src/modules/contracts/ocr/driving-license-ocr.types";
 import type {
   TarsIntegrationService,
@@ -269,13 +275,9 @@ if (!RUN) {
       });
       assert.equal(accept.statusCode, 200, accept.body);
 
-      const pay = await app.inject({
-        method: "POST",
-        url: `/contracts/${closedContractId}/payment/confirm`,
-        headers: auth(),
-        payload: { method: "MANUAL" },
-      });
-      assert.equal(pay.statusCode, 200, pay.body);
+      const payments = createFakePaymentProvider(run);
+      setPaymentProviderForTests(payments.provider);
+      await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `tars-pay-${closedContractId}`);
 
       const carOut = await app.inject({
         method: "POST",
@@ -306,6 +308,15 @@ if (!RUN) {
         payload: { lines: [{ type: "FUEL", description: "fuel gap", amount: 120 }] },
       });
       assert.equal(reconcile.statusCode, 200, reconcile.body);
+
+      const recPay = await app.inject({
+        method: "POST",
+        url: `/contracts/${closedContractId}/reconciliation/payment`,
+        headers: auth(),
+      });
+      assert.equal(recPay.statusCode, 200, recPay.body);
+      const recPaymentId = recPay.json().data.payment.id as string;
+      await confirmPaymentViaWebhook(app, payments, recPaymentId);
 
       const close = await app.inject({
         method: "POST",
@@ -358,6 +369,7 @@ if (!RUN) {
     after(async () => {
       await setOcrProvider(undefined);
       setTarsProviderForTests(undefined);
+      setPaymentProviderForTests(undefined);
       if (app) await app.close();
     });
 
@@ -710,12 +722,9 @@ if (!RUN) {
         url: `/contracts/rental/${rentalToken}/accept`,
         payload: {},
       });
-      await app.inject({
-        method: "POST",
-        url: `/contracts/${offer.id}/payment/confirm`,
-        headers: auth(),
-        payload: { method: "MANUAL" },
-      });
+      const payments = createFakePaymentProvider(`${run}-auto`);
+      setPaymentProviderForTests(payments.provider);
+      await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `tars-auto-${offer.id}`);
       await app.inject({
         method: "POST",
         url: `/contracts/${offer.id}/car-out`,

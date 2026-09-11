@@ -19,6 +19,7 @@ import {
   vehicleNotAvailableForMaintenanceError,
   vehicleNotFoundError,
 } from "src/modules/maintenance/maintenance.errors";
+import { recordMaintenanceExpenseLedger } from "src/modules/finance/finance-ledger.service";
 import {
   isMaintenanceOverdue,
   maintenanceStatusFromDto,
@@ -413,6 +414,8 @@ export function createMaintenanceService(fastify: FastifyInstance) {
           where: { id: existing.vehicleId },
           data: { operationalStatus: "AVAILABLE" },
         });
+
+        await recordMaintenanceExpenseLedger(tx, id);
 
         return tx.maintenanceOrder.findUniqueOrThrow({
           where: { id: updated.id },

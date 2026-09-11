@@ -63,7 +63,6 @@ export function toPublicRentalContext(row: PublicRentalRow): z.infer<typeof Publ
       rentalDays: row.rentalDays,
       agreedAmount: row.agreedAmount,
       currency: row.currency,
-      depositAmount: row.depositAmount,
       startAt: row.startAt,
       endAt: row.endAt,
       actualPickupAt: row.carOut?.occurredAt ?? null,

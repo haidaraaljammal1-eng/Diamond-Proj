@@ -16,7 +16,12 @@ export type ContractLinkType = "RENTAL" | "RETURN" | "RENEWAL";
 
 export type ContractPaymentMethod = "BANK_TRANSFER" | "CARD" | "MANUAL";
 
-export type ContractPaymentStatus = "PENDING" | "CONFIRMED" | "FAILED" | "CANCELLED";
+export type ContractPaymentStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "CONFIRMED"
+  | "FAILED"
+  | "CANCELLED";
 
 export type ReconciliationLineType =
   | "DAMAGE"
@@ -136,10 +141,10 @@ export interface ContractReconciliationLineDto {
 export interface ContractReconciliationDto {
   id: string;
   chargesTotal: number;
-  depositAmount: number;
-  deductions: number;
   finalAmount: number;
   approvedAt: string | null;
+  settledAt?: string | null;
+  settled?: boolean;
   lines: ContractReconciliationLineDto[];
 }
 
@@ -151,6 +156,8 @@ export interface ContractRenewalDto {
   newEndAt: string;
   createdAt: string;
   approvedAt: string | null;
+  appliedAt?: string | null;
+  awaitingPayment?: boolean;
 }
 
 export interface ContractRoadLiabilitySignalsDto {
@@ -165,6 +172,7 @@ export interface ContractPostCloseReceivableItemDto {
   amount: number;
   currency: string;
   status: "OPEN" | "SETTLED" | "VOID";
+  settledAt?: string | null;
   roadLiabilityType: "RTA_VIOLATION" | "SALIK_TOLL" | "SALIK_VIOLATION";
   createdAt: string;
 }
@@ -189,7 +197,6 @@ export interface ContractDetailDto {
   currency: string;
   startAt: string | null;
   endAt: string | null;
-  depositAmount: number | null;
   termsVersion: string;
   snapshot: unknown;
   activatedAt: string | null;
@@ -215,7 +222,6 @@ export interface CreateContractOfferPayload {
   agreedAmount: number;
   startAt?: string;
   endAt?: string;
-  depositAmount?: number;
   customerId?: number;
 }
 

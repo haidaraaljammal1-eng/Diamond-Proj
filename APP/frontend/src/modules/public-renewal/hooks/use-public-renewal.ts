@@ -20,7 +20,12 @@ export function usePublicRenewal(token: string) {
     status: store.status,
     error: store.error,
     confirmPending: store.confirmPending,
+    payPending: store.payPending,
+    statusPending: store.statusPending,
+    paymentStatus: store.paymentStatus,
     load: store.load,
     confirm: store.confirm,
+    startPayment: store.startPayment,
+    refreshPaymentStatus: store.refreshPaymentStatus,
   };
 }

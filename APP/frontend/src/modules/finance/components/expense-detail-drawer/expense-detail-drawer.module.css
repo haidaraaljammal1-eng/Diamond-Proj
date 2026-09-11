@@ -1,0 +1,36 @@
+.body {
+  display: grid;
+  gap: 12px;
+}
+
+.kv {
+  display: grid;
+  gap: 4px;
+  font-size: 0.84rem;
+}
+
+.kv span {
+  color: var(--diamond-muted, #6f6556);
+}
+
+.kv b {
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.statusVoid {
+  color: #8a2f1f;
+  font-weight: 700;
+}
+
+.error,
+.loading {
+  font-size: 0.84rem;
+  color: var(--diamond-muted, #6f6556);
+}

@@ -95,6 +95,7 @@ model Vehicle {
   photos                    VehiclePhoto[]
   contracts                 Contract[]
   maintenanceOrders         MaintenanceOrder[]
+  manualExpenses            ManualExpense[]
   gpsBinding                VehicleGpsBinding?
   gpsLatestState            VehicleGpsLatestState?
   roadLiabilities           RoadLiability[]

@@ -87,6 +87,8 @@ model User {
   roadLiabilityChargesConfirmed        RoadLiabilityCustomerCharge[] @relation("RoadLiabilityCustomerChargeConfirmedBy")
   contractRenewalsCreated              ContractRenewal[]            @relation("ContractRenewalCreatedBy")
   maintenanceOrdersCreated             MaintenanceOrder[]           @relation("MaintenanceOrderCreatedBy")
+  manualExpensesCreated                ManualExpense[]              @relation("ManualExpenseCreatedBy")
+  manualExpensesVoided                 ManualExpense[]              @relation("ManualExpenseVoidedBy")
 
   @@index([status])
   @@map("users")

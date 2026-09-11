@@ -175,6 +175,7 @@
     "clear": "Clear selection"
   },
   "DateRangePicker": {
+    "fieldLabel": "Date range",
     "placeholder": "Select date range",
     "apply": "Apply",
     "clear": "Clear",
@@ -207,7 +208,9 @@
     "invalidRate": "Enter a valid non-negative amount",
     "identityOrPassport": "Enter an identity number or a passport number",
     "invalidNonnegative": "Enter a valid non-negative number",
-    "scheduledRequired": "Enter a valid date and time"
+    "scheduledRequired": "Enter a valid date and time",
+    "wholeAed": "Enter the amount as a whole AED value.",
+    "positiveAmount": "Enter an amount greater than zero."
   },
   "Roles": {
     "crumbs": "Administration · Access control",
@@ -737,7 +740,6 @@
       "plate": "Plate",
       "days": "Duration",
       "amount": "Agreed amount",
-      "deposit": "Deposit",
       "start": "Start",
       "end": "End",
       "payment": "Payment",
@@ -917,6 +919,26 @@
       "page": "Page {page} of {totalPages}"
     }
   },
+  "Payments": {
+    "providerStripe": "Provider: Stripe",
+    "notConfigured": "Status: Not Configured",
+    "noPaymentRequired": "No payment required",
+    "paymentRequired": "Payment Required",
+    "paid": "Paid",
+    "collected": "Collected",
+    "createLink": "Create Stripe Payment Link",
+    "copyLink": "Copy Link",
+    "openLink": "Open Link",
+    "unavailable": "Stripe payment is not configured yet.",
+    "closeBlocked": "Collect the confirmed return charges before closing the contract.",
+    "callback": {
+      "title": "Payment status",
+      "checking": "Checking payment status…",
+      "success": "Payment confirmed.",
+      "cancelled": "Payment was cancelled.",
+      "failed": "Payment did not complete."
+    }
+  },
   "PublicRental": {
     "brandAlt": "Diamond Elite Rent Car",
     "tagline": "Rent Car · Dubai",
@@ -975,7 +997,6 @@
       "duration": "Rental duration",
       "days": "Days",
       "amount": "Total amount",
-      "deposit": "Deposit",
       "licenseTitle": "Driving license",
       "licenseNumber": "Driving license number",
       "licenseExpiry": "License expiry",
@@ -1008,7 +1029,7 @@
       "methods": "Payment method",
       "cardTitle": "Card",
       "cardHint": "Visa · Mastercard · Amex — secure checkout",
-      "unavailable": "Online card payment is currently unavailable. Secure card payment will be enabled after the payment gateway is connected.",
+      "unavailable": "Stripe payment is not configured yet.",
       "devNote": "Payment provider not configured",
       "pay": "Pay",
       "retry": "Retry payment",
@@ -1128,6 +1149,19 @@
     "newEnd": "Updated end",
     "renewalAmount": "Renewal amount",
     "confirm": "Confirm Rental Extension",
+    "payment": {
+      "title": "Complete renewal payment",
+      "body": "Your extension is approved. Pay the renewal amount to apply the new dates to your contract.",
+      "totalDue": "Amount due",
+      "pay": "Pay with card",
+      "retry": "Try payment again",
+      "processing": "Opening secure checkout…",
+      "pending": "Payment is processing. This page updates after Stripe confirms the payment.",
+      "checkStatus": "Check payment status",
+      "failed": "Payment could not be completed. You can try again.",
+      "cancelled": "Checkout was cancelled before payment completed.",
+      "unavailable": "Online card payment is not available right now. Your extension is not applied until payment is confirmed."
+    },
     "successTitle": "Your rental extension has been confirmed",
     "successBody": "The same contract stays active. Please keep this confirmation for your records.",
     "missingOffer": "This renewal link has no offer. Please contact the rental office.",
@@ -1714,6 +1748,192 @@
       "notEligible": "This liability cannot be charged to the customer yet.",
       "forbidden": "You do not have permission to confirm a customer charge.",
       "generic": "The customer charge could not be confirmed. Try again."
+    }
+  },
+  "Finance": {
+    "crumbs": "Administration · Finance",
+    "title": "Finance",
+    "subtitle": "Financial operations, receivables and company expenses.",
+    "refresh": "Refresh",
+    "addExpense": "+ Add Expense",
+    "search": "Search",
+    "clear": "Clear",
+    "clearFilters": "Clear filters",
+    "retry": "Retry",
+    "lastUpdated": "Last updated: {value}",
+    "denied": {
+      "title": "Finance access is not available",
+      "description": "This page requires the finance.read permission."
+    },
+    "period": {
+      "label": "Period",
+      "today": "Today",
+      "week": "Week",
+      "month": "Month",
+      "custom": "Custom"
+    },
+    "kpi": {
+      "collected": "Collected",
+      "collectedNote": "Selected period",
+      "outstanding": "Outstanding",
+      "outstandingCurrent": "Current unpaid obligations",
+      "outstandingNote": "{count} open items · as of {asOf}",
+      "expenses": "Expenses",
+      "expensesNote": "Selected period",
+      "netMovement": "Net Movement",
+      "netMovementNote": "Collected − Expenses"
+    },
+    "receivables": {
+      "title": "Open Receivables",
+      "subtitle": "Customer obligations still awaiting Stripe payment.",
+      "searchLabel": "Search receivables",
+      "searchPlaceholder": "Contract, customer, vehicle…",
+      "sourceLabel": "Source type",
+      "sourceAll": "All sources",
+      "sortLabel": "Sort",
+      "sort": {
+        "obligationCreatedAt:desc": "Newest",
+        "obligationCreatedAt:asc": "Oldest",
+        "amount:desc": "Highest amount",
+        "amount:asc": "Lowest amount"
+      },
+      "empty": "No outstanding customer obligations.",
+      "view": "View",
+      "columns": {
+        "source": "Source",
+        "contract": "Contract",
+        "customer": "Customer",
+        "vehicle": "Vehicle",
+        "since": "Created",
+        "age": "Age",
+        "state": "Payment state",
+        "amount": "Outstanding",
+        "action": "Action"
+      }
+    },
+    "receivableSource": {
+      "RENTAL": "Rental",
+      "RENEWAL": "Renewal",
+      "RECONCILIATION": "Return Reconciliation",
+      "POST_CLOSE_RECEIVABLE": "Post-Close Charge"
+    },
+    "analytics": {
+      "trendTitle": "Financial Trend",
+      "trendSubtitle": "Selected period",
+      "collected": "Collected",
+      "expenses": "Expenses",
+      "netMovement": "Net Movement",
+      "outstandingTitle": "Outstanding Breakdown",
+      "outstandingCurrent": "Current balance — not limited to the selected period",
+      "outstandingEmpty": "No outstanding obligations.",
+      "expenseTitle": "Expense Breakdown",
+      "expenseSubtitle": "Selected period",
+      "expenseEmpty": "No expenses in this period.",
+      "items": "{count} items"
+    },
+    "ledger": {
+      "title": "Financial Ledger",
+      "subtitle": "A traceable record of collected money and company expenses.",
+      "searchLabel": "Search ledger",
+      "searchPlaceholder": "Contract, description, customer…",
+      "directionLabel": "Movement type",
+      "directionAll": "All movements",
+      "kindLabel": "Source type",
+      "kindAll": "All sources",
+      "empty": "No ledger entries in this period.",
+      "view": "View",
+      "columns": {
+        "date": "Date",
+        "movement": "Movement",
+        "source": "Source",
+        "reference": "Reference",
+        "contractVehicle": "Contract / Vehicle",
+        "amount": "Amount",
+        "action": "Action"
+      }
+    },
+    "ledgerMovement": {
+      "COLLECTION": "Customer Collection",
+      "EXPENSE": "Expense",
+      "EXPENSE_REVERSAL": "Expense Reversal"
+    },
+    "ledgerKind": {
+      "RENTAL_PAYMENT": "Rental Payment",
+      "RENEWAL_PAYMENT": "Renewal Payment",
+      "RECONCILIATION_PAYMENT": "Reconciliation Payment",
+      "POST_CLOSE_RECEIVABLE_PAYMENT": "Post-Close Payment",
+      "MAINTENANCE_EXPENSE": "Maintenance",
+      "MANUAL_EXPENSE": "Manual Expense",
+      "MANUAL_EXPENSE_REVERSAL": "Expense Reversal"
+    },
+    "expenseCategory": {
+      "MAINTENANCE": "Maintenance",
+      "VEHICLE_CLEANING": "Vehicle Cleaning",
+      "FUEL": "Fuel",
+      "PARKING": "Parking",
+      "GOVERNMENT_FEES": "Government Fees",
+      "OFFICE_ADMIN": "Office / Administration",
+      "MARKETING": "Marketing",
+      "OPERATIONS": "Operations",
+      "OTHER": "Other"
+    },
+    "age": {
+      "today": "Today",
+      "oneDay": "1 day",
+      "days": "{count} days"
+    },
+    "pagination": {
+      "results": "{count} results",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "expense": {
+      "addTitle": "Add Expense",
+      "addDescription": "Record a manual operational company expense.",
+      "amount": "Amount",
+      "category": "Category",
+      "date": "Date",
+      "description": "Description",
+      "vehicle": "Vehicle (optional)",
+      "vendor": "Vendor / Supplier",
+      "receiptNumber": "Receipt Number",
+      "attachment": "Receipt attachment",
+      "note": "Note",
+      "save": "Save expense",
+      "cancel": "Cancel",
+      "close": "Close",
+      "chooseAttachment": "Choose file",
+      "uploading": "Uploading…",
+      "uploadFailed": "Attachment upload failed.",
+      "vehicleSearchLabel": "Search vehicles",
+      "vehicleSearchPlaceholder": "Vehicle name or plate…",
+      "vehicleLoading": "Loading vehicles…",
+      "vehicleEmpty": "No vehicles found.",
+      "detailTitle": "Manual Expense",
+      "detailLoading": "Loading expense…",
+      "status": "Status",
+      "statusActive": "Active",
+      "statusVoid": "Void",
+      "createdBy": "Created by",
+      "createdAt": "Created at",
+      "voidReason": "Void reason",
+      "voidedBy": "Voided by",
+      "voidedAt": "Voided at",
+      "correctionOf": "Correction of",
+      "voidAction": "Void Expense",
+      "correctAction": "Correct Expense",
+      "voidTitle": "Void Expense",
+      "voidDescription": "The original financial record will remain in the audit history and a reversal will be created.",
+      "voidConfirm": "Void expense",
+      "correctTitle": "Correct Expense",
+      "correctDescription": "The original expense will be voided and a corrected record will be created.",
+      "correctConfirm": "Save correction",
+      "createSuccess": "Expense recorded.",
+      "voidSuccess": "Expense voided.",
+      "correctSuccess": "Expense corrected."
+    },
+    "errors": {
+      "generic": "Finance data could not be loaded. Try again."
     }
   }
 }

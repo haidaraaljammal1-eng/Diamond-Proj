@@ -20,6 +20,8 @@ Workshop maintenance orders for Diamond fleet vehicles. TARS, contracts, payment
 | `cost` | Optional actual known cost in whole AED (`null` until entered) |
 | `createdByUserId` | From authenticated staff context |
 
+On `POST /maintenance/:id/complete`, when `cost` is set, Finance records one `MAINTENANCE_EXPENSE` ledger entry (`dedupeKey = maintenance:<id>`). Maintenance cost is a company expense only — never a customer receivable. See [finance-backend.md](./finance-backend.md).
+
 `OVERDUE` is **not** persisted. API exposes `overdue: boolean` when:
 
 - `status = scheduled` and `scheduledAt < now`, or

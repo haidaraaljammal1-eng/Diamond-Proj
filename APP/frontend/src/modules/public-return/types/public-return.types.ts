@@ -18,7 +18,6 @@ export interface PublicReturnView {
   currency: string;
   startAt: string | null;
   endAt: string | null;
-  depositAmount: number | null;
   termsVersion: string;
   vehicle: {
     displayName: string;

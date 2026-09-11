@@ -4,6 +4,11 @@ import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
 import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
+import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
+import {
+  confirmRentalPaymentViaStatusToken,
+  createFakePaymentProvider,
+} from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
 
 /**
@@ -153,7 +158,6 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 3,
           agreedAmount: 1500,
-          depositAmount: 500,
         },
       });
       assert.equal(offer.statusCode, 201, offer.body);
@@ -185,13 +189,10 @@ if (!RUN) {
         payload: {},
       });
       assert.equal(accept.statusCode, 200, accept.body);
-      const pay = await app.inject({
-        method: "POST",
-        url: `/contracts/${contractId}/payment/confirm`,
-        headers: auth(),
-        payload: { method: "MANUAL" },
-      });
-      assert.equal(pay.statusCode, 200, pay.body);
+      seq += 1;
+      const payments = createFakePaymentProvider(`${run}-${seq}`);
+      setPaymentProviderForTests(payments.provider);
+      await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `rn-pay-${contractId}`);
       const carOut = await app.inject({
         method: "POST",
         url: `/contracts/${contractId}/car-out`,
@@ -217,6 +218,7 @@ if (!RUN) {
 
     after(async () => {
       setDrivingLicenseOcrProviderForTests(undefined);
+      setPaymentProviderForTests(undefined);
       await app.close();
     });
 
@@ -289,8 +291,10 @@ if (!RUN) {
       assert.equal(expired.json().error.context.reason, "CONTRACT_LINK_EXPIRED");
     });
 
-    test("public confirm applies the stored offer on the same ACTIVE contract", async () => {
+    test("public confirm applies the stored offer after renewal payment", async () => {
       const { contractId, contractNumber, vehicleId } = await createActiveContract();
+      const payments = createFakePaymentProvider(`${run}-renewal-pay`);
+      setPaymentProviderForTests(payments.provider);
       const beforeCount = await prisma.contract.count({ where: { vehicleId } });
       const issued = await app.inject({
         method: "POST",
@@ -318,11 +322,24 @@ if (!RUN) {
       assert.equal(confirm.statusCode, 200, confirm.body);
       assert.equal(confirm.json().data.contractNumber, contractNumber);
       assert.equal(confirm.json().data.status, "ACTIVE");
-      assert.equal(confirm.json().data.rentalDays, 7);
-      assert.equal(confirm.json().data.agreedAmount, 2200);
-      assert.equal(confirm.json().data.renewal.additionalDays, 4);
-      assert.equal(confirm.json().data.renewal.additionalAmount, 700);
-      assert.equal(confirm.json().data.renewal.confirmed, true);
+      assert.equal(confirm.json().data.rentalDays, 3);
+      assert.equal(confirm.json().data.agreedAmount, 1500);
+      assert.equal(confirm.json().data.renewal.awaitingPayment, true);
+      assert.equal(confirm.json().data.renewal.confirmed, false);
+
+      const payStart = await app.inject({
+        method: "POST",
+        url: `/contracts/renew/${renewToken}/payment`,
+      });
+      assert.equal(payStart.statusCode, 200, payStart.body);
+      const statusToken = payStart.json().data.statusToken as string;
+      payments.confirm();
+      const payStatus = await app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${statusToken}`,
+      });
+      assert.equal(payStatus.statusCode, 200, payStatus.body);
+      assert.equal(payStatus.json().data.status, "CONFIRMED");
 
       const replay = await app.inject({
         method: "POST",

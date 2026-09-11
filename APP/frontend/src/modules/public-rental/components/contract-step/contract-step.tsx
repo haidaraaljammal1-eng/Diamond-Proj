@@ -120,16 +120,6 @@ export function ContractStep({
         <dl className={styles.grid}>
           <Field label={t("duration")} value={duration} ltr />
           <Field label={t("amount")} value={amount} ltr />
-          {context.rental.depositAmount != null ? (
-            <Field
-              label={t("deposit")}
-              value={formatRentalAmount(
-                context.rental.depositAmount,
-                context.rental.currency,
-              )}
-              ltr
-            />
-          ) : null}
         </dl>
       </section>
 

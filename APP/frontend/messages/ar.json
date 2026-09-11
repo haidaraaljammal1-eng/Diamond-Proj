@@ -175,6 +175,7 @@
     "clear": "مسح الاختيار"
   },
   "DateRangePicker": {
+    "fieldLabel": "الفترة الزمنية",
     "placeholder": "حدد الفترة الزمنية",
     "apply": "تطبيق",
     "clear": "مسح",
@@ -207,7 +208,9 @@
     "invalidRate": "أدخل مبلغًا صالحًا (0 أو أكثر)",
     "identityOrPassport": "أدخل رقم الهوية أو رقم جواز السفر",
     "invalidNonnegative": "أدخل رقماً صالحاً (0 أو أكثر)",
-    "scheduledRequired": "أدخل تاريخاً ووقتاً صالحين"
+    "scheduledRequired": "أدخل تاريخاً ووقتاً صالحين",
+    "wholeAed": "يجب إدخال المبلغ كرقم صحيح بالدرهم.",
+    "positiveAmount": "يجب أن يكون المبلغ أكبر من صفر."
   },
   "Roles": {
     "crumbs": "الإدارة · التحكم في الوصول",
@@ -737,7 +740,6 @@
       "plate": "اللوحة",
       "days": "المدة",
       "amount": "المبلغ المتفق عليه",
-      "deposit": "التأمين",
       "start": "البداية",
       "end": "النهاية",
       "payment": "الدفع",
@@ -917,6 +919,26 @@
       "page": "صفحة {page} من {totalPages}"
     }
   },
+  "Payments": {
+    "providerStripe": "المزوّد: Stripe",
+    "notConfigured": "الحالة: غير مفعّل",
+    "noPaymentRequired": "لا يوجد مبلغ مستحق",
+    "paymentRequired": "الدفع مطلوب",
+    "paid": "تم التحصيل",
+    "collected": "تم التحصيل",
+    "createLink": "إنشاء رابط الدفع عبر Stripe",
+    "copyLink": "نسخ الرابط",
+    "openLink": "فتح الرابط",
+    "unavailable": "الدفع عبر Stripe غير مفعّل حالياً.",
+    "closeBlocked": "يجب تحصيل رسوم الإرجاع المؤكدة قبل إغلاق العقد.",
+    "callback": {
+      "title": "حالة الدفع",
+      "checking": "جارٍ التحقق من حالة الدفع…",
+      "success": "تم تأكيد الدفع.",
+      "cancelled": "تم إلغاء محاولة الدفع.",
+      "failed": "لم يكتمل الدفع."
+    }
+  },
   "PublicRental": {
     "brandAlt": "Diamond Elite Rent Car",
     "tagline": "Rent Car · Dubai",
@@ -975,7 +997,6 @@
       "duration": "مدة الإيجار",
       "days": "أيام",
       "amount": "المبلغ المتفق عليه",
-      "deposit": "التأمين",
       "licenseTitle": "رخصة القيادة",
       "licenseNumber": "رقم رخصة القيادة",
       "licenseExpiry": "تاريخ انتهاء الرخصة",
@@ -1008,7 +1029,7 @@
       "methods": "وسيلة الدفع",
       "cardTitle": "بطاقة ائتمانية",
       "cardHint": "Visa · Mastercard · Amex — حماية آمنة",
-      "unavailable": "الدفع الإلكتروني غير متاح حاليًا. سيتم تفعيل الدفع الآمن عبر البطاقة بعد ربط بوابة الدفع.",
+      "unavailable": "الدفع عبر Stripe غير مفعّل حالياً.",
       "devNote": "Payment provider not configured",
       "pay": "ادفع",
       "retry": "إعادة المحاولة",
@@ -1128,6 +1149,19 @@
     "newEnd": "النهاية المحدّثة",
     "renewalAmount": "مبلغ التمديد",
     "confirm": "تأكيد تمديد الإيجار",
+    "payment": {
+      "title": "إتمام دفع التمديد",
+      "body": "تمت الموافقة على التمديد. ادفع مبلغ التمديد لتطبيق التواريخ الجديدة على عقدك.",
+      "totalDue": "المبلغ المستحق",
+      "pay": "الدفع بالبطاقة",
+      "retry": "إعادة محاولة الدفع",
+      "processing": "جارٍ فتح صفحة الدفع الآمنة…",
+      "pending": "الدفع قيد المعالجة. ستُحدَّث هذه الصفحة بعد تأكيد Stripe للدفع.",
+      "checkStatus": "التحقق من حالة الدفع",
+      "failed": "تعذّر إتمام الدفع. يمكنك المحاولة مرة أخرى.",
+      "cancelled": "تم إلغاء صفحة الدفع قبل إتمام العملية.",
+      "unavailable": "الدفع بالبطاقة غير متاح حاليًا. لن يُطبَّق التمديد حتى يُؤكَّد الدفع."
+    },
     "successTitle": "تم تأكيد تمديد الإيجار بنجاح",
     "successBody": "يبقى العقد نفسه نشطًا. يُرجى الاحتفاظ بهذا التأكيد في سجلاتك.",
     "missingOffer": "لا يوجد عرض على رابط التمديد. يرجى التواصل مع المكتب.",
@@ -1714,6 +1748,192 @@
       "notEligible": "لا يمكن تثبيت هذا الالتزام على العميل حالياً.",
       "forbidden": "ليست لديك صلاحية تثبيت المبلغ على العميل.",
       "generic": "تعذر تثبيت المبلغ على العميل. حاول مرة أخرى."
+    }
+  },
+  "Finance": {
+    "crumbs": "الإدارة · المالية",
+    "title": "المالية",
+    "subtitle": "التحصيلات والمستحقات والمصروفات والحركة المالية.",
+    "refresh": "تحديث",
+    "addExpense": "+ إضافة مصروف",
+    "search": "بحث",
+    "clear": "مسح",
+    "clearFilters": "مسح الفلاتر",
+    "retry": "إعادة المحاولة",
+    "lastUpdated": "آخر تحديث: {value}",
+    "denied": {
+      "title": "صفحة المالية غير متاحة",
+      "description": "هذه الصفحة تتطلب صلاحية finance.read."
+    },
+    "period": {
+      "label": "الفترة",
+      "today": "اليوم",
+      "week": "الأسبوع",
+      "month": "الشهر",
+      "custom": "فترة مخصصة"
+    },
+    "kpi": {
+      "collected": "تم التحصيل",
+      "collectedNote": "الفترة المحددة",
+      "outstanding": "مستحق التحصيل",
+      "outstandingCurrent": "المبالغ المستحقة حالياً",
+      "outstandingNote": "{count} عناصر مفتوحة · حتى {asOf}",
+      "expenses": "المصروفات",
+      "expensesNote": "الفترة المحددة",
+      "netMovement": "صافي الحركة",
+      "netMovementNote": "تم التحصيل − المصروفات"
+    },
+    "receivables": {
+      "title": "المبالغ المستحقة",
+      "subtitle": "المبالغ المؤكدة على العملاء والتي لم يتم تحصيلها بعد.",
+      "searchLabel": "بحث في المستحقات",
+      "searchPlaceholder": "عقد، عميل، مركبة…",
+      "sourceLabel": "نوع المصدر",
+      "sourceAll": "كل المصادر",
+      "sortLabel": "الترتيب",
+      "sort": {
+        "obligationCreatedAt:desc": "الأحدث",
+        "obligationCreatedAt:asc": "الأقدم",
+        "amount:desc": "الأعلى مبلغاً",
+        "amount:asc": "الأقل مبلغاً"
+      },
+      "empty": "لا توجد مبالغ مستحقة على العملاء حالياً.",
+      "view": "عرض",
+      "columns": {
+        "source": "المصدر",
+        "contract": "العقد",
+        "customer": "العميل",
+        "vehicle": "المركبة",
+        "since": "تاريخ الإنشاء",
+        "age": "العمر",
+        "state": "حالة الدفع",
+        "amount": "المستحق",
+        "action": "إجراء"
+      }
+    },
+    "receivableSource": {
+      "RENTAL": "إيجار",
+      "RENEWAL": "تجديد",
+      "RECONCILIATION": "تسوية الإرجاع",
+      "POST_CLOSE_RECEIVABLE": "مطالبة بعد الإغلاق"
+    },
+    "analytics": {
+      "trendTitle": "الحركة المالية",
+      "trendSubtitle": "الفترة المحددة",
+      "collected": "تم التحصيل",
+      "expenses": "المصروفات",
+      "netMovement": "صافي الحركة",
+      "outstandingTitle": "تفصيل المستحقات",
+      "outstandingCurrent": "الرصيد المستحق الحالي — غير مقيد بالفترة المحددة",
+      "outstandingEmpty": "لا توجد مبالغ مستحقة.",
+      "expenseTitle": "تفصيل المصروفات",
+      "expenseSubtitle": "الفترة المحددة",
+      "expenseEmpty": "لا توجد مصروفات في هذه الفترة.",
+      "items": "{count} عناصر"
+    },
+    "ledger": {
+      "title": "سجل الحركة المالية",
+      "subtitle": "سجل موثق للمبالغ المحصلة ومصروفات الشركة.",
+      "searchLabel": "بحث في السجل",
+      "searchPlaceholder": "عقد، وصف، عميل…",
+      "directionLabel": "نوع الحركة",
+      "directionAll": "كل الحركات",
+      "kindLabel": "نوع المصدر",
+      "kindAll": "كل المصادر",
+      "empty": "لا توجد حركات في هذه الفترة.",
+      "view": "عرض",
+      "columns": {
+        "date": "التاريخ",
+        "movement": "الحركة",
+        "source": "المصدر",
+        "reference": "المرجع",
+        "contractVehicle": "العقد / المركبة",
+        "amount": "المبلغ",
+        "action": "إجراء"
+      }
+    },
+    "ledgerMovement": {
+      "COLLECTION": "تحصيل من العميل",
+      "EXPENSE": "مصروف",
+      "EXPENSE_REVERSAL": "إلغاء مصروف"
+    },
+    "ledgerKind": {
+      "RENTAL_PAYMENT": "دفعة إيجار",
+      "RENEWAL_PAYMENT": "دفعة تجديد",
+      "RECONCILIATION_PAYMENT": "دفعة تسوية",
+      "POST_CLOSE_RECEIVABLE_PAYMENT": "دفعة بعد الإغلاق",
+      "MAINTENANCE_EXPENSE": "صيانة",
+      "MANUAL_EXPENSE": "مصروف يدوي",
+      "MANUAL_EXPENSE_REVERSAL": "إلغاء مصروف"
+    },
+    "expenseCategory": {
+      "MAINTENANCE": "الصيانة",
+      "VEHICLE_CLEANING": "تنظيف المركبة",
+      "FUEL": "وقود",
+      "PARKING": "مواقف",
+      "GOVERNMENT_FEES": "رسوم حكومية",
+      "OFFICE_ADMIN": "مكتب / إدارة",
+      "MARKETING": "تسويق",
+      "OPERATIONS": "عمليات",
+      "OTHER": "أخرى"
+    },
+    "age": {
+      "today": "اليوم",
+      "oneDay": "يوم واحد",
+      "days": "{count} أيام"
+    },
+    "pagination": {
+      "results": "{count} نتيجة",
+      "prev": "السابق",
+      "next": "التالي"
+    },
+    "expense": {
+      "addTitle": "إضافة مصروف",
+      "addDescription": "تسجيل مصروف تشغيلي يدوي للشركة.",
+      "amount": "المبلغ",
+      "category": "الفئة",
+      "date": "التاريخ",
+      "description": "الوصف",
+      "vehicle": "المركبة (اختياري)",
+      "vendor": "المورد / البائع",
+      "receiptNumber": "رقم الإيصال",
+      "attachment": "مرفق الإيصال",
+      "note": "ملاحظة",
+      "save": "حفظ المصروف",
+      "cancel": "إلغاء",
+      "close": "إغلاق",
+      "chooseAttachment": "اختيار ملف",
+      "uploading": "جارٍ الرفع…",
+      "uploadFailed": "تعذر رفع المرفق.",
+      "vehicleSearchLabel": "بحث المركبات",
+      "vehicleSearchPlaceholder": "اسم المركبة أو اللوحة…",
+      "vehicleLoading": "جارٍ تحميل المركبات…",
+      "vehicleEmpty": "لا توجد مركبات.",
+      "detailTitle": "مصروف يدوي",
+      "detailLoading": "جارٍ تحميل المصروف…",
+      "status": "الحالة",
+      "statusActive": "نشط",
+      "statusVoid": "ملغى",
+      "createdBy": "أنشأه",
+      "createdAt": "تاريخ الإنشاء",
+      "voidReason": "سبب الإلغاء",
+      "voidedBy": "ألغاه",
+      "voidedAt": "تاريخ الإلغاء",
+      "correctionOf": "تصحيح لـ",
+      "voidAction": "إلغاء المصروف",
+      "correctAction": "تصحيح المصروف",
+      "voidTitle": "إلغاء المصروف",
+      "voidDescription": "سيبقى السجل المالي الأصلي محفوظاً، وسيتم إنشاء حركة عكسية لإلغاء أثره المالي.",
+      "voidConfirm": "إلغاء المصروف",
+      "correctTitle": "تصحيح المصروف",
+      "correctDescription": "سيتم إلغاء المصروف الأصلي وإنشاء سجل مصحح جديد.",
+      "correctConfirm": "حفظ التصحيح",
+      "createSuccess": "تم تسجيل المصروف.",
+      "voidSuccess": "تم إلغاء المصروف.",
+      "correctSuccess": "تم تصحيح المصروف."
+    },
+    "errors": {
+      "generic": "تعذر تحميل بيانات المالية. حاول مرة أخرى."
     }
   }
 }

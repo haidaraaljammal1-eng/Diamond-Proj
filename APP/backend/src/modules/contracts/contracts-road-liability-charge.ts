@@ -30,19 +30,14 @@ export function roadLiabilityReconDescription(type: RoadLiabilityType): string {
 
 export function reconciliationTotalsFromLines(
   lines: ReadonlyArray<{ amount: number }>,
-  depositAmount: number,
 ): {
   chargesTotal: number;
-  depositAmount: number;
-  deductions: number;
   finalAmount: number;
 } {
   const chargesTotal = lines.reduce((sum, line) => sum + line.amount, 0);
   return {
     chargesTotal,
-    depositAmount,
-    deductions: depositAmount,
-    finalAmount: chargesTotal - depositAmount,
+    finalAmount: chargesTotal,
   };
 }
 

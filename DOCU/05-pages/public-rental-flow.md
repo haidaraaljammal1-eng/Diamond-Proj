@@ -24,7 +24,7 @@ The customer never submits `contractId`, `vehicleId`, `agreedAmount`, `rentalDay
 - `office.displayName` from `OFFICE_DISPLAY_NAME` (default `Diamond Rent Car`)
 - `contract`: `contractNumber`, `status`, `termsVersion`
 - `vehicle`: display name, type label, plate, year, color, VIN
-- `rental`: days, agreed amount, currency, deposit, agreed start/end, `actualPickupAt` / `actualReturnAt` (null until Car-Out / Car-In)
+- `rental`: days, agreed amount, currency, agreed start/end, `actualPickupAt` / `actualReturnAt` (null until Car-Out / Car-In)
 - `licenseVerification`: status, masked number, expiry date, confidence
 - `payment`: current attempt status if any, `providerAvailable`
 - `flow.step`: derived, never stored as `Contract.status`
@@ -78,7 +78,7 @@ Replacement: previous `ContractDocument` gets `supersededAt`; a new verification
 
 Customer-editable (existing `PublicFormSchema`): name, mobile, email, nationality, identity and/or passport, address.
 
-Server-owned: `contractNumber` (`DE-{year}-{nnnnnn}`), vehicle facts, `rentalDays`, `agreedAmount`, currency, deposit, agreed period, verified license number/expiry. Extra body fields such as `drivingLicenseNumber` are ignored.
+Server-owned: `contractNumber` (`DE-{year}-{nnnnnn}`), vehicle facts, `rentalDays`, `agreedAmount`, currency, agreed period, verified license number/expiry. Extra body fields such as `drivingLicenseNumber` are ignored. Diamond V1 does not use rental deposits.
 
 When the Customer is created/updated, verified license values are copied onto Customer and the same Attachment is linked as `CustomerDocument` (no second file bytes). `actualPickupAt` / `actualReturnAt` stay null until Car-Out / Car-In. Placeholder copy such as «يُعبّأ عند استلام السيارة» is frontend i18n, never stored.
 
@@ -106,7 +106,7 @@ Amount and currency are re-read from Contract. The public POST body does not acc
 
 Eligibility: valid link, `SIGNED`, VALID license, no active PENDING/PROCESSING attempt, amount > 0, provider configured. One active attempt is enforced with `withTransaction` + advisory lock `contract_payment`. `runIdempotent` on `Idempotency-Key` (same key replays; different fingerprint → `IDEMPOTENCY_KEY_CONFLICT`). PROCESSING/PENDING block a new attempt (`PAYMENT_ALREADY_PROCESSING`). FAILED or CANCELLED allow a new attempt with a new key. UNKNOWN provider status stays PROCESSING/PENDING (never auto-FAILED).
 
-A success URL / redirect is **not** payment proof. Public clients cannot set `CONFIRMED` or `PAID`. Only `getPaymentStatus` (webhook/server later) may confirm; then `SIGNED → PAID`. Staff manual/bank `POST /contracts/:id/payment/confirm` is unchanged.
+A success URL / redirect is **not** payment proof. Public clients cannot set `CONFIRMED` or `PAID`. Stripe webhook (primary) and `GET /contracts/payments/status/:statusToken` (poll fallback) may confirm; then `SIGNED → PAID`. Staff manual `POST /contracts/:id/payment/confirm` is disabled in V1 (`MANUAL_PAYMENT_DISABLED`). See `DOCU/05-pages/payments-backend.md`.
 
 If the Rental link expires while an attempt is PROCESSING/PENDING, `GET /contracts/payments/status/:statusToken` still resolves it. The status token is random, returned once, stored hashed, read-only, scoped to one `ContractPayment`, TTL 7 days, and cannot create payments or expose PII beyond `{ status, contractStatus }`.
 
@@ -170,7 +170,7 @@ Module: `APP/frontend/src/modules/public-rental/` (`api` / `hooks` / `stores` / 
 
 **License:** JPEG/PNG upload (one file). Loading copy: verifying. Panels: VALID (number + expiry, Continue only after server step is CONTRACT+), EXPIRED (red blocker, no Continue), UNREADABLE / REVIEW_REQUIRED (retry upload), PROVIDER_UNAVAILABLE (customer-safe unavailable; development note `OCR provider not configured`). No fake OCR.
 
-**Contract:** official white web sheet (not PDF). Auto-filled read-only: office, `contractNumber`, vehicle, duration, amount, deposit, verified license number/expiry. Customer FormBuilder fields only: name, mobile, email, nationality, identity and/or passport, address. Pickup/return are display placeholders (`actualPickupAt` / `actualReturnAt` stay null). After FORM: required Checkbox acceptance, then Accept (`FORM → SIGNED`). No signature pad (Backend has no public signature upload).
+**Contract:** official white web sheet (not PDF). Auto-filled read-only: office, `contractNumber`, vehicle, duration, amount, verified license number/expiry. Customer FormBuilder fields only: name, mobile, email, nationality, identity and/or passport, address. Pickup/return are display placeholders (`actualPickupAt` / `actualReturnAt` stay null). After FORM: required Checkbox acceptance, then Accept (`FORM → SIGNED`). No signature pad (Backend has no public signature upload).
 
 **Payment:** Demo-like summary and Card method. `providerAvailable=false` disables Card Pay; no fake Stripe, no fake success, contract stays SIGNED. Development may preview the Card UI with Pay still disabled. States: PROCESSING, PENDING (no retry), FAILED (retry new attempt), CONFIRMED, READY_FOR_HANDOVER (no customer Car-Out). If the rental link expires while PROCESSING/PENDING, show payment status recovery instead of wiping the attempt. `statusToken` is memory only.
 
@@ -183,7 +183,7 @@ Frontend unit tests live under `src/modules/public-rental/**/*.test.ts`.
 Frontend-only presentation overlay for customer demos when Azure OCR or Stripe is not configured. Gate: `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` (never `NODE_ENV` alone). Local `npm run dev` reads `APP/frontend/.env.development`, so teammates get Simulate without copying `.env.local`. Production builds stay off unless the host sets the flag. Module: `APP/frontend/src/modules/public-rental` stays the source UI; overlay lives in `APP/frontend/src/modules/demo-simulation/`.
 
 - In-memory Zustand only. No `localStorage`, `sessionStorage`, cookies, persisted store, Backend write, or database mutation.
-- Real Contract / Vehicle / office / duration / agreed amount / currency / deposit remain the display authority.
+- Real Contract / Vehicle / office / duration / agreed amount / currency remain the display authority.
 - Simulated license results, customer autofill, acceptance, and payment states never POST OCR, form, accept, or payment endpoints.
 - Visible champagne badge: Simulation Mode / وضع المحاكاة, plus Reset Simulation / إعادة ضبط المحاكاة.
 - Simulated VALID license can Continue locally to the official contract; EXPIRED and UNREADABLE stay on the license step. Simulated card payment can show PROCESSING → PENDING → CONFIRMED → READY_FOR_HANDOVER, or FAILED / PENDING, with demo reference `DEMO-PAY-00001` (never a Stripe PaymentIntent). Refresh restores Backend-derived state.

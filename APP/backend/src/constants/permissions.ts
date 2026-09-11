@@ -98,6 +98,9 @@ export const PERMISSIONS = {
   CONTRACTS_CLOSE: "contracts.close",
   CONTRACTS_RENEW: "contracts.renew",
 
+  FINANCE_READ: "finance.read",
+  FINANCE_MANAGE_EXPENSES: "finance.manage_expenses",
+
   PURCHASE_EXPERIENCES_READ: "purchase_experiences.read",
   PURCHASE_EXPERIENCES_MANAGE: "purchase_experiences.manage",
 
@@ -368,6 +371,16 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     key: PERMISSIONS.CONTRACTS_RENEW,
     category: "contracts",
     description: "Renew an active contract",
+  },
+  {
+    key: PERMISSIONS.FINANCE_READ,
+    category: "finance",
+    description: "View finance summary, ledger, open receivables, and manual expenses",
+  },
+  {
+    key: PERMISSIONS.FINANCE_MANAGE_EXPENSES,
+    category: "finance",
+    description: "Create, void, and correct manual company expenses",
   },
   {
     key: PERMISSIONS.PURCHASE_EXPERIENCES_READ,

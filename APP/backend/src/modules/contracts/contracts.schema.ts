@@ -65,7 +65,6 @@ export const CreateOfferSchema = z.object({
   agreedAmount: MoneyAed.min(1),
   startAt: z.coerce.date().optional(),
   endAt: z.coerce.date().optional(),
-  depositAmount: MoneyAed.optional(),
   customerId: z.number().int().positive().optional(),
   assignedEmployeeUserId: z.number().int().positive().optional(),
 });
@@ -185,6 +184,7 @@ export const PublicRenewalOfferSchema = z.object({
   previousEndAt: z.date(),
   newEndAt: z.date(),
   confirmed: z.boolean(),
+  awaitingPayment: z.boolean().optional(),
 });
 
 export const PublicFormSchema = z.object({
@@ -225,6 +225,7 @@ export const ContractPostCloseReceivableItemSchema = z.object({
   amount: z.number().int(),
   currency: z.string(),
   status: z.enum(["OPEN", "SETTLED", "VOID"]),
+  settledAt: z.date().nullable().optional(),
   roadLiabilityType: z.enum(["RTA_VIOLATION", "SALIK_TOLL", "SALIK_VIOLATION"]),
   createdAt: z.date(),
 });
@@ -275,7 +276,6 @@ export const ContractDetailSchema = z.object({
   currency: z.string(),
   startAt: z.date().nullable(),
   endAt: z.date().nullable(),
-  depositAmount: z.number().int().nullable(),
   termsVersion: z.string(),
   snapshot: z.unknown().nullable(),
   activatedAt: z.date().nullable(),
@@ -330,10 +330,10 @@ export const ContractDetailSchema = z.object({
     .object({
       id: z.string(),
       chargesTotal: z.number().int(),
-      depositAmount: z.number().int(),
-      deductions: z.number().int(),
       finalAmount: z.number().int(),
       approvedAt: z.date().nullable(),
+      settledAt: z.date().nullable().optional(),
+      settled: z.boolean().optional(),
           lines: z.array(
             z.object({
               id: z.string(),
@@ -359,6 +359,8 @@ export const ContractDetailSchema = z.object({
       newEndAt: z.date(),
       createdAt: z.date(),
       approvedAt: z.date().nullable(),
+      appliedAt: z.date().nullable().optional(),
+      awaitingPayment: z.boolean().optional(),
     }),
   ),
   actions: z.object({
@@ -395,7 +397,6 @@ export const PublicContractViewSchema = z.object({
   currency: z.string(),
   startAt: z.date().nullable(),
   endAt: z.date().nullable(),
-  depositAmount: z.number().int().nullable(),
   termsVersion: z.string(),
   vehicle: z.object({
     displayName: z.string(),
@@ -404,6 +405,11 @@ export const PublicContractViewSchema = z.object({
     modelYear: z.number().int().nullable(),
   }),
   renewal: PublicRenewalOfferSchema.nullable().optional(),
+  payment: z
+    .object({
+      providerAvailable: z.boolean(),
+    })
+    .optional(),
 });
 
 export const PublicLicenseVerificationSchema = z.object({
@@ -434,7 +440,6 @@ export const PublicRentalContextSchema = z.object({
     rentalDays: z.number().int(),
     agreedAmount: z.number().int(),
     currency: z.string(),
-    depositAmount: z.number().int().nullable(),
     startAt: z.date().nullable(),
     endAt: z.date().nullable(),
     actualPickupAt: z.date().nullable(),
@@ -480,21 +485,41 @@ export const PublicPaymentContextSchema = z.object({
   providerAvailable: z.boolean(),
 });
 
-export const PublicPaymentAttemptSchema = z.object({
+export const PaymentCheckoutSchema = z.object({
   payment: z.object({
+    id: z.string().uuid().optional(),
     status: ContractPaymentStatusSchema,
     amount: z.number().int(),
     currency: z.string(),
-    method: ContractPaymentMethodSchema,
+    purpose: z.enum(["RENTAL", "RENEWAL", "RECONCILIATION", "POST_CLOSE_RECEIVABLE"]).optional(),
+    checkoutUrl: z.string().url().nullable().optional(),
+    checkoutExpiresAt: z.date().nullable().optional(),
   }),
+  checkoutUrl: z.string().url().nullable().optional(),
   statusToken: z.string().nullable(),
   providerAvailable: z.boolean(),
+  noPaymentRequired: z.boolean().optional(),
+});
+
+export const PublicPaymentAttemptSchema = PaymentCheckoutSchema.extend({
+  payment: PaymentCheckoutSchema.shape.payment.extend({
+    method: ContractPaymentMethodSchema,
+  }),
 });
 
 export const PublicPaymentStatusSchema = z.object({
   status: ContractPaymentStatusSchema,
   contractStatus: ContractStatusSchema.nullable(),
+  purpose: z.enum(["RENTAL", "RENEWAL", "RECONCILIATION", "POST_CLOSE_RECEIVABLE"]).optional(),
+  checkoutUrl: z.string().url().nullable().optional(),
 });
+
+export const ContractPaymentPurposeSchema = z.enum([
+  "RENTAL",
+  "RENEWAL",
+  "RECONCILIATION",
+  "POST_CLOSE_RECEIVABLE",
+]);
 
 export const PaymentStatusTokenParam = z.object({
   statusToken: z.string().min(16).max(128),

@@ -43,6 +43,13 @@ enum ContractPaymentStatus {
   CANCELLED
 }
 
+enum ContractPaymentPurpose {
+  RENTAL
+  RENEWAL
+  RECONCILIATION
+  POST_CLOSE_RECEIVABLE
+}
+
 enum ContractDocumentType {
   DRIVING_LICENSE
 }
@@ -112,6 +119,7 @@ model Contract {
   currency      String            @default("AED")
   startAt       DateTime?
   endAt         DateTime?
+  /// Legacy column — Diamond V1 does not use rental deposits. Kept for non-destructive migration.
   depositAmount Int?
 
   /// Frozen legal facts. Written no later than SIGNED; never rewritten after that.
@@ -183,29 +191,54 @@ model ContractAcceptance {
 }
 
 model ContractPayment {
-  id                   String                @id @default(uuid())
+  id                   String                 @id @default(uuid())
   contractId           String
-  contract             Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract             Contract               @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  purpose              ContractPaymentPurpose @default(RENTAL)
+  /// Obligation target: contractId (RENTAL), renewalId, reconciliationId, or receivableId.
+  targetId             String
   amount               Int
-  currency             String                @default("AED")
+  currency             String                 @default("AED")
   method               ContractPaymentMethod
-  status               ContractPaymentStatus @default(PENDING)
+  status               ContractPaymentStatus  @default(PENDING)
   externalReference    String?
   provider             String?
   providerReference    String?
   providerStatus       String?
+  checkoutUrl          String?
+  checkoutExpiresAt    DateTime?
   processingStartedAt  DateTime?
   confirmedAt          DateTime?
   failedAt             DateTime?
   /// SHA-256 of the one-time payment-status token. Raw value is never stored.
-  statusTokenHash      String?               @unique
+  statusTokenHash      String?                @unique
   statusTokenExpiresAt DateTime?
-  createdAt            DateTime              @default(now())
+  createdAt            DateTime               @default(now())
   createdByUserId      Int?
-  createdBy            User?                 @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdBy            User?                  @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  reconciliationSettlement ContractReconciliation?     @relation("ReconciliationSettlement")
+  postCloseSettlement      ContractPostCloseReceivable?  @relation("PostCloseSettlement")
+  renewalSettlement        ContractRenewal?            @relation("RenewalSettlement")
+  ledgerEntries            FinancialLedgerEntry[]
 
   @@index([contractId, status])
+  @@index([purpose, targetId, status])
   @@map("contract_payments")
+}
+
+/// DB-backed Stripe webhook idempotency. Same event must not apply business effects twice.
+model StripeWebhookEvent {
+  id            String    @id @default(uuid())
+  stripeEventId String    @unique
+  eventType     String
+  receivedAt    DateTime  @default(now())
+  processedAt   DateTime?
+  outcome       String?
+  error         String?
+
+  @@index([receivedAt])
+  @@map("stripe_webhook_events")
 }
 
 /// Contract-scoped file (customer may not exist yet). One active driving license
@@ -317,12 +350,16 @@ model ContractReconciliation {
   contractId       String    @unique
   contract         Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
   chargesTotal     Int
+  /// Legacy columns — Diamond V1 reconciliation uses finalAmount = chargesTotal only.
   depositAmount    Int       @default(0)
   deductions       Int       @default(0)
   finalAmount      Int
   approvedAt       DateTime?
   approvedByUserId Int?
   approvedBy       User?     @relation("ContractReconciliationApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  settledAt        DateTime?
+  settledPaymentId String?   @unique
+  settledPayment   ContractPayment? @relation("ReconciliationSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -368,7 +405,11 @@ model ContractRenewal {
   previousEndAt    DateTime
   newEndAt         DateTime
   createdAt        DateTime  @default(now())
+  /// Customer accepted the offer. Contract extension applies only after payment (or zero amount).
   approvedAt       DateTime?
+  appliedAt        DateTime?
+  settledPaymentId String?   @unique
+  settledPayment   ContractPayment? @relation("RenewalSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdByUserId  Int?
   createdBy        User?     @relation("ContractRenewalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 

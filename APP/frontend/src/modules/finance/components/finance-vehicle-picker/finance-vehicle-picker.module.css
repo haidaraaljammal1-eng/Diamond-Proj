@@ -1,0 +1,41 @@
+.root {
+  display: grid;
+  gap: 10px;
+}
+
+.selected,
+.empty {
+  font-size: 0.82rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.selected {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.list {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.option {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid #e4dac8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.optionSelected {
+  border-color: #b08d2f;
+  background: #fff8e8;
+}

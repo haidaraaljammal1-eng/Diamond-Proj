@@ -107,7 +107,23 @@
 - Demo simulation must remain environment-gated, frontend-only, visibly labeled, non-persistent, and must never create provider/business success in backend.
 - Payment success is backend/provider authoritative. A redirect URL is not confirmation.
 - PROCESSING/PENDING card attempts block duplicate retry. UNKNOWN provider status stays in-flight.
+- Stripe is the only V1 customer payment method. Manual staff confirmation and frontend actions never confirm money.
+- Collected/settled state requires trusted Stripe/provider confirmation (webhook primary, status poll fallback).
+- Payment amount is always server-derived; clients must not send authoritative amounts.
+- Positive approved Reconciliation must be paid before Contract Close. Car-In releases Vehicle regardless of payment.
+- Late CLOSED road liabilities collect through Post-Close Receivable, not by reopening the Contract.
+- Renewal additional amount applies to the Contract only after payment (zero additional amount may apply without Stripe).
+- Diamond V1 has no Deposit.
 - After a successful implementation, update the relevant MD under `DOCU` (API detail does not belong in this file).
+
+## Finance (Diamond)
+
+- Finance Collected means trusted Stripe-confirmed customer money only (`CONFIRMED` + `CARD` + `provider = stripe`). Historical `MANUAL` / `BANK_TRANSFER` rows are preserved but excluded from V1 Collected.
+- Outstanding is a current customer obligation balance, not collected revenue. It is not period-filtered away.
+- `FinancialLedgerEntry` records recognized movements only; unpaid obligations stay in Open Receivables projections.
+- Maintenance `COMPLETED` actual `cost` is a company Expense (`MAINTENANCE_EXPENSE`), never a customer charge.
+- Manual Expense exists for operational company spend; Manual Income does not. Corrections use Void + replacement, not hard delete.
+- Finance V1 has no Invoices, no Deposit, and no manual customer collection routes.
 
 ## GPS Operations (Diamond)
 

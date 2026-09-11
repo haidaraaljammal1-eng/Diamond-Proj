@@ -3,6 +3,7 @@ import { USERS_PAGE_PERMISSIONS } from "@/modules/users/users.permissions";
 import { VEHICLES_PAGE_PERMISSIONS } from "@/modules/vehicles/vehicles.permissions";
 import { CONTRACTS_PAGE_PERMISSIONS } from "@/modules/contracts/contracts.permissions";
 import { MAINTENANCE_PAGE_PERMISSIONS } from "@/modules/maintenance/maintenance.permissions";
+import { FINANCE_PAGE_PERMISSIONS } from "@/modules/finance/finance.permissions";
 import type { NavigationConfig } from "./navigation.types";
 
 /**
@@ -78,7 +79,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "finance",
         href: "/finance",
         icon: "finance",
-        adminOnly: true,
+        permissions: [...FINANCE_PAGE_PERMISSIONS],
       },
       {
         key: "invoices",

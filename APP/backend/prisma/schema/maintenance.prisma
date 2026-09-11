@@ -43,6 +43,7 @@ model MaintenanceOrder {
   createdBy            User                   @relation("MaintenanceOrderCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
+  ledgerEntries        FinancialLedgerEntry[]
 
   @@index([vehicleId])
   @@index([status])

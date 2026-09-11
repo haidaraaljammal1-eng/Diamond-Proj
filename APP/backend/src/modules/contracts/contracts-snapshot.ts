@@ -31,7 +31,6 @@ export interface ContractSnapshot {
     rentalDays: number;
     startAt: string | null;
     endAt: string | null;
-    depositAmount: number | null;
     currency: string;
   };
   termsVersion: string;
@@ -64,7 +63,6 @@ type CommercialSnapInput = {
   rentalDays: number;
   startAt: Date | null;
   endAt: Date | null;
-  depositAmount: number | null;
   currency?: string;
 };
 
@@ -110,7 +108,6 @@ export function buildContractSnapshot(input: {
       rentalDays: input.commercial.rentalDays,
       startAt: input.commercial.startAt?.toISOString() ?? null,
       endAt: input.commercial.endAt?.toISOString() ?? null,
-      depositAmount: input.commercial.depositAmount,
       currency: input.commercial.currency ?? CONTRACT_CURRENCY,
     },
     termsVersion: input.termsVersion ?? CONTRACT_TERMS_VERSION,

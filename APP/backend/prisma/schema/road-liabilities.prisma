@@ -202,6 +202,9 @@ model ContractPostCloseReceivable {
   amount           Int
   currency         String                            @default("AED")
   status           ContractPostCloseReceivableStatus @default(OPEN)
+  settledAt        DateTime?
+  settledPaymentId String?                           @unique
+  settledPayment   ContractPayment?                  @relation("PostCloseSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdAt        DateTime                          @default(now())
   updatedAt        DateTime                          @updatedAt
 

@@ -1,0 +1,49 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: grid;
+  gap: 4px;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.label {
+  color: var(--diamond-ink, #2a2418);
+}
+
+.amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.count {
+  font-size: 0.75rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.barTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: #efe8da;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #c9a84c, #e8d08a);
+}
+
+.empty {
+  font-size: 0.82rem;
+  color: var(--diamond-muted, #6f6556);
+}

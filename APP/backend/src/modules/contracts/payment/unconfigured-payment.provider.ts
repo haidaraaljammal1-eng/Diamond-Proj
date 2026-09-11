@@ -1,15 +1,16 @@
 import type {
-  CreatePaymentInput,
-  CreatePaymentResult,
+  CreateCheckoutInput,
+  CreateCheckoutResult,
   PaymentProvider,
   PaymentStatusResult,
+  WebhookVerifyResult,
 } from "src/modules/contracts/payment/payment-provider.types";
 
 export class UnconfiguredPaymentProvider implements PaymentProvider {
   readonly name = "none";
   readonly configured = false;
 
-  async createPayment(_input: CreatePaymentInput): Promise<CreatePaymentResult> {
+  async createCheckoutSession(_input: CreateCheckoutInput): Promise<CreateCheckoutResult> {
     return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
   }
 
@@ -17,7 +18,7 @@ export class UnconfiguredPaymentProvider implements PaymentProvider {
     return { status: "UNKNOWN" };
   }
 
-  async verifyWebhook(): Promise<{ ok: false; reason: "NOT_CONFIGURED" }> {
+  async verifyWebhook(): Promise<WebhookVerifyResult> {
     return { ok: false, reason: "NOT_CONFIGURED" };
   }
 }

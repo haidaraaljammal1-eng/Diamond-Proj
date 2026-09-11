@@ -162,7 +162,6 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
       contract: {
         id: string;
         status: ContractStatus;
-        depositAmount: number | null;
         reconciliation: { id: string } | null;
         carIn: { id: string } | null;
       };
@@ -196,9 +195,9 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
           data: {
             contractId: input.contract.id,
             chargesTotal: 0,
-            depositAmount: input.contract.depositAmount ?? 0,
-            deductions: input.contract.depositAmount ?? 0,
-            finalAmount: -(input.contract.depositAmount ?? 0),
+            depositAmount: 0,
+            deductions: 0,
+            finalAmount: 0,
           },
         });
         reconciliationId = created.id;
@@ -227,7 +226,11 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
       const allLines = await tx.contractReconciliationLine.findMany({ where: { reconciliationId } });
       await tx.contractReconciliation.update({
         where: { id: reconciliationId },
-        data: reconciliationTotalsFromLines(allLines, input.contract.depositAmount ?? 0),
+        data: {
+          ...reconciliationTotalsFromLines(allLines),
+          depositAmount: 0,
+          deductions: 0,
+        },
       });
       return;
     }

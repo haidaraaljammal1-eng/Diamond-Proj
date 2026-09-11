@@ -21,7 +21,6 @@ const OFFER = {
   currency: "AED",
   startAt: "2026-09-01T08:00:00.000Z",
   endAt: "2026-09-04T08:00:00.000Z",
-  depositAmount: 500,
   termsVersion: "diamond-rental-terms-v1",
   vehicle: {
     displayName: "Renewal Fixture",
@@ -56,7 +55,41 @@ async function login(page: Page, locale: "ar" | "en") {
 }
 
 function mockPublicRenewal(page: Page, data: Record<string, unknown>, status = 200) {
+  let latest = data;
   return page.route("**/contracts/renew/**", async (route) => {
+    if (route.request().url().includes("/payment")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            payment: { status: "PROCESSING", amount: 700, currency: "AED", method: "CARD" },
+            checkoutUrl: "https://checkout.test/renewal-fixture",
+            statusToken: "renewal-status-token-fixture",
+            providerAvailable: true,
+          },
+        }),
+      });
+      return;
+    }
+    if (route.request().method() === "POST" && route.request().url().includes("/confirm")) {
+      const payment =
+        (latest.payment as { providerAvailable?: boolean } | undefined) ??
+        ({ providerAvailable: true } as { providerAvailable: boolean });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            ...OFFER,
+            ...latest,
+            payment,
+            renewal: { ...OFFER.renewal, confirmed: false, awaitingPayment: true },
+          },
+        }),
+      });
+      return;
+    }
     if (route.request().method() === "POST") {
       await route.fulfill({
         status: 200,
@@ -72,6 +105,7 @@ function mockPublicRenewal(page: Page, data: Record<string, unknown>, status = 2
       });
       return;
     }
+    if (status === 200) latest = data;
     await route.fulfill({
       status,
       contentType: "application/json",
@@ -117,7 +151,7 @@ async function openFirstRow(page: Page) {
 
 test.describe("Public renewal page", () => {
   test("English valid offer is LTR, read-only, and confirms", async ({ page }) => {
-    await mockPublicRenewal(page, OFFER);
+    await mockPublicRenewal(page, { ...OFFER, payment: { providerAvailable: true } });
     await page.goto("/en/renew/fixture-token-aaaa");
     await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
     await expect(page.getByTestId("public-renewal")).toBeVisible({ timeout: 20_000 });
@@ -127,10 +161,18 @@ test.describe("Public renewal page", () => {
     await expect(page.locator("input")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Confirm Rental Extension" })).toBeVisible();
     await page.getByTestId("renewal-confirm").click();
-    await expect(page.getByTestId("renewal-success")).toContainText(
-      "Your rental extension has been confirmed",
-    );
-    await page.screenshot({ path: `${SHOTS}/en-public-renewal-success.png` });
+    await expect(page.getByTestId("renewal-payment-step")).toBeVisible();
+    await expect(page.getByTestId("renewal-pay")).toBeVisible();
+    await page.screenshot({ path: `${SHOTS}/en-public-renewal-awaiting-payment.png` });
+  });
+
+  test("English Stripe unconfigured shows honest unavailable state", async ({ page }) => {
+    await mockPublicRenewal(page, { ...OFFER, payment: { providerAvailable: false } });
+    await page.goto("/en/renew/fixture-token-aaaa");
+    await expect(page.getByTestId("public-renewal")).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId("renewal-confirm").click();
+    await expect(page.getByTestId("renewal-payment-unavailable")).toBeVisible();
+    await expect(page.getByTestId("renewal-success")).toHaveCount(0);
   });
 
   test("Arabic valid offer is RTL with required labels", async ({ page }) => {

@@ -235,4 +235,21 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       data: await contracts.confirmRenewalPublic(request.params.token),
     }),
   );
+
+  app.post(
+    "/renew/:token/payment",
+    {
+      schema: {
+        summary: "Start Stripe checkout for a confirmed renewal offer",
+        operationId: "startPublicRenewalPayment",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(PublicPaymentAttemptSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({
+      data: await contracts.startRenewalPaymentPublic(request.params.token),
+    }),
+  );
 }

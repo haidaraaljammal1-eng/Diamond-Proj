@@ -14,6 +14,7 @@ import {
   ContractListItemSchema,
   CreateOfferSchema,
   ListContractsQuerySchema,
+  PaymentCheckoutSchema,
   ReconcileSchema,
   ReconciliationRoadLiabilitiesSchema,
   RenewSchema,
@@ -25,6 +26,7 @@ import { PERMISSIONS } from "src/constants/permissions";
 import { requireAuth } from "src/lib/context/auth-context";
 
 const InspectionPhotoParam = ContractIdParam.extend({ photoId: z.string().uuid() });
+const PostCloseReceivableParam = ContractIdParam.extend({ receivableId: z.string().uuid() });
 
 export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -135,9 +137,13 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
     "/:id/payment/confirm",
     {
       schema: {
-        summary: "Confirm payment and reserve the vehicle",
+        summary: "[Deprecated] Manual payment confirmation is disabled in V1",
+        description:
+          "Stripe is the only supported V1 customer payment method. This route always returns MANUAL_PAYMENT_DISABLED.",
         operationId: "confirmContractPayment",
         tags: ["Contracts"],
+        deprecated: true,
+        hide: true,
         permissions: [PERMISSIONS.CONTRACTS_MANAGE],
         params: ContractIdParam,
         body: ConfirmPaymentSchema,
@@ -316,6 +322,58 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       );
       request.setAudit({
         action: "contracts.confirm_road_liability_charge",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/payment",
+    {
+      schema: {
+        summary: "Start Stripe checkout for an approved reconciliation balance",
+        operationId: "startReconciliationPayment",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(PaymentCheckoutSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.startReconciliationPayment(request.params.id, actor.id);
+      request.setAudit({
+        action: "contracts.reconciliation_payment",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/post-close-receivables/:receivableId/payment",
+    {
+      schema: {
+        summary: "Start Stripe checkout for an open post-close receivable",
+        operationId: "startPostCloseReceivablePayment",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.VIOLATIONS_CHARGE],
+        params: PostCloseReceivableParam,
+        response: { 200: dataResponse(PaymentCheckoutSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.startPostClosePayment(
+        request.params.id,
+        request.params.receivableId,
+        actor.id,
+      );
+      request.setAudit({
+        action: "contracts.post_close_payment",
         entityType: "contract",
         entityId: request.params.id,
       });

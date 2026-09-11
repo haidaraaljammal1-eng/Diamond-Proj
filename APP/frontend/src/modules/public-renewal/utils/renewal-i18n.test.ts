@@ -35,6 +35,8 @@ describe("renewal i18n", () => {
       assert.ok(nested(locale, ["PublicRenewal", "successTitle"]).length > 0);
       assert.ok(nested(locale, ["PublicRenewal", "currentRental"]).length > 0);
       assert.ok(nested(locale, ["PublicRenewal", "renewalOffer"]).length > 0);
+      assert.ok(nested(locale, ["PublicRenewal", "payment", "pay"]).length > 0);
+      assert.ok(nested(locale, ["PublicRenewal", "payment", "unavailable"]).length > 0);
       assert.ok(
         nested(locale, ["PublicRenewal", "link", "CONTRACT_LINK_EXPIRED", "title"]).length > 0,
       );

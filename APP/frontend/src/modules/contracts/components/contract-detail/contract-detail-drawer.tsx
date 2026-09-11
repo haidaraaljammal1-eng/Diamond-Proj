@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Drawer } from "@/shared/components/ui/drawer";
+import { StripePaymentActions } from "@/modules/payments/components/stripe-payment-actions";
+import { useStripeCheckout } from "@/modules/payments/hooks/use-stripe-checkout";
+import {
+  startPostCloseReceivablePayment,
+  startReconciliationPayment,
+} from "@/modules/payments/api/payments.api";
 import { useContract } from "../../hooks/use-contract";
 import { ContractStatusChip } from "../contract-status/contract-status";
 import { ContractTimeline } from "../contract-timeline/contract-timeline";
@@ -18,7 +24,6 @@ export interface ContractDetailDrawerProps {
   contractId: string | null;
   onClose: () => void;
   onGenerateRentalLink: (id: string) => void;
-  onConfirmPayment: (id: string) => void;
   onCarOut: (id: string) => void;
   onCarIn: (id: string) => void;
   onReturnLink: (id: string) => void;
@@ -41,7 +46,6 @@ export function ContractDetailDrawer({
   contractId,
   onClose,
   onGenerateRentalLink,
-  onConfirmPayment,
   onCarOut,
   onCarIn,
   onReturnLink,
@@ -50,7 +54,10 @@ export function ContractDetailDrawer({
   onCloseContract,
 }: ContractDetailDrawerProps) {
   const t = useTranslations("Contracts");
+  const tPay = useTranslations("Payments");
   const format = useFormatter();
+  const checkout = useStripeCheckout();
+  const [providerAvailable, setProviderAvailable] = useState(true);
   const {
     detail,
     detailStatus,
@@ -105,12 +112,6 @@ export function ContractDetailDrawer({
               label={t("detail.amount")}
               value={money(detail.agreedAmount, detail.currency)}
             />
-            {detail.depositAmount != null ? (
-              <Kv
-                label={t("detail.deposit")}
-                value={money(detail.depositAmount, detail.currency)}
-              />
-            ) : null}
             {detail.startAt ? (
               <Kv
                 label={t("detail.start")}
@@ -201,15 +202,45 @@ export function ContractDetailDrawer({
             <section className={styles.section} data-testid="contract-post-close">
               <p className={styles.sectionTitle}>{t("detail.postClose")}</p>
               {detail.postCloseReceivables.items.map((item) => (
-                <div key={item.id} className={styles.kv}>
-                  <span>
-                    {item.roadLiabilityType === "SALIK_TOLL"
-                      ? t("reconcile.type.SALIK")
-                      : t("reconcile.type.VIOLATION")}
-                    {" · "}
-                    {item.status === "OPEN" ? t("detail.postCloseOpen") : item.status}
-                  </span>
-                  <b dir="ltr">{money(item.amount, item.currency)}</b>
+                <div key={item.id} className={styles.postCloseItem}>
+                  <div className={styles.kv}>
+                    <span>
+                      {item.roadLiabilityType === "SALIK_TOLL"
+                        ? t("reconcile.type.SALIK")
+                        : t("reconcile.type.VIOLATION")}
+                      {" · "}
+                      {item.status === "SETTLED" ? tPay("collected") : t("detail.postCloseOpen")}
+                    </span>
+                    <b dir="ltr">{money(item.amount, item.currency)}</b>
+                  </div>
+                  {item.status === "OPEN" ? (
+                    <StripePaymentActions
+                      providerAvailable={providerAvailable}
+                      settled={false}
+                      amountDue={item.amount}
+                      currency={item.currency}
+                      pending={checkout.pending}
+                      checkoutUrl={checkout.lastCheckoutUrl}
+                      onCreateLink={() => {
+                        if (!detail) return;
+                        void checkout
+                          .runCheckout(() =>
+                            startPostCloseReceivablePayment(detail.id, item.id),
+                          )
+                          .then((result) => {
+                            setProviderAvailable(result.providerAvailable);
+                            void loadContract(detail.id);
+                          })
+                          .catch(() => setProviderAvailable(false));
+                      }}
+                      onCopyLink={() => void checkout.copyCheckoutLink()}
+                      onOpenLink={() => {
+                        if (checkout.lastCheckoutUrl) {
+                          window.open(checkout.lastCheckoutUrl, "_blank", "noopener,noreferrer");
+                        }
+                      }}
+                    />
+                  ) : null}
                 </div>
               ))}
             </section>
@@ -225,6 +256,29 @@ export function ContractDetailDrawer({
               <Kv
                 label={t("reconcile.final")}
                 value={money(detail.reconciliation.finalAmount, detail.currency)}
+              />
+              <StripePaymentActions
+                providerAvailable={providerAvailable}
+                settled={Boolean(detail.reconciliation.settled)}
+                amountDue={detail.reconciliation.finalAmount}
+                currency={detail.currency}
+                pending={checkout.pending}
+                checkoutUrl={checkout.lastCheckoutUrl}
+                onCreateLink={() => {
+                  void checkout
+                    .runCheckout(() => startReconciliationPayment(detail.id))
+                    .then((result) => {
+                      setProviderAvailable(result.providerAvailable);
+                      void loadContract(detail.id);
+                    })
+                    .catch(() => setProviderAvailable(false));
+                }}
+                onCopyLink={() => void checkout.copyCheckoutLink()}
+                onOpenLink={() => {
+                  if (checkout.lastCheckoutUrl) {
+                    window.open(checkout.lastCheckoutUrl, "_blank", "noopener,noreferrer");
+                  }
+                }}
               />
             </section>
           ) : null}
@@ -274,11 +328,6 @@ export function ContractDetailDrawer({
                   {t("actions.rentalLink")}
                 </Button>
               ) : null}
-              {actions.showConfirmPayment ? (
-                <Button type="button" size="sm" onClick={() => onConfirmPayment(detail.id)}>
-                  {t("actions.confirmPayment")}
-                </Button>
-              ) : null}
               {actions.showCarOut ? (
                 <Button type="button" size="sm" onClick={() => onCarOut(detail.id)}>
                   {t("actions.carOut")}
@@ -306,6 +355,11 @@ export function ContractDetailDrawer({
                 <Button type="button" size="sm" onClick={() => onReconcile(detail.id)}>
                   {t("actions.reconcile")}
                 </Button>
+              ) : null}
+              {detail.reconciliation &&
+              detail.reconciliation.finalAmount > 0 &&
+              !detail.reconciliation.settled ? (
+                <p className={styles.muted}>{tPay("closeBlocked")}</p>
               ) : null}
               {actions.showClose ? (
                 <Button type="button" size="sm" onClick={() => onCloseContract(detail.id)}>

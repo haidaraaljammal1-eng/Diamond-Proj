@@ -1,23 +1,32 @@
-export interface CreatePaymentInput {
+import type { ContractPaymentPurpose } from "@prisma/client";
+
+export interface CreateCheckoutInput {
+  paymentId: string;
   contractId: string;
+  purpose: ContractPaymentPurpose;
+  targetId: string;
   amount: number;
   currency: string;
+  successUrl: string;
+  cancelUrl: string;
 }
 
-export interface CreatePaymentSuccess {
+export interface CreateCheckoutSuccess {
   ok: true;
   provider: string;
   providerReference: string;
   providerStatus: string;
+  checkoutUrl: string;
+  checkoutExpiresAt: Date;
 }
 
-export interface CreatePaymentFailure {
+export interface CreateCheckoutFailure {
   ok: false;
   reason: "NOT_CONFIGURED";
   provider: string;
 }
 
-export type CreatePaymentResult = CreatePaymentSuccess | CreatePaymentFailure;
+export type CreateCheckoutResult = CreateCheckoutSuccess | CreateCheckoutFailure;
 
 export type ProviderPaymentStatus =
   | "PENDING"
@@ -25,27 +34,42 @@ export type ProviderPaymentStatus =
   | "CONFIRMED"
   | "FAILED"
   | "CANCELLED"
+  | "EXPIRED"
   | "UNKNOWN";
 
 export interface PaymentStatusResult {
   status: ProviderPaymentStatus;
   providerStatus?: string;
+  amountMinor?: number;
+  currency?: string;
 }
 
-export interface PaymentWebhookResult {
-  ok: boolean;
-  reason?: "NOT_CONFIGURED" | "INVALID_SIGNATURE";
+export interface ParsedWebhookPaymentEvent {
+  stripeEventId: string;
+  eventType: string;
+  providerReference: string;
+  paymentId: string;
+  status: Exclude<ProviderPaymentStatus, "UNKNOWN" | "PENDING">;
+  amountMinor?: number;
+  currency?: string;
 }
+
+export interface WebhookVerifySuccess {
+  ok: true;
+  event: ParsedWebhookPaymentEvent;
+}
+
+export interface WebhookVerifyFailure {
+  ok: false;
+  reason: "NOT_CONFIGURED" | "INVALID_SIGNATURE" | "IGNORED";
+}
+
+export type WebhookVerifyResult = WebhookVerifySuccess | WebhookVerifyFailure;
 
 export interface PaymentProvider {
   readonly name: string;
   readonly configured: boolean;
-  createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult>;
+  createCheckoutSession(input: CreateCheckoutInput): Promise<CreateCheckoutResult>;
   getPaymentStatus(providerReference: string): Promise<PaymentStatusResult>;
-  /** A success URL is never proof. Future Stripe confirmation uses this + getPaymentStatus. */
-  verifyWebhook(payload: Buffer, signature: string): Promise<PaymentWebhookResult>;
-}
-
-export interface CardPaymentConfirmInput {
-  providerReference: string;
+  verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult>;
 }

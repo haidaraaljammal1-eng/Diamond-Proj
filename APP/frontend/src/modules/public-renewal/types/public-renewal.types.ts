@@ -8,12 +8,24 @@ export type PublicRenewalStatus =
   | "REVIEW"
   | "CLOSED";
 
+export type ContractPaymentStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "CONFIRMED"
+  | "FAILED"
+  | "CANCELLED";
+
 export interface PublicRenewalOffer {
   additionalDays: number;
   additionalAmount: number;
   previousEndAt: string;
   newEndAt: string;
   confirmed: boolean;
+  awaitingPayment?: boolean;
+}
+
+export interface PublicRenewalPayment {
+  providerAvailable: boolean;
 }
 
 export interface PublicRenewalView {
@@ -26,7 +38,6 @@ export interface PublicRenewalView {
   currency: string;
   startAt: string | null;
   endAt: string | null;
-  depositAmount: number | null;
   termsVersion: string;
   vehicle: {
     displayName: string;
@@ -35,6 +46,7 @@ export interface PublicRenewalView {
     modelYear: number | null;
   };
   renewal?: PublicRenewalOffer | null;
+  payment?: PublicRenewalPayment | null;
 }
 
 export type PublicRenewalLoadStatus = "idle" | "loading" | "ready" | "error";

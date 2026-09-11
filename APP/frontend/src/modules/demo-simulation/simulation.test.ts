@@ -67,7 +67,6 @@ const realContext: PublicRentalContext = {
     rentalDays: 7,
     agreedAmount: 3500,
     currency: "AED",
-    depositAmount: 1500,
     startAt: "2026-09-12T08:00:00.000Z",
     endAt: "2026-09-19T08:00:00.000Z",
     actualPickupAt: null,
@@ -128,7 +127,6 @@ describe("applyRentalSimulation", () => {
     const next = applyRentalSimulation(realContext, overlay);
     assert.equal(next.rental.agreedAmount, 3500);
     assert.equal(next.rental.currency, "AED");
-    assert.equal(next.rental.depositAmount, 1500);
     assert.equal(next.rental.rentalDays, 7);
     assert.equal(next.contract.contractNumber, "DE-2026-000411");
     assert.equal(next.vehicle.plateNumber, "A 12345");

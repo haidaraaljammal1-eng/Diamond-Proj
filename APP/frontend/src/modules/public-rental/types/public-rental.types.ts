@@ -51,7 +51,6 @@ export interface PublicRentalContext {
     rentalDays: number;
     agreedAmount: number;
     currency: string;
-    depositAmount: number | null;
     startAt: string | null;
     endAt: string | null;
     actualPickupAt: string | null;
@@ -105,6 +104,7 @@ export interface PublicPaymentAttempt {
     currency: string;
     method: ContractPaymentMethod;
   };
+  checkoutUrl?: string | null;
   statusToken: string | null;
   providerAvailable: boolean;
 }
@@ -112,6 +112,8 @@ export interface PublicPaymentAttempt {
 export interface PublicPaymentStatus {
   status: ContractPaymentStatus;
   contractStatus: ContractStatus | null;
+  purpose?: string;
+  checkoutUrl?: string | null;
 }
 
 export interface PublicRentalFormPayload {

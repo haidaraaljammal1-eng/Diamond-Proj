@@ -73,12 +73,25 @@ describe("deriveCustomerChargeAdjustment", () => {
 });
 
 describe("reconciliationTotalsFromLines", () => {
+  it("sets finalAmount equal to chargesTotal with no deposit deduction", () => {
+    assert.deepEqual(
+      reconciliationTotalsFromLines([
+        { amount: 300 },
+        { amount: 50 },
+        { amount: 100 },
+        { amount: 120 },
+      ]),
+      {
+        chargesTotal: 570,
+        finalAmount: 570,
+      },
+    );
+  });
+
   it("uses the customer charge once and does not add the official amount again", () => {
-    assert.deepEqual(reconciliationTotalsFromLines([{ amount: 120 }], 500), {
+    assert.deepEqual(reconciliationTotalsFromLines([{ amount: 120 }]), {
       chargesTotal: 120,
-      depositAmount: 500,
-      deductions: 500,
-      finalAmount: -380,
+      finalAmount: 120,
     });
   });
 });

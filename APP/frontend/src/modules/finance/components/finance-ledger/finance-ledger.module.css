@@ -1,0 +1,103 @@
+.section {
+  margin-bottom: 28px;
+}
+
+.header {
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--diamond-border, #d8cdb8);
+  border-radius: 12px;
+  background: var(--diamond-surface, #faf7f0);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ece4d4;
+  text-align: start;
+  vertical-align: top;
+}
+
+.table th {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--diamond-muted, #6f6556);
+  background: #f5efe3;
+}
+
+.amountCollection {
+  color: #2f6b3f;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amountExpense {
+  color: #7a3b2d;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amountReversal {
+  color: #5a4a2d;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.empty,
+.error {
+  padding: 18px;
+  text-align: center;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.skeletonRow {
+  height: 42px;
+  margin: 8px 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f3efe6 25%, #ebe4d6 50%, #f3efe6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .hideMd {
+    display: none;
+  }
+}

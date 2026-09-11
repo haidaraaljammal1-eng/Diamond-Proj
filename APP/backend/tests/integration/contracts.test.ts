@@ -4,6 +4,11 @@ import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
 import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
+import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
+import {
+  confirmRentalPaymentViaStatusToken,
+  createFakePaymentProvider,
+} from "../helpers/fake-payment-provider";
 
 /**
  * Contracts V1 integration. Requires RUN_INTEGRATION=true and TEST_DATABASE_URL
@@ -217,7 +222,6 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 1500,
-        depositAmount: 500,
       },
     });
     assert.equal(offer.statusCode, 201, offer.body);
@@ -301,33 +305,24 @@ if (!RUN) {
       data: { name: "Changed Later" },
     });
 
-    const payHeaders = { ...auth(), "idempotency-key": `pay-${contractId}` };
-    const pay = await app.inject({
+    const payments = createFakePaymentProvider(run);
+    setPaymentProviderForTests(payments.provider);
+    const paid = await confirmRentalPaymentViaStatusToken(
+      app,
+      payments,
+      rentalToken,
+      `pay-${contractId}`,
+    );
+    assert.equal(paid.contractStatus, "PAID");
+
+    const manualDisabled = await app.inject({
       method: "POST",
       url: `/contracts/${contractId}/payment/confirm`,
-      headers: payHeaders,
+      headers: auth(),
       payload: { method: "MANUAL" },
     });
-    assert.equal(pay.statusCode, 200, pay.body);
-    assert.equal(pay.json().data.status, "PAID");
-
-    const payReplay = await app.inject({
-      method: "POST",
-      url: `/contracts/${contractId}/payment/confirm`,
-      headers: payHeaders,
-      payload: { method: "MANUAL" },
-    });
-    assert.equal(payReplay.statusCode, 200, payReplay.body);
-    assert.equal(payReplay.json().data.status, "PAID");
-
-    const payMismatch = await app.inject({
-      method: "POST",
-      url: `/contracts/${contractId}/payment/confirm`,
-      headers: payHeaders,
-      payload: { method: "BANK_TRANSFER" },
-    });
-    assert.equal(payMismatch.statusCode, 409, payMismatch.body);
-    assert.equal(payMismatch.json().error.context.reason, "IDEMPOTENCY_KEY_CONFLICT");
+    assert.equal(manualDisabled.statusCode, 409);
+    assert.equal(manualDisabled.json().error.context.reason, "MANUAL_PAYMENT_DISABLED");
 
     const vehiclePaid = await app.inject({
       method: "GET",
@@ -520,7 +515,9 @@ if (!RUN) {
     });
     assert.equal(rec.statusCode, 200, rec.body);
     assert.equal(rec.json().data.reconciliation.chargesTotal, 500);
-    assert.equal(rec.json().data.reconciliation.finalAmount, 0);
+    assert.equal(rec.json().data.reconciliation.finalAmount, 500);
+    assert.equal(rec.json().data.reconciliation.depositAmount, undefined);
+    assert.equal(rec.json().data.reconciliation.deductions, undefined);
     assert.deepEqual(
       rec.json().data.reconciliation.lines.map((line: { type: string }) => line.type).sort(),
       ["DAMAGE", "FUEL", "LATE", "OTHER"],
@@ -589,22 +586,28 @@ if (!RUN) {
         },
       });
       await app.inject({ method: "POST", url: `/contracts/rental/${t}/accept`, payload: {} });
+      return t;
     }
-    await sign(idA);
-    await sign(idB);
+    const payments = createFakePaymentProvider(`${run}-race`);
+    setPaymentProviderForTests(payments.provider);
+    const tokenA = await sign(idA);
+    const tokenB = await sign(idB);
+    async function tryPayRental(token: string, key: string) {
+      const start = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${token}/payment`,
+        headers: { "idempotency-key": key },
+      });
+      if (start.statusCode !== 200) return start;
+      payments.confirm();
+      return app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${start.json().data.statusToken as string}`,
+      });
+    }
     const [payA, payB] = await Promise.all([
-      app.inject({
-        method: "POST",
-        url: `/contracts/${idA}/payment/confirm`,
-        headers: auth(),
-        payload: { method: "MANUAL" },
-      }),
-      app.inject({
-        method: "POST",
-        url: `/contracts/${idB}/payment/confirm`,
-        headers: auth(),
-        payload: { method: "MANUAL" },
-      }),
+      tryPayRental(tokenA, `race-${idA}`),
+      tryPayRental(tokenB, `race-${idB}`),
     ]);
     const codes = [payA.statusCode, payB.statusCode].sort();
     assert.deepEqual(codes, [200, 409]);
@@ -677,15 +680,18 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 2,
         agreedAmount: 900,
-        payments: {
-          create: {
-            amount: 900,
-            method: "MANUAL",
-            status: "CONFIRMED",
-            confirmedAt: new Date(),
-            createdByUserId: actor.id,
-          },
-        },
+      },
+    });
+    await prisma.contractPayment.create({
+      data: {
+        contractId: next.id,
+        purpose: "RENTAL",
+        targetId: next.id,
+        amount: 900,
+        method: "MANUAL",
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+        createdByUserId: actor.id,
       },
     });
     const photos = await dummyPhotos();
@@ -748,6 +754,75 @@ if (!RUN) {
     });
     const expired = await app.inject({ method: "GET", url: `/contracts/rental/${fresh}` });
     assert.equal(expired.statusCode, 401);
+  });
+
+  test("legacy stored deposit values do not reduce reconciliation finalAmount in API output", async () => {
+    const v = await app.inject({
+      method: "POST",
+      url: "/vehicles",
+      headers: auth(),
+      payload: { vehicleName: `CT-DEP-${run}`, plateNumber: `CT D ${run}` },
+    });
+    const vid = v.json().data.id as number;
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { email: (await import("src/lib/security/normalize")).normalizeEmail(admin.email) },
+    });
+    const customer = await prisma.customer.create({ data: { name: `CT Dep ${run}` } });
+    const legacy = await prisma.contract.create({
+      data: {
+        contractNumber: `CT-DEP-${run}`,
+        status: "REVIEW",
+        vehicleId: vid,
+        customerId: customer.id,
+        createdByUserId: actor.id,
+        priceType: "DAILY",
+        rentalDays: 2,
+        agreedAmount: 800,
+        depositAmount: 500,
+        carOut: {
+          create: {
+            performedByUserId: actor.id,
+            occurredAt: new Date("2026-09-01T08:00:00.000Z"),
+            mileageOut: 10,
+            fuelOut: "F",
+          },
+        },
+        carIn: {
+          create: {
+            occurredAt: new Date("2026-09-01T11:00:00.000Z"),
+            mileageIn: 40,
+            fuelIn: "1/2",
+          },
+        },
+        reconciliation: {
+          create: {
+            chargesTotal: 570,
+            depositAmount: 500,
+            deductions: 500,
+            finalAmount: 70,
+            approvedAt: new Date("2026-09-01T11:20:00.000Z"),
+            lines: {
+              create: [
+                { type: "DAMAGE", description: "damage", amount: 300 },
+                { type: "FUEL", description: "fuel", amount: 50 },
+                { type: "LATE", description: "late", amount: 100 },
+                { type: "VIOLATION", description: "rta", amount: 120 },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/contracts/${legacy.id}`,
+      headers: auth(),
+    });
+    assert.equal(detail.statusCode, 200, detail.body);
+    assert.equal(detail.json().data.reconciliation.chargesTotal, 570);
+    assert.equal(detail.json().data.reconciliation.finalAmount, 570);
+    assert.equal(detail.json().data.depositAmount, undefined);
   });
   });
 }

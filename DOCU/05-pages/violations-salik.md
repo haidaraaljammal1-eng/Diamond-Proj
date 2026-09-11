@@ -147,7 +147,7 @@ GPS predictions never create ReconciliationLine or Post-Close Receivable.
 
 ## Finance integration boundary
 
-Finance is not built here. Confirmed amount, currency, contract attribution, and collection status are on `RoadLiability`. `ContractPostCloseReceivable` is the foundation for later Finance consumption — no settlement, payments, invoices, or collections UI now. GPS predictions must never appear as confirmed Finance exposure.
+Finance is not built here. Confirmed amount, currency, contract attribution, and collection status are on `RoadLiability`. `ContractPostCloseReceivable` is the foundation for later Finance consumption. V1 customer collection for open post-close receivables uses the shared Stripe Checkout engine (`POST /contracts/:id/post-close-receivables/:receivableId/payment`); official `RoadLiability.amount` stays immutable. GPS predictions must never appear as confirmed Finance exposure.
 
 When a liability first becomes chargeable, one idempotent outbox event `road_liability.chargeable` is written (IDs and amount only — no PII, coordinates, or secrets).
 

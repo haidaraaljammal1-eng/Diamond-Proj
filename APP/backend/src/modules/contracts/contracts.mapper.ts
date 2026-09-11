@@ -9,7 +9,11 @@ import {
 const DETAIL_INCLUDE = {
   vehicle: { include: { model: { select: { name: true } } } },
   customer: true,
-  payments: { orderBy: { createdAt: "desc" as const }, take: 1 },
+  payments: {
+    where: { purpose: "RENTAL" },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
   carOut: {
     include: {
       photos: {
@@ -83,15 +87,25 @@ export function toListItem(row: {
   };
 }
 
+function reconciliationSettled(row: ContractDetailRow): boolean {
+  if (!row.reconciliation) return true;
+  if (row.reconciliation.finalAmount <= 0) return true;
+  return Boolean(row.reconciliation.settledAt);
+}
+
 function actionsFor(row: ContractDetailRow): ContractDetail["actions"] {
   return {
     canGenerateRentalLink: row.status === "AWAITING" || row.status === "FORM" || row.status === "SIGNED",
-    canConfirmPayment: row.status === "SIGNED",
+    canConfirmPayment: false,
     canCarOut: row.status === "PAID",
     canGenerateReturnLink: row.status === "ACTIVE",
     canCarIn: row.status === "RETOUT" && !row.carIn,
     canReconcile: row.status === "REVIEW",
-    canClose: row.status === "REVIEW" && !!row.carIn && !!row.reconciliation?.approvedAt,
+    canClose:
+      row.status === "REVIEW" &&
+      !!row.carIn &&
+      !!row.reconciliation?.approvedAt &&
+      reconciliationSettled(row),
     canRenew: row.status === "ACTIVE",
   };
 }
@@ -102,6 +116,7 @@ function toPostCloseSummary(row: ContractDetailRow): ContractDetail["postCloseRe
     amount: item.amount,
     currency: item.currency,
     status: item.status,
+    settledAt: item.settledAt,
     roadLiabilityType: item.roadLiability.type,
     createdAt: item.createdAt,
   }));
@@ -131,7 +146,6 @@ export function toDetail(
     currency: row.currency,
     startAt: row.startAt,
     endAt: row.endAt,
-    depositAmount: row.depositAmount,
     termsVersion: row.termsVersion,
     snapshot: row.snapshot,
     activatedAt: row.activatedAt,
@@ -196,10 +210,10 @@ export function toDetail(
       ? {
           id: row.reconciliation.id,
           chargesTotal: row.reconciliation.chargesTotal,
-          depositAmount: row.reconciliation.depositAmount,
-          deductions: row.reconciliation.deductions,
-          finalAmount: row.reconciliation.finalAmount,
+          finalAmount: row.reconciliation.chargesTotal,
           approvedAt: row.reconciliation.approvedAt,
+          settledAt: row.reconciliation.settledAt,
+          settled: reconciliationSettled(row),
           lines: row.reconciliation.lines.map((l) => ({
             id: l.id,
             type: l.type,
@@ -222,6 +236,9 @@ export function toDetail(
       newEndAt: r.newEndAt,
       createdAt: r.createdAt,
       approvedAt: r.approvedAt,
+      appliedAt: r.appliedAt,
+      awaitingPayment:
+        r.approvedAt != null && r.appliedAt == null && r.additionalAmount > 0,
     })),
     actions: actionsFor(row),
     roadLiabilitySignals: signals,

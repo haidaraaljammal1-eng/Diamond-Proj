@@ -112,6 +112,34 @@ export const contractError = {
     err(ErrorCode.TOKEN_INVALID, "Payment status token is invalid", "PAYMENT_STATUS_TOKEN_INVALID"),
   paymentStatusTokenExpired: () =>
     err(ErrorCode.TOKEN_EXPIRED, "Payment status token has expired", "PAYMENT_STATUS_TOKEN_EXPIRED"),
+  paymentAlreadySettled: () =>
+    err(ErrorCode.CONFLICT, "This obligation is already settled", "ALREADY_PAID"),
+  reconciliationPaymentRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Reconciliation charges must be collected before closing",
+      "RECONCILIATION_PAYMENT_REQUIRED",
+    ),
+  manualPaymentDisabled: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Manual payment confirmation is not available in V1",
+      "MANUAL_PAYMENT_DISABLED",
+    ),
+  invalidPaymentAmount: () =>
+    err(ErrorCode.VALIDATION_ERROR, "Payment amount is invalid", "INVALID_PAYMENT_AMOUNT"),
+  invalidPaymentCurrency: (currency: string) =>
+    err(ErrorCode.VALIDATION_ERROR, "Payment currency is not supported", "INVALID_PAYMENT_CURRENCY", {
+      currency,
+    }),
+  paymentAmountMismatch: () =>
+    err(ErrorCode.CONFLICT, "Provider payment amount does not match", "PAYMENT_AMOUNT_MISMATCH"),
+  paymentProviderReferenceMismatch: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Provider reference does not match the payment attempt",
+      "PAYMENT_PROVIDER_REFERENCE_MISMATCH",
+    ),
   roadLiabilityRequired: () =>
     err(
       ErrorCode.CONFLICT,

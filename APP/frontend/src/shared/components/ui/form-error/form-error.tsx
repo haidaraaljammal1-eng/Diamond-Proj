@@ -16,7 +16,9 @@ export type ValidationMessageKey =
   | "invalidRate"
   | "identityOrPassport"
   | "invalidNonnegative"
-  | "scheduledRequired";
+  | "scheduledRequired"
+  | "wholeAed"
+  | "positiveAmount";
 
 interface FormErrorProps {
   id?: string;

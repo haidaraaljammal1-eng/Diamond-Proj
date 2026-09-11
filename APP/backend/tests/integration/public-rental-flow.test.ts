@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
-import type { PaymentProvider, ProviderPaymentStatus } from "src/modules/contracts/payment/payment-provider.types";
+import { createFakePaymentProvider } from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
 
 const RUN =
@@ -65,40 +65,7 @@ if (!RUN) {
     }
 
     function fakePayments() {
-      const statuses = new Map<string, ProviderPaymentStatus>();
-      let n = 0;
-      const provider: PaymentProvider & { lastRef: string | null } = {
-        name: "test",
-        configured: true,
-        lastRef: null,
-        async createPayment() {
-          n += 1;
-          const ref = `ref-${run}-${n}`;
-          statuses.set(ref, "PROCESSING");
-          provider.lastRef = ref;
-          return {
-            ok: true,
-            provider: "test",
-            providerReference: ref,
-            providerStatus: "PROCESSING",
-          };
-        },
-        async getPaymentStatus(ref: string) {
-          return { status: statuses.get(ref) ?? "UNKNOWN" };
-        },
-        async verifyWebhook() {
-          return { ok: false as const, reason: "NOT_CONFIGURED" as const };
-        },
-      };
-      return {
-        provider,
-        confirm() {
-          if (provider.lastRef) statuses.set(provider.lastRef, "CONFIRMED");
-        },
-        fail() {
-          if (provider.lastRef) statuses.set(provider.lastRef, "FAILED");
-        },
-      };
+      return createFakePaymentProvider(run);
     }
 
     let offerSeq = 0;
@@ -129,7 +96,6 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 4,
           agreedAmount: 1600,
-          depositAmount: 200,
         },
       });
       assert.equal(offer.statusCode, 201, offer.body);
@@ -374,8 +340,8 @@ if (!RUN) {
         url: `/contracts/rental/${ctx.token}/payment`,
         headers: { "idempotency-key": `pay-${ctx.contractId}-2` },
       });
-      assert.equal(second.statusCode, 409);
-      assert.equal(second.json().error.context.reason, "PAYMENT_ALREADY_PROCESSING");
+      assert.equal(second.statusCode, 200, second.body);
+      assert.ok(second.json().data.checkoutUrl);
 
       const before = await app.inject({
         method: "GET",

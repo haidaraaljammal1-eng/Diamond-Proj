@@ -1,0 +1,46 @@
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.req {
+  color: #a33;
+  margin-inline-start: 4px;
+}
+
+.amountRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.currency {
+  font-size: 0.82rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.error {
+  color: #8a2f1f;
+  font-size: 0.82rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fileName {
+  font-size: 0.78rem;
+  color: var(--diamond-muted, #6f6556);
+}

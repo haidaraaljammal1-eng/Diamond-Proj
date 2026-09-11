@@ -126,7 +126,7 @@ Staff generate real Backend tokens. Frontend builds `/{locale}/rental|return|ren
 
 ## Payment confirmation
 
-SIGNED + `contracts.manage` → `POST /contracts/:id/payment/confirm` (`MANUAL` / `BANK_TRANSFER` / `CARD`). SIGNED → PAID. Fleet card becomes Ready for Car-Out. No gateway UI.
+SIGNED → customer Stripe Checkout on the public rental page (`POST /contracts/rental/:token/payment`). Staff manual `POST /contracts/:id/payment/confirm` is disabled in V1. Trusted provider confirmation moves SIGNED → PAID; fleet card becomes Ready for Car-Out.
 
 ## Car-Out
 
@@ -144,6 +144,8 @@ Drawer Car-In copy: Vehicle returned / حالة الحيازة: انتهت. GPS 
 
 ## Reconciliation / Close
 
+Diamond V1 does not use rental deposits. Reconciliation `finalAmount` equals `chargesTotal`. No deposit collection, deduction, credit, or refund exists.
+
 REVIEW → line items (`DAMAGE` / `FUEL` / `LATE` / `SALIK` / `VIOLATION` / `OTHER`). The dialog lists every category and opens with empty Salik and Violation rows (amount / reference / note) so those settlement types are visible immediately — no live engines and no invented amounts. Totals come from the Backend after save (`chargesTotal`, `finalAmount`). Close uses Shared confirmation Dialog and is available only when Backend `canClose` is true (REVIEW + Car-In + approved reconciliation). REVIEW → CLOSED. Close does not release the vehicle; Fleet trusts refreshed backend state (a newer rental may already be RENTED).
 
 ## Overlay stacking
@@ -152,7 +154,7 @@ Shared Dialog stacks above Shared Drawer (dialog z-index 110, drawer 95/96). Esc
 
 ## Renewal
 
-ACTIVE contracts only. The same Contract stays ACTIVE; no second Contract or Rental is created. Vehicle stays RENTED. Staff enter `additionalDays` + `additionalAmount` when generating a Renewal Link (`POST /contracts/:id/renewal-link`). Those values are stored as a pending `ContractRenewal` and become the server-owned offer. The customer page `/[locale]/renew/[token]` is public, token-scoped, no staff JWT, no AppShell. The customer reviews Current Rental vs Renewal Offer and confirms; the client cannot override amount, duration, vehicle, or contract identity. Used links may be reloaded for the success state. Drawer Renewal History uses existing `ContractRenewal` rows (date, previous/new end, days, amount, pending vs confirmed). Renewal is not part of mandatory TARS execution and has no payment/Stripe step. Hidden in RETOUT / REVIEW / CLOSED.
+ACTIVE contracts only. The same Contract stays ACTIVE; no second Contract or Rental is created. Vehicle stays RENTED. Staff enter `additionalDays` + `additionalAmount` when generating a Renewal Link (`POST /contracts/:id/renewal-link`). Those values are stored as a pending `ContractRenewal` and become the server-owned offer. The customer page `/[locale]/renew/[token]` is public, token-scoped, no staff JWT, no AppShell. The customer reviews Current Rental vs Renewal Offer and confirms; when `additionalAmount > 0`, Stripe Checkout must confirm before terms apply. Zero additional amount may apply without payment. The client cannot override amount, duration, vehicle, or contract identity. Used links may be reloaded for the success state. Drawer Renewal History uses existing `ContractRenewal` rows (date, previous/new end, days, amount, pending vs confirmed). Renewal is not part of mandatory TARS execution. Hidden in RETOUT / REVIEW / CLOSED.
 
 ## Refresh
 
