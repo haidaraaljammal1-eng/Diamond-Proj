@@ -117,6 +117,17 @@ const EnvSchema = z
     // Server-only Meta webhook verify token (GET hub.verify_token). Never frontend.
     META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional().default(""),
 
+    // Active WhatsApp operational provider. UltraMsg is the current deployment default
+    // when configured; Meta Cloud API remains available when selected and configured.
+    WHATSAPP_PROVIDER: z.enum(["META_CLOUD_API", "ULTRAMSG"]).default("META_CLOUD_API"),
+    ULTRAMSG_INSTANCE_ID: z.string().optional().default(""),
+    ULTRAMSG_API_URL: z.string().optional().default(""),
+    ULTRAMSG_TOKEN: z.string().optional().default(""),
+    ULTRAMSG_WEBHOOK_CALLBACK_KEY: z.string().optional().default(""),
+    ULTRAMSG_CONFIGURE_WEBHOOK: envBool(false),
+    ULTRAMSG_TEST_RECIPIENT: z.string().optional().default(""),
+    PUBLIC_BACKEND_URL: z.string().optional().default(""),
+
     EMAIL_ENABLED: envBool(false),
     SMTP_HOST: z.string().optional().default(""),
     SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -191,6 +202,13 @@ const EnvSchema = z
         code: "custom",
         path: ["META_WHATSAPP_WEBHOOK_VERIFY_TOKEN"],
         message: "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN still uses the example placeholder value in production",
+      });
+    }
+    if (val.NODE_ENV === "production" && val.ULTRAMSG_TOKEN.includes("replace-with")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["ULTRAMSG_TOKEN"],
+        message: "ULTRAMSG_TOKEN still uses the example placeholder value in production",
       });
     }
   });

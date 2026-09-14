@@ -2,6 +2,18 @@
 
 Staff Inbox at `/[locale]/whatsapp` (`whatsapp.read`). Visual layout follows the Diamond Demo conversation list + chat pane. This remains **manual staff communication** — no auto-replies, no Customer auto-create, no campaigns.
 
+## Active provider (UltraMsg)
+
+This is **not** an Inbox rebuild. The list, search, All/Unread, bubbles, media cards, Customer strip, SSE, AR/EN, and RTL stay the same.
+
+- Employees see WhatsApp Connected / Disconnected / Scan QR — not provider brand.
+- Manage WhatsApp may show `Provider: UltraMsg` for diagnostics.
+- Capabilities hide Embedded Signup, WABA, Phone Number ID, approved templates, and the 24-hour Meta window when `supportsTemplates=false` / `requiresCustomerServiceWindow=false` / `supportsEmbeddedSignup=false`.
+- Composer is enabled only when the provider session is **AUTHENTICATED** (plus `whatsapp.send` and current-connection eligibility). QR required / disconnected show localized reasons.
+- QR polling (~2–3s) runs only while the QR dialog is open, bounded, and never as Inbox polling. QR is not cached in localStorage.
+- Simulation is frontend-only UltraMsg-shaped (QR / authenticated / disconnected / retrying). No backend calls. No real-mode fallback to simulation.
+- Meta template / Embedded Signup code remains dormant behind capability flags.
+
 ## Route and navigation
 
 - `/ar/whatsapp`, `/en/whatsapp`

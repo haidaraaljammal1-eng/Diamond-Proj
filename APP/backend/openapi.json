@@ -164958,7 +164958,8 @@
                         "provider": {
                           "type": "string",
                           "enum": [
-                            "META_CLOUD_API"
+                            "META_CLOUD_API",
+                            "ULTRAMSG"
                           ]
                         },
                         "displayPhoneNumber": {
@@ -165016,6 +165017,88 @@
                           "nullable": true,
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "providerSessionStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "enum": [
+                            "INITIALIZING",
+                            "QR_REQUIRED",
+                            "RETRYING",
+                            "LOADING",
+                            "AUTHENTICATED",
+                            "DISCONNECTED",
+                            "STANDBY",
+                            "UNKNOWN"
+                          ]
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "enum": [
+                                "META_CLOUD",
+                                "ULTRAMSG"
+                              ]
+                            },
+                            "supportsQrAuthentication": {
+                              "type": "boolean"
+                            },
+                            "supportsEmbeddedSignup": {
+                              "type": "boolean"
+                            },
+                            "supportsFreeText": {
+                              "type": "boolean"
+                            },
+                            "supportsTemplates": {
+                              "type": "boolean"
+                            },
+                            "requiresCustomerServiceWindow": {
+                              "type": "boolean"
+                            },
+                            "supportsImage": {
+                              "type": "boolean"
+                            },
+                            "supportsDocument": {
+                              "type": "boolean"
+                            },
+                            "supportsAudio": {
+                              "type": "boolean"
+                            },
+                            "supportsVideo": {
+                              "type": "boolean"
+                            },
+                            "supportsProviderReadReceipt": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookReceived": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookCreate": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookAck": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "supportsQrAuthentication",
+                            "supportsEmbeddedSignup",
+                            "supportsFreeText",
+                            "supportsTemplates",
+                            "requiresCustomerServiceWindow",
+                            "supportsImage",
+                            "supportsDocument",
+                            "supportsAudio",
+                            "supportsVideo",
+                            "supportsProviderReadReceipt",
+                            "supportsWebhookReceived",
+                            "supportsWebhookCreate",
+                            "supportsWebhookAck"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -165028,7 +165111,1040 @@
                         "connectedBy",
                         "lastValidatedAt",
                         "webhookStatus",
-                        "lastWebhookAt"
+                        "lastWebhookAt",
+                        "providerSessionStatus",
+                        "capabilities"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/whatsapp/connection/qr": {
+      "get": {
+        "operationId": "getWhatsAppConnectionQr",
+        "summary": "WhatsApp QR representation for session authentication",
+        "tags": [
+          "WhatsApp"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "imageDataUrl": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "qrCode": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "imageDataUrl",
+                        "qrCode"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/whatsapp/connection/bootstrap": {
+      "post": {
+        "operationId": "bootstrapWhatsAppConnection",
+        "summary": "Configure the office WhatsApp connection from server-side provider credentials",
+        "tags": [
+          "WhatsApp"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "DISCONNECTED",
+                            "LINKING",
+                            "LINKED",
+                            "REAUTH_REQUIRED",
+                            "ERROR"
+                          ]
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "META_CLOUD_API",
+                            "ULTRAMSG"
+                          ]
+                        },
+                        "displayPhoneNumber": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "verifiedName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "businessAccountName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "connectedAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "connectedBy": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "name": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastValidatedAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "webhookStatus": {
+                          "type": "string",
+                          "enum": [
+                            "NOT_CONFIGURED",
+                            "PENDING",
+                            "ACTIVE",
+                            "ERROR"
+                          ]
+                        },
+                        "lastWebhookAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "providerSessionStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "enum": [
+                            "INITIALIZING",
+                            "QR_REQUIRED",
+                            "RETRYING",
+                            "LOADING",
+                            "AUTHENTICATED",
+                            "DISCONNECTED",
+                            "STANDBY",
+                            "UNKNOWN"
+                          ]
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "enum": [
+                                "META_CLOUD",
+                                "ULTRAMSG"
+                              ]
+                            },
+                            "supportsQrAuthentication": {
+                              "type": "boolean"
+                            },
+                            "supportsEmbeddedSignup": {
+                              "type": "boolean"
+                            },
+                            "supportsFreeText": {
+                              "type": "boolean"
+                            },
+                            "supportsTemplates": {
+                              "type": "boolean"
+                            },
+                            "requiresCustomerServiceWindow": {
+                              "type": "boolean"
+                            },
+                            "supportsImage": {
+                              "type": "boolean"
+                            },
+                            "supportsDocument": {
+                              "type": "boolean"
+                            },
+                            "supportsAudio": {
+                              "type": "boolean"
+                            },
+                            "supportsVideo": {
+                              "type": "boolean"
+                            },
+                            "supportsProviderReadReceipt": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookReceived": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookCreate": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookAck": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "supportsQrAuthentication",
+                            "supportsEmbeddedSignup",
+                            "supportsFreeText",
+                            "supportsTemplates",
+                            "requiresCustomerServiceWindow",
+                            "supportsImage",
+                            "supportsDocument",
+                            "supportsAudio",
+                            "supportsVideo",
+                            "supportsProviderReadReceipt",
+                            "supportsWebhookReceived",
+                            "supportsWebhookCreate",
+                            "supportsWebhookAck"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "provider",
+                        "displayPhoneNumber",
+                        "verifiedName",
+                        "businessAccountName",
+                        "connectedAt",
+                        "connectedBy",
+                        "lastValidatedAt",
+                        "webhookStatus",
+                        "lastWebhookAt",
+                        "providerSessionStatus",
+                        "capabilities"
                       ],
                       "additionalProperties": false
                     }
@@ -166486,7 +167602,8 @@
                         "provider": {
                           "type": "string",
                           "enum": [
-                            "META_CLOUD_API"
+                            "META_CLOUD_API",
+                            "ULTRAMSG"
                           ]
                         },
                         "displayPhoneNumber": {
@@ -166544,6 +167661,88 @@
                           "nullable": true,
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "providerSessionStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "enum": [
+                            "INITIALIZING",
+                            "QR_REQUIRED",
+                            "RETRYING",
+                            "LOADING",
+                            "AUTHENTICATED",
+                            "DISCONNECTED",
+                            "STANDBY",
+                            "UNKNOWN"
+                          ]
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "enum": [
+                                "META_CLOUD",
+                                "ULTRAMSG"
+                              ]
+                            },
+                            "supportsQrAuthentication": {
+                              "type": "boolean"
+                            },
+                            "supportsEmbeddedSignup": {
+                              "type": "boolean"
+                            },
+                            "supportsFreeText": {
+                              "type": "boolean"
+                            },
+                            "supportsTemplates": {
+                              "type": "boolean"
+                            },
+                            "requiresCustomerServiceWindow": {
+                              "type": "boolean"
+                            },
+                            "supportsImage": {
+                              "type": "boolean"
+                            },
+                            "supportsDocument": {
+                              "type": "boolean"
+                            },
+                            "supportsAudio": {
+                              "type": "boolean"
+                            },
+                            "supportsVideo": {
+                              "type": "boolean"
+                            },
+                            "supportsProviderReadReceipt": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookReceived": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookCreate": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookAck": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "supportsQrAuthentication",
+                            "supportsEmbeddedSignup",
+                            "supportsFreeText",
+                            "supportsTemplates",
+                            "requiresCustomerServiceWindow",
+                            "supportsImage",
+                            "supportsDocument",
+                            "supportsAudio",
+                            "supportsVideo",
+                            "supportsProviderReadReceipt",
+                            "supportsWebhookReceived",
+                            "supportsWebhookCreate",
+                            "supportsWebhookAck"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -166556,7 +167755,9 @@
                         "connectedBy",
                         "lastValidatedAt",
                         "webhookStatus",
-                        "lastWebhookAt"
+                        "lastWebhookAt",
+                        "providerSessionStatus",
+                        "capabilities"
                       ],
                       "additionalProperties": false
                     }
@@ -166995,7 +168196,8 @@
                         "provider": {
                           "type": "string",
                           "enum": [
-                            "META_CLOUD_API"
+                            "META_CLOUD_API",
+                            "ULTRAMSG"
                           ]
                         },
                         "displayPhoneNumber": {
@@ -167053,6 +168255,88 @@
                           "nullable": true,
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "providerSessionStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "enum": [
+                            "INITIALIZING",
+                            "QR_REQUIRED",
+                            "RETRYING",
+                            "LOADING",
+                            "AUTHENTICATED",
+                            "DISCONNECTED",
+                            "STANDBY",
+                            "UNKNOWN"
+                          ]
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "enum": [
+                                "META_CLOUD",
+                                "ULTRAMSG"
+                              ]
+                            },
+                            "supportsQrAuthentication": {
+                              "type": "boolean"
+                            },
+                            "supportsEmbeddedSignup": {
+                              "type": "boolean"
+                            },
+                            "supportsFreeText": {
+                              "type": "boolean"
+                            },
+                            "supportsTemplates": {
+                              "type": "boolean"
+                            },
+                            "requiresCustomerServiceWindow": {
+                              "type": "boolean"
+                            },
+                            "supportsImage": {
+                              "type": "boolean"
+                            },
+                            "supportsDocument": {
+                              "type": "boolean"
+                            },
+                            "supportsAudio": {
+                              "type": "boolean"
+                            },
+                            "supportsVideo": {
+                              "type": "boolean"
+                            },
+                            "supportsProviderReadReceipt": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookReceived": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookCreate": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookAck": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "supportsQrAuthentication",
+                            "supportsEmbeddedSignup",
+                            "supportsFreeText",
+                            "supportsTemplates",
+                            "requiresCustomerServiceWindow",
+                            "supportsImage",
+                            "supportsDocument",
+                            "supportsAudio",
+                            "supportsVideo",
+                            "supportsProviderReadReceipt",
+                            "supportsWebhookReceived",
+                            "supportsWebhookCreate",
+                            "supportsWebhookAck"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -167065,7 +168349,9 @@
                         "connectedBy",
                         "lastValidatedAt",
                         "webhookStatus",
-                        "lastWebhookAt"
+                        "lastWebhookAt",
+                        "providerSessionStatus",
+                        "capabilities"
                       ],
                       "additionalProperties": false
                     }
@@ -167504,7 +168790,8 @@
                         "provider": {
                           "type": "string",
                           "enum": [
-                            "META_CLOUD_API"
+                            "META_CLOUD_API",
+                            "ULTRAMSG"
                           ]
                         },
                         "displayPhoneNumber": {
@@ -167562,6 +168849,88 @@
                           "nullable": true,
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "providerSessionStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "enum": [
+                            "INITIALIZING",
+                            "QR_REQUIRED",
+                            "RETRYING",
+                            "LOADING",
+                            "AUTHENTICATED",
+                            "DISCONNECTED",
+                            "STANDBY",
+                            "UNKNOWN"
+                          ]
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "enum": [
+                                "META_CLOUD",
+                                "ULTRAMSG"
+                              ]
+                            },
+                            "supportsQrAuthentication": {
+                              "type": "boolean"
+                            },
+                            "supportsEmbeddedSignup": {
+                              "type": "boolean"
+                            },
+                            "supportsFreeText": {
+                              "type": "boolean"
+                            },
+                            "supportsTemplates": {
+                              "type": "boolean"
+                            },
+                            "requiresCustomerServiceWindow": {
+                              "type": "boolean"
+                            },
+                            "supportsImage": {
+                              "type": "boolean"
+                            },
+                            "supportsDocument": {
+                              "type": "boolean"
+                            },
+                            "supportsAudio": {
+                              "type": "boolean"
+                            },
+                            "supportsVideo": {
+                              "type": "boolean"
+                            },
+                            "supportsProviderReadReceipt": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookReceived": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookCreate": {
+                              "type": "boolean"
+                            },
+                            "supportsWebhookAck": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "supportsQrAuthentication",
+                            "supportsEmbeddedSignup",
+                            "supportsFreeText",
+                            "supportsTemplates",
+                            "requiresCustomerServiceWindow",
+                            "supportsImage",
+                            "supportsDocument",
+                            "supportsAudio",
+                            "supportsVideo",
+                            "supportsProviderReadReceipt",
+                            "supportsWebhookReceived",
+                            "supportsWebhookCreate",
+                            "supportsWebhookAck"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -167574,7 +168943,9 @@
                         "connectedBy",
                         "lastValidatedAt",
                         "webhookStatus",
-                        "lastWebhookAt"
+                        "lastWebhookAt",
+                        "providerSessionStatus",
+                        "capabilities"
                       ],
                       "additionalProperties": false
                     }
@@ -168749,7 +170120,9 @@
                                 "WEBHOOK_NOT_ACTIVE",
                                 "CUSTOMER_SERVICE_WINDOW_CLOSED",
                                 "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
-                                "PROVIDER_NOT_CONFIGURED"
+                                "PROVIDER_NOT_CONFIGURED",
+                                "PROVIDER_NOT_AUTHENTICATED",
+                                "QR_REQUIRED"
                               ]
                             },
                             "windowExpiresAt": {
@@ -170319,7 +171692,9 @@
                                     "WEBHOOK_NOT_ACTIVE",
                                     "CUSTOMER_SERVICE_WINDOW_CLOSED",
                                     "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
-                                    "PROVIDER_NOT_CONFIGURED"
+                                    "PROVIDER_NOT_CONFIGURED",
+                                    "PROVIDER_NOT_AUTHENTICATED",
+                                    "QR_REQUIRED"
                                   ]
                                 },
                                 "windowExpiresAt": {
@@ -170945,7 +172320,9 @@
                                 "WEBHOOK_NOT_ACTIVE",
                                 "CUSTOMER_SERVICE_WINDOW_CLOSED",
                                 "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
-                                "PROVIDER_NOT_CONFIGURED"
+                                "PROVIDER_NOT_CONFIGURED",
+                                "PROVIDER_NOT_AUTHENTICATED",
+                                "QR_REQUIRED"
                               ]
                             },
                             "windowExpiresAt": {
@@ -171837,7 +173214,9 @@
                                     "WEBHOOK_NOT_ACTIVE",
                                     "CUSTOMER_SERVICE_WINDOW_CLOSED",
                                     "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
-                                    "PROVIDER_NOT_CONFIGURED"
+                                    "PROVIDER_NOT_CONFIGURED",
+                                    "PROVIDER_NOT_AUTHENTICATED",
+                                    "QR_REQUIRED"
                                   ]
                                 },
                                 "windowExpiresAt": {
@@ -172691,7 +174070,9 @@
                                     "WEBHOOK_NOT_ACTIVE",
                                     "CUSTOMER_SERVICE_WINDOW_CLOSED",
                                     "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
-                                    "PROVIDER_NOT_CONFIGURED"
+                                    "PROVIDER_NOT_CONFIGURED",
+                                    "PROVIDER_NOT_AUTHENTICATED",
+                                    "QR_REQUIRED"
                                   ]
                                 },
                                 "windowExpiresAt": {
@@ -173818,7 +175199,9 @@
                                 "WEBHOOK_NOT_ACTIVE",
                                 "CUSTOMER_SERVICE_WINDOW_CLOSED",
                                 "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
-                                "PROVIDER_NOT_CONFIGURED"
+                                "PROVIDER_NOT_CONFIGURED",
+                                "PROVIDER_NOT_AUTHENTICATED",
+                                "QR_REQUIRED"
                               ]
                             },
                             "windowExpiresAt": {
@@ -174435,7 +175818,9 @@
                                 "WEBHOOK_NOT_ACTIVE",
                                 "CUSTOMER_SERVICE_WINDOW_CLOSED",
                                 "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
-                                "PROVIDER_NOT_CONFIGURED"
+                                "PROVIDER_NOT_CONFIGURED",
+                                "PROVIDER_NOT_AUTHENTICATED",
+                                "QR_REQUIRED"
                               ]
                             },
                             "windowExpiresAt": {

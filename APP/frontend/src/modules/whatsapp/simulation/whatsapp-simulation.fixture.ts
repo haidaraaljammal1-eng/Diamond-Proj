@@ -6,6 +6,7 @@ import type {
   WhatsAppMessagingEligibility,
   WhatsAppTemplateDto,
 } from "../types/whatsapp.types.ts";
+import { ULTRAMSG_CAPABILITIES } from "../types/whatsapp.types.ts";
 import { blankWhatsAppMessageFields } from "../utils/whatsapp-view-model.ts";
 
 export const WHATSAPP_SIMULATION_ID_PREFIX = "sim-wa-";
@@ -186,18 +187,18 @@ export function buildWhatsAppSimulationInbox(): WhatsAppSimulationInbox {
         messagingEligibility:
           item.id === unknown.id
             ? {
-                canSendText: false,
-                canSendMedia: false,
-                canSendTemplate: true,
-                reason: "CUSTOMER_SERVICE_WINDOW_CLOSED",
-                windowExpiresAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+                canSendText: true,
+                canSendMedia: true,
+                canSendTemplate: false,
+                reason: "READY",
+                windowExpiresAt: null,
               } satisfies WhatsAppMessagingEligibility
             : {
                 canSendText: true,
                 canSendMedia: true,
-                canSendTemplate: true,
+                canSendTemplate: false,
                 reason: "READY",
-                windowExpiresAt: new Date(Date.now() + 12 * 60 * 60_000).toISOString(),
+                windowExpiresAt: null,
               } satisfies WhatsAppMessagingEligibility,
         customerLink: {
           linked: item.id.endsWith("north"),
@@ -213,7 +214,7 @@ export function buildWhatsAppSimulationInbox(): WhatsAppSimulationInbox {
   return {
     connection: {
       status: "LINKED",
-      provider: "META_CLOUD_API",
+      provider: "ULTRAMSG",
       displayPhoneNumber: OFFICE.displayPhoneNumber,
       verifiedName: OFFICE.verifiedName,
       businessAccountName: "Demo WhatsApp Business",
@@ -222,6 +223,8 @@ export function buildWhatsAppSimulationInbox(): WhatsAppSimulationInbox {
       lastValidatedAt: iso(200),
       webhookStatus: "ACTIVE",
       lastWebhookAt: iso(2),
+      providerSessionStatus: "AUTHENTICATED",
+      capabilities: ULTRAMSG_CAPABILITIES,
     },
     conversations,
     details,

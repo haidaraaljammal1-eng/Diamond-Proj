@@ -33,7 +33,9 @@ export function WhatsAppComposer() {
   const trimmed = text.replace(/^[\s\uFEFF\u200B]+|[\s\uFEFF\u200B]+$/g, "");
   const windowOpen = Boolean(
     eligibility?.canSendText &&
-      (inbox.simulationActive || isClientSendWindowStillOpen(eligibility.windowExpiresAt)),
+      (inbox.simulationActive ||
+        !inbox.connection?.capabilities?.requiresCustomerServiceWindow ||
+        isClientSendWindowStillOpen(eligibility.windowExpiresAt)),
   );
   const enabled = inbox.hasSendPermission && !submitting && !inbox.sending;
   const canSubmitText = enabled && windowOpen && trimmed.length > 0 && trimmed.length <= WHATSAPP_TEXT_BODY_MAX;
@@ -44,6 +46,10 @@ export function WhatsAppComposer() {
     if (!inbox.hasSendPermission && !inbox.simulationActive) return t("composer.noPermission");
     if (!eligibility) return t("composer.disabledHint");
     if (windowOpen) return t("composer.readyHint");
+    if (eligibility.reason === "QR_REQUIRED") return t("composer.reason.QR_REQUIRED");
+    if (eligibility.reason === "PROVIDER_NOT_AUTHENTICATED") {
+      return t("composer.reason.PROVIDER_NOT_AUTHENTICATED");
+    }
     if (eligibility.canSendTemplate) return t("composer.reason.CUSTOMER_SERVICE_WINDOW_CLOSED");
     return t(`composer.reason.${eligibility.reason}`);
   }

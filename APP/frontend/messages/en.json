@@ -2030,7 +2030,9 @@
         "WEBHOOK_NOT_ACTIVE": "Incoming message synchronization is not active yet.",
         "CUSTOMER_SERVICE_WINDOW_CLOSED": "The 24-hour customer service window has ended. Free-form messages cannot be sent. You can send an approved template.",
         "CUSTOMER_SERVICE_WINDOW_UNKNOWN": "The customer service window cannot be verified, so free-form messages cannot be sent.",
-        "PROVIDER_NOT_CONFIGURED": "WhatsApp messaging is not configured."
+        "PROVIDER_NOT_CONFIGURED": "WhatsApp messaging is not configured.",
+        "PROVIDER_NOT_AUTHENTICATED": "WhatsApp connection is not ready.",
+        "QR_REQUIRED": "Scan the QR code to connect WhatsApp."
       }
     },
     "message": {
@@ -2081,6 +2083,26 @@
         "title": "Connection error",
         "body": "The WhatsApp connection reported an error. Existing conversations remain available."
       },
+      "qrRequired": {
+        "title": "Scan QR Code",
+        "body": "Scan the QR code to connect WhatsApp."
+      },
+      "connecting": {
+        "title": "Connecting…",
+        "body": "WhatsApp is connecting. Sending is paused until the session is ready."
+      },
+      "retrying": {
+        "title": "Reconnecting…",
+        "body": "WhatsApp is reconnecting. Sending is paused until the session is ready."
+      },
+      "sessionDisconnected": {
+        "title": "WhatsApp Disconnected",
+        "body": "The WhatsApp session is disconnected. Scan the QR code again from Manage WhatsApp."
+      },
+      "standby": {
+        "title": "WhatsApp on standby",
+        "body": "The WhatsApp session is on standby and is not ready to send."
+      },
       "status": {
         "disconnected": "No connection",
         "LINKING": "Account linking",
@@ -2105,7 +2127,9 @@
       "read": "Sim read",
       "disconnected": "Not Connected",
       "linked": "Linked",
-      "webhookActive": "Webhook Active"
+      "webhookActive": "Webhook Active",
+      "qrRequired": "Scan QR",
+      "retrying": "Reconnecting"
     },
     "realtime": {
       "live": "Live",
@@ -2135,7 +2159,12 @@
       "WHATSAPP_TEMPLATE_PARAMETERS_INVALID": "Enter all required template variables.",
       "WHATSAPP_EMBEDDED_SIGNUP_NOT_CONFIGURED": "WhatsApp Embedded Signup is not configured.",
       "WHATSAPP_CUSTOMER_MATCH_AMBIGUOUS": "Several customers match this number. Choose one manually.",
-      "WHATSAPP_CUSTOMER_NOT_FOUND": "That customer was not found."
+      "WHATSAPP_CUSTOMER_NOT_FOUND": "That customer was not found.",
+      "WHATSAPP_PROVIDER_NOT_AUTHENTICATED": "WhatsApp connection is not ready.",
+      "WHATSAPP_QR_REQUIRED": "Scan the QR code to connect WhatsApp.",
+      "WHATSAPP_PUBLIC_WEBHOOK_URL_REQUIRED": "A public HTTPS backend URL is required to activate the webhook.",
+      "ULTRAMSG_WEBHOOK_SETUP_FAILED": "WhatsApp webhook setup could not be completed.",
+      "WHATSAPP_QR_UNAVAILABLE": "The WhatsApp QR code is not available."
     },
     "templates": {
       "title": "Approved Templates",
@@ -2165,7 +2194,11 @@
       "completeSetup": "Complete Setup",
       "disconnect": "Disconnect",
       "disconnectConfirm": "Diamond will stop using this connection. Historical conversations remain. This does not delete the number from Meta.",
-      "changeAccountConfirm": "Future messages will use the newly selected account. Historical conversations stay on the previous connection."
+      "changeAccountConfirm": "Future messages will use the newly selected account. Historical conversations stay on the previous connection.",
+      "providerUltraMsg": "Provider: UltraMsg",
+      "showQr": "Show QR Code",
+      "qrHint": "Scan the QR code to connect WhatsApp.",
+      "qrLoading": "Loading QR code…"
     },
     "customer": {
       "linked": "Linked Customer",

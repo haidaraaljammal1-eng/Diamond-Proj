@@ -1,7 +1,10 @@
 import {
   WHATSAPP_CUSTOMER_SERVICE_WINDOW_MS,
 } from "src/modules/whatsapp/whatsapp.constants";
+import type { WhatsAppProviderCapabilities } from "src/modules/whatsapp/whatsapp.capabilities";
+import { META_CLOUD_CAPABILITIES } from "src/modules/whatsapp/whatsapp.capabilities";
 import type { WhatsAppConnectionStatus, WhatsAppConnectionWebhookStatus } from "@prisma/client";
+import type { WhatsAppProviderSessionStatusName } from "src/modules/whatsapp/whatsapp.types";
 
 export type WhatsAppMessagingEligibilityReason =
   | "READY"
@@ -10,7 +13,9 @@ export type WhatsAppMessagingEligibilityReason =
   | "WEBHOOK_NOT_ACTIVE"
   | "CUSTOMER_SERVICE_WINDOW_CLOSED"
   | "CUSTOMER_SERVICE_WINDOW_UNKNOWN"
-  | "PROVIDER_NOT_CONFIGURED";
+  | "PROVIDER_NOT_CONFIGURED"
+  | "PROVIDER_NOT_AUTHENTICATED"
+  | "QR_REQUIRED";
 
 export interface WhatsAppMessagingEligibility {
   canSendText: boolean;
@@ -28,8 +33,10 @@ export interface WhatsAppEligibilityInput {
     status: WhatsAppConnectionStatus;
     webhookStatus: WhatsAppConnectionWebhookStatus;
     hasCredential: boolean;
+    providerSessionStatus?: WhatsAppProviderSessionStatusName | null;
   } | null;
   providerConfigured: boolean;
+  capabilities?: WhatsAppProviderCapabilities;
   now: Date;
 }
 
@@ -56,13 +63,14 @@ function blocked(
 }
 
 /**
- * Connection must be the active LINKED office connection with webhook ACTIVE
- * and stored credentials. Template send may proceed when this gate passes even
- * if the 24-hour free-form window is closed. Free-form text/media may not.
+ * Connection must be the active LINKED office connection with stored credentials.
+ * Template send (Meta) may proceed when this gate passes even if the 24-hour
+ * free-form window is closed. UltraMsg does not use that window.
  */
 export function evaluateMessagingEligibility(
   input: WhatsAppEligibilityInput,
 ): WhatsAppMessagingEligibility {
+  const caps = input.capabilities ?? META_CLOUD_CAPABILITIES;
   if (!input.providerConfigured) {
     return blocked("PROVIDER_NOT_CONFIGURED");
   }
@@ -76,15 +84,39 @@ export function evaluateMessagingEligibility(
   ) {
     return blocked("CONNECTION_INACTIVE");
   }
+
+  if (caps.supportsQrAuthentication) {
+    const session = input.currentConnection.providerSessionStatus ?? "UNKNOWN";
+    if (session === "QR_REQUIRED") return blocked("QR_REQUIRED");
+    if (session !== "AUTHENTICATED") return blocked("PROVIDER_NOT_AUTHENTICATED");
+    return {
+      canSendText: caps.supportsFreeText,
+      canSendMedia: caps.supportsImage || caps.supportsDocument || caps.supportsAudio || caps.supportsVideo,
+      canSendTemplate: false,
+      reason: "READY",
+      windowExpiresAt: null,
+    };
+  }
+
   if (input.currentConnection.webhookStatus !== "ACTIVE") {
     return blocked("WEBHOOK_NOT_ACTIVE");
+  }
+
+  if (!caps.requiresCustomerServiceWindow) {
+    return {
+      canSendText: caps.supportsFreeText,
+      canSendMedia: true,
+      canSendTemplate: caps.supportsTemplates,
+      reason: "READY",
+      windowExpiresAt: null,
+    };
   }
 
   if (!input.lastInboundAt) {
     return {
       canSendText: false,
       canSendMedia: false,
-      canSendTemplate: true,
+      canSendTemplate: caps.supportsTemplates,
       reason: "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
       windowExpiresAt: null,
     };
@@ -94,7 +126,7 @@ export function evaluateMessagingEligibility(
     return {
       canSendText: false,
       canSendMedia: false,
-      canSendTemplate: true,
+      canSendTemplate: caps.supportsTemplates,
       reason: "CUSTOMER_SERVICE_WINDOW_CLOSED",
       windowExpiresAt,
     };
@@ -102,7 +134,7 @@ export function evaluateMessagingEligibility(
   return {
     canSendText: true,
     canSendMedia: true,
-    canSendTemplate: true,
+    canSendTemplate: caps.supportsTemplates,
     reason: "READY",
     windowExpiresAt,
   };

@@ -12,7 +12,72 @@ export type WhatsAppMessagingEligibilityReason =
   | "WEBHOOK_NOT_ACTIVE"
   | "CUSTOMER_SERVICE_WINDOW_CLOSED"
   | "CUSTOMER_SERVICE_WINDOW_UNKNOWN"
-  | "PROVIDER_NOT_CONFIGURED";
+  | "PROVIDER_NOT_CONFIGURED"
+  | "PROVIDER_NOT_AUTHENTICATED"
+  | "QR_REQUIRED";
+
+export type WhatsAppCapabilityProvider = "META_CLOUD" | "ULTRAMSG";
+
+export interface WhatsAppProviderCapabilities {
+  provider: WhatsAppCapabilityProvider;
+  supportsQrAuthentication: boolean;
+  supportsEmbeddedSignup: boolean;
+  supportsFreeText: boolean;
+  supportsTemplates: boolean;
+  requiresCustomerServiceWindow: boolean;
+  supportsImage: boolean;
+  supportsDocument: boolean;
+  supportsAudio: boolean;
+  supportsVideo: boolean;
+  supportsProviderReadReceipt: boolean;
+  supportsWebhookReceived: boolean;
+  supportsWebhookCreate: boolean;
+  supportsWebhookAck: boolean;
+}
+
+export const META_CLOUD_CAPABILITIES: WhatsAppProviderCapabilities = {
+  provider: "META_CLOUD",
+  supportsQrAuthentication: false,
+  supportsEmbeddedSignup: true,
+  supportsFreeText: true,
+  supportsTemplates: true,
+  requiresCustomerServiceWindow: true,
+  supportsImage: true,
+  supportsDocument: true,
+  supportsAudio: true,
+  supportsVideo: true,
+  supportsProviderReadReceipt: false,
+  supportsWebhookReceived: true,
+  supportsWebhookCreate: false,
+  supportsWebhookAck: true,
+};
+
+export const ULTRAMSG_CAPABILITIES: WhatsAppProviderCapabilities = {
+  provider: "ULTRAMSG",
+  supportsQrAuthentication: true,
+  supportsEmbeddedSignup: false,
+  supportsFreeText: true,
+  supportsTemplates: false,
+  requiresCustomerServiceWindow: false,
+  supportsImage: true,
+  supportsDocument: true,
+  supportsAudio: true,
+  supportsVideo: true,
+  supportsProviderReadReceipt: true,
+  supportsWebhookReceived: true,
+  supportsWebhookCreate: true,
+  supportsWebhookAck: true,
+};
+
+export type WhatsAppProviderSessionStatus =
+  | "INITIALIZING"
+  | "QR_REQUIRED"
+  | "RETRYING"
+  | "LOADING"
+  | "AUTHENTICATED"
+  | "DISCONNECTED"
+  | "STANDBY"
+  | "UNKNOWN";
 
 export interface WhatsAppMessagingEligibility {
   canSendText: boolean;
@@ -69,7 +134,7 @@ export interface WhatsAppPageMeta {
 
 export interface WhatsAppConnectionDto {
   status: WhatsAppConnectionStatus;
-  provider: "META_CLOUD_API";
+  provider: "META_CLOUD_API" | "ULTRAMSG";
   displayPhoneNumber: string | null;
   verifiedName: string | null;
   businessAccountName: string | null;
@@ -78,6 +143,8 @@ export interface WhatsAppConnectionDto {
   lastValidatedAt: string | null;
   webhookStatus: WhatsAppWebhookStatus;
   lastWebhookAt: string | null;
+  providerSessionStatus: WhatsAppProviderSessionStatus | null;
+  capabilities: WhatsAppProviderCapabilities;
 }
 
 export interface WhatsAppConversationConnectionDto {
@@ -163,6 +230,11 @@ export interface WhatsAppCustomerMatchDto {
   customer: WhatsAppLinkedCustomerDto | null;
 }
 
+export interface WhatsAppQrDto {
+  imageDataUrl: string | null;
+  qrCode: string | null;
+}
+
 export interface WhatsAppConnectionAttemptStartDto {
   attemptId: string;
   state: string;
@@ -207,4 +279,9 @@ export type WhatsAppConnectionBanner =
   | "disconnected"
   | "webhookInactive"
   | "reauth"
-  | "error";
+  | "error"
+  | "qrRequired"
+  | "connecting"
+  | "retrying"
+  | "sessionDisconnected"
+  | "standby";

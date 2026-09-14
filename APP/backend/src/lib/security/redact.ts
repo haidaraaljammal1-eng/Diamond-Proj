@@ -54,7 +54,10 @@ export function sanitizeForAudit(input: unknown, depth = 0): unknown {
  */
 export function redactSensitiveUrl(url: string | undefined): string | undefined {
   if (!url) return url;
-  return url.replace(/([?&](?:hub\.)?verify_token=)[^&]*/gi, "$1[REDACTED]");
+  return url
+    .replace(/([?&](?:hub\.)?verify_token=)[^&]*/gi, "$1[REDACTED]")
+    .replace(/([?&]token=)[^&]*/gi, "$1[REDACTED]")
+    .replace(/(\/whatsapp\/webhooks\/ultramsg\/)[^/?#]+/gi, "$1[REDACTED]");
 }
 
 /** Mask the last octet of an IPv4 address for audit storage. */

@@ -22,6 +22,7 @@ export function createWhatsAppMediaService(fastify: FastifyInstance) {
         providerMediaId: true,
         mediaFilename: true,
         mediaMimeType: true,
+        displayPayload: true,
         connection: {
           select: {
             credentialCiphertext: true,
@@ -33,7 +34,15 @@ export function createWhatsAppMediaService(fastify: FastifyInstance) {
     const protectedType = WHATSAPP_PROTECTED_MEDIA_TYPES.includes(
       message.messageType as (typeof WHATSAPP_PROTECTED_MEDIA_TYPES)[number],
     );
-    if (!protectedType || !message.providerMediaId) throw whatsappError.mediaUnavailable();
+    const payload =
+      message.displayPayload && typeof message.displayPayload === "object" && !Array.isArray(message.displayPayload)
+        ? (message.displayPayload as { mediaUrl?: unknown })
+        : null;
+    const mediaUrl =
+      typeof payload?.mediaUrl === "string" && /^https?:\/\//i.test(payload.mediaUrl)
+        ? payload.mediaUrl
+        : null;
+    if (!protectedType || (!message.providerMediaId && !mediaUrl)) throw whatsappError.mediaUnavailable();
     if (!message.connection.credentialCiphertext) throw whatsappError.mediaUnavailable();
 
     const provider = createWhatsAppProvider();
@@ -44,13 +53,18 @@ export function createWhatsAppMediaService(fastify: FastifyInstance) {
     } catch {
       throw whatsappError.mediaUnavailable();
     }
-    const meta = await provider.getMediaMetadata(accessToken, message.providerMediaId);
-    if (!meta.ok) throw whatsappError.mediaUnavailable();
-    const downloaded = await provider.downloadMedia(accessToken, meta.value.url);
+    let downloaded;
+    if (mediaUrl) {
+      downloaded = await provider.downloadMedia(accessToken, mediaUrl);
+    } else {
+      const meta = await provider.getMediaMetadata(accessToken, message.providerMediaId!);
+      if (!meta.ok) throw whatsappError.mediaUnavailable();
+      downloaded = await provider.downloadMedia(accessToken, meta.value.url);
+    }
     if (!downloaded.ok) throw whatsappError.mediaUnavailable();
     const filename = sanitizeMediaFilename(message.mediaFilename);
     const contentType =
-      downloaded.value.contentType || message.mediaMimeType || meta.value.mimeType || "application/octet-stream";
+      downloaded.value.contentType || message.mediaMimeType || "application/octet-stream";
     return {
       body: downloaded.value.body,
       contentType,

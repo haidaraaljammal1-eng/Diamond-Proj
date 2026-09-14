@@ -6,6 +6,19 @@
 
 enum WhatsAppProvider {
   META_CLOUD_API
+  ULTRAMSG
+}
+
+/// Normalized UltraMsg instance session. Distinct from Diamond connection.status.
+enum WhatsAppProviderSessionStatus {
+  INITIALIZING
+  QR_REQUIRED
+  RETRYING
+  LOADING
+  AUTHENTICATED
+  DISCONNECTED
+  STANDBY
+  UNKNOWN
 }
 
 /// Current office connection. V1 allows at most one non-DISCONNECTED row
@@ -94,11 +107,20 @@ model WhatsAppConnection {
   provider WhatsAppProvider        @default(META_CLOUD_API)
   status   WhatsAppConnectionStatus @default(DISCONNECTED)
 
+  /// Legacy Meta Cloud API identifiers. Nullable for UltraMsg connections.
   wabaId              String?
   phoneNumberId       String?
   displayPhoneNumber  String?
   verifiedName        String?
   businessAccountName String?
+
+  /// UltraMsg instance identity. Never a token.
+  providerInstanceId String?
+  providerApiUrl     String?
+  providerSessionStatus     WhatsAppProviderSessionStatus?
+  providerSessionCheckedAt  DateTime?
+  /// Encrypted webhook callback key (`enc:v1:`). Never returned or logged.
+  webhookCallbackCiphertext String?
 
   /// AES-256-GCM ciphertext (`enc:v1:` prefix). Never returned, logged, or audited.
   credentialCiphertext  String?
@@ -178,8 +200,10 @@ model WhatsAppConversation {
   connectionId String
   connection   WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
 
-  /// Exact Meta wa_id. Never normalized into a Diamond Customer.
+  /// Exact Meta wa_id, or UltraMsg digits derived from `@c.us`. Never a Diamond Customer.
   customerWaId         String
+  /// Provider-neutral 1:1 chat id. UltraMsg stores exact `number@c.us`. Null on historical Meta rows.
+  providerChatId       String?
   customerDisplayName  String?
 
   lastMessageId      String?
@@ -212,6 +236,7 @@ model WhatsAppConversation {
   outboundAttempts WhatsAppOutboundAttempt[]
 
   @@unique([connectionId, customerWaId])
+  @@index([connectionId, providerChatId])
   @@index([lastMessageAt])
   @@index([unreadCount])
   @@index([customerDisplayName])

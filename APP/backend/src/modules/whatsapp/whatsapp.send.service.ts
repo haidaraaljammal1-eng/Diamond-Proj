@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import type { WhatsAppConnectionStatus, WhatsAppMessageSendState } from "@prisma/client";
+import type { WhatsAppConnectionStatus, WhatsAppConnectionWebhookStatus, WhatsAppMessageSendState, WhatsAppProviderSessionStatus } from "@prisma/client";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { withTransaction } from "src/lib/db/transaction";
@@ -17,6 +17,7 @@ import {
   type WhatsAppMessagingEligibility,
 } from "src/modules/whatsapp/whatsapp.eligibility";
 import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
+import { toConversationDetail, toMessageDto } from "src/modules/whatsapp/whatsapp.mapper";
 import { buildMessagePreview, isNewerConversationMessage } from "src/modules/whatsapp/whatsapp.message-type";
 import { createWhatsAppProvider } from "src/modules/whatsapp/whatsapp.provider";
 import { reconcileOutboundStatusEvents } from "src/modules/whatsapp/whatsapp.outbound-status";
@@ -32,7 +33,8 @@ import {
   sanitizeMediaFilename,
   validateOutboundMedia,
 } from "src/modules/whatsapp/whatsapp.media";
-import { toConversationDetail, toMessageDto } from "src/modules/whatsapp/whatsapp.mapper";
+import { outboundUltraMsgChatId } from "src/modules/whatsapp/ultramsg.chat-id";
+import { ULTRAMSG_DOCUMENT_FILENAME_MAX, ULTRAMSG_MEDIA_MAX_BYTES } from "src/modules/whatsapp/ultramsg.config";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
 import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
@@ -56,6 +58,7 @@ const CONVERSATION_DETAIL_SELECT = {
   connectionId: true,
   customerId: true,
   customerLinkedAt: true,
+  providerChatId: true,
   customer: { select: { id: true, name: true, mobile: true, externalId: true } },
   connection: {
     select: {
@@ -67,6 +70,8 @@ const CONVERSATION_DETAIL_SELECT = {
       credentialCiphertext: true,
       phoneNumberId: true,
       wabaId: true,
+      provider: true,
+      providerSessionStatus: true,
     },
   },
 } as const;
@@ -114,6 +119,10 @@ function throwForEligibility(reason: WhatsAppMessagingEligibility["reason"]): ne
   switch (reason) {
     case "PROVIDER_NOT_CONFIGURED":
       throw whatsappError.providerNotConfigured();
+    case "PROVIDER_NOT_AUTHENTICATED":
+      throw whatsappError.providerNotAuthenticated();
+    case "QR_REQUIRED":
+      throw whatsappError.qrRequired();
     case "NO_ACTIVE_CONNECTION":
     case "CONNECTION_INACTIVE":
       throw whatsappError.conversationConnectionInactive();
@@ -128,20 +137,79 @@ function throwForEligibility(reason: WhatsAppMessagingEligibility["reason"]): ne
   }
 }
 
+function eligibilityFrom(
+  conversation: { connectionId: string; lastInboundAt: Date | null },
+  current: {
+    id: string;
+    status: WhatsAppConnectionStatus;
+    webhookStatus: WhatsAppConnectionWebhookStatus;
+    credentialCiphertext: string | null;
+    providerSessionStatus?: WhatsAppProviderSessionStatus | null;
+  } | null,
+): WhatsAppMessagingEligibility {
+  const provider = createWhatsAppProvider();
+  return evaluateMessagingEligibility({
+    conversationConnectionId: conversation.connectionId,
+    lastInboundAt: conversation.lastInboundAt,
+    currentConnection: current
+      ? {
+          id: current.id,
+          status: current.status,
+          webhookStatus: current.webhookStatus,
+          hasCredential: Boolean(current.credentialCiphertext),
+          providerSessionStatus: current.providerSessionStatus ?? null,
+        }
+      : null,
+    providerConfigured: provider.configured,
+    capabilities: provider.capabilities(),
+    now: new Date(),
+  });
+}
+
+function routingForSend(
+  current: {
+    credentialCiphertext: string | null;
+    phoneNumberId: string | null;
+  } | null,
+  conversation: { customerWaId: string; providerChatId?: string | null },
+) {
+  if (!current?.credentialCiphertext) throw whatsappError.conversationConnectionInactive();
+  const caps = createWhatsAppProvider().capabilities();
+  if (caps.supportsQrAuthentication) {
+    const toChatId = outboundUltraMsgChatId({
+      providerChatId: conversation.providerChatId,
+      customerWaId: conversation.customerWaId,
+    });
+    if (!toChatId) throw whatsappError.conversationConnectionInactive();
+    return {
+      toChatId,
+      phoneNumberId: current.phoneNumberId ?? "",
+      credentialCiphertext: current.credentialCiphertext,
+    };
+  }
+  if (!current.phoneNumberId) throw whatsappError.conversationConnectionInactive();
+  return {
+    toChatId: conversation.customerWaId,
+    phoneNumberId: current.phoneNumberId,
+    credentialCiphertext: current.credentialCiphertext,
+  };
+}
+
 export function createWhatsAppSendService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
   async function currentOfficeConnection() {
     return prisma.whatsAppConnection.findFirst({
       where: { status: { in: CURRENT_STATUSES } },
-      select: {
-        id: true,
-        status: true,
-        webhookStatus: true,
-        credentialCiphertext: true,
-        phoneNumberId: true,
-        wabaId: true,
-      },
+        select: {
+          id: true,
+          status: true,
+          webhookStatus: true,
+          credentialCiphertext: true,
+          phoneNumberId: true,
+          wabaId: true,
+          providerSessionStatus: true,
+        },
     });
   }
 
@@ -160,9 +228,11 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
             status: current.status,
             webhookStatus: current.webhookStatus,
             hasCredential: Boolean(current.credentialCiphertext),
+            providerSessionStatus: current.providerSessionStatus,
           }
         : null,
       providerConfigured: createWhatsAppProvider().configured,
+      capabilities: createWhatsAppProvider().capabilities(),
       now: new Date(),
     });
   }
@@ -200,26 +270,12 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
           webhookStatus: true,
           credentialCiphertext: true,
           phoneNumberId: true,
+          providerSessionStatus: true,
         },
       });
-      const eligibility = evaluateMessagingEligibility({
-        conversationConnectionId: conversation.connectionId,
-        lastInboundAt: conversation.lastInboundAt,
-        currentConnection: current
-          ? {
-              id: current.id,
-              status: current.status,
-              webhookStatus: current.webhookStatus,
-              hasCredential: Boolean(current.credentialCiphertext),
-            }
-          : null,
-        providerConfigured: createWhatsAppProvider().configured,
-        now: new Date(),
-      });
+      const eligibility = eligibilityFrom(conversation, current);
       if (!eligibility.canSendText) throwIfCannotSend(eligibility, "freeform");
-      if (!current?.phoneNumberId || !current.credentialCiphertext) {
-        throw whatsappError.conversationConnectionInactive();
-      }
+      const routing = routingForSend(current, conversation);
 
       const existing = await tx.whatsAppOutboundAttempt.findUnique({
         where: {
@@ -325,9 +381,9 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
         kind: "created" as const,
         messageId,
         connectionId: conversation.connectionId,
-        phoneNumberId: current.phoneNumberId,
-        credentialCiphertext: current.credentialCiphertext,
-        customerWaId: conversation.customerWaId,
+        phoneNumberId: routing.phoneNumberId,
+        credentialCiphertext: routing.credentialCiphertext,
+        customerWaId: routing.toChatId,
         events: createdEvent ? [createdEvent] : [],
       };
     });
@@ -544,20 +600,7 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       select: CONVERSATION_DETAIL_SELECT,
     });
     if (!conversation) throw whatsappError.conversationNotFound();
-    const eligibility = evaluateMessagingEligibility({
-      conversationConnectionId: conversation.connectionId,
-      lastInboundAt: conversation.lastInboundAt,
-      currentConnection: current
-        ? {
-            id: current.id,
-            status: current.status,
-            webhookStatus: current.webhookStatus,
-            hasCredential: Boolean(current.credentialCiphertext),
-          }
-        : null,
-      providerConfigured: createWhatsAppProvider().configured,
-      now: new Date(),
-    });
+    const eligibility = eligibilityFrom(conversation, current);
     throwIfCannotSend(eligibility, "template");
     if (!current?.phoneNumberId || !current.credentialCiphertext || !current.wabaId) {
       throw whatsappError.conversationConnectionInactive();
@@ -770,9 +813,17 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       bytes: params.bytes,
       declaredMime: params.declaredMime,
       requestedKind: params.requestedKind,
+      providerMaxBytes: createWhatsAppProvider().capabilities().supportsQrAuthentication
+        ? ULTRAMSG_MEDIA_MAX_BYTES
+        : undefined,
     });
     const caption = normalizeMediaCaption(validated.kind, params.caption);
-    const filename = sanitizeMediaFilename(params.filename);
+    const filename = sanitizeMediaFilename(
+      params.filename,
+      createWhatsAppProvider().capabilities().supportsQrAuthentication
+        ? ULTRAMSG_DOCUMENT_FILENAME_MAX
+        : 180,
+    );
     const contentHash = hashMediaBytes(params.bytes);
     const idempotencyKey = requireIdempotencyKey(params.idempotencyKey);
     const keyHash = hashIdempotencyKey(idempotencyKey);
@@ -799,26 +850,12 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
           webhookStatus: true,
           credentialCiphertext: true,
           phoneNumberId: true,
+          providerSessionStatus: true,
         },
       });
-      const eligibility = evaluateMessagingEligibility({
-        conversationConnectionId: conversation.connectionId,
-        lastInboundAt: conversation.lastInboundAt,
-        currentConnection: current
-          ? {
-              id: current.id,
-              status: current.status,
-              webhookStatus: current.webhookStatus,
-              hasCredential: Boolean(current.credentialCiphertext),
-            }
-          : null,
-        providerConfigured: createWhatsAppProvider().configured,
-        now: new Date(),
-      });
+      const eligibility = eligibilityFrom(conversation, current);
       throwIfCannotSend(eligibility, "freeform");
-      if (!current?.phoneNumberId || !current.credentialCiphertext) {
-        throw whatsappError.conversationConnectionInactive();
-      }
+      const routing = routingForSend(current, conversation);
       const existing = await tx.whatsAppOutboundAttempt.findUnique({
         where: {
           actorUserId_idempotencyKeyHash: {
@@ -919,9 +956,9 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
         kind: "created" as const,
         messageId,
         connectionId: conversation.connectionId,
-        phoneNumberId: current.phoneNumberId,
-        credentialCiphertext: current.credentialCiphertext,
-        customerWaId: conversation.customerWaId,
+        phoneNumberId: routing.phoneNumberId,
+        credentialCiphertext: routing.credentialCiphertext,
+        customerWaId: routing.toChatId,
         events: createdEvent ? [createdEvent] : [],
       };
     });
@@ -945,24 +982,14 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       await completeAttempt(reserved.messageId, "FAILED", null, "WHATSAPP_SEND_AUTH_FAILED");
       return loadSendResult(reserved.messageId, params.conversationId);
     }
-    const uploaded = await provider.uploadMedia({
+    const sent = await provider.sendOutboundMedia({
       accessToken,
       phoneNumberId: reserved.phoneNumberId,
+      toChatId: reserved.customerWaId,
+      kind: validated.kind,
       bytes: params.bytes,
       mimeType: validated.mimeType,
       filename,
-    });
-    if (!uploaded.ok) {
-      const state: WhatsAppMessageSendState = uploaded.code === "SEND_UNKNOWN" ? "UNKNOWN" : "FAILED";
-      await completeAttempt(reserved.messageId, state, null, uploaded.providerErrorCode ?? uploaded.code);
-      return loadSendResult(reserved.messageId, params.conversationId);
-    }
-    const sent = await provider.sendMediaMessage({
-      accessToken,
-      phoneNumberId: reserved.phoneNumberId,
-      toWaId: reserved.customerWaId,
-      kind: validated.kind,
-      mediaId: uploaded.value.mediaId,
       caption: caption ?? undefined,
     });
     if (!sent.ok) {

@@ -1,19 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
 import {
   activateWhatsAppWebhook,
   authorizeWhatsAppConnectionAttempt,
+  bootstrapWhatsAppConnection,
   disconnectWhatsAppConnection,
+  getWhatsAppConnection,
+  getWhatsAppConnectionQr,
   selectWhatsAppConnection,
   startWhatsAppConnectionAttempt,
 } from "../../api/whatsapp.api";
 import type { WhatsAppConnectionDto, WhatsAppGrantedChoiceDto } from "../../types/whatsapp.types";
 import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error";
-import { connectionBanner } from "../../utils/whatsapp-view-model";
+import { connectionBanner, connectionCapabilities } from "../../utils/whatsapp-view-model";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
 import styles from "./connection-settings.module.css";
 
@@ -69,8 +72,55 @@ export function WhatsAppConnectionSettings({
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [confirmChange, setConfirmChange] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrImage, setQrImage] = useState<string | null>(null);
   const linked = connection && connection.status !== "DISCONNECTED";
   const banner = connectionBanner(connection);
+  const caps = connectionCapabilities(connection);
+
+  const refresh = inbox.refresh;
+  useEffect(() => {
+    if (!open || !qrOpen || !caps.supportsQrAuthentication) return;
+    let cancelled = false;
+    let ticks = 0;
+    const maxTicks = 48;
+
+    async function poll() {
+      if (cancelled || ticks >= maxTicks) return;
+      ticks += 1;
+      try {
+        const next = await getWhatsAppConnection();
+        if (cancelled) return;
+        if (next.providerSessionStatus === "AUTHENTICATED") {
+          setQrImage(null);
+          setQrOpen(false);
+          await refresh();
+          return;
+        }
+        if (next.providerSessionStatus === "QR_REQUIRED") {
+          const qr = await getWhatsAppConnectionQr();
+          if (!cancelled) setQrImage(qr.imageDataUrl);
+        }
+      } catch {
+        /* keep last QR; status endpoint remains source of session */
+      }
+    }
+
+    void poll();
+    const timer = window.setInterval(() => void poll(), 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      setQrImage(null);
+    };
+  }, [open, qrOpen, caps.supportsQrAuthentication, refresh]);
+
+  useEffect(() => {
+    if (!open) {
+      setQrOpen(false);
+      setQrImage(null);
+    }
+  }, [open]);
 
   async function connect() {
     setBusy(true);
@@ -79,6 +129,12 @@ export function WhatsAppConnectionSettings({
       if (inbox.simulationActive) {
         inbox.simulationSetConnection?.("LINKED_ACTIVE");
         setBusy(false);
+        return;
+      }
+      if (caps.supportsQrAuthentication || !caps.supportsEmbeddedSignup) {
+        const next = await bootstrapWhatsAppConnection();
+        await inbox.refresh();
+        if (next.providerSessionStatus === "QR_REQUIRED") setQrOpen(true);
         return;
       }
       const attempt = await startWhatsAppConnectionAttempt();
@@ -177,6 +233,9 @@ export function WhatsAppConnectionSettings({
       closeLabel={t("templates.close")}
     >
       <div className={styles.body} data-testid="whatsapp-connection-settings">
+        {caps.provider === "ULTRAMSG" ? (
+          <p data-testid="whatsapp-provider-label">{t("manage.providerUltraMsg")}</p>
+        ) : null}
         <p>
           {t(`connection.status.${connection?.status === "DISCONNECTED" || !connection ? "disconnected" : connection.status}`)}
           {" · "}
@@ -185,7 +244,7 @@ export function WhatsAppConnectionSettings({
         {connection?.displayPhoneNumber ? <p dir="ltr">{connection.displayPhoneNumber}</p> : null}
         {connection?.verifiedName ? <p>{connection.verifiedName}</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
-        {choices.length > 0 ? (
+        {caps.supportsEmbeddedSignup && choices.length > 0 ? (
           <ul className={styles.choices}>
             {choices.map((choice) => (
               <li key={`${choice.wabaId}:${choice.phoneNumberId}`}>
@@ -212,6 +271,11 @@ export function WhatsAppConnectionSettings({
             >
               {linked ? t("manage.changeAccount") : t("manage.connect")}
             </Button>
+            {linked && banner === "qrRequired" ? (
+              <Button type="button" variant="secondary" disabled={busy} onClick={() => setQrOpen(true)}>
+                {t("manage.showQr")}
+              </Button>
+            ) : null}
             {linked && banner === "webhookInactive" ? (
               <Button type="button" variant="secondary" disabled={busy} onClick={() => void activate()}>
                 {t("manage.completeSetup")}
@@ -229,6 +293,28 @@ export function WhatsAppConnectionSettings({
             ) : null}
           </div>
         )}
+        {qrOpen ? (
+          <div className={styles.confirm} data-testid="whatsapp-qr-dialog">
+            <p>{t("manage.qrHint")}</p>
+            {qrImage ? (
+              // QR is auth material: shown only while this manage dialog is open.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrImage} alt={t("manage.qrHint")} width={220} height={220} />
+            ) : (
+              <p>{t("manage.qrLoading")}</p>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setQrOpen(false);
+                setQrImage(null);
+              }}
+            >
+              {t("templates.close")}
+            </Button>
+          </div>
+        ) : null}
         {confirmChange ? (
           <div className={styles.confirm}>
             <p>{t("manage.changeAccountConfirm")}</p>

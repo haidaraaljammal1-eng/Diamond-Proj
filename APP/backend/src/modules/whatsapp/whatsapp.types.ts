@@ -1,4 +1,6 @@
-export type WhatsAppProviderKey = "META_CLOUD_API";
+import type { WhatsAppProviderCapabilities } from "src/modules/whatsapp/whatsapp.capabilities";
+
+export type WhatsAppProviderKey = "META_CLOUD_API" | "ULTRAMSG";
 
 export type WhatsAppProviderFailureCode =
   | "NOT_CONFIGURED"
@@ -10,7 +12,8 @@ export type WhatsAppProviderFailureCode =
   | "SEND_REJECTED"
   | "SEND_RATE_LIMITED"
   | "SEND_AUTH_FAILED"
-  | "SEND_UNKNOWN";
+  | "SEND_UNKNOWN"
+  | "NOT_AUTHENTICATED";
 
 export interface WhatsAppProviderFailure {
   ok: false;
@@ -140,13 +143,73 @@ export interface WhatsAppSendMediaInput {
   caption?: string;
 }
 
+export type WhatsAppProviderSessionStatusName =
+  | "INITIALIZING"
+  | "QR_REQUIRED"
+  | "RETRYING"
+  | "LOADING"
+  | "AUTHENTICATED"
+  | "DISCONNECTED"
+  | "STANDBY"
+  | "UNKNOWN";
+
+export interface WhatsAppSessionSnapshot {
+  status: WhatsAppProviderSessionStatusName;
+  rawStatus: string | null;
+}
+
+export interface WhatsAppInstanceIdentity {
+  chatId: string | null;
+  displayPhone: string | null;
+  displayName: string | null;
+}
+
+export interface WhatsAppInstanceSettings {
+  sendDelay: number;
+  sendDelayMax: number;
+  webhookUrl: string | null;
+  webhookMessageReceived: boolean;
+  webhookMessageCreate: boolean;
+  webhookMessageAck: boolean;
+  webhookMessageDownloadMedia: boolean;
+}
+
+export interface WhatsAppQrPayload {
+  imageDataUrl: string | null;
+  qrCode: string | null;
+}
+
+export interface WhatsAppSendOutboundMediaInput {
+  accessToken: string;
+  toChatId: string;
+  phoneNumberId: string;
+  kind: WhatsAppOutboundMediaKind;
+  bytes: Buffer;
+  mimeType: string;
+  filename: string;
+  caption?: string;
+}
+
 /**
- * Meta Cloud API operations used by Diamond WhatsApp.
+ * Provider operations used by Diamond WhatsApp.
  * Phone registration / migration / PIN / number takeover are not implemented.
+ * Implementations MUST NOT call /instance/clear, logout, or restart.
  */
 export interface WhatsAppProvider {
   readonly name: string;
   readonly configured: boolean;
+  capabilities(): WhatsAppProviderCapabilities;
+  getSession(accessToken: string): Promise<WhatsAppProviderResult<WhatsAppSessionSnapshot>>;
+  getInstanceIdentity(accessToken: string): Promise<WhatsAppProviderResult<WhatsAppInstanceIdentity>>;
+  getInstanceSettings(accessToken: string): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>>;
+  getQr(accessToken: string): Promise<WhatsAppProviderResult<WhatsAppQrPayload>>;
+  applyWebhookSettings(
+    accessToken: string,
+    settings: WhatsAppInstanceSettings,
+  ): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>>;
+  sendOutboundMedia(
+    input: WhatsAppSendOutboundMediaInput,
+  ): Promise<WhatsAppProviderResult<WhatsAppSendTextAccepted>>;
   exchangeAuthorizationCode(
     code: string,
   ): Promise<WhatsAppProviderResult<WhatsAppAccessCredential>>;

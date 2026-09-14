@@ -16,6 +16,8 @@ import {
 export interface InboundMessageInput {
   connectionId: string;
   customerWaId: string;
+  /** Exact UltraMsg `@c.us` chat id when known. Null for historical Meta. */
+  providerChatId?: string | null;
   customerDisplayName: string | null;
   providerMessageId: string;
   messageType: string | null;
@@ -79,20 +81,29 @@ export async function materializeInboundMessage(
   });
 
   const result = await withTransaction(prisma, async (tx) => {
+    const identityKey = input.providerChatId || input.customerWaId;
     await acquireAdvisoryLock(
       tx,
       WHATSAPP_CONVERSATION_LOCK_NS,
-      `${input.connectionId}:${input.customerWaId}`,
+      `${input.connectionId}:${identityKey}`,
     );
 
-    let conversation = await tx.whatsAppConversation.findUnique({
-      where: {
-        connectionId_customerWaId: {
-          connectionId: input.connectionId,
-          customerWaId: input.customerWaId,
+    let conversation =
+      input.providerChatId
+        ? await tx.whatsAppConversation.findFirst({
+            where: { connectionId: input.connectionId, providerChatId: input.providerChatId },
+          })
+        : null;
+    if (!conversation) {
+      conversation = await tx.whatsAppConversation.findUnique({
+        where: {
+          connectionId_customerWaId: {
+            connectionId: input.connectionId,
+            customerWaId: input.customerWaId,
+          },
         },
-      },
-    });
+      });
+    }
     let conversationCreated = false;
     if (!conversation) {
       try {
@@ -100,6 +111,7 @@ export async function materializeInboundMessage(
           data: {
             connectionId: input.connectionId,
             customerWaId: input.customerWaId,
+            providerChatId: input.providerChatId ?? null,
             customerDisplayName: nextCustomerDisplayName(null, input.customerDisplayName),
             unreadCount: 0,
           },
@@ -116,6 +128,11 @@ export async function materializeInboundMessage(
           },
         });
       }
+    } else if (input.providerChatId && !conversation.providerChatId) {
+      conversation = await tx.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: { providerChatId: input.providerChatId },
+      });
     }
 
     const inserted = await tx.whatsAppMessage.createMany({

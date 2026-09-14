@@ -274,3 +274,18 @@ export async function activateWhatsAppWebhook(): Promise<WhatsAppConnectionDto> 
   );
   return response.data;
 }
+
+export async function bootstrapWhatsAppConnection(): Promise<WhatsAppConnectionDto> {
+  const response = await apiRequest<WhatsAppConnectionDto>(
+    `${WHATSAPP_PATH}/connection/bootstrap`,
+    { method: "POST" },
+  );
+  return response.data;
+}
+
+export async function getWhatsAppConnectionQr(): Promise<{ imageDataUrl: string | null; qrCode: string | null }> {
+  const response = await apiRequest<{ imageDataUrl: string | null; qrCode: string | null }>(
+    `${WHATSAPP_PATH}/connection/qr`,
+  );
+  return response.data;
+}

@@ -49,7 +49,9 @@ interface WhatsAppSimulationState {
     conversationId: string,
     input: { file: File; messageType: string; caption?: string },
   ) => boolean;
-  setConnectionState: (state: "DISCONNECTED" | "LINKED" | "LINKED_ACTIVE") => void;
+  setConnectionState: (
+    state: "DISCONNECTED" | "LINKED" | "LINKED_ACTIVE" | "QR_REQUIRED" | "RETRYING",
+  ) => void;
   linkCustomer: (customerId: number) => void;
   unlinkCustomer: () => void;
   simulateInbound: () => void;
@@ -288,7 +290,20 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
     const connection = {
       ...inbox.connection,
       status: state === "DISCONNECTED" ? ("DISCONNECTED" as const) : ("LINKED" as const),
-      webhookStatus: state === "LINKED_ACTIVE" ? ("ACTIVE" as const) : state === "LINKED" ? ("PENDING" as const) : ("NOT_CONFIGURED" as const),
+      webhookStatus:
+        state === "LINKED_ACTIVE"
+          ? ("ACTIVE" as const)
+          : state === "LINKED"
+            ? ("PENDING" as const)
+            : ("NOT_CONFIGURED" as const),
+      providerSessionStatus:
+        state === "DISCONNECTED"
+          ? ("DISCONNECTED" as const)
+          : state === "QR_REQUIRED"
+            ? ("QR_REQUIRED" as const)
+            : state === "RETRYING"
+              ? ("RETRYING" as const)
+              : ("AUTHENTICATED" as const),
     };
     set({ inbox: { ...inbox, connection } });
   },

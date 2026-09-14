@@ -58,6 +58,22 @@ export function WhatsAppSimulationControls() {
             type="button"
             variant="ghost"
             size="sm"
+            onClick={() => useWhatsAppSimulationStore.getState().setConnectionState("QR_REQUIRED")}
+          >
+            {t("simulation.qrRequired")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => useWhatsAppSimulationStore.getState().setConnectionState("RETRYING")}
+          >
+            {t("simulation.retrying")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => useWhatsAppSimulationStore.getState().setConnectionState("DISCONNECTED")}
           >
             {t("simulation.disconnected")}

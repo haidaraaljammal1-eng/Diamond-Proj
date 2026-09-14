@@ -31,9 +31,37 @@ export const WhatsAppConnectedBySchema = z
   })
   .nullable();
 
+export const WhatsAppCapabilitySchema = z.object({
+  provider: z.enum(["META_CLOUD", "ULTRAMSG"]),
+  supportsQrAuthentication: z.boolean(),
+  supportsEmbeddedSignup: z.boolean(),
+  supportsFreeText: z.boolean(),
+  supportsTemplates: z.boolean(),
+  requiresCustomerServiceWindow: z.boolean(),
+  supportsImage: z.boolean(),
+  supportsDocument: z.boolean(),
+  supportsAudio: z.boolean(),
+  supportsVideo: z.boolean(),
+  supportsProviderReadReceipt: z.boolean(),
+  supportsWebhookReceived: z.boolean(),
+  supportsWebhookCreate: z.boolean(),
+  supportsWebhookAck: z.boolean(),
+});
+
+export const WhatsAppProviderSessionStatusSchema = z.enum([
+  "INITIALIZING",
+  "QR_REQUIRED",
+  "RETRYING",
+  "LOADING",
+  "AUTHENTICATED",
+  "DISCONNECTED",
+  "STANDBY",
+  "UNKNOWN",
+]);
+
 export const WhatsAppConnectionSchema = z.object({
   status: WhatsAppConnectionStatusSchema,
-  provider: z.literal("META_CLOUD_API"),
+  provider: z.enum(["META_CLOUD_API", "ULTRAMSG"]),
   displayPhoneNumber: z.string().nullable(),
   verifiedName: z.string().nullable(),
   businessAccountName: z.string().nullable(),
@@ -42,6 +70,13 @@ export const WhatsAppConnectionSchema = z.object({
   lastValidatedAt: z.date().nullable(),
   webhookStatus: WhatsAppWebhookStatusSchema,
   lastWebhookAt: z.date().nullable(),
+  providerSessionStatus: WhatsAppProviderSessionStatusSchema.nullable(),
+  capabilities: WhatsAppCapabilitySchema,
+});
+
+export const WhatsAppQrSchema = z.object({
+  imageDataUrl: z.string().nullable(),
+  qrCode: z.string().nullable(),
 });
 
 export const WhatsAppConnectionAttemptStartSchema = z.object({
@@ -165,6 +200,8 @@ export const WhatsAppConversationDetailSchema = WhatsAppConversationListItemSche
       "CUSTOMER_SERVICE_WINDOW_CLOSED",
       "CUSTOMER_SERVICE_WINDOW_UNKNOWN",
       "PROVIDER_NOT_CONFIGURED",
+      "PROVIDER_NOT_AUTHENTICATED",
+      "QR_REQUIRED",
     ]),
     windowExpiresAt: z.date().nullable(),
   }),

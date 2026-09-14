@@ -34,6 +34,12 @@ import type {
   WhatsAppProviderFailure,
   WhatsAppProviderResult,
 } from "src/modules/whatsapp/whatsapp.types";
+import {
+  diamondUltraMsgWebhookUrl,
+  publicWebhookUrlRequired,
+  ultramsgRuntimeConfig,
+} from "src/modules/whatsapp/ultramsg.config";
+import { env } from "src/config/env";
 
 type AuditWrite = (partial: Partial<AuditContext>) => void;
 
@@ -53,6 +59,7 @@ const CONNECTION_PUBLIC = {
   lastValidatedAt: true,
   webhookStatus: true,
   lastWebhookAt: true,
+  providerSessionStatus: true,
   connectedBy: { select: { id: true, name: true } },
 } as const;
 
@@ -90,13 +97,55 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
   async function getConnection() {
     const row = await prisma.whatsAppConnection.findFirst({
       where: CURRENT_WHERE,
-      select: CONNECTION_PUBLIC,
+      select: { ...CONNECTION_PUBLIC, credentialCiphertext: true },
     });
-    return toConnectionDto(row);
+    const provider = createWhatsAppProvider();
+    if (
+      row?.credentialCiphertext &&
+      provider.configured &&
+      provider.capabilities().supportsQrAuthentication
+    ) {
+      await refreshUltraMsgSession(row.id, row.credentialCiphertext);
+      const fresh = await prisma.whatsAppConnection.findFirst({
+        where: { id: row.id },
+        select: CONNECTION_PUBLIC,
+      });
+      return toConnectionDto(fresh, provider.capabilities());
+    }
+    return toConnectionDto(row, provider.capabilities());
+  }
+
+  async function refreshUltraMsgSession(connectionId: string, credentialCiphertext: string) {
+    const provider = createWhatsAppProvider();
+    let token: string;
+    try {
+      token = decryptWhatsAppCredential(credentialCiphertext);
+    } catch {
+      return;
+    }
+    const session = await provider.getSession(token);
+    const identity = session.ok ? await provider.getInstanceIdentity(token) : null;
+    await prisma.whatsAppConnection.update({
+      where: { id: connectionId },
+      data: {
+        providerSessionStatus: session.ok ? session.value.status : "UNKNOWN",
+        providerSessionCheckedAt: new Date(),
+        lastValidatedAt: new Date(),
+        ...(identity?.ok
+          ? {
+              displayPhoneNumber: identity.value.displayPhone,
+              verifiedName: identity.value.displayName,
+            }
+          : {}),
+      },
+    });
   }
 
   async function startAttempt(userId: number, audit: AuditWrite) {
     const provider = requireProvider();
+    if (!provider.capabilities().supportsEmbeddedSignup) {
+      throw whatsappError.embeddedSignupNotConfigured();
+    }
     const state = generateOpaqueToken();
     const expiresAt = expiryFromNow(WHATSAPP_CONNECTION_ATTEMPT_TTL_SECONDS);
     const attempt = await prisma.whatsAppConnectionAttempt.create({
@@ -422,6 +471,10 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
   }
 
   async function activateWebhook(userId: number, audit: AuditWrite) {
+    const provider = createWhatsAppProvider();
+    if (provider.capabilities().supportsQrAuthentication) {
+      return activateUltraMsgWebhook(userId, audit);
+    }
     const current = await prisma.whatsAppConnection.findFirst({
       where: CURRENT_WHERE,
       select: {
@@ -435,7 +488,6 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
     if (!current || current.status !== "LINKED" || !current.wabaId || !current.credentialCiphertext) {
       throw whatsappError.connectionNotFound();
     }
-    const provider = createWhatsAppProvider();
     if (!provider.configured) {
       await prisma.whatsAppConnection.update({
         where: { id: current.id },
@@ -495,7 +547,246 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
     return toConnectionDto(updated.row);
   }
 
-  return { getConnection, startAttempt, authorize, select, disconnect, activateWebhook };
+  async function bootstrap(userId: number, audit: AuditWrite) {
+    const provider = requireProvider();
+    if (!provider.capabilities().supportsQrAuthentication) {
+      throw whatsappError.providerNotConfigured();
+    }
+    const cfg = ultramsgRuntimeConfig();
+    if (!cfg.token) throw whatsappError.providerNotConfigured();
+    const session = await provider.getSession(cfg.token);
+    if (!session.ok) throw whatsappError.validationFailed(session.providerErrorCode);
+    const identity = await provider.getInstanceIdentity(cfg.token);
+    const ciphertext = encryptWhatsAppCredential(cfg.token);
+    const callbackKey = cfg.webhookCallbackKey || generateOpaqueToken();
+    const callbackCipher = encryptWhatsAppCredential(callbackKey);
+
+    const promoted = await withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, WHATSAPP_CONNECTION_LOCK_NS, WHATSAPP_OFFICE_LOCK_ID);
+      const current = await tx.whatsAppConnection.findFirst({ where: CURRENT_WHERE });
+      if (
+        current &&
+        current.provider === "ULTRAMSG" &&
+        current.providerInstanceId === cfg.instanceId
+      ) {
+        const updated = await tx.whatsAppConnection.update({
+          where: { id: current.id },
+          data: {
+            status: "LINKED",
+            credentialCiphertext: ciphertext,
+            providerApiUrl: cfg.apiUrl,
+            providerInstanceId: cfg.instanceId,
+            providerSessionStatus: session.value.status,
+            providerSessionCheckedAt: new Date(),
+            webhookCallbackCiphertext: callbackCipher,
+            displayPhoneNumber: identity.ok ? identity.value.displayPhone : current.displayPhoneNumber,
+            verifiedName: identity.ok ? identity.value.displayName : current.verifiedName,
+            connectedByUserId: userId,
+            connectedAt: current.connectedAt ?? new Date(),
+            lastValidatedAt: new Date(),
+            lastProviderErrorCode: null,
+          },
+          select: CONNECTION_PUBLIC,
+        });
+        const event = await writeWhatsAppRealtimeEvent(tx, {
+          type: "whatsapp.connection.updated",
+          dedupeKey: `whatsapp.connection.updated:${updated.id}:${updated.status}:${session.value.status}`,
+          connectionId: updated.id,
+        });
+        return { created: updated, previousId: null as string | null, events: event ? [event] : [] };
+      }
+
+      if (current) {
+        await tx.whatsAppConnection.update({
+          where: { id: current.id },
+          data: {
+            status: "DISCONNECTED",
+            credentialCiphertext: null,
+            credentialExpiresAt: null,
+            disconnectedAt: new Date(),
+            disconnectedByUserId: userId,
+            webhookStatus: "NOT_CONFIGURED",
+          },
+        });
+      }
+
+      const created = await tx.whatsAppConnection.create({
+        data: {
+          provider: "ULTRAMSG",
+          status: "LINKED",
+          providerInstanceId: cfg.instanceId,
+          providerApiUrl: cfg.apiUrl,
+          providerSessionStatus: session.value.status,
+          providerSessionCheckedAt: new Date(),
+          webhookCallbackCiphertext: callbackCipher,
+          displayPhoneNumber: identity.ok ? identity.value.displayPhone : null,
+          verifiedName: identity.ok ? identity.value.displayName : null,
+          credentialCiphertext: ciphertext,
+          connectedByUserId: userId,
+          connectedAt: new Date(),
+          lastValidatedAt: new Date(),
+          webhookStatus: "NOT_CONFIGURED",
+        },
+        select: CONNECTION_PUBLIC,
+      });
+      const events: WhatsAppRealtimeEvent[] = [];
+      if (current) {
+        const previousEvent = await writeWhatsAppRealtimeEvent(tx, {
+          type: "whatsapp.connection.updated",
+          dedupeKey: `whatsapp.connection.updated:${current.id}:DISCONNECTED`,
+          connectionId: current.id,
+        });
+        if (previousEvent) events.push(previousEvent);
+      }
+      const createdEvent = await writeWhatsAppRealtimeEvent(tx, {
+        type: "whatsapp.connection.updated",
+        dedupeKey: `whatsapp.connection.updated:${created.id}:${created.status}:${created.webhookStatus}`,
+        connectionId: created.id,
+      });
+      if (createdEvent) events.push(createdEvent);
+      return { created, previousId: current?.id ?? null, events };
+    });
+
+    publishWhatsAppRealtime(promoted.events);
+    audit({
+      action: promoted.previousId ? WHATSAPP_AUDIT.CONNECTION_CHANGED : WHATSAPP_AUDIT.CONNECTION_LINKED,
+      entityType: "WhatsAppConnection",
+      entityId: promoted.created.id,
+      metadata: {
+        connectionId: promoted.created.id,
+        previousConnectionId: promoted.previousId,
+        provider: "ULTRAMSG",
+        providerInstanceId: cfg.instanceId,
+        status: "LINKED",
+        providerSessionStatus: session.value.status,
+      },
+    });
+    return toConnectionDto(promoted.created, provider.capabilities());
+  }
+
+  async function getQr() {
+    const provider = requireProvider();
+    if (!provider.capabilities().supportsQrAuthentication) {
+      throw whatsappError.qrUnavailable();
+    }
+    const current = await prisma.whatsAppConnection.findFirst({
+      where: CURRENT_WHERE,
+      select: { credentialCiphertext: true, providerSessionStatus: true },
+    });
+    if (!current?.credentialCiphertext) throw whatsappError.connectionNotFound();
+    if (current.providerSessionStatus === "AUTHENTICATED") {
+      return { imageDataUrl: null, qrCode: null };
+    }
+    let token: string;
+    try {
+      token = decryptWhatsAppCredential(current.credentialCiphertext);
+    } catch {
+      throw whatsappError.sendAuthFailed();
+    }
+    const qr = await provider.getQr(token);
+    if (!qr.ok) throw whatsappError.qrUnavailable();
+    return qr.value;
+  }
+
+  async function activateUltraMsgWebhook(userId: number, audit: AuditWrite) {
+    const current = await prisma.whatsAppConnection.findFirst({
+      where: CURRENT_WHERE,
+      select: {
+        id: true,
+        status: true,
+        credentialCiphertext: true,
+        webhookCallbackCiphertext: true,
+      },
+    });
+    if (!current || current.status !== "LINKED" || !current.credentialCiphertext) {
+      throw whatsappError.connectionNotFound();
+    }
+    if (publicWebhookUrlRequired()) throw whatsappError.publicWebhookUrlRequired();
+    if (!env.ULTRAMSG_CONFIGURE_WEBHOOK) throw whatsappError.webhookSetupFailed();
+
+    const provider = createWhatsAppProvider();
+    if (!provider.configured) throw whatsappError.providerNotConfigured();
+    let token: string;
+    try {
+      token = decryptWhatsAppCredential(current.credentialCiphertext);
+    } catch {
+      throw whatsappError.sendAuthFailed();
+    }
+
+    let callbackKey = env.ULTRAMSG_WEBHOOK_CALLBACK_KEY.trim();
+    if (!callbackKey && current.webhookCallbackCiphertext) {
+      try {
+        callbackKey = decryptWhatsAppCredential(current.webhookCallbackCiphertext);
+      } catch {
+        callbackKey = "";
+      }
+    }
+    if (!callbackKey) callbackKey = generateOpaqueToken();
+    const webhookUrl = diamondUltraMsgWebhookUrl(callbackKey);
+    if (!webhookUrl) throw whatsappError.publicWebhookUrlRequired();
+
+    const existing = await provider.getInstanceSettings(token);
+    if (!existing.ok) {
+      await prisma.whatsAppConnection.update({
+        where: { id: current.id },
+        data: {
+          webhookStatus: "ERROR",
+          lastProviderErrorCode: existing.providerErrorCode ?? existing.code,
+        },
+      });
+      throw whatsappError.webhookSetupFailed();
+    }
+
+    const applied = await provider.applyWebhookSettings(token, {
+      sendDelay: existing.value.sendDelay,
+      sendDelayMax: existing.value.sendDelayMax,
+      webhookUrl,
+      webhookMessageReceived: true,
+      webhookMessageCreate: true,
+      webhookMessageAck: true,
+      webhookMessageDownloadMedia: true,
+    });
+    const verified =
+      applied.ok &&
+      applied.value.webhookUrl === webhookUrl &&
+      applied.value.webhookMessageReceived &&
+      applied.value.webhookMessageCreate &&
+      applied.value.webhookMessageAck &&
+      applied.value.webhookMessageDownloadMedia;
+
+    const updated = await withTransaction(prisma, async (tx) => {
+      const row = await tx.whatsAppConnection.update({
+        where: { id: current.id },
+        data: {
+          webhookStatus: verified ? "ACTIVE" : "ERROR",
+          lastProviderErrorCode: verified ? null : WhatsAppErrorReason.WEBHOOK_SETUP_FAILED,
+          webhookCallbackCiphertext: encryptWhatsAppCredential(callbackKey),
+        },
+        select: CONNECTION_PUBLIC,
+      });
+      const event = await writeWhatsAppRealtimeEvent(tx, {
+        type: "whatsapp.connection.updated",
+        dedupeKey: `whatsapp.connection.updated:${row.id}:${row.webhookStatus}`,
+        connectionId: row.id,
+      });
+      return { row, events: event ? [event] : [] };
+    });
+    publishWhatsAppRealtime(updated.events);
+    audit({
+      action: WHATSAPP_AUDIT.WEBHOOK_ACTIVATED,
+      entityType: "WhatsAppConnection",
+      entityId: updated.row.id,
+      metadata: {
+        connectionId: updated.row.id,
+        webhookStatus: updated.row.webhookStatus,
+        actorUserId: userId,
+      },
+    });
+    if (!verified) throw whatsappError.webhookSetupFailed();
+    return toConnectionDto(updated.row, provider.capabilities());
+  }
+
+  return { getConnection, startAttempt, authorize, select, disconnect, activateWebhook, bootstrap, getQr };
 }
 
 export type WhatsAppConnectionService = ReturnType<typeof createWhatsAppConnectionService>;

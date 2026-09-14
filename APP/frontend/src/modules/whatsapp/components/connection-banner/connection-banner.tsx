@@ -16,10 +16,34 @@ export function WhatsAppConnectionBanner({
   if (loading) return null;
   const kind: WhatsAppConnectionBanner = connectionBanner(connection);
   if (kind === "none") return null;
+  const titleKey =
+    kind === "qrRequired"
+      ? "connection.qrRequired.title"
+      : kind === "connecting"
+        ? "connection.connecting.title"
+        : kind === "retrying"
+          ? "connection.retrying.title"
+          : kind === "sessionDisconnected"
+            ? "connection.sessionDisconnected.title"
+            : kind === "standby"
+              ? "connection.standby.title"
+              : `connection.${kind}.title`;
+  const bodyKey =
+    kind === "qrRequired"
+      ? "connection.qrRequired.body"
+      : kind === "connecting"
+        ? "connection.connecting.body"
+        : kind === "retrying"
+          ? "connection.retrying.body"
+          : kind === "sessionDisconnected"
+            ? "connection.sessionDisconnected.body"
+            : kind === "standby"
+              ? "connection.standby.body"
+              : `connection.${kind}.body`;
   return (
     <aside className={styles.banner} data-kind={kind} data-testid="whatsapp-connection-banner" role="status">
-      <p className={styles.title}>{t(`connection.${kind}.title`)}</p>
-      <p className={styles.copy}>{t(`connection.${kind}.body`)}</p>
+      <p className={styles.title}>{t(titleKey)}</p>
+      <p className={styles.copy}>{t(bodyKey)}</p>
     </aside>
   );
 }

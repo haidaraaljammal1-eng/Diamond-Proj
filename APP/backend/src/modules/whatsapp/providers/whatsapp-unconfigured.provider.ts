@@ -1,15 +1,22 @@
+import { env } from "src/config/env";
+import { ULTRAMSG_CAPABILITIES, UNCONFIGURED_CAPABILITIES } from "src/modules/whatsapp/whatsapp.capabilities";
 import type {
   WhatsAppAccessCredential,
   WhatsAppGrantedPhone,
   WhatsAppGrantedWaba,
   WhatsAppInspectedAccess,
+  WhatsAppInstanceIdentity,
+  WhatsAppInstanceSettings,
   WhatsAppMediaBytes,
   WhatsAppMediaMetadata,
   WhatsAppProvider,
   WhatsAppProviderResult,
   WhatsAppProviderTemplate,
+  WhatsAppQrPayload,
   WhatsAppSendMediaInput,
+  WhatsAppSendOutboundMediaInput,
   WhatsAppSendTemplateInput,
+  WhatsAppSessionSnapshot,
   WhatsAppUploadMediaInput,
 } from "src/modules/whatsapp/whatsapp.types";
 
@@ -23,6 +30,41 @@ function notConfigured<T>(): WhatsAppProviderResult<T> {
 export class WhatsAppUnconfiguredProvider implements WhatsAppProvider {
   readonly name = "none";
   readonly configured = false;
+
+  capabilities() {
+    if (env.WHATSAPP_PROVIDER === "ULTRAMSG") {
+      return {
+        ...ULTRAMSG_CAPABILITIES,
+        supportsFreeText: false,
+        supportsImage: false,
+        supportsDocument: false,
+        supportsAudio: false,
+        supportsVideo: false,
+      };
+    }
+    return UNCONFIGURED_CAPABILITIES;
+  }
+
+  async getSession(): Promise<WhatsAppProviderResult<WhatsAppSessionSnapshot>> {
+    return notConfigured();
+  }
+  async getInstanceIdentity(): Promise<WhatsAppProviderResult<WhatsAppInstanceIdentity>> {
+    return notConfigured();
+  }
+  async getInstanceSettings(): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>> {
+    return notConfigured();
+  }
+  async getQr(): Promise<WhatsAppProviderResult<WhatsAppQrPayload>> {
+    return notConfigured();
+  }
+  async applyWebhookSettings(): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>> {
+    return notConfigured();
+  }
+  async sendOutboundMedia(
+    _input?: WhatsAppSendOutboundMediaInput,
+  ): Promise<WhatsAppProviderResult<{ providerMessageId: string }>> {
+    return notConfigured();
+  }
 
   async exchangeAuthorizationCode(
     _code?: string,

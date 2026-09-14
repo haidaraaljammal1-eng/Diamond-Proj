@@ -1,6 +1,55 @@
-# WhatsApp Backend — Final (Phases 1–10)
+# WhatsApp Backend — Final (Phases 1–10) + UltraMsg provider
 
-Diamond WhatsApp is **manual staff communication only**. No AI, chatbot, auto-reply, campaigns, bulk/broadcast, scheduled send, automatic Customer create/update, or fake Meta success.
+Diamond WhatsApp is **manual staff communication only**. No AI, chatbot, auto-reply, campaigns, bulk/broadcast, scheduled send, automatic Customer create/update, or fake Meta/UltraMsg success.
+
+## Active provider (this deployment)
+
+- **Current operational provider:** UltraMsg
+- **Test instance id:** `instance191564`
+- **API base URL:** `https://api.ultramsg.com/instance191564`
+- Token: server-only `ULTRAMSG_TOKEN`. Never in frontend, OpenAPI, docs, logs, AuditLog, or DTOs. There is no `NEXT_PUBLIC_ULTRAMSG_TOKEN`.
+
+The Inbox, conversations, messages, unread, SSE/outbox, customer link, and permissions are **unchanged**. This migration replaces the **provider-specific** connection, send, webhook, and composer-eligibility layer.
+
+Meta Cloud API code remains in-tree (`MetaCloudWhatsAppProvider`) for future reuse. It is not the active runtime when `WHATSAPP_PROVIDER=ULTRAMSG`.
+
+### Provider capabilities (UltraMsg V1)
+
+`supportsQrAuthentication=true`, `supportsEmbeddedSignup=false`, `supportsFreeText=true`, `supportsTemplates=false`, `requiresCustomerServiceWindow=false`, image/document/audio/video=true, provider read receipt exists but Diamond does **not** auto-call `/chats/read`. Frontend derives UI from `connection.capabilities`, not scattered `if provider === ULTRAMSG`.
+
+### Session status
+
+UltraMsg `initialize|qr|retrying|loading|authenticated|disconnected|standby` maps to Diamond `INITIALIZING|QR_REQUIRED|RETRYING|LOADING|AUTHENTICATED|DISCONNECTED|STANDBY|UNKNOWN`. Only **AUTHENTICATED** is send-ready. Diamond never relies on UltraMsg’s “queue while unauthorized” behavior: if the session is not authenticated, `/messages/*` is not called (`WHATSAPP_PROVIDER_NOT_AUTHENTICATED` / `WHATSAPP_QR_REQUIRED`).
+
+### Connection
+
+Additive columns only: `providerInstanceId`, `providerApiUrl`, `providerSessionStatus`, `providerSessionCheckedAt`, `webhookCallbackCiphertext`. Token stays in encrypted `credentialCiphertext`. Meta `wabaId` / `phoneNumberId` remain nullable for historical rows.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/whatsapp/connection/bootstrap` | Server-side UltraMsg env bootstrap (`whatsapp.manage_connection`). Validates `/instance/status` + `/instance/me`, encrypts token, retires previous active connection without delete. |
+| `GET` | `/whatsapp/connection/qr` | Sanitized QR for Manage WhatsApp. `whatsapp.manage_connection` only. Never logged or stored in localStorage. Empty when already authenticated. Does **not** call `/instance/clear`. |
+| `POST` | `/whatsapp/connection/webhook/activate` | Provider-aware. UltraMsg: GET settings → preserve `sendDelay`/`sendDelayMax` → set webhook fields only → verify. Requires public `PUBLIC_BACKEND_URL` (https, not localhost) **and** `ULTRAMSG_CONFIGURE_WEBHOOK=true`. |
+
+### UltraMsg webhook
+
+`POST /whatsapp/webhooks/ultramsg/:callbackKey` — public, no JWT, **not** Meta HMAC. Compensating controls: high-entropy callback key (path), constant-time compare, instanceId match, JSON size limit, rate limit, schema validation, hash/event-key idempotency. **This is not provider HMAC authentication.**
+
+Events: `message_received` → inbound Conversation/Message; `message_create` → reconcile outbound `providerMessageId` (no duplicate bubble); `message_ack` → monotonic SENT/DELIVERED/READ (`pending` safe, `server`→SENT, `device`→DELIVERED, `read`/`played`→READ). Groups (`@g.us`) persist `IGNORED` (`ULTRAMSG_GROUP_NOT_SUPPORTED`) and never appear in Inbox. 1:1 identity is exact `number@c.us` (`providerChatId`); match digits strip only `@c.us`. No Customer auto-create/link.
+
+### Outbound
+
+Text: `POST /messages/chat` form `to`+`body` (max 4096). Recipient from persisted `providerChatId`. Media: `/messages/image|document|audio|video` with **base64** (no public unauthenticated file URL). Limits: image/audio 16MB, video 32MB, document 30MB, caption 1024, filename 255, intersected with Diamond `MAX_UPLOAD_SIZE`. HTTP 200 ≠ SENT (`ACCEPTED` only). No POST retry. UNKNOWN has no auto-resend.
+
+Optional `/chats` history import is **not** implemented (schema not live-verified). Diamond PostgreSQL remains Inbox source of truth.
+
+### Live gates
+
+- Webhook mutate: only if `PUBLIC_BACKEND_URL` is public HTTPS **and** `ULTRAMSG_CONFIGURE_WEBHOOK=true`.
+- Live outbound: only if `ULTRAMSG_TEST_RECIPIENT` is set. Never pick a recipient from existing chats.
+- Destructive UltraMsg APIs (`/instance/clear`, logout, restart, chat/message delete) are forbidden in application code.
+
+Historical Meta phases remain documented below. UltraMsg is the active operational provider.
 
 - **Phase 1:** secure office connection (credentials / WABA / phone).
 - **Phase 2:** secure Meta webhook ingress (verify, signature, route, idempotent store).

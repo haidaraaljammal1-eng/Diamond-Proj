@@ -2030,7 +2030,9 @@
         "WEBHOOK_NOT_ACTIVE": "مزامنة الرسائل الواردة غير مفعلة بعد.",
         "CUSTOMER_SERVICE_WINDOW_CLOSED": "انتهت نافذة خدمة العميل لمدة 24 ساعة، ولا يمكن إرسال رسائل نصية حرة. يمكنك إرسال قالب معتمد.",
         "CUSTOMER_SERVICE_WINDOW_UNKNOWN": "تعذر التحقق من نافذة خدمة العميل، لذلك لا يمكن إرسال رسائل نصية حرة.",
-        "PROVIDER_NOT_CONFIGURED": "مراسلة واتساب غير مُعدّة."
+        "PROVIDER_NOT_CONFIGURED": "مراسلة واتساب غير مُعدّة.",
+        "PROVIDER_NOT_AUTHENTICATED": "اتصال واتساب غير جاهز حالياً.",
+        "QR_REQUIRED": "امسح رمز QR لربط واتساب."
       }
     },
     "message": {
@@ -2081,6 +2083,26 @@
         "title": "خطأ في الاتصال",
         "body": "أبلغ اتصال واتساب عن خطأ. المحادثات الحالية تبقى متاحة."
       },
+      "qrRequired": {
+        "title": "امسح رمز QR",
+        "body": "امسح رمز QR لربط واتساب."
+      },
+      "connecting": {
+        "title": "جارٍ الاتصال…",
+        "body": "واتساب يتصل الآن. الإرسال متوقف حتى يصبح الجلسة جاهزة."
+      },
+      "retrying": {
+        "title": "جارٍ إعادة الاتصال…",
+        "body": "واتساب يعيد الاتصال. الإرسال متوقف حتى تصبح الجلسة جاهزة."
+      },
+      "sessionDisconnected": {
+        "title": "واتساب غير متصل",
+        "body": "جلسة واتساب غير متصلة. امسح رمز QR مرة أخرى من إدارة واتساب."
+      },
+      "standby": {
+        "title": "واتساب في وضع الانتظار",
+        "body": "جلسة واتساب في وضع الانتظار وليست جاهزة للإرسال."
+      },
       "status": {
         "disconnected": "لا يوجد اتصال",
         "LINKING": "جاري ربط الحساب",
@@ -2105,7 +2127,9 @@
       "read": "قراءة محاكاة",
       "disconnected": "غير مرتبط",
       "linked": "مرتبط",
-      "webhookActive": "Webhook مفعّل"
+      "webhookActive": "Webhook مفعّل",
+      "qrRequired": "امسح QR",
+      "retrying": "إعادة الاتصال"
     },
     "realtime": {
       "live": "مباشر",
@@ -2135,7 +2159,12 @@
       "WHATSAPP_TEMPLATE_PARAMETERS_INVALID": "أدخل كل متغيرات القالب المطلوبة.",
       "WHATSAPP_EMBEDDED_SIGNUP_NOT_CONFIGURED": "تسجيل واتساب المضمّن غير مُعد.",
       "WHATSAPP_CUSTOMER_MATCH_AMBIGUOUS": "عدة عملاء يطابقون هذا الرقم. اختر يدوياً.",
-      "WHATSAPP_CUSTOMER_NOT_FOUND": "لم يتم العثور على هذا العميل."
+      "WHATSAPP_CUSTOMER_NOT_FOUND": "لم يتم العثور على هذا العميل.",
+      "WHATSAPP_PROVIDER_NOT_AUTHENTICATED": "اتصال واتساب غير جاهز حالياً.",
+      "WHATSAPP_QR_REQUIRED": "امسح رمز QR لربط واتساب.",
+      "WHATSAPP_PUBLIC_WEBHOOK_URL_REQUIRED": "يلزم عنوان خلفية HTTPS عام لتفعيل الويب هوك.",
+      "ULTRAMSG_WEBHOOK_SETUP_FAILED": "تعذر إكمال إعداد ويب هوك واتساب.",
+      "WHATSAPP_QR_UNAVAILABLE": "رمز QR لواتساب غير متاح."
     },
     "templates": {
       "title": "القوالب المعتمدة",
@@ -2165,7 +2194,11 @@
       "completeSetup": "إكمال الإعداد",
       "disconnect": "فصل",
       "disconnectConfirm": "سيتوقف دايموند عن استخدام هذا الربط. المحادثات التاريخية تبقى. هذا لا يحذف الرقم من ميتا.",
-      "changeAccountConfirm": "الرسائل القادمة ستستخدم الحساب الجديد. المحادثات التاريخية تبقى على الربط السابق."
+      "changeAccountConfirm": "الرسائل القادمة ستستخدم الحساب الجديد. المحادثات التاريخية تبقى على الربط السابق.",
+      "providerUltraMsg": "المزوّد: UltraMsg",
+      "showQr": "عرض رمز QR",
+      "qrHint": "امسح رمز QR لربط واتساب.",
+      "qrLoading": "جارٍ تحميل رمز QR…"
     },
     "customer": {
       "linked": "عميل مرتبط",

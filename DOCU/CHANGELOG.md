@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-14
+
+- WhatsApp operational provider migrated from Meta Cloud API to UltraMsg (`instance191564`) without rebuilding Inbox. Additive Prisma fields, capability-driven UI, QR connection management, isolated UltraMsg webhook (callback-key compensating control, not HMAC), ACK mapping, no 24h/template gating, no provider queue-while-offline sends. Meta implementation retained inactive. Live webhook/send gated on public URL + explicit env. Token never documented. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+
 ## 2026-09-13
 
 - WhatsApp final completion: approved templates, authenticated media proxy + outbound image/document/audio/video, Embedded Signup / webhook activate in Inbox Manage WhatsApp, optional explicit Customer match/link (`whatsapp.link_customer`). Manual office communication only. On-demand media proxy (no Attachment archive). Live Meta verification still deferred. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.

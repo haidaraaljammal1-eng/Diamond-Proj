@@ -1,11 +1,14 @@
 import { WHATSAPP_MAX_PHONE_PAGES, WHATSAPP_MAX_WABAS } from "src/modules/whatsapp/whatsapp.constants";
 import { normalizeProviderTemplate } from "src/modules/whatsapp/whatsapp.templates";
+import { META_CLOUD_CAPABILITIES } from "src/modules/whatsapp/whatsapp.capabilities";
 import type {
   GraphHttp,
   WhatsAppAccessCredential,
   WhatsAppGrantedPhone,
   WhatsAppGrantedWaba,
   WhatsAppInspectedAccess,
+  WhatsAppInstanceIdentity,
+  WhatsAppInstanceSettings,
   WhatsAppMediaBytes,
   WhatsAppMediaMetadata,
   WhatsAppMetaRuntimeConfig,
@@ -13,9 +16,12 @@ import type {
   WhatsAppProviderFailure,
   WhatsAppProviderResult,
   WhatsAppProviderTemplate,
+  WhatsAppQrPayload,
   WhatsAppSendMediaInput,
+  WhatsAppSendOutboundMediaInput,
   WhatsAppSendTemplateInput,
   WhatsAppSendTextAccepted,
+  WhatsAppSessionSnapshot,
   WhatsAppUploadMediaInput,
 } from "src/modules/whatsapp/whatsapp.types";
 
@@ -108,6 +114,46 @@ export class MetaCloudWhatsAppProvider implements WhatsAppProvider {
     private readonly cfg: WhatsAppMetaRuntimeConfig,
     private readonly http: GraphHttp = { getJson: defaultGetJson, postJson: defaultPostJson },
   ) {}
+
+  capabilities() {
+    return META_CLOUD_CAPABILITIES;
+  }
+
+  async getSession(): Promise<WhatsAppProviderResult<WhatsAppSessionSnapshot>> {
+    return { ok: false, code: "NOT_CONFIGURED" };
+  }
+  async getInstanceIdentity(): Promise<WhatsAppProviderResult<WhatsAppInstanceIdentity>> {
+    return { ok: false, code: "NOT_CONFIGURED" };
+  }
+  async getInstanceSettings(): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>> {
+    return { ok: false, code: "NOT_CONFIGURED" };
+  }
+  async getQr(): Promise<WhatsAppProviderResult<WhatsAppQrPayload>> {
+    return { ok: false, code: "NOT_CONFIGURED" };
+  }
+  async applyWebhookSettings(): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>> {
+    return { ok: false, code: "NOT_CONFIGURED" };
+  }
+  async sendOutboundMedia(
+    input: WhatsAppSendOutboundMediaInput,
+  ): Promise<WhatsAppProviderResult<WhatsAppSendTextAccepted>> {
+    const uploaded = await this.uploadMedia({
+      accessToken: input.accessToken,
+      phoneNumberId: input.phoneNumberId,
+      bytes: input.bytes,
+      mimeType: input.mimeType,
+      filename: input.filename,
+    });
+    if (!uploaded.ok) return uploaded;
+    return this.sendMediaMessage({
+      accessToken: input.accessToken,
+      phoneNumberId: input.phoneNumberId,
+      toWaId: input.toChatId,
+      kind: input.kind,
+      mediaId: uploaded.value.mediaId,
+      caption: input.caption,
+    });
+  }
 
   private async getJson(
     url: string,

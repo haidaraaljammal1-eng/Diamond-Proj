@@ -11,6 +11,7 @@ import {
   WhatsAppAuthorizeResponseSchema,
   WhatsAppConnectionAttemptStartSchema,
   WhatsAppConnectionSchema,
+  WhatsAppQrSchema,
   WhatsAppSelectBodySchema,
 } from "src/modules/whatsapp/whatsapp.schema";
 
@@ -35,6 +36,45 @@ export default async function whatsappConnectionRoutes(fastify: FastifyInstance)
       },
     },
     async () => ({ data: await whatsapp.getConnection() }),
+  );
+
+  app.get(
+    "/qr",
+    {
+      schema: {
+        summary: "WhatsApp QR representation for session authentication",
+        operationId: "getWhatsAppConnectionQr",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_MANAGE_CONNECTION],
+        response: {
+          200: dataResponse(WhatsAppQrSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async () => ({ data: await whatsapp.getQr() }),
+  );
+
+  app.post(
+    "/bootstrap",
+    {
+      config: sensitiveMutationRateLimit(),
+      schema: {
+        summary: "Configure the office WhatsApp connection from server-side provider credentials",
+        operationId: "bootstrapWhatsAppConnection",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_MANAGE_CONNECTION],
+        response: {
+          200: dataResponse(WhatsAppConnectionSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const identity = requireAuth(request);
+      const data = await whatsapp.bootstrap(identity.id, (partial) => request.setAudit(partial));
+      return { data };
+    },
   );
 
   app.post(

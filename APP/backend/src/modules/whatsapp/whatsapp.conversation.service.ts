@@ -114,8 +114,15 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
   }) {
     const current = await prisma.whatsAppConnection.findFirst({
       where: { status: { in: CURRENT_STATUSES } },
-      select: { id: true, status: true, webhookStatus: true, credentialCiphertext: true },
+      select: {
+        id: true,
+        status: true,
+        webhookStatus: true,
+        credentialCiphertext: true,
+        providerSessionStatus: true,
+      },
     });
+    const provider = createWhatsAppProvider();
     return evaluateMessagingEligibility({
       conversationConnectionId: conversation.connectionId,
       lastInboundAt: conversation.lastInboundAt,
@@ -125,9 +132,11 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
             status: current.status,
             webhookStatus: current.webhookStatus,
             hasCredential: Boolean(current.credentialCiphertext),
+            providerSessionStatus: current.providerSessionStatus,
           }
         : null,
-      providerConfigured: createWhatsAppProvider().configured,
+      providerConfigured: provider.configured,
+      capabilities: provider.capabilities(),
       now: new Date(),
     });
   }

@@ -49,9 +49,9 @@ export function kindForDetectedMime(mime: string): WhatsAppOutboundMediaKind | n
   return null;
 }
 
-export function sanitizeMediaFilename(filename: string | null | undefined): string {
+export function sanitizeMediaFilename(filename: string | null | undefined, maxLength = 180): string {
   const raw = (filename ?? "file").replace(/\\/g, "/").split("/").pop() ?? "file";
-  const cleaned = raw.replace(/[^\w.\- ()[\]]+/g, "_").slice(0, 180).trim();
+  const cleaned = raw.replace(/[^\w.\- ()[\]]+/g, "_").slice(0, maxLength).trim();
   return cleaned.length > 0 ? cleaned : "file";
 }
 
@@ -75,6 +75,7 @@ export function validateOutboundMedia(input: {
   bytes: Buffer;
   declaredMime: string;
   requestedKind: string;
+  providerMaxBytes?: Partial<Record<WhatsAppOutboundMediaKind, number>>;
 }): { kind: WhatsAppOutboundMediaKind; mimeType: string } {
   if (
     !WHATSAPP_OUTBOUND_MEDIA_TYPES.includes(input.requestedKind as WhatsAppOutboundMediaKind)
@@ -88,8 +89,9 @@ export function validateOutboundMedia(input: {
   if (input.declaredMime && input.declaredMime !== detected) {
     throw whatsappError.mediaInvalidType();
   }
-  const officialMax = WHATSAPP_MEDIA_MAX_BYTES[kind];
-  const maxBytes = Math.min(officialMax, env.MAX_UPLOAD_SIZE);
+  const diamondMax = WHATSAPP_MEDIA_MAX_BYTES[kind];
+  const providerMax = input.providerMaxBytes?.[kind] ?? diamondMax;
+  const maxBytes = Math.min(diamondMax, providerMax, env.MAX_UPLOAD_SIZE);
   if (input.bytes.length === 0 || input.bytes.length > maxBytes) {
     throw whatsappError.mediaTooLarge();
   }

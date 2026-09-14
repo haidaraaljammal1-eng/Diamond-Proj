@@ -6,7 +6,35 @@ import type {
   WhatsAppMessageDto,
   WhatsAppMessageType,
   WhatsAppMessagingEligibility,
+  WhatsAppProviderCapabilities,
 } from "../types/whatsapp.types.ts";
+import { META_CLOUD_CAPABILITIES } from "../types/whatsapp.types.ts";
+
+export function connectionCapabilities(
+  connection: WhatsAppConnectionDto | null,
+): WhatsAppProviderCapabilities {
+  return connection?.capabilities ?? META_CLOUD_CAPABILITIES;
+}
+
+export function connectionBanner(connection: WhatsAppConnectionDto | null): WhatsAppConnectionBanner {
+  if (!connection || connection.status === "DISCONNECTED") return "disconnected";
+  if (connection.status === "REAUTH_REQUIRED") return "reauth";
+  if (connection.status === "ERROR") return "error";
+  const caps = connectionCapabilities(connection);
+  if (caps.supportsQrAuthentication) {
+    const session = connection.providerSessionStatus;
+    if (session === "QR_REQUIRED") return "qrRequired";
+    if (session === "LOADING" || session === "INITIALIZING") return "connecting";
+    if (session === "RETRYING") return "retrying";
+    if (session === "DISCONNECTED") return "sessionDisconnected";
+    if (session === "STANDBY") return "standby";
+    if (session === "AUTHENTICATED" && connection.webhookStatus === "ACTIVE") return "none";
+    if (session === "AUTHENTICATED") return "webhookInactive";
+    return "connecting";
+  }
+  if (connection.webhookStatus !== "ACTIVE") return "webhookInactive";
+  return "none";
+}
 
 export function conversationTitle(
   customerDisplayName: string | null | undefined,
@@ -33,14 +61,6 @@ export function lastMessagePreviewKind(
   const text = preview?.trim();
   if (text) return { kind: "text", text };
   return { kind: type ?? "UNKNOWN" };
-}
-
-export function connectionBanner(connection: WhatsAppConnectionDto | null): WhatsAppConnectionBanner {
-  if (!connection || connection.status === "DISCONNECTED") return "disconnected";
-  if (connection.status === "REAUTH_REQUIRED") return "reauth";
-  if (connection.status === "ERROR") return "error";
-  if (connection.webhookStatus !== "ACTIVE") return "webhookInactive";
-  return "none";
 }
 
 export function isCurrentConnectionLinked(connection: WhatsAppConnectionDto | null): boolean {

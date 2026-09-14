@@ -41,6 +41,7 @@ import {
 } from "../simulation/whatsapp-simulation.fixture.ts";
 import { blankWhatsAppMessageFields } from "./whatsapp-view-model.ts";
 import type { WhatsAppConnectionDto, WhatsAppMessageDto } from "../types/whatsapp.types.ts";
+import { META_CLOUD_CAPABILITIES } from "../types/whatsapp.types.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const moduleDir = join(here, "..");
@@ -98,6 +99,8 @@ const disconnected: WhatsAppConnectionDto = {
   lastValidatedAt: null,
   webhookStatus: "NOT_CONFIGURED",
   lastWebhookAt: null,
+  providerSessionStatus: null,
+  capabilities: META_CLOUD_CAPABILITIES,
 };
 
 describe("whatsapp.read permission", () => {
@@ -558,33 +561,31 @@ describe("manual outbound send UX", () => {
 
   it("includes open and closed simulation windows and stays frontend-only", () => {
     const fixture = buildWhatsAppSimulationInbox();
-    const closed = Object.values(fixture.details).filter(
-      (item) => item.messagingEligibility.reason === "CUSTOMER_SERVICE_WINDOW_CLOSED",
-    );
     const open = Object.values(fixture.details).filter((item) => item.messagingEligibility.canSendText);
-    assert.ok(closed.length >= 1);
     assert.ok(open.length >= 1);
+    assert.equal(fixture.connection.capabilities.requiresCustomerServiceWindow, false);
     const simStore = readFileSync(join(moduleDir, "simulation/whatsapp-simulation.store.ts"), "utf8");
     assert.match(simStore, /sim-wa-send-|WHATSAPP_SIMULATION_ID_PREFIX/);
     assert.match(simStore, /sendState: "ACCEPTED"/);
     assert.doesNotMatch(simStore, /providerStatus: "SENT"/);
+    assert.match(simStore, /QR_REQUIRED/);
   });
 });
 
 describe("final Inbox UX", () => {
   it("keeps closed-window free text off and template action available", () => {
     const fixture = buildWhatsAppSimulationInbox();
-    const closed = Object.values(fixture.details).find(
-      (item) => item.messagingEligibility.reason === "CUSTOMER_SERVICE_WINDOW_CLOSED",
+    assert.equal(fixture.connection.capabilities.supportsTemplates, false);
+    assert.equal(fixture.connection.capabilities.requiresCustomerServiceWindow, false);
+    assert.ok(
+      Object.values(fixture.details).every((item) => item.messagingEligibility.canSendTemplate === false),
     );
-    assert.ok(closed);
-    assert.equal(closed?.messagingEligibility.canSendText, false);
-    assert.equal(closed?.messagingEligibility.canSendMedia, false);
-    assert.equal(closed?.messagingEligibility.canSendTemplate, true);
     const composer = readFileSync(join(moduleDir, "components/composer/composer.tsx"), "utf8");
     assert.match(composer, /whatsapp-use-template/);
     assert.match(composer, /canSendTemplate/);
     assert.match(composer, /whatsapp-attach/);
+    assert.match(composer, /PROVIDER_NOT_AUTHENTICATED/);
+    assert.match(composer, /QR_REQUIRED/);
   });
 
   it("lists only sendable templates and keeps unapproved ones out of send", () => {
@@ -630,11 +631,14 @@ describe("final Inbox UX", () => {
     const settings = readFileSync(join(moduleDir, "components/connection-settings/connection-settings.tsx"), "utf8");
     assert.match(screen, /hasManageConnectionPermission/);
     assert.match(screen, /manage\.button/);
+    assert.match(settings, /bootstrapWhatsAppConnection/);
+    assert.match(settings, /supportsEmbeddedSignup/);
+    assert.match(settings, /supportsQrAuthentication/);
     assert.match(settings, /startWhatsAppConnectionAttempt/);
     assert.match(settings, /WHATSAPP_EMBEDDED_SIGNUP_NOT_CONFIGURED/);
-    assert.match(settings, /response_type: "code"/);
     assert.match(settings, /activateWhatsAppWebhook/);
     assert.match(settings, /changeAccountConfirm/);
+    assert.match(settings, /whatsapp-qr-dialog/);
     assert.doesNotMatch(settings, /localStorage/);
     assert.doesNotMatch(settings, /sessionStorage/);
   });

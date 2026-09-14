@@ -6,9 +6,12 @@ import { WHATSAPP_MESSAGE_PREVIEW_MAX } from "src/modules/whatsapp/whatsapp.cons
 
 const TYPE_MAP: Record<string, WhatsAppMessageType> = {
   text: "TEXT",
+  chat: "TEXT",
   image: "IMAGE",
   document: "DOCUMENT",
   audio: "AUDIO",
+  ptt: "AUDIO",
+  voice: "AUDIO",
   video: "VIDEO",
   location: "LOCATION",
   contacts: "CONTACTS",

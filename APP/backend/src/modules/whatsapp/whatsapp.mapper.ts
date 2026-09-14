@@ -1,5 +1,7 @@
 import type { Prisma, WhatsAppConnection, User } from "@prisma/client";
-import { WHATSAPP_PROTECTED_MEDIA_TYPES, WHATSAPP_PROVIDER } from "src/modules/whatsapp/whatsapp.constants";
+import { WHATSAPP_PROTECTED_MEDIA_TYPES } from "src/modules/whatsapp/whatsapp.constants";
+import { createWhatsAppProvider } from "src/modules/whatsapp/whatsapp.provider";
+import type { WhatsAppProviderCapabilities } from "src/modules/whatsapp/whatsapp.capabilities";
 import type {
   WhatsAppConnectionDto,
   WhatsAppConversationDetailDto,
@@ -14,6 +16,7 @@ export function toConnectionDto(
     | (Pick<
         WhatsAppConnection,
         | "status"
+        | "provider"
         | "displayPhoneNumber"
         | "verifiedName"
         | "businessAccountName"
@@ -21,13 +24,15 @@ export function toConnectionDto(
         | "lastValidatedAt"
         | "webhookStatus"
         | "lastWebhookAt"
+        | "providerSessionStatus"
       > & { connectedBy?: Pick<User, "id" | "name"> | null })
     | null,
+  capabilities: WhatsAppProviderCapabilities = createWhatsAppProvider().capabilities(),
 ): WhatsAppConnectionDto {
   if (!row) {
     return {
       status: "DISCONNECTED",
-      provider: WHATSAPP_PROVIDER,
+      provider: capabilities.provider === "ULTRAMSG" ? "ULTRAMSG" : "META_CLOUD_API",
       displayPhoneNumber: null,
       verifiedName: null,
       businessAccountName: null,
@@ -36,11 +41,13 @@ export function toConnectionDto(
       lastValidatedAt: null,
       webhookStatus: "NOT_CONFIGURED",
       lastWebhookAt: null,
+      providerSessionStatus: null,
+      capabilities,
     };
   }
   return {
     status: row.status,
-    provider: WHATSAPP_PROVIDER,
+    provider: row.provider,
     displayPhoneNumber: row.displayPhoneNumber,
     verifiedName: row.verifiedName,
     businessAccountName: row.businessAccountName,
@@ -49,6 +56,8 @@ export function toConnectionDto(
     lastValidatedAt: row.lastValidatedAt,
     webhookStatus: row.webhookStatus,
     lastWebhookAt: row.lastWebhookAt,
+    providerSessionStatus: row.providerSessionStatus,
+    capabilities,
   };
 }
 
@@ -139,7 +148,13 @@ function asDisplayPayload(value: Prisma.JsonValue | null | undefined) {
     contacts?: WhatsAppMessageDto["contacts"];
     reaction?: WhatsAppMessageDto["reaction"];
     interactive?: WhatsAppMessageDto["interactive"];
+    mediaUrl?: unknown;
   };
+}
+
+function hasStoredMediaUrl(value: Prisma.JsonValue | null | undefined): boolean {
+  const payload = asDisplayPayload(value);
+  return typeof payload?.mediaUrl === "string" && /^https?:\/\//i.test(payload.mediaUrl);
 }
 
 export function toMessageDto(row: {
@@ -174,7 +189,8 @@ export function toMessageDto(row: {
     mediaFilename: row.mediaFilename ?? null,
     mediaMimeType: row.mediaMimeType ?? null,
     mediaSizeBytes: row.mediaSizeBytes ?? null,
-    hasProtectedMedia: Boolean(row.providerMediaId) && protectedType,
+    hasProtectedMedia:
+      protectedType && (Boolean(row.providerMediaId) || hasStoredMediaUrl(row.displayPayload)),
     templateName: row.templateName ?? null,
     templateLanguage: row.templateLanguage ?? null,
     templatePreview: row.templatePreview ?? null,

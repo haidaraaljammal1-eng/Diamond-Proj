@@ -1,5 +1,8 @@
+import { env } from "src/config/env";
 import { isWhatsAppMetaConfigured, whatsappMetaConfig } from "src/modules/whatsapp/whatsapp.config";
+import { isUltraMsgConfigured } from "src/modules/whatsapp/ultramsg.config";
 import { MetaCloudWhatsAppProvider } from "src/modules/whatsapp/providers/meta-cloud-api.provider";
+import { createUltraMsgWhatsAppProvider } from "src/modules/whatsapp/providers/ultramsg.provider";
 import { WhatsAppUnconfiguredProvider } from "src/modules/whatsapp/providers/whatsapp-unconfigured.provider";
 import type { WhatsAppProvider } from "src/modules/whatsapp/whatsapp.types";
 
@@ -22,6 +25,10 @@ export function createWhatsAppProvider(): WhatsAppProvider {
       return new WhatsAppUnconfiguredProvider();
     }
     return testOverride;
+  }
+  if (env.WHATSAPP_PROVIDER === "ULTRAMSG") {
+    if (isUltraMsgConfigured()) return createUltraMsgWhatsAppProvider();
+    return new WhatsAppUnconfiguredProvider();
   }
   if (isWhatsAppMetaConfigured()) {
     return new MetaCloudWhatsAppProvider(whatsappMetaConfig());

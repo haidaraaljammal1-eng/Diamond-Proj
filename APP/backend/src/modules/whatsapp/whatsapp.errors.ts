@@ -50,6 +50,13 @@ export const WhatsAppErrorReason = {
   EMBEDDED_SIGNUP_NOT_CONFIGURED: "WHATSAPP_EMBEDDED_SIGNUP_NOT_CONFIGURED",
   CUSTOMER_MATCH_AMBIGUOUS: "WHATSAPP_CUSTOMER_MATCH_AMBIGUOUS",
   CUSTOMER_NOT_FOUND: "WHATSAPP_CUSTOMER_NOT_FOUND",
+  PROVIDER_NOT_AUTHENTICATED: "WHATSAPP_PROVIDER_NOT_AUTHENTICATED",
+  QR_REQUIRED: "WHATSAPP_QR_REQUIRED",
+  PUBLIC_WEBHOOK_URL_REQUIRED: "WHATSAPP_PUBLIC_WEBHOOK_URL_REQUIRED",
+  WEBHOOK_CALLBACK_INVALID: "WHATSAPP_WEBHOOK_CALLBACK_INVALID",
+  GROUP_NOT_SUPPORTED: "ULTRAMSG_GROUP_NOT_SUPPORTED",
+  QR_UNAVAILABLE: "WHATSAPP_QR_UNAVAILABLE",
+  WEBHOOK_SETUP_FAILED: "ULTRAMSG_WEBHOOK_SETUP_FAILED",
 } as const;
 
 const R = WhatsAppErrorReason;
@@ -226,4 +233,28 @@ export const whatsappError = {
     ),
   customerNotFound: () =>
     err(ErrorCode.NOT_FOUND, "Diamond customer was not found", R.CUSTOMER_NOT_FOUND),
+  providerNotAuthenticated: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "WhatsApp provider session is not authenticated",
+      R.PROVIDER_NOT_AUTHENTICATED,
+    ),
+  qrRequired: () =>
+    err(ErrorCode.CONFLICT, "Scan the QR code to connect WhatsApp", R.QR_REQUIRED),
+  publicWebhookUrlRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A public HTTPS backend URL is required to configure the WhatsApp webhook",
+      R.PUBLIC_WEBHOOK_URL_REQUIRED,
+    ),
+  webhookCallbackInvalid: () =>
+    err(ErrorCode.FORBIDDEN, "WhatsApp webhook callback was rejected", R.WEBHOOK_CALLBACK_INVALID),
+  qrUnavailable: () =>
+    err(ErrorCode.CONFLICT, "WhatsApp QR code is not available", R.QR_UNAVAILABLE),
+  webhookSetupFailed: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "WhatsApp webhook setup could not be completed",
+      "ULTRAMSG_WEBHOOK_SETUP_FAILED",
+    ),
 };
