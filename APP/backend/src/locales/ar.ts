@@ -247,4 +247,30 @@ export const ar: Record<string, string> = {
   "Payment attempt was not found": "محاولة الدفع غير موجودة",
   "Payment status token is invalid": "رمز حالة الدفع غير صالح",
   "Payment status token has expired": "انتهت صلاحية رمز حالة الدفع",
+
+  "WhatsApp provider is not configured": "مزود واتساب غير مُعدّ",
+  "WhatsApp connection attempt has expired": "انتهت صلاحية محاولة ربط واتساب",
+  "WhatsApp connection attempt has already been used": "تم استخدام محاولة ربط واتساب مسبقاً",
+  "WhatsApp provider authorization failed": "فشل تفويض مزود واتساب",
+  "Selected WhatsApp Business Account was not granted by Meta":
+    "حساب واتساب للأعمال المحدد لم يُمنح من ميتا",
+  "Selected WhatsApp phone number was not granted by Meta":
+    "رقم واتساب المحدد لم يُمنح من ميتا",
+  "WhatsApp connection could not be validated": "تعذر التحقق من ربط واتساب",
+  "WhatsApp connection was not found": "ربط واتساب غير موجود",
+  "WhatsApp connection was changed by another request": "تم تغيير ربط واتساب بواسطة طلب آخر",
+  "WhatsApp connection attempt was not found": "محاولة ربط واتساب غير موجودة",
+  "WhatsApp conversation was not found": "محادثة واتساب غير موجودة",
+  "WhatsApp conversation is not on the active office connection":
+    "هذه المحادثة ليست على ربط واتساب النشط للمكتب",
+  "WhatsApp inbound webhook is not active": "Webhook الوارد لواتساب غير مفعّل",
+  "The 24-hour WhatsApp customer service window has ended":
+    "انتهت نافذة خدمة العميل لمدة 24 ساعة",
+  "WhatsApp customer service window cannot be verified":
+    "تعذر التحقق من نافذة خدمة العميل في واتساب",
+  "WhatsApp provider rejected the message": "رفض مزود واتساب الرسالة",
+  "WhatsApp send outcome is uncertain": "حالة إرسال واتساب غير مؤكدة",
+  "WhatsApp send was rate limited": "تم تقييد معدل إرسال واتساب",
+  "WhatsApp send authorization failed": "فشل تفويض إرسال واتساب",
+  "WhatsApp message text is invalid": "نص رسالة واتساب غير صالح",
 };

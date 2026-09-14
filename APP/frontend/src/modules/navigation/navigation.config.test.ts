@@ -57,7 +57,9 @@ describe("navigation config — sidebar cleanup", () => {
       ],
     );
     assert.equal(keys.includes("operations"), false);
-    assert.equal(hrefs.includes("/operations"), false);
+    assert.doesNotMatch(config, /badge:\s*3/);
+    assert.match(config, /href:\s*"\/whatsapp"/);
+    assert.match(config, /permission:\s*"whatsapp.read"/);
     assert.doesNotMatch(config, /\/operations/);
     assert.doesNotMatch(icons, /operations:/);
     assert.doesNotMatch(types, /"operations"/);
@@ -72,6 +74,7 @@ describe("navigation config — sidebar cleanup", () => {
           "/finance",
           "/invoices",
           "/contracts",
+          "/whatsapp",
         ].includes(href),
       ),
       [
@@ -83,6 +86,7 @@ describe("navigation config — sidebar cleanup", () => {
         "/finance",
         "/invoices",
         "/contracts",
+        "/whatsapp",
       ],
     );
   });
@@ -133,6 +137,8 @@ describe("sidebar / shell copy", () => {
     assert.equal(ar.navigation.invoices, "الفواتير");
     assert.equal(en.navigation.contracts, "Contracts");
     assert.equal(ar.navigation.contracts, "العقود");
+    assert.equal(en.navigation.chats, "WhatsApp");
+    assert.equal(ar.navigation.chats, "واتساب");
   });
 
   it("removes the New Contract shortcut and sidebar status block from the rail", () => {

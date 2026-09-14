@@ -85,6 +85,12 @@ export const PERMISSIONS = {
 
   GPS_READ: "gps.read",
 
+  // Office WhatsApp: connection, Inbox read, send, optional Customer link. Permissions stay separate.
+  WHATSAPP_MANAGE_CONNECTION: "whatsapp.manage_connection",
+  WHATSAPP_READ: "whatsapp.read",
+  WHATSAPP_SEND: "whatsapp.send",
+  WHATSAPP_LINK_CUSTOMER: "whatsapp.link_customer",
+
   VIOLATIONS_READ: "violations.read",
   VIOLATIONS_CHARGE: "violations.charge",
 
@@ -325,6 +331,26 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     key: PERMISSIONS.GPS_READ,
     category: "gps",
     description: "View GPS Operations summary, vehicle tracking, and map points",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_MANAGE_CONNECTION,
+    category: "whatsapp",
+    description: "Link, change, or disconnect the office WhatsApp Cloud API connection",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_READ,
+    category: "whatsapp",
+    description: "View WhatsApp conversations and messages, and mark conversations read internally",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_SEND,
+    category: "whatsapp",
+    description: "Send manual WhatsApp text, approved templates, and permitted media in an existing conversation",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_LINK_CUSTOMER,
+    category: "whatsapp",
+    description: "Explicitly link or unlink a WhatsApp conversation to a Diamond Customer",
   },
   {
     key: PERMISSIONS.VIOLATIONS_READ,

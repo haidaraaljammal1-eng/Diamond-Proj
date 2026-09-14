@@ -45,3 +45,30 @@ export function authRateLimit() {
     },
   };
 }
+
+/**
+ * Stricter than the global limiter, looser than login. Used for authenticated
+ * security-sensitive mutations (WhatsApp linking) that still need a few
+ * sequential steps (start → authorize → select).
+ */
+export function sensitiveMutationRateLimit() {
+  return {
+    rateLimit: {
+      max: Math.max(env.RATE_LIMIT_AUTH_MAX * 4, 20),
+      timeWindow: env.RATE_LIMIT_AUTH_WINDOW,
+    },
+  };
+}
+
+/**
+ * Manual staff WhatsApp send. One conversation per request — not a marketing cap.
+ * Higher than linking because a desk may send several replies in one minute.
+ */
+export function whatsappSendRateLimit() {
+  return {
+    rateLimit: {
+      max: Math.max(env.RATE_LIMIT_AUTH_MAX * 12, 60),
+      timeWindow: env.RATE_LIMIT_AUTH_WINDOW,
+    },
+  };
+}

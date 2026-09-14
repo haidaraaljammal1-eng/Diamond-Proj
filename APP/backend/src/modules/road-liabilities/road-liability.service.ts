@@ -106,7 +106,7 @@ function maybeWriteChargeableOutbox(
       currency: liability.currency,
       occurredAt: liability.occurredAt.toISOString(),
     },
-  });
+  }).then(() => undefined);
 }
 
 export function createRoadLiabilityService(fastify: FastifyInstance) {

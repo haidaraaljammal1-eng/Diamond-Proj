@@ -33,7 +33,7 @@
     "finance": "المالية",
     "invoices": "الفواتير",
     "contracts": "العقود",
-    "chats": "واتساب المكتب",
+    "chats": "واتساب",
     "team": "الموظفون",
     "roles": "الأدوار والصلاحيات"
   },
@@ -1967,6 +1967,217 @@
       "FINANCE_EXPENSE_NO_CHANGES": "لا توجد تغييرات للحفظ.",
       "FINANCE_EXPENSE_NOT_ACTIVE": "لا يمكن تصحيح مصروف ملغى.",
       "FINANCE_EXPENSE_NOT_FOUND": "تعذر العثور على هذا المصروف."
+    }
+  },
+  "WhatsApp": {
+    "crumbs": "العمليات · واتساب",
+    "title": "واتساب",
+    "subtitle": "محادثات المكتب من رقم WhatsApp Business المرتبط.",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
+    "denied": {
+      "title": "الوصول إلى واتساب غير متاح",
+      "description": "هذه الصفحة تتطلب صلاحية whatsapp.read."
+    },
+    "list": {
+      "title": "المحادثات",
+      "loading": "جاري تحميل المحادثات",
+      "loadMore": "تحميل المزيد"
+    },
+    "search": {
+      "placeholder": "ابحث في المحادثات",
+      "inputLabel": "ابحث في المحادثات",
+      "button": "بحث",
+      "clear": "مسح البحث"
+    },
+    "filters": {
+      "label": "تصفية المحادثات",
+      "all": "الكل",
+      "unread": "غير المقروءة"
+    },
+    "empty": {
+      "none": {
+        "title": "لا توجد محادثات بعد",
+        "body": "ستظهر محادثات واتساب الواردة هنا."
+      },
+      "search": {
+        "title": "لا توجد محادثات مطابقة للبحث.",
+        "body": "جرّب اسماً أو رقماً آخر."
+      },
+      "unread": {
+        "title": "لا توجد محادثات غير مقروءة.",
+        "body": "كل المحادثات مقروءة داخل دايموند."
+      }
+    },
+    "chat": {
+      "selectTitle": "اختر محادثة",
+      "selectBody": "اختر إحدى المحادثات لعرض الرسائل.",
+      "back": "رجوع",
+      "loadOlder": "تحميل الرسائل الأقدم",
+      "loading": "جاري تحميل الرسائل"
+    },
+    "composer": {
+      "placeholder": "رسالة",
+      "inputLabel": "رسالة",
+      "send": "إرسال",
+      "disabledHint": "سيتم تفعيل إرسال الرسائل بعد إكمال إعداد المراسلة في واتساب.",
+      "readyHint": "رسائل نصية يدوية فقط. المستلم يُحدد من المحادثة.",
+      "noPermission": "ليس لديك صلاحية لإرسال رسائل واتساب.",
+      "reason": {
+        "READY": "رسائل نصية يدوية فقط. المستلم يُحدد من المحادثة.",
+        "NO_ACTIVE_CONNECTION": "واتساب غير مرتبط للإرسال.",
+        "CONNECTION_INACTIVE": "هذه المحادثة ليست على ربط واتساب النشط.",
+        "WEBHOOK_NOT_ACTIVE": "مزامنة الرسائل الواردة غير مفعلة بعد.",
+        "CUSTOMER_SERVICE_WINDOW_CLOSED": "انتهت نافذة خدمة العميل لمدة 24 ساعة، ولا يمكن إرسال رسائل نصية حرة. يمكنك إرسال قالب معتمد.",
+        "CUSTOMER_SERVICE_WINDOW_UNKNOWN": "تعذر التحقق من نافذة خدمة العميل، لذلك لا يمكن إرسال رسائل نصية حرة.",
+        "PROVIDER_NOT_CONFIGURED": "مراسلة واتساب غير مُعدّة."
+      }
+    },
+    "message": {
+      "unsupported": "رسالة غير مدعومة",
+      "mediaUnavailable": "الوسائط غير متاحة",
+      "mediaLoading": "جاري تحميل الوسائط"
+    },
+    "messageType": {
+      "TEXT": "رسالة",
+      "IMAGE": "صورة",
+      "DOCUMENT": "مستند",
+      "AUDIO": "رسالة صوتية",
+      "VIDEO": "فيديو",
+      "LOCATION": "موقع",
+      "CONTACTS": "جهة اتصال",
+      "INTERACTIVE": "رسالة تفاعلية",
+      "REACTION": "تفاعل",
+      "STICKER": "ملصق",
+      "TEMPLATE": "قالب",
+      "UNKNOWN": "رسالة"
+    },
+    "status": {
+      "sending": "جارٍ الإرسال",
+      "pending": "قيد الإرسال",
+      "sent": "تم الإرسال",
+      "delivered": "تم التسليم",
+      "read": "تمت القراءة",
+      "failed": "فشل الإرسال",
+      "unknown": "حالة الإرسال غير مؤكدة"
+    },
+    "window": {
+      "openUntil": "نافذة خدمة العميل متاحة حتى {time}"
+    },
+    "connection": {
+      "disconnected": {
+        "title": "واتساب غير مرتبط",
+        "body": "اربط حساب WhatsApp Business لعرض المحادثات هنا."
+      },
+      "webhookInactive": {
+        "title": "الحساب مرتبط",
+        "body": "حساب واتساب مرتبط، لكن مزامنة الرسائل الواردة غير مفعلة بعد."
+      },
+      "reauth": {
+        "title": "إعادة تسجيل الدخول مطلوبة",
+        "body": "يلزم تفويض حساب واتساب مرة أخرى. المحادثات الحالية تبقى متاحة."
+      },
+      "error": {
+        "title": "خطأ في الاتصال",
+        "body": "أبلغ اتصال واتساب عن خطأ. المحادثات الحالية تبقى متاحة."
+      },
+      "status": {
+        "disconnected": "لا يوجد اتصال",
+        "LINKING": "جاري ربط الحساب",
+        "LINKED": "الحساب مرتبط",
+        "REAUTH_REQUIRED": "إعادة تسجيل الدخول مطلوبة",
+        "ERROR": "خطأ في الاتصال"
+      },
+      "webhook": {
+        "NOT_CONFIGURED": "Webhook غير مُعد",
+        "PENDING": "Webhook قيد الانتظار",
+        "ACTIVE": "Webhook مفعّل",
+        "ERROR": "خطأ في Webhook"
+      }
+    },
+    "simulation": {
+      "button": "محاكاة",
+      "badge": "محاكاة تجريبية",
+      "reset": "إعادة ضبط المحاكاة",
+      "disable": "إيقاف المحاكاة",
+      "inbound": "وارد محاكى",
+      "delivered": "تسليم محاكى",
+      "read": "قراءة محاكاة",
+      "disconnected": "غير مرتبط",
+      "linked": "مرتبط",
+      "webhookActive": "Webhook مفعّل"
+    },
+    "realtime": {
+      "live": "مباشر",
+      "reconnecting": "يعيد الاتصال",
+      "offline": "غير متصل"
+    },
+    "error": {
+      "generic": "تعذر تحميل بيانات واتساب. حاول مرة أخرى.",
+      "FORBIDDEN": "ليس لديك صلاحية لإرسال رسائل واتساب.",
+      "WHATSAPP_CONVERSATION_NOT_FOUND": "لم يتم العثور على هذه المحادثة.",
+      "WHATSAPP_CONVERSATION_CONNECTION_INACTIVE": "هذه المحادثة ليست على ربط واتساب النشط.",
+      "WHATSAPP_WEBHOOK_NOT_ACTIVE": "مزامنة الرسائل الواردة غير مفعلة بعد.",
+      "WHATSAPP_CUSTOMER_SERVICE_WINDOW_CLOSED": "انتهت نافذة خدمة العميل لمدة 24 ساعة، ولا يمكن إرسال رسائل نصية حرة حالياً.",
+      "WHATSAPP_CUSTOMER_SERVICE_WINDOW_UNKNOWN": "تعذر التحقق من نافذة خدمة العميل، لذلك لا يمكن إرسال رسائل نصية حرة.",
+      "WHATSAPP_PROVIDER_NOT_CONFIGURED": "مراسلة واتساب غير مُعدّة.",
+      "WHATSAPP_SEND_REJECTED": "تعذر إرسال الرسالة.",
+      "WHATSAPP_SEND_OUTCOME_UNKNOWN": "حالة الإرسال غير مؤكدة. لن تتم إعادة الإرسال تلقائياً.",
+      "WHATSAPP_SEND_RATE_LIMITED": "تم تقييد معدل الإرسال. حاول لاحقاً.",
+      "WHATSAPP_SEND_AUTH_FAILED": "فشل تفويض إرسال واتساب.",
+      "IDEMPOTENCY_KEY_REUSED": "طلب الإرسال لا يطابق المحاولة الأصلية.",
+      "WHATSAPP_INVALID_TEXT": "أدخل رسالة صالحة.",
+      "WHATSAPP_MEDIA_UNAVAILABLE": "هذه الوسائط لم تعد متاحة.",
+      "WHATSAPP_MEDIA_INVALID_TYPE": "نوع الملف غير مسموح.",
+      "WHATSAPP_MEDIA_TOO_LARGE": "حجم الملف أكبر من المسموح.",
+      "WHATSAPP_TEMPLATE_NOT_APPROVED": "هذا القالب غير معتمد للإرسال.",
+      "WHATSAPP_TEMPLATE_NOT_FOUND": "لم يتم العثور على هذا القالب.",
+      "WHATSAPP_TEMPLATE_PARAMETERS_INVALID": "أدخل كل متغيرات القالب المطلوبة.",
+      "WHATSAPP_EMBEDDED_SIGNUP_NOT_CONFIGURED": "تسجيل واتساب المضمّن غير مُعد.",
+      "WHATSAPP_CUSTOMER_MATCH_AMBIGUOUS": "عدة عملاء يطابقون هذا الرقم. اختر يدوياً.",
+      "WHATSAPP_CUSTOMER_NOT_FOUND": "لم يتم العثور على هذا العميل."
+    },
+    "templates": {
+      "title": "القوالب المعتمدة",
+      "description": "أرسل قالباً معتمداً واحداً إلى هذه المحادثة.",
+      "use": "استخدام قالب",
+      "search": "ابحث في القوالب",
+      "load": "تحميل القوالب",
+      "loading": "جاري تحميل القوالب",
+      "close": "إغلاق",
+      "back": "رجوع",
+      "send": "إرسال القالب",
+      "previewUnavailable": "لا توجد معاينة",
+      "headerVariable": "متغير الترويسة {n}",
+      "bodyVariable": "المتغير {n}"
+    },
+    "media": {
+      "attach": "إرفاق",
+      "download": "تنزيل",
+      "remove": "إزالة"
+    },
+    "manage": {
+      "button": "إدارة واتساب",
+      "title": "إدارة واتساب",
+      "description": "اربط أو غيّر أو افصل رقم WhatsApp Business للمكتب.",
+      "connect": "ربط WhatsApp Business",
+      "changeAccount": "تغيير حساب واتساب",
+      "completeSetup": "إكمال الإعداد",
+      "disconnect": "فصل",
+      "disconnectConfirm": "سيتوقف دايموند عن استخدام هذا الربط. المحادثات التاريخية تبقى. هذا لا يحذف الرقم من ميتا.",
+      "changeAccountConfirm": "الرسائل القادمة ستستخدم الحساب الجديد. المحادثات التاريخية تبقى على الربط السابق."
+    },
+    "customer": {
+      "linked": "عميل مرتبط",
+      "linkedHidden": "عميل مرتبط",
+      "possibleMatch": "مطابقة عميل محتملة",
+      "ambiguous": "عدة مطابقات للعملاء",
+      "noSafeMatch": "لا توجد مطابقة آمنة",
+      "none": "غير مرتبط بعميل دايموند",
+      "link": "ربط عميل",
+      "unlink": "إلغاء ربط العميل",
+      "search": "ابحث عن العملاء",
+      "needCustomerRead": "البحث عن العملاء يتطلب صلاحية قراءة العملاء."
     }
   }
 }

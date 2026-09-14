@@ -3,7 +3,7 @@
  *
  * The config is the single source for the Diamond operational rail. Items are:
  * - `link`   → a route navigation item (`href` without locale prefix).
- * - `action` → a Demo control that is not a page route (e.g. WhatsApp dock).
+ * - `action` → a Demo control that is not a page route.
  *
  * Visibility rules (in evaluation order):
  * 1. Declared `permission` / `permissions` → the session must hold every

@@ -1,5 +1,6 @@
 import type { FastifyServerOptions } from "fastify";
 import { env, isDevelopment } from "src/config/env";
+import { redactSensitiveUrl } from "src/lib/security/redact";
 
 /**
  * Structured logging with redaction. Secrets and auth headers are NEVER logged.
@@ -30,8 +31,23 @@ export const loggerOptions: FastifyServerOptions["logger"] = {
       "*.recoveryCode",
       "*.recoveryCodes",
       "*.challengeToken",
+      "*.verify_token",
+      "*.verifyToken",
+      "*.appSecret",
+      "*.app_secret",
+      "*.textBody",
+      "req.query['hub.verify_token']",
     ],
     censor: "[REDACTED]",
+  },
+  serializers: {
+    req(request) {
+      const raw = request as { method?: string; url?: string };
+      return {
+        method: raw.method,
+        url: redactSensitiveUrl(raw.url),
+      };
+    },
   },
   ...(isDevelopment
     ? {

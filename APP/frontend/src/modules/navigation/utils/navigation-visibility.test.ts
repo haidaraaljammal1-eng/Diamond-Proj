@@ -152,3 +152,34 @@ describe("violations navigation visibility", () => {
     );
   });
 });
+
+const chats: NavigationItem = {
+  key: "chats",
+  type: "link",
+  labelKey: "chats",
+  href: "/whatsapp",
+  icon: "chats",
+  permission: "whatsapp.read",
+};
+
+describe("whatsapp navigation visibility", () => {
+  it("shows WhatsApp when the session holds whatsapp.read", () => {
+    assert.equal(
+      isNavigationItemVisible(
+        chats,
+        main,
+        (permission) => permission === "whatsapp.read",
+        false,
+      ),
+      true,
+    );
+  });
+
+  it("hides WhatsApp when the session does not hold whatsapp.read", () => {
+    assert.equal(isNavigationItemVisible(chats, main, () => false, false), false);
+  });
+
+  it("does not treat system_admin as a WhatsApp bypass", () => {
+    assert.equal(isNavigationItemVisible(chats, main, () => false, true), false);
+  });
+});

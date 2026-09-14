@@ -90,6 +90,13 @@ model User {
   manualExpensesCreated                ManualExpense[]              @relation("ManualExpenseCreatedBy")
   manualExpensesVoided                 ManualExpense[]              @relation("ManualExpenseVoidedBy")
   manualExpenseRevisions               ManualExpenseRevision[]      @relation("ManualExpenseRevisionChangedBy")
+  whatsAppConnectionsConnected         WhatsAppConnection[]         @relation("WhatsAppConnectionConnectedBy")
+  whatsAppConnectionsDisconnected      WhatsAppConnection[]         @relation("WhatsAppConnectionDisconnectedBy")
+  whatsAppConnectionAttempts           WhatsAppConnectionAttempt[]  @relation("WhatsAppConnectionAttemptInitiatedBy")
+  whatsAppConversationsLastRead        WhatsAppConversation[]       @relation("WhatsAppConversationLastReadBy")
+  whatsAppConversationsCustomerLinked  WhatsAppConversation[]       @relation("WhatsAppConversationCustomerLinkedBy")
+  whatsAppMessagesSent                 WhatsAppMessage[]            @relation("WhatsAppMessageSentBy")
+  whatsAppOutboundAttempts             WhatsAppOutboundAttempt[]    @relation("WhatsAppOutboundAttemptActor")
 
   @@index([status])
   @@map("users")

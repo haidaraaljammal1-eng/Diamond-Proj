@@ -1,7 +1,17 @@
 # Changelog
 
+## 2026-09-13
+
+- WhatsApp final completion: approved templates, authenticated media proxy + outbound image/document/audio/video, Embedded Signup / webhook activate in Inbox Manage WhatsApp, optional explicit Customer match/link (`whatsapp.link_customer`). Manual office communication only. On-demand media proxy (no Attachment archive). Live Meta verification still deferred. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+
 ## 2026-09-12
 
+- WhatsApp Phase 6: authenticated SSE Inbox notifications (`GET /whatsapp/realtime`, `whatsapp.read`). SSE is not the source of truth; DB/REST remain authoritative. JWT stays in `Authorization` (never the query string). Events are ids-only, published after commit via `DomainOutboxEvent` + in-process hub, with a 15-minute replay window and REST reconciliation. No polling. Simulation stays frontend-only. Live Meta not required. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+- WhatsApp Phase 5: manual staff TEXT send (`POST /whatsapp/conversations/:id/messages`, `whatsapp.send`). Recipient is derived server-side. 24-hour customer service window is enforced from `lastInboundAt`. Idempotent (`Idempotency-Key`); no automatic Meta POST retry. Provider HTTP accept is `ACCEPTED`, not `SENT`. Webhook owns SENT/DELIVERED/READ/FAILED. Ambiguous send is `UNKNOWN` with no auto-resend. Simulation send stays frontend-only. Live Meta send verification deferred. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+- WhatsApp Phase 4 frontend: real Inbox at `/[locale]/whatsapp` (`whatsapp.read`) using conversation/message APIs, All/Unread, search, internal mark-read, disabled composer. Optional frontend-only simulation. No outbound send, media download, Customer link, or Dock. `GET /whatsapp/connection` is readable with `whatsapp.read` (sanitized; mutations stay `whatsapp.manage_connection`). See `DOCU/05-pages/whatsapp.md`.
+- WhatsApp Phase 3 backend: `WhatsAppConversation` + `WhatsAppMessage` from normalized `MESSAGE_RECEIVED` events; office unread; `whatsapp.read` list/detail/messages/mark-read APIs. No Inbox UI, outbound send, media download, Customer auto-link, or auto-reply. See `DOCU/05-pages/whatsapp-backend.md`.
+- WhatsApp Phase 2 backend: secure Meta Cloud API webhook foundation (`GET`/`POST /whatsapp/webhooks/meta`, raw-body HMAC, verify token, idempotent `WhatsAppWebhookEvent`, WABA/`phone_number_id` routing). No inbox, conversations, outbound send, media download, or auto-reply. Live Meta verification deferred. See `DOCU/05-pages/whatsapp-backend.md`.
+- WhatsApp Phase 1 backend: secure Meta Cloud API connection foundation (`WhatsAppConnection` + short-lived `WhatsAppConnectionAttempt`, encrypted credentials, `whatsapp.manage_connection`). No messaging, webhooks, or phone migration. Missing Meta config fails closed. See `DOCU/05-pages/whatsapp-backend.md`.
 - Sidebar cleanup: brand wordmark is `DIAMOND` (ELITE removed); New Contract shortcut and the mock fleet-status block are gone from the rail; Operations Center is removed from navigation, i18n, and frontend routing (no dedicated page or backend module existed). Dashboard Quick Access, GPS, Contracts, Maintenance, Finance, and remaining rail items are unchanged. See `DOCU/00-system-overview/app-shell-architecture.md`.
 
 ## 2026-09-11

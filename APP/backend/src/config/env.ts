@@ -103,6 +103,20 @@ const EnvSchema = z
     GPS_OFFLINE_AFTER_MINUTES: z.coerce.number().int().positive().default(10),
     GPS_MOVING_SPEED_THRESHOLD_KPH: z.coerce.number().min(0).default(3),
 
+    // WhatsApp Cloud API / Embedded Signup. Optional: empty values keep the
+    // rest of Diamond usable and WhatsApp mutating endpoints fail closed with
+    // WHATSAPP_PROVIDER_NOT_CONFIGURED. META_APP_SECRET is server-only.
+    META_APP_ID: z.string().optional().default(""),
+    META_APP_SECRET: z.string().optional().default(""),
+    // Documented Graph API version from Meta Embedded Signup (v25.0). Overridable.
+    META_GRAPH_API_VERSION: z
+      .string()
+      .regex(/^v\d+\.\d+$/, "META_GRAPH_API_VERSION must look like v25.0")
+      .default("v25.0"),
+    META_WHATSAPP_CONFIG_ID: z.string().optional().default(""),
+    // Server-only Meta webhook verify token (GET hub.verify_token). Never frontend.
+    META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional().default(""),
+
     EMAIL_ENABLED: envBool(false),
     SMTP_HOST: z.string().optional().default(""),
     SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -170,6 +184,13 @@ const EnvSchema = z
         code: "custom",
         path: ["DEV_ADMIN_PASSWORD"],
         message: "DEV_ADMIN_PASSWORD is required when SEED_DEV_ADMIN=true",
+      });
+    }
+    if (val.NODE_ENV === "production" && val.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN.includes("replace-with")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["META_WHATSAPP_WEBHOOK_VERIFY_TOKEN"],
+        message: "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN still uses the example placeholder value in production",
       });
     }
   });

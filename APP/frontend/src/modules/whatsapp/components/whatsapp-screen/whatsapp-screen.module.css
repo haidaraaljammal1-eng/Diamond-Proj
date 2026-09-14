@@ -1,0 +1,66 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 118px);
+  max-height: calc(100dvh - 118px);
+  overflow: hidden;
+}
+
+.screen :global(header) {
+  margin-bottom: 10px;
+  flex: none;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.realtime {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--diamond-muted, rgba(255, 255, 255, 0.55));
+}
+
+.realtime[data-status="live"] {
+  color: var(--diamond-champagne);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--diamond-hair);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  overflow: hidden;
+}
+
+.denied {
+  padding: 18px;
+  border: 1px solid var(--diamond-hair);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.deniedTitle {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .screen[data-chat-open="true"] :global([data-testid="whatsapp-conversation-list"]) {
+    display: none;
+  }
+
+  .screen[data-chat-open="false"] :global([data-testid="whatsapp-chat-pane"]),
+  .screen[data-chat-open="false"] :global([data-testid="whatsapp-chat-empty"]) {
+    display: none;
+  }
+}

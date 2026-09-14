@@ -33,7 +33,7 @@
     "finance": "Finance",
     "invoices": "Invoices",
     "contracts": "Contracts",
-    "chats": "Office WhatsApp",
+    "chats": "WhatsApp",
     "team": "Staff",
     "roles": "Roles & permissions"
   },
@@ -1967,6 +1967,217 @@
       "FINANCE_EXPENSE_NO_CHANGES": "No changes to save.",
       "FINANCE_EXPENSE_NOT_ACTIVE": "A voided expense cannot be corrected.",
       "FINANCE_EXPENSE_NOT_FOUND": "This expense could not be found."
+    }
+  },
+  "WhatsApp": {
+    "crumbs": "Operations · WhatsApp",
+    "title": "WhatsApp",
+    "subtitle": "Office conversations from the connected WhatsApp Business number.",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "denied": {
+      "title": "WhatsApp access is not available",
+      "description": "This page requires the whatsapp.read permission."
+    },
+    "list": {
+      "title": "Conversations",
+      "loading": "Loading conversations",
+      "loadMore": "Load more"
+    },
+    "search": {
+      "placeholder": "Search conversations",
+      "inputLabel": "Search conversations",
+      "button": "Search",
+      "clear": "Clear search"
+    },
+    "filters": {
+      "label": "Conversation filters",
+      "all": "All",
+      "unread": "Unread"
+    },
+    "empty": {
+      "none": {
+        "title": "No conversations yet",
+        "body": "Incoming WhatsApp conversations will appear here."
+      },
+      "search": {
+        "title": "No conversations match your search.",
+        "body": "Try a different name or number."
+      },
+      "unread": {
+        "title": "No unread conversations.",
+        "body": "All conversations are marked read in Diamond."
+      }
+    },
+    "chat": {
+      "selectTitle": "Select a conversation",
+      "selectBody": "Choose a conversation to view its messages.",
+      "back": "Back",
+      "loadOlder": "Load older messages",
+      "loading": "Loading messages"
+    },
+    "composer": {
+      "placeholder": "Message",
+      "inputLabel": "Message",
+      "send": "Send",
+      "disabledHint": "Sending messages will be enabled after WhatsApp messaging is configured.",
+      "readyHint": "Manual text messages only. Recipient is set by the conversation.",
+      "noPermission": "You do not have permission to send WhatsApp messages.",
+      "reason": {
+        "READY": "Manual text messages only. Recipient is set by the conversation.",
+        "NO_ACTIVE_CONNECTION": "WhatsApp is not connected for sending.",
+        "CONNECTION_INACTIVE": "This conversation is not on the active WhatsApp connection.",
+        "WEBHOOK_NOT_ACTIVE": "Incoming message synchronization is not active yet.",
+        "CUSTOMER_SERVICE_WINDOW_CLOSED": "The 24-hour customer service window has ended. Free-form messages cannot be sent. You can send an approved template.",
+        "CUSTOMER_SERVICE_WINDOW_UNKNOWN": "The customer service window cannot be verified, so free-form messages cannot be sent.",
+        "PROVIDER_NOT_CONFIGURED": "WhatsApp messaging is not configured."
+      }
+    },
+    "message": {
+      "unsupported": "Unsupported message",
+      "mediaUnavailable": "Media is not available",
+      "mediaLoading": "Loading media"
+    },
+    "messageType": {
+      "TEXT": "Message",
+      "IMAGE": "Image",
+      "DOCUMENT": "Document",
+      "AUDIO": "Audio",
+      "VIDEO": "Video",
+      "LOCATION": "Location",
+      "CONTACTS": "Contact",
+      "INTERACTIVE": "Interactive message",
+      "REACTION": "Reaction",
+      "STICKER": "Sticker",
+      "TEMPLATE": "Template",
+      "UNKNOWN": "Message"
+    },
+    "status": {
+      "sending": "Sending",
+      "pending": "Pending",
+      "sent": "Sent",
+      "delivered": "Delivered",
+      "read": "Read",
+      "failed": "Failed",
+      "unknown": "Status uncertain"
+    },
+    "window": {
+      "openUntil": "Customer service window open until {time}"
+    },
+    "connection": {
+      "disconnected": {
+        "title": "WhatsApp is not connected",
+        "body": "Connect a WhatsApp Business account to receive conversations here."
+      },
+      "webhookInactive": {
+        "title": "Account Linked",
+        "body": "WhatsApp account is linked, but incoming message synchronization is not active yet."
+      },
+      "reauth": {
+        "title": "Reauthentication Required",
+        "body": "The WhatsApp account needs to be authorized again. Existing conversations remain available."
+      },
+      "error": {
+        "title": "Connection error",
+        "body": "The WhatsApp connection reported an error. Existing conversations remain available."
+      },
+      "status": {
+        "disconnected": "No connection",
+        "LINKING": "Account linking",
+        "LINKED": "Account Linked",
+        "REAUTH_REQUIRED": "Reauthentication Required",
+        "ERROR": "Connection error"
+      },
+      "webhook": {
+        "NOT_CONFIGURED": "Webhook Not Configured",
+        "PENDING": "Webhook pending",
+        "ACTIVE": "Webhook Active",
+        "ERROR": "Webhook error"
+      }
+    },
+    "simulation": {
+      "button": "Simulation",
+      "badge": "DEMO SIMULATION",
+      "reset": "Reset Simulation",
+      "disable": "Disable Simulation",
+      "inbound": "Sim inbound",
+      "delivered": "Sim delivered",
+      "read": "Sim read",
+      "disconnected": "Not Connected",
+      "linked": "Linked",
+      "webhookActive": "Webhook Active"
+    },
+    "realtime": {
+      "live": "Live",
+      "reconnecting": "Reconnecting",
+      "offline": "Offline"
+    },
+    "error": {
+      "generic": "WhatsApp data could not be loaded. Try again.",
+      "FORBIDDEN": "You do not have permission to send WhatsApp messages.",
+      "WHATSAPP_CONVERSATION_NOT_FOUND": "This conversation was not found.",
+      "WHATSAPP_CONVERSATION_CONNECTION_INACTIVE": "This conversation is not on the active WhatsApp connection.",
+      "WHATSAPP_WEBHOOK_NOT_ACTIVE": "Incoming message synchronization is not active yet.",
+      "WHATSAPP_CUSTOMER_SERVICE_WINDOW_CLOSED": "The 24-hour customer service window has ended. Free-form messages cannot be sent.",
+      "WHATSAPP_CUSTOMER_SERVICE_WINDOW_UNKNOWN": "The customer service window cannot be verified, so free-form messages cannot be sent.",
+      "WHATSAPP_PROVIDER_NOT_CONFIGURED": "WhatsApp messaging is not configured.",
+      "WHATSAPP_SEND_REJECTED": "The message could not be sent.",
+      "WHATSAPP_SEND_OUTCOME_UNKNOWN": "Delivery status is uncertain. Do not resend automatically.",
+      "WHATSAPP_SEND_RATE_LIMITED": "Sending was rate limited. Try again later.",
+      "WHATSAPP_SEND_AUTH_FAILED": "WhatsApp send authorization failed.",
+      "IDEMPOTENCY_KEY_REUSED": "This send request does not match the original attempt.",
+      "WHATSAPP_INVALID_TEXT": "Enter a valid message.",
+      "WHATSAPP_MEDIA_UNAVAILABLE": "This media is no longer available.",
+      "WHATSAPP_MEDIA_INVALID_TYPE": "This file type is not allowed.",
+      "WHATSAPP_MEDIA_TOO_LARGE": "This file is too large.",
+      "WHATSAPP_TEMPLATE_NOT_APPROVED": "This template is not approved for sending.",
+      "WHATSAPP_TEMPLATE_NOT_FOUND": "This template was not found.",
+      "WHATSAPP_TEMPLATE_PARAMETERS_INVALID": "Enter all required template variables.",
+      "WHATSAPP_EMBEDDED_SIGNUP_NOT_CONFIGURED": "WhatsApp Embedded Signup is not configured.",
+      "WHATSAPP_CUSTOMER_MATCH_AMBIGUOUS": "Several customers match this number. Choose one manually.",
+      "WHATSAPP_CUSTOMER_NOT_FOUND": "That customer was not found."
+    },
+    "templates": {
+      "title": "Approved Templates",
+      "description": "Send one approved template to this conversation.",
+      "use": "Use Template",
+      "search": "Search templates",
+      "load": "Load templates",
+      "loading": "Loading templates",
+      "close": "Close",
+      "back": "Back",
+      "send": "Send Template",
+      "previewUnavailable": "No preview text",
+      "headerVariable": "Header variable {n}",
+      "bodyVariable": "Variable {n}"
+    },
+    "media": {
+      "attach": "Attach",
+      "download": "Download",
+      "remove": "Remove"
+    },
+    "manage": {
+      "button": "Manage WhatsApp",
+      "title": "Manage WhatsApp",
+      "description": "Connect, change, or disconnect the office WhatsApp Business number.",
+      "connect": "Connect WhatsApp Business",
+      "changeAccount": "Change WhatsApp Account",
+      "completeSetup": "Complete Setup",
+      "disconnect": "Disconnect",
+      "disconnectConfirm": "Diamond will stop using this connection. Historical conversations remain. This does not delete the number from Meta.",
+      "changeAccountConfirm": "Future messages will use the newly selected account. Historical conversations stay on the previous connection."
+    },
+    "customer": {
+      "linked": "Linked Customer",
+      "linkedHidden": "Customer linked",
+      "possibleMatch": "Possible Customer Match",
+      "ambiguous": "Multiple Customer Matches",
+      "noSafeMatch": "No Safe Match",
+      "none": "Not linked to a Diamond Customer",
+      "link": "Link Customer",
+      "unlink": "Unlink Customer",
+      "search": "Search customers",
+      "needCustomerRead": "Customer search requires customer read permission."
     }
   }
 }

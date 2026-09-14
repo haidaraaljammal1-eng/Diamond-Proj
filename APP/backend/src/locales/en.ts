@@ -259,4 +259,32 @@ export const en: Record<string, string> = {
   "Payment attempt was not found": "Payment attempt was not found",
   "Payment status token is invalid": "Payment status token is invalid",
   "Payment status token has expired": "Payment status token has expired",
+
+  "WhatsApp provider is not configured": "WhatsApp provider is not configured",
+  "WhatsApp connection attempt has expired": "WhatsApp connection attempt has expired",
+  "WhatsApp connection attempt has already been used":
+    "WhatsApp connection attempt has already been used",
+  "WhatsApp provider authorization failed": "WhatsApp provider authorization failed",
+  "Selected WhatsApp Business Account was not granted by Meta":
+    "Selected WhatsApp Business Account was not granted by Meta",
+  "Selected WhatsApp phone number was not granted by Meta":
+    "Selected WhatsApp phone number was not granted by Meta",
+  "WhatsApp connection could not be validated": "WhatsApp connection could not be validated",
+  "WhatsApp connection was not found": "WhatsApp connection was not found",
+  "WhatsApp connection was changed by another request":
+    "WhatsApp connection was changed by another request",
+  "WhatsApp connection attempt was not found": "WhatsApp connection attempt was not found",
+  "WhatsApp conversation was not found": "WhatsApp conversation was not found",
+  "WhatsApp conversation is not on the active office connection":
+    "WhatsApp conversation is not on the active office connection",
+  "WhatsApp inbound webhook is not active": "WhatsApp inbound webhook is not active",
+  "The 24-hour WhatsApp customer service window has ended":
+    "The 24-hour WhatsApp customer service window has ended",
+  "WhatsApp customer service window cannot be verified":
+    "WhatsApp customer service window cannot be verified",
+  "WhatsApp provider rejected the message": "WhatsApp provider rejected the message",
+  "WhatsApp send outcome is uncertain": "WhatsApp send outcome is uncertain",
+  "WhatsApp send was rate limited": "WhatsApp send was rate limited",
+  "WhatsApp send authorization failed": "WhatsApp send authorization failed",
+  "WhatsApp message text is invalid": "WhatsApp message text is invalid",
 };

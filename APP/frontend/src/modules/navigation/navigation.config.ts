@@ -8,15 +8,15 @@ import type { NavigationConfig } from "./navigation.types";
 
 /**
  * Central navigation configuration — Diamond operational rail
- * (order, labels, icons, admin-only owners, WhatsApp action, badge).
+ * (order, labels, icons, admin-only owners). WhatsApp is a real Inbox route.
  *
  * Permission notes:
  * - `dashboard.read`, the Staff entry (`users.read`), the Roles entry
  *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`),
  *   Contracts (`contracts.read`), Maintenance (`maintenance.read`),
- *   GPS (`gps.read`), Violations & Salik (`violations.read`), and
- *   Finance (`finance.read`) map to permissions that exist in the Backend
- *   catalog.
+ *   GPS (`gps.read`), Violations & Salik (`violations.read`),
+ *   Finance (`finance.read`), and WhatsApp (`whatsapp.read`) map to permissions
+ *   that exist in the Backend catalog.
  * - Remaining Demo pages with no matching Backend permission declare none
  *   (never invented).
  * - `adminOnly` mirrors the Demo `adminonly` owner/employee behavior.
@@ -92,10 +92,11 @@ export const navigationConfig: NavigationConfig = [
       },
       {
         key: "chats",
-        type: "action",
+        type: "link",
         labelKey: "chats",
+        href: "/whatsapp",
         icon: "chats",
-        badge: 3,
+        permission: "whatsapp.read",
       },
     ],
   },
