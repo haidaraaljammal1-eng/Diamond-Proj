@@ -1,7 +1,7 @@
 import { env } from "src/config/env";
 
-export const ULTRAMSG_INSTANCE_ID = "instance191564";
-export const ULTRAMSG_DEFAULT_API_URL = "https://api.ultramsg.com/instance191564";
+export const ULTRAMSG_INSTANCE_ID = "";
+export const ULTRAMSG_DEFAULT_API_URL = "";
 
 export const ULTRAMSG_TEXT_BODY_MAX = 4096;
 export const ULTRAMSG_MEDIA_CAPTION_MAX = 1024;

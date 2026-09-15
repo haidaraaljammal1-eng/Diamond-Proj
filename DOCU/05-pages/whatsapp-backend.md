@@ -5,8 +5,8 @@ Diamond WhatsApp is **manual staff communication only**. No AI, chatbot, auto-re
 ## Active provider (this deployment)
 
 - **Current operational provider:** UltraMsg
-- **Test instance id:** `instance191564`
-- **API base URL:** `https://api.ultramsg.com/instance191564`
+- **Instance id:** provided via `ULTRAMSG_INSTANCE_ID` env (no sample instance committed)
+- **API base URL:** `ULTRAMSG_API_URL` set from the provider panel (no sample instance committed)
 - Token: server-only `ULTRAMSG_TOKEN`. Never in frontend, OpenAPI, docs, logs, AuditLog, or DTOs. There is no `NEXT_PUBLIC_ULTRAMSG_TOKEN`.
 
 The Inbox, conversations, messages, unread, SSE/outbox, customer link, and permissions are **unchanged**. This migration replaces the **provider-specific** connection, send, webhook, and composer-eligibility layer.

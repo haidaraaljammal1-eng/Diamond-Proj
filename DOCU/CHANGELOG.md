@@ -2,7 +2,7 @@
 
 ## 2026-09-14
 
-- WhatsApp operational provider migrated from Meta Cloud API to UltraMsg (`instance191564`) without rebuilding Inbox. Additive Prisma fields, capability-driven UI, QR connection management, isolated UltraMsg webhook (callback-key compensating control, not HMAC), ACK mapping, no 24h/template gating, no provider queue-while-offline sends. Meta implementation retained inactive. Live webhook/send gated on public URL + explicit env. Token never documented. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+- WhatsApp operational provider migrated from Meta Cloud API to UltraMsg (env-provided instance id) without rebuilding Inbox. Additive Prisma fields, capability-driven UI, QR connection management, isolated UltraMsg webhook (callback-key compensating control, not HMAC), ACK mapping, no 24h/template gating, no provider queue-while-offline sends. Meta implementation retained inactive. Live webhook/send gated on public URL + explicit env. Token never documented. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
 
 ## 2026-09-13
 

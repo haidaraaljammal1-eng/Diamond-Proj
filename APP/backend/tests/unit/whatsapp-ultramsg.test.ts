@@ -34,8 +34,9 @@ const MODULE_ROOT = join(process.cwd(), "src/modules/whatsapp");
 
 describe("UltraMsg client safety", () => {
   it("uses the configured instance base URL and never disables TLS", () => {
-    assert.equal(normalizeUltraMsgApiUrl("https://api.ultramsg.com/instance191564/"), ULTRAMSG_DEFAULT_API_URL);
-    assert.equal(ULTRAMSG_INSTANCE_ID, "instance191564");
+    assert.equal(ULTRAMSG_DEFAULT_API_URL, "");
+    assert.equal(ULTRAMSG_INSTANCE_ID, "");
+    assert.equal(normalizeUltraMsgApiUrl("https://api.ultramsg.com/instance000/"), "https://api.ultramsg.com/instance000");
     const source = readFileSync(join(MODULE_ROOT, "providers/ultramsg.client.ts"), "utf8");
     assert.doesNotMatch(source, /rejectUnauthorized:\s*false/);
     assert.doesNotMatch(source, /NODE_TLS_REJECT_UNAUTHORIZED/);
@@ -60,7 +61,7 @@ describe("UltraMsg client safety", () => {
   });
 
   it("redacts token from URLs, logs, and errors", () => {
-    const url = redactSensitiveUrl("https://api.ultramsg.com/instance191564/instance/status?token=secret-token-value");
+    const url = redactSensitiveUrl("https://api.ultramsg.com/instance000/instance/status?token=secret-token-value");
     assert.equal(url?.includes("secret-token-value"), false);
     assert.match(url ?? "", /\[REDACTED\]/);
     const path = redactSensitiveUrl("https://office.example/whatsapp/webhooks/ultramsg/super-secret-callback");
@@ -114,7 +115,7 @@ describe("UltraMsg webhook parse", () => {
     const parsed = parseUltraMsgWebhook(
       {
         event_type: "message_received",
-        instanceId: "instance191564",
+        instanceId: "instance000",
         hash: "abc123",
         data: {
           id: "true_971500000000@c.us_3EB0",
@@ -137,7 +138,7 @@ describe("UltraMsg webhook parse", () => {
     const group = parseUltraMsgWebhook(
       {
         event_type: "message_received",
-        instanceId: "instance191564",
+        instanceId: "instance000",
         data: { id: "g1", from: "120363@g.us", fromMe: false, type: "chat", body: "g", time: 1_726_300_000 },
       },
       "envelope",
@@ -145,8 +146,8 @@ describe("UltraMsg webhook parse", () => {
     assert.equal(group.ignoreReason, WhatsAppErrorReason.GROUP_NOT_SUPPORTED);
     assert.equal(timingSafeCallbackKey("abcd1234", "abcd1234"), true);
     assert.equal(timingSafeCallbackKey("abcd1234", "zzzz1234"), false);
-    assert.equal(ultramsgInstanceIdsMatch("instance191564", "191564"), true);
-    assert.equal(ultramsgInstanceIdsMatch("instance191564", "instance000"), false);
+    assert.equal(ultramsgInstanceIdsMatch("instance100", "100"), true);
+    assert.equal(ultramsgInstanceIdsMatch("instance100", "instance000"), false);
   });
 });
 
