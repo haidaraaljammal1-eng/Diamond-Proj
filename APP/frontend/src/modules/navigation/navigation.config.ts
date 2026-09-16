@@ -2,18 +2,23 @@ import { ROLES_PAGE_PERMISSIONS } from "@/modules/roles/roles.permissions";
 import { USERS_PAGE_PERMISSIONS } from "@/modules/users/users.permissions";
 import { VEHICLES_PAGE_PERMISSIONS } from "@/modules/vehicles/vehicles.permissions";
 import { CONTRACTS_PAGE_PERMISSIONS } from "@/modules/contracts/contracts.permissions";
+import { MAINTENANCE_PAGE_PERMISSIONS } from "@/modules/maintenance/maintenance.permissions";
+import { FINANCE_PAGE_PERMISSIONS } from "@/modules/finance/finance.permissions";
 import type { NavigationConfig } from "./navigation.types";
 
 /**
- * Central navigation configuration — mirrors the Diamond Demo rail exactly
- * (order, labels, icons, admin-only owners, WhatsApp action, badge).
+ * Central navigation configuration — Diamond operational rail
+ * (order, labels, icons, admin-only owners). WhatsApp is a real Inbox route.
  *
  * Permission notes:
  * - `dashboard.read`, the Staff entry (`users.read`), the Roles entry
- *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`), and
- *   Contracts (`contracts.read`) map to permissions that exist in the Backend catalog.
- * - Every other Demo page still has NO matching Backend permission, so it
- *   intentionally declares none (never invented).
+ *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`),
+ *   Contracts (`contracts.read`), Maintenance (`maintenance.read`),
+ *   GPS (`gps.read`), Violations & Salik (`violations.read`),
+ *   Finance (`finance.read`), and WhatsApp (`whatsapp.read`) map to permissions
+ *   that exist in the Backend catalog.
+ * - Remaining Demo pages with no matching Backend permission declare none
+ *   (never invented).
  * - `adminOnly` mirrors the Demo `adminonly` owner/employee behavior.
  */
 export const navigationConfig: NavigationConfig = [
@@ -30,14 +35,6 @@ export const navigationConfig: NavigationConfig = [
         permission: "dashboard.read",
       },
       {
-        key: "operations",
-        type: "link",
-        labelKey: "operations",
-        href: "/operations",
-        icon: "operations",
-        adminOnly: true,
-      },
-      {
         key: "cars",
         type: "link",
         labelKey: "cars",
@@ -51,6 +48,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "gps",
         href: "/gps",
         icon: "gps",
+        permission: "gps.read",
       },
       {
         key: "maintenance",
@@ -58,6 +56,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "maintenance",
         href: "/maintenance",
         icon: "maintenance",
+        permissions: [...MAINTENANCE_PAGE_PERMISSIONS],
       },
       {
         key: "violations",
@@ -65,7 +64,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "violations",
         href: "/violations",
         icon: "violations",
-        adminOnly: true,
+        permission: "violations.read",
       },
       {
         key: "finance",
@@ -73,7 +72,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "finance",
         href: "/finance",
         icon: "finance",
-        adminOnly: true,
+        permissions: [...FINANCE_PAGE_PERMISSIONS],
       },
       {
         key: "invoices",
@@ -93,10 +92,11 @@ export const navigationConfig: NavigationConfig = [
       },
       {
         key: "chats",
-        type: "action",
+        type: "link",
         labelKey: "chats",
+        href: "/whatsapp",
         icon: "chats",
-        badge: 3,
+        permission: "whatsapp.read",
       },
     ],
   },

@@ -16,6 +16,8 @@ export interface StatCardProps {
   note?: string;
   /** Colors the note — `up` is the Demo green delta line. */
   noteTone?: StatCardTone;
+  /** Denser KPI for operational strips (GPS). Default remains the Dashboard tile. */
+  compact?: boolean;
 }
 
 /**
@@ -32,9 +34,10 @@ export function StatCard({
   suffix,
   note,
   noteTone = "neutral",
+  compact = false,
 }: StatCardProps) {
   return (
-    <article className={styles.kpi}>
+    <article className={[styles.kpi, compact ? styles.compact : ""].filter(Boolean).join(" ")}>
       <p className={styles.label}>
         {icon ? (
           <span className={styles.icon} aria-hidden="true">

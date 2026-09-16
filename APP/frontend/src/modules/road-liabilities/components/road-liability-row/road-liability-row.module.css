@@ -1,0 +1,244 @@
+.row {
+  border-bottom: 1px solid var(--diamond-hair);
+  cursor: pointer;
+  background: transparent;
+}
+
+.row:hover {
+  background: rgba(201, 161, 92, 0.06);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: -2px;
+}
+
+.selected {
+  background: rgba(201, 161, 92, 0.1);
+  box-shadow: inset 3px 0 0 var(--diamond-gold);
+}
+
+:global([dir="rtl"]) .selected {
+  box-shadow: inset -3px 0 0 var(--diamond-gold);
+}
+
+.prediction {
+  background: rgba(223, 169, 59, 0.06);
+}
+
+.prediction.selected {
+  background: rgba(223, 169, 59, 0.12);
+}
+
+.cell {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.sourceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sourceRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sourceTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(201, 161, 92, 0.28);
+  background: rgba(201, 161, 92, 0.08);
+  color: var(--diamond-gold-hi);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sourceTagGps {
+  border-color: rgba(223, 169, 59, 0.4);
+  background: rgba(223, 169, 59, 0.1);
+  color: #b07f1f;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: currentColor;
+}
+
+.typeLabel {
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+.gpsHint {
+  font-size: 10px;
+  color: #b07f1f;
+}
+
+.dual {
+  font-size: 10px;
+  color: var(--diamond-gold-hi);
+}
+
+.vehicle {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.photo {
+  width: 44px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  background:
+    radial-gradient(130% 160% at 20% 0%, rgba(201, 161, 92, 0.28), transparent 52%),
+    linear-gradient(160deg, #f7f0e2, #efe6d2 60%);
+}
+
+.photo[data-empty="true"] {
+  box-shadow: inset 0 0 0 1px rgba(201, 161, 92, 0.22);
+}
+
+.name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diamond-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plate {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+.party {
+  min-width: 0;
+}
+
+.partyName {
+  margin: 0;
+  font-size: 13px;
+  color: var(--diamond-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contract {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+.occurred {
+  margin: 0;
+  font-size: 12px;
+  color: var(--diamond-champagne);
+  white-space: nowrap;
+}
+
+.time {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--diamond-gold-hi);
+  white-space: nowrap;
+}
+
+.awaiting {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b07f1f;
+  white-space: nowrap;
+}
+
+.chips {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 10px;
+  background: var(--diamond-onyx);
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+}
+
+.card:hover {
+  background: rgba(201, 161, 92, 0.08);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
+.cardSelected {
+  border-color: rgba(201, 161, 92, 0.55);
+  box-shadow: inset 3px 0 0 var(--diamond-gold);
+  background: rgba(201, 161, 92, 0.1);
+}
+
+:global([dir="rtl"]) .cardSelected {
+  box-shadow: inset -3px 0 0 var(--diamond-gold);
+}
+
+.cardPrediction {
+  border-color: rgba(223, 169, 59, 0.35);
+  background: rgba(223, 169, 59, 0.06);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.cardBottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.attachedHint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--diamond-muted);
+}

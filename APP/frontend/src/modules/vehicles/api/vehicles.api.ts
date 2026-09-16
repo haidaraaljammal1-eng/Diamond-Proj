@@ -11,7 +11,7 @@ import type {
   VehiclePublicDto,
   VehiclesListQuery,
 } from "../types/vehicle.types";
-import { parsePageMeta, VEHICLES_MAX_PAGE_SIZE } from "./vehicles.api.types";
+import { parsePageMeta, VEHICLES_PAGE_SIZE } from "./vehicles.api.types";
 import type { PageMeta } from "./vehicles.api.types";
 import { buildVehiclesQuery } from "../utils/vehicle-filters";
 
@@ -53,7 +53,7 @@ export async function getVehicles(
 ): Promise<{ data: VehicleCardDto[]; meta: PageMeta | null }> {
   const query = buildVehiclesQuery({
     ...params,
-    pageSize: params.pageSize ?? VEHICLES_MAX_PAGE_SIZE,
+    pageSize: params.pageSize ?? VEHICLES_PAGE_SIZE,
   });
   const response = await apiRequest<VehicleCardDto[]>(
     `${VEHICLES_PATH}?${query}`,

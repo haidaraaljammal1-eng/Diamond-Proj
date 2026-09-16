@@ -1,0 +1,84 @@
+.demoNote {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f3ead6;
+  color: #5a4a2d;
+  font-size: 0.8rem;
+}
+
+.kv {
+  display: grid;
+  gap: 4px;
+  font-size: 0.84rem;
+}
+
+.kv span {
+  color: var(--diamond-muted, #6f6556);
+}
+
+.kv b {
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.history {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #ece4d4;
+}
+
+.historyTitle {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.historyItem {
+  display: grid;
+  gap: 4px;
+}
+
+.historyWhen,
+.historyWho {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.historyChanges {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.historyField {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.historyValues {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.statusVoid {
+  color: #8a2f1f;
+  font-weight: 700;
+}
+
+.error,
+.loading {
+  font-size: 0.84rem;
+  color: var(--diamond-muted, #6f6556);
+}

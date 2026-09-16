@@ -1,28 +1,41 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, ContractStatus } from "@prisma/client";
 import { createReadStream } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { AppError } from "src/lib/errors/app-error";
-import { withTransaction } from "src/lib/db/transaction";
+import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { writeOutboxEvent } from "src/lib/db/outbox";
 import { runIdempotent, fingerprintIdempotentPayload } from "src/lib/db/idempotency";
+import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
+import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { paginate, parseSort } from "src/lib/http/pagination";
 import { normalizeEmail, normalizePhone } from "src/lib/security/normalize";
 import { resolveStoragePath } from "src/lib/files/storage-key";
 import { env } from "src/config/env";
-import { hashToken } from "src/lib/security/tokens";
+import { expiryFromNow, generateOpaqueToken, hashToken } from "src/lib/security/tokens";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import {
   CONTRACT_CURRENCY,
+  CONTRACT_LICENSE_LOCK_NS,
+  CONTRACT_PAYMENT_LOCK_NS,
+  CONTRACT_RECONCILE_LOCK_NS,
   CONTRACT_TERMS_VERSION,
+  DRIVING_LICENSE_UPLOAD_MIME,
   INSPECTION_ANGLES,
+  OFFICE_DISPLAY_NAME_DEFAULT,
+  PAYMENT_STATUS_TOKEN_TTL_SECONDS,
+  VEHICLE_RENTAL_LOCK_NS,
 } from "src/modules/contracts/contracts.constants";
 import { allocateContractNumber } from "src/modules/contracts/contracts-number";
 import { assertStatus, assertTransition } from "src/modules/contracts/contracts-status";
 import { buildContractSnapshot } from "src/modules/contracts/contracts-snapshot";
 import {
+  completeRentalLinks,
+  completeReturnLinks,
   issueContractLink,
   markLinkUsed,
   resolveContractLink,
+  revokeUnusedRenewalLinks,
 } from "src/modules/contracts/contracts-links";
 import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental-guard";
 import { contractError } from "src/modules/contracts/contracts.errors";
@@ -31,16 +44,37 @@ import {
   toDetail,
   toListItem,
 } from "src/modules/contracts/contracts.mapper";
+import {
+  PUBLIC_RENTAL_INCLUDE,
+  toPublicRentalContext,
+} from "src/modules/contracts/public-rental-context";
+import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
+import { createDrivingLicenseOcrProvider } from "src/modules/contracts/ocr/ocr-provider.factory";
+import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
+import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
+import { createFilesService } from "src/modules/files/files.service";
+import type { MultipartFile } from "@fastify/multipart";
 import type {
   CarInSchema,
   CarOutSchema,
   ConfirmPaymentSchema,
+  ConfirmRoadLiabilityChargeSchema,
   CreateOfferInput,
   PublicAcceptSchema,
   PublicFormSchema,
   ReconcileSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
+import {
+  isManualExternalReconLineType,
+  reconciliationTotalsFromLines,
+} from "src/modules/contracts/contracts-road-liability-charge";
+import {
+  buildRoadLiabilityChargeProposal,
+  COLLECTIBLE_WHERE,
+} from "src/modules/road-liabilities/road-liability.mapper";
+import { createRoadLiabilityCustomerChargeService } from "src/modules/road-liabilities/road-liability-customer-charge.service";
+import { loadSalikGpsSignals } from "src/modules/contracts/contract-road-liability-signals";
 import type { z } from "zod";
 import type { ListContractsQuerySchema } from "src/modules/contracts/contracts.schema";
 
@@ -61,8 +95,84 @@ function derivedEndAt(startAt: Date | null | undefined, days: number, fallback =
   return new Date(start.getTime() + days * 86_400_000);
 }
 
+type RenewalHistoryRow = {
+  additionalDays: number;
+  additionalAmount: number;
+  previousEndAt: Date;
+  newEndAt: Date;
+  approvedAt: Date | null;
+  appliedAt: Date | null;
+};
+
+function toPublicRenewal(row: RenewalHistoryRow) {
+  return {
+    additionalDays: row.additionalDays,
+    additionalAmount: row.additionalAmount,
+    previousEndAt: row.previousEndAt,
+    newEndAt: row.newEndAt,
+    confirmed: row.appliedAt != null,
+    awaitingPayment:
+      row.approvedAt != null && row.appliedAt == null && row.additionalAmount > 0,
+  };
+}
+
+function pickPublicRenewal(renewals: RenewalHistoryRow[], preferConfirmed: boolean) {
+  const pending = renewals.find((row) => row.approvedAt == null);
+  if (!preferConfirmed && pending) return toPublicRenewal(pending);
+  const awaitingPayment = renewals.find(
+    (row) => row.approvedAt != null && row.appliedAt == null,
+  );
+  if (awaitingPayment) return toPublicRenewal(awaitingPayment);
+  const latestApplied = renewals.find((row) => row.appliedAt != null);
+  if (latestApplied) return toPublicRenewal(latestApplied);
+  if (pending) return toPublicRenewal(pending);
+  return null;
+}
+
 export function createContractsService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
+  const files = createFilesService(fastify);
+  const customerCharges = createRoadLiabilityCustomerChargeService(fastify);
+  const paymentService = createContractPaymentService(prisma);
+
+  async function decorateDetail(row: Awaited<ReturnType<typeof loadDetail>>, db: typeof prisma | Tx = prisma) {
+    const signals = await loadSalikGpsSignals(db, [row.id]);
+    return toDetail(row, signals.get(row.id));
+  }
+
+  function assertLicenseProgress(
+    status: string | null | undefined,
+    expiryDate?: Date | null,
+  ): void {
+    if (status === "VALID") return;
+    if (status === "EXPIRED") {
+      throw contractError.drivingLicenseExpired(
+        expiryDate
+          ? expiryDate.toISOString().slice(0, 10)
+          : undefined,
+      );
+    }
+    if (status === "PROVIDER_UNAVAILABLE") throw contractError.drivingLicenseOcrNotConfigured();
+    if (status === "UNREADABLE") throw contractError.drivingLicenseUnreadable();
+    if (status === "REVIEW_REQUIRED") throw contractError.drivingLicenseReviewRequired();
+    throw contractError.drivingLicenseRequired();
+  }
+
+  async function loadPublicRental(tx: Parameters<Parameters<typeof withTransaction>[1]>[0], id: string) {
+    const row = await tx.contract.findUnique({
+      where: { id },
+      include: PUBLIC_RENTAL_INCLUDE,
+    });
+    if (!row) throw contractError.notFound();
+    return toPublicRentalContext(row);
+  }
+
+  async function latestLicense(tx: Parameters<Parameters<typeof withTransaction>[1]>[0], contractId: string) {
+    return tx.drivingLicenseVerification.findFirst({
+      where: { contractId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
 
   async function loadDetail(id: string) {
     const row = await prisma.contract.findUnique({
@@ -79,6 +189,7 @@ export function createContractsService(fastify: FastifyInstance) {
     contractId: string,
     extra: Record<string, unknown> = {},
   ) {
+    // Dedupe keys must be unique per occurrence; Postgres aborts the tx on unique violations.
     await writeOutboxEvent(tx, {
       eventType,
       aggregateType: "contract",
@@ -118,11 +229,10 @@ export function createContractsService(fastify: FastifyInstance) {
           currency: CONTRACT_CURRENCY,
           startAt,
           endAt,
-          depositAmount: input.depositAmount ?? null,
         },
       });
       await emit(tx, "contract.created", created.id, { vehicleId: input.vehicleId });
-      return toDetail(
+      return decorateDetail(
         await tx.contract.findUniqueOrThrow({
           where: { id: created.id },
           include: CONTRACT_DETAIL_INCLUDE,
@@ -175,19 +285,29 @@ export function createContractsService(fastify: FastifyInstance) {
           skip,
           take,
         });
-        return rows.map(toListItem);
+        const signals = await loadSalikGpsSignals(
+          prisma,
+          rows.map((row) => row.id),
+        );
+        return rows.map((row) =>
+          toListItem({
+            ...row,
+            hasSalikGpsSignal: signals.get(row.id)?.hasSalikGpsSignal ?? false,
+          }),
+        );
       },
     });
   }
 
   async function get(id: string) {
-    return toDetail(await loadDetail(id));
+    return decorateDetail(await loadDetail(id));
   }
 
   async function generateLink(
     contractId: string,
     type: "RENTAL" | "RETURN" | "RENEWAL",
     actorUserId: number,
+    offer?: z.infer<typeof RenewSchema>,
   ) {
     return withTransaction(prisma, async (tx) => {
       const contract = await tx.contract.findUnique({ where: { id: contractId } });
@@ -209,8 +329,24 @@ export function createContractsService(fastify: FastifyInstance) {
           throw contractError.invalidTransition(contract.status, "RETOUT");
         }
       }
-      if (type === "RENEWAL" && contract.status !== "ACTIVE") {
-        throw contractError.invalidTransition(contract.status, "ACTIVE");
+      if (type === "RENEWAL") {
+        if (contract.status !== "ACTIVE") {
+          throw contractError.invalidTransition(contract.status, "ACTIVE");
+        }
+        if (!offer) throw contractError.renewalOfferRequired();
+        const previousEndAt = contract.endAt ?? derivedEndAt(contract.startAt, contract.rentalDays);
+        const newEndAt = derivedEndAt(previousEndAt, offer.additionalDays, previousEndAt);
+        await tx.contractRenewal.deleteMany({ where: { contractId, approvedAt: null } });
+        await tx.contractRenewal.create({
+          data: {
+            contractId,
+            additionalDays: offer.additionalDays,
+            additionalAmount: offer.additionalAmount,
+            previousEndAt,
+            newEndAt,
+            createdByUserId: actorUserId,
+          },
+        });
       }
 
       const issued = await issueContractLink(tx, {
@@ -227,67 +363,12 @@ export function createContractsService(fastify: FastifyInstance) {
   }
 
   async function confirmPayment(
-    contractId: string,
-    input: z.infer<typeof ConfirmPaymentSchema>,
-    actorUserId: number,
-    idempotencyKey?: string,
-  ) {
-    const run = async () =>
-      withTransaction(prisma, async (tx) => {
-        const contract = await tx.contract.findUnique({ where: { id: contractId } });
-        if (!contract) throw contractError.notFound();
-        if (contract.status === "PAID" || contract.status === "ACTIVE") {
-          return toDetail(
-            await tx.contract.findUniqueOrThrow({
-              where: { id: contractId },
-              include: CONTRACT_DETAIL_INCLUDE,
-            }),
-          );
-        }
-        assertTransition(contract.status, "PAID");
-        await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
-
-        await tx.contractPayment.create({
-          data: {
-            contractId,
-            amount: input.amount ?? contract.agreedAmount,
-            currency: contract.currency,
-            method: input.method,
-            status: "CONFIRMED",
-            externalReference: input.externalReference ?? null,
-            confirmedAt: new Date(),
-            createdByUserId: actorUserId,
-          },
-        });
-        await tx.contract.update({
-          where: { id: contractId },
-          data: { status: "PAID", revision: { increment: 1 } },
-        });
-        await emit(tx, "contract.paid", contractId, { vehicleId: contract.vehicleId });
-        return toDetail(
-          await tx.contract.findUniqueOrThrow({
-            where: { id: contractId },
-            include: CONTRACT_DETAIL_INCLUDE,
-          }),
-        );
-      });
-
-    if (!idempotencyKey) return run();
-    const outcome = await runIdempotent(
-      prisma,
-      {
-        scope: `contract:payment:${contractId}`,
-        key: idempotencyKey,
-        fingerprint: fingerprintIdempotentPayload({
-          method: input.method,
-          amount: input.amount ?? null,
-          externalReference: input.externalReference ?? null,
-        }),
-      },
-      run,
-    );
-    if (outcome.deduped) return get(contractId);
-    return outcome.result!;
+    _contractId: string,
+    _input: z.infer<typeof ConfirmPaymentSchema>,
+    _actorUserId: number,
+    _idempotencyKey?: string,
+  ): Promise<Awaited<ReturnType<typeof get>>> {
+    throw contractError.manualPaymentDisabled();
   }
 
   async function carOut(
@@ -305,7 +386,7 @@ export function createContractsService(fastify: FastifyInstance) {
         });
         if (!contract) throw contractError.notFound();
         if (contract.status === "ACTIVE" && contract.carOut) {
-          return toDetail(
+          return decorateDetail(
             await tx.contract.findUniqueOrThrow({
               where: { id: contractId },
               include: CONTRACT_DETAIL_INCLUDE,
@@ -316,7 +397,7 @@ export function createContractsService(fastify: FastifyInstance) {
         await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
 
         const confirmed = await tx.contractPayment.findFirst({
-          where: { contractId, status: "CONFIRMED" },
+          where: { contractId, purpose: "RENTAL", status: "CONFIRMED" },
         });
         if (!confirmed) throw contractError.paymentRequired();
 
@@ -348,7 +429,7 @@ export function createContractsService(fastify: FastifyInstance) {
           data: { operationalStatus: "RENTED" },
         });
         await emit(tx, "contract.activated", contractId, { vehicleId: contract.vehicleId });
-        return toDetail(
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -378,7 +459,7 @@ export function createContractsService(fastify: FastifyInstance) {
 
   async function submitPublicForm(token: string, input: z.infer<typeof PublicFormSchema>) {
     if (!input.identityNumber && !input.passportNumber) {
-      throw AppError.validation("Identity number or passport number is required");
+      throw contractError.publicFormIncomplete();
     }
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RENTAL");
@@ -391,6 +472,12 @@ export function createContractsService(fastify: FastifyInstance) {
         throw contractError.invalidTransition(contract.status, "FORM");
       }
 
+      const verification = await latestLicense(tx, contract.id);
+      assertLicenseProgress(verification?.status, verification?.expiryDate);
+      if (!verification?.licenseNumber || !verification.expiryDate) {
+        throw contractError.drivingLicenseRequired();
+      }
+
       const customerData = {
         name: input.name,
         mobile: normalizePhone(input.mobile),
@@ -398,8 +485,8 @@ export function createContractsService(fastify: FastifyInstance) {
         nationality: input.nationality,
         identityNumber: input.identityNumber ?? null,
         passportNumber: input.passportNumber ?? null,
-        drivingLicenseNumber: input.drivingLicenseNumber,
-        drivingLicenseExpiry: input.drivingLicenseExpiry,
+        drivingLicenseNumber: verification.licenseNumber,
+        drivingLicenseExpiry: verification.expiryDate,
         address: input.address ?? null,
       };
 
@@ -411,13 +498,18 @@ export function createContractsService(fastify: FastifyInstance) {
         customerId = created.id;
       }
 
-      if (input.documents?.length) {
+      const activeLicense = await tx.contractDocument.findFirst({
+        where: { contractId: contract.id, type: "DRIVING_LICENSE", supersededAt: null },
+      });
+      if (activeLicense) {
         await tx.customerDocument.createMany({
-          data: input.documents.map((d) => ({
-            customerId: customerId!,
-            type: d.type,
-            attachmentId: d.attachmentId,
-          })),
+          data: [
+            {
+              customerId,
+              type: "DRIVING_LICENSE",
+              attachmentId: activeLicense.attachmentId,
+            },
+          ],
           skipDuplicates: true,
         });
       }
@@ -431,12 +523,7 @@ export function createContractsService(fastify: FastifyInstance) {
       if (contract.status === "AWAITING") {
         await emit(tx, "contract.form_completed", contract.id);
       }
-      return publicView(
-        await tx.contract.findUniqueOrThrow({
-          where: { id: contract.id },
-          include: { vehicle: { include: { model: { select: { name: true } } } } },
-        }),
-      );
+      return loadPublicRental(tx, contract.id);
     });
   }
 
@@ -455,11 +542,20 @@ export function createContractsService(fastify: FastifyInstance) {
         },
       });
       if (!contract) throw contractError.notFound();
+      if (contract.status !== "FORM") throw contractError.notReadyForAcceptance();
       assertTransition(contract.status, "SIGNED");
-      if (!contract.customer) throw AppError.validation("Customer form must be completed first");
+      if (!contract.customer) throw contractError.publicFormIncomplete();
+
+      const verification = await latestLicense(tx, contract.id);
+      assertLicenseProgress(verification?.status, verification?.expiryDate);
 
       const snapshot = buildContractSnapshot({
-        customer: contract.customer,
+        contractNumber: contract.contractNumber,
+        customer: {
+          ...contract.customer,
+          drivingLicenseNumber: verification?.licenseNumber ?? contract.customer.drivingLicenseNumber,
+          drivingLicenseExpiry: verification?.expiryDate ?? contract.customer.drivingLicenseExpiry,
+        },
         vehicle: {
           vehicleName: contract.vehicle.vehicleName,
           plateNumber: contract.vehicle.plateNumber,
@@ -474,7 +570,6 @@ export function createContractsService(fastify: FastifyInstance) {
           rentalDays: contract.rentalDays,
           startAt: contract.startAt,
           endAt: contract.endAt,
-          depositAmount: contract.depositAmount,
           currency: contract.currency,
         },
       });
@@ -497,62 +592,77 @@ export function createContractsService(fastify: FastifyInstance) {
           revision: { increment: 1 },
         },
       });
-      await markLinkUsed(tx, link.id);
       await emit(tx, "contract.signed", contract.id);
-      return publicView(
-        await tx.contract.findUniqueOrThrow({
-          where: { id: contract.id },
-          include: { vehicle: { include: { model: { select: { name: true } } } } },
-        }),
-      );
+      return loadPublicRental(tx, contract.id);
     });
+  }
+
+  async function persistCarIn(
+    tx: Tx,
+    contract: {
+      id: string;
+      status: ContractStatus;
+      vehicleId: number;
+      carIn: { id: string } | null;
+      carOut: { id: string } | null;
+    },
+    input: z.infer<typeof CarInSchema>,
+  ): Promise<"created" | "existing"> {
+    if (contract.status === "REVIEW" && contract.carIn) return "existing";
+    assertTransition(contract.status, "REVIEW");
+    if (!contract.carOut) throw contractError.carOutRequired();
+
+    await acquireAdvisoryLock(tx, VEHICLE_RENTAL_LOCK_NS, contract.vehicleId);
+    const now = input.occurredAt ?? new Date();
+    const row = await tx.contractCarIn.create({
+      data: {
+        contractId: contract.id,
+        occurredAt: now,
+        mileageIn: input.mileageIn,
+        fuelIn: input.fuelIn,
+        notes: input.notes ?? null,
+      },
+    });
+    await tx.contractCarInPhoto.createMany({
+      data: input.photos.map((p, i) => ({
+        carInId: row.id,
+        attachmentId: p.attachmentId,
+        angle: p.angle,
+        sortOrder: i,
+      })),
+    });
+    await tx.contract.update({
+      where: { id: contract.id },
+      data: { status: "REVIEW", revision: { increment: 1 } },
+    });
+    const vehicle = await tx.vehicle.findUnique({
+      where: { id: contract.vehicleId },
+      select: { operationalStatus: true },
+    });
+    if (vehicle?.operationalStatus === "RENTED") {
+      await tx.vehicle.update({
+        where: { id: contract.vehicleId },
+        data: { operationalStatus: "AVAILABLE" },
+      });
+    }
+    await emit(tx, "contract.return_submitted", contract.id, { vehicleId: contract.vehicleId });
+    return "created";
   }
 
   async function carIn(token: string, input: z.infer<typeof CarInSchema>, idempotencyKey?: string) {
     assertEightAngles(input.photos);
     const run = async () =>
       withTransaction(prisma, async (tx) => {
-        const link = await resolveContractLink(tx, token, "RETURN");
+        const link = await resolveContractLink(tx, token, "RETURN", {
+          allowCompleted: true,
+        });
         const contract = await tx.contract.findUnique({
           where: { id: link.contractId },
           include: { carIn: true, carOut: true },
         });
         if (!contract) throw contractError.notFound();
-        if (contract.status === "REVIEW" && contract.carIn) {
-          return publicView(
-            await tx.contract.findUniqueOrThrow({
-              where: { id: contract.id },
-              include: { vehicle: { include: { model: { select: { name: true } } } } },
-            }),
-          );
-        }
-        assertTransition(contract.status, "REVIEW");
-        if (!contract.carOut) throw contractError.carOutRequired();
-
-        const now = input.occurredAt ?? new Date();
-        const row = await tx.contractCarIn.create({
-          data: {
-            contractId: contract.id,
-            occurredAt: now,
-            mileageIn: input.mileageIn,
-            fuelIn: input.fuelIn,
-            notes: input.notes ?? null,
-          },
-        });
-        await tx.contractCarInPhoto.createMany({
-          data: input.photos.map((p, i) => ({
-            carInId: row.id,
-            attachmentId: p.attachmentId,
-            angle: p.angle,
-            sortOrder: i,
-          })),
-        });
-        await tx.contract.update({
-          where: { id: contract.id },
-          data: { status: "REVIEW", revision: { increment: 1 } },
-        });
-        await markLinkUsed(tx, link.id);
-        await emit(tx, "contract.return_submitted", contract.id, { vehicleId: contract.vehicleId });
+        const outcome = await persistCarIn(tx, contract, input);
+        if (outcome === "created") await markLinkUsed(tx, link.id);
         return publicView(
           await tx.contract.findUniqueOrThrow({
             where: { id: contract.id },
@@ -581,12 +691,71 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  async function carInStaff(
+    contractId: string,
+    input: z.infer<typeof CarInSchema>,
+    idempotencyKey?: string,
+  ) {
+    assertEightAngles(input.photos);
+    const run = async () =>
+      withTransaction(prisma, async (tx) => {
+        const contract = await tx.contract.findUnique({
+          where: { id: contractId },
+          include: { carIn: true, carOut: true },
+        });
+        if (!contract) throw contractError.notFound();
+        const outcome = await persistCarIn(tx, contract, input);
+        if (outcome === "created") await completeReturnLinks(tx, contract.id);
+        return decorateDetail(
+          await tx.contract.findUniqueOrThrow({
+            where: { id: contract.id },
+            include: CONTRACT_DETAIL_INCLUDE,
+          }),
+        );
+      });
+
+    if (!idempotencyKey) return run();
+    const outcome = await runIdempotent(
+      prisma,
+      {
+        scope: `contract:car-in-staff:${contractId}`,
+        key: idempotencyKey,
+        fingerprint: fingerprintIdempotentPayload({
+          mileageIn: input.mileageIn,
+          fuelIn: input.fuelIn,
+          notes: input.notes ?? null,
+          occurredAt: input.occurredAt?.toISOString() ?? null,
+          photos: input.photos,
+        }),
+      },
+      run,
+    );
+    if (outcome.deduped) return get(contractId);
+    return outcome.result!;
+  }
+
+  async function detailFromTx(tx: Tx, contractId: string) {
+    return decorateDetail(
+      await tx.contract.findUniqueOrThrow({
+        where: { id: contractId },
+        include: CONTRACT_DETAIL_INCLUDE,
+      }),
+      tx,
+    );
+  }
+
   async function reconcile(
     contractId: string,
     input: z.infer<typeof ReconcileSchema>,
     actorUserId: number,
   ) {
+    for (const line of input.lines) {
+      if (isManualExternalReconLineType(line.type)) {
+        throw contractError.roadLiabilityRequired();
+      }
+    }
     return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
       const contract = await tx.contract.findUnique({
         where: { id: contractId },
         include: { carIn: true, reconciliation: true },
@@ -595,23 +764,27 @@ export function createContractsService(fastify: FastifyInstance) {
       assertStatus(contract.status, "REVIEW");
       if (!contract.carIn) throw contractError.carInRequired();
 
-      const chargesTotal = input.lines.reduce((sum, line) => sum + line.amount, 0);
-      const depositAmount = contract.depositAmount ?? 0;
-      const deductions = depositAmount;
-      const finalAmount = chargesTotal - deductions;
+      const preservedLiabilityLines = contract.reconciliation
+        ? await tx.contractReconciliationLine.findMany({
+            where: { reconciliationId: contract.reconciliation.id, roadLiabilityId: { not: null } },
+          })
+        : [];
+      const totals = reconciliationTotalsFromLines([
+        ...preservedLiabilityLines,
+        ...input.lines,
+      ]);
       const now = new Date();
 
       if (contract.reconciliation) {
         await tx.contractReconciliationLine.deleteMany({
-          where: { reconciliationId: contract.reconciliation.id },
+          where: { reconciliationId: contract.reconciliation.id, roadLiabilityId: null },
         });
         await tx.contractReconciliation.update({
           where: { id: contract.reconciliation.id },
           data: {
-            chargesTotal,
-            depositAmount,
-            deductions,
-            finalAmount,
+            ...totals,
+            depositAmount: 0,
+            deductions: 0,
             approvedAt: now,
             approvedByUserId: actorUserId,
             lines: { create: input.lines },
@@ -621,23 +794,115 @@ export function createContractsService(fastify: FastifyInstance) {
         await tx.contractReconciliation.create({
           data: {
             contractId,
-            chargesTotal,
-            depositAmount,
-            deductions,
-            finalAmount,
+            ...totals,
+            depositAmount: 0,
+            deductions: 0,
             approvedAt: now,
             approvedByUserId: actorUserId,
             lines: { create: input.lines },
           },
         });
       }
-      return toDetail(
-        await tx.contract.findUniqueOrThrow({
-          where: { id: contractId },
-          include: CONTRACT_DETAIL_INCLUDE,
-        }),
-      );
+      return detailFromTx(tx, contractId);
     });
+  }
+
+  async function listReconciliationRoadLiabilities(contractId: string) {
+    const contract = await prisma.contract.findUnique({ where: { id: contractId } });
+    if (!contract) throw contractError.notFound();
+
+    const [availableRows, attachedRows] = await Promise.all([
+      prisma.roadLiability.findMany({
+        where: {
+          ...COLLECTIBLE_WHERE,
+          attributedContractId: contractId,
+          reconciliationLine: { is: null },
+        },
+        include: {
+          vehicle: { include: { model: { select: { name: true } } } },
+          observations: { select: { sourceKey: true } },
+        },
+        orderBy: { occurredAt: "asc" },
+      }),
+      prisma.contractReconciliationLine.findMany({
+        where: {
+          reconciliation: { contractId },
+          roadLiabilityId: { not: null },
+        },
+        include: { roadLiability: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+
+    return {
+      available: availableRows.flatMap((row) => {
+        if (row.amount == null || !row.currency) return [];
+        const proposal = buildRoadLiabilityChargeProposal({ amount: row.amount });
+        return [
+          {
+            id: row.id,
+            type: row.type,
+            sourceKey: row.authoritativeSourceKey,
+            occurredAt: row.occurredAt,
+            officialAmount: proposal.officialAmount,
+            currency: row.currency,
+            suggestedCustomerChargeAmount: proposal.suggestedCustomerChargeAmount,
+            minimumCustomerChargeAmount: proposal.minimumCustomerChargeAmount,
+            externalReference: row.authoritativeExternalReference,
+            locationLabel: row.locationLabel,
+            predictedByGps: row.observations.some((observation) => observation.sourceKey === "GPS_INFERENCE"),
+            vehicle: row.vehicle
+              ? {
+                  id: row.vehicle.id,
+                  displayName: vehicleDisplayName({
+                    vehicleName: row.vehicle.vehicleName,
+                    modelName: row.vehicle.model?.name ?? null,
+                    modelYear: row.vehicle.modelYear,
+                    plateNumber: row.vehicle.plateNumber,
+                  }),
+                  plateNumber: row.vehicle.plateNumber,
+                }
+              : null,
+          },
+        ];
+      }),
+      attached: attachedRows.flatMap((line) => {
+        const liability = line.roadLiability;
+        if (!liability || !line.roadLiabilityId) return [];
+        return [
+          {
+            roadLiabilityId: line.roadLiabilityId,
+            reconciliationLineId: line.id,
+            type: liability.type,
+            sourceKey: liability.authoritativeSourceKey,
+            occurredAt: liability.occurredAt,
+            officialAmount: line.officialAmountSnapshot ?? liability.amount ?? 0,
+            customerChargeAmount: line.amount,
+            adjustmentAmount: line.adjustmentAmount ?? 0,
+            adjustmentReason: line.adjustmentReason,
+            adjustmentNote: line.adjustmentNote,
+            locked: true as const,
+          },
+        ];
+      }),
+    };
+  }
+
+  async function confirmRoadLiabilityCharge(
+    contractId: string,
+    roadLiabilityId: string,
+    input: z.infer<typeof ConfirmRoadLiabilityChargeSchema>,
+    actorUserId: number,
+    idempotencyKey?: string,
+  ) {
+    await customerCharges.confirmForContract(
+      contractId,
+      roadLiabilityId,
+      input,
+      actorUserId,
+      idempotencyKey,
+    );
+    return get(contractId);
   }
 
   async function close(contractId: string, actorUserId: number, idempotencyKey?: string) {
@@ -649,7 +914,7 @@ export function createContractsService(fastify: FastifyInstance) {
         });
         if (!contract) throw contractError.notFound();
         if (contract.status === "CLOSED") {
-          return toDetail(
+          return decorateDetail(
             await tx.contract.findUniqueOrThrow({
               where: { id: contractId },
               include: CONTRACT_DETAIL_INCLUDE,
@@ -659,22 +924,23 @@ export function createContractsService(fastify: FastifyInstance) {
         assertTransition(contract.status, "CLOSED");
         if (!contract.carIn) throw contractError.carInRequired();
         if (!contract.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+        if (
+          contract.reconciliation.finalAmount > 0 &&
+          !contract.reconciliation.settledAt
+        ) {
+          throw contractError.reconciliationPaymentRequired();
+        }
 
-        await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
         const now = new Date();
         await tx.contract.update({
           where: { id: contractId },
           data: { status: "CLOSED", closedAt: now, revision: { increment: 1 } },
         });
-        await tx.vehicle.update({
-          where: { id: contract.vehicleId },
-          data: { operationalStatus: "AVAILABLE" },
-        });
         await emit(tx, "contract.closed", contractId, {
           vehicleId: contract.vehicleId,
           actorUserId,
         });
-        return toDetail(
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -711,7 +977,9 @@ export function createContractsService(fastify: FastifyInstance) {
 
         const previousEndAt = contract.endAt ?? derivedEndAt(contract.startAt, contract.rentalDays);
         const newEndAt = derivedEndAt(previousEndAt, input.additionalDays, previousEndAt);
-        await tx.contractRenewal.create({
+        await tx.contractRenewal.deleteMany({ where: { contractId, appliedAt: null } });
+        await revokeUnusedRenewalLinks(tx, contractId);
+        const renewal = await tx.contractRenewal.create({
           data: {
             contractId,
             additionalDays: input.additionalDays,
@@ -722,17 +990,10 @@ export function createContractsService(fastify: FastifyInstance) {
             createdByUserId: actorUserId,
           },
         });
-        await tx.contract.update({
-          where: { id: contractId },
-          data: {
-            rentalDays: contract.rentalDays + input.additionalDays,
-            agreedAmount: contract.agreedAmount + input.additionalAmount,
-            endAt: newEndAt,
-            revision: { increment: 1 },
-          },
-        });
-        await emit(tx, "contract.renewed", contractId, { additionalDays: input.additionalDays });
-        return toDetail(
+        if (input.additionalAmount <= 0) {
+          await paymentService.applyZeroAmountSettlement(tx, "RENEWAL", renewal.id);
+        }
+        return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
             include: CONTRACT_DETAIL_INCLUDE,
@@ -757,38 +1018,82 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
-  async function confirmRenewalPublic(token: string, input: z.infer<typeof RenewSchema>) {
-    const link = await resolveContractLink(prisma, token, "RENEWAL");
-    await renew(link.contractId, input, null);
-    await markLinkUsed(prisma, link.id);
-    return publicView(
-      await prisma.contract.findUniqueOrThrow({
-        where: { id: link.contractId },
-        include: { vehicle: { include: { model: { select: { name: true } } } } },
-      }),
-    );
+  async function confirmRenewalPublic(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const include = {
+        vehicle: { include: { model: { select: { name: true } } } },
+        renewals: { orderBy: { createdAt: "desc" as const } },
+      };
+      const preview = await resolveContractLink(tx, token, "RENEWAL", { allowCompleted: true });
+      if (preview.usedAt) {
+        const already = await tx.contract.findUnique({
+          where: { id: preview.contractId },
+          include,
+        });
+        if (!already) throw contractError.notFound();
+        return publicView(already, pickPublicRenewal(already.renewals, true));
+      }
+
+      const contract = await tx.contract.findUnique({
+        where: { id: preview.contractId },
+        include,
+      });
+      if (!contract) throw contractError.notFound();
+      assertStatus(contract.status, "ACTIVE");
+      await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
+
+      const lockedLink = await resolveContractLink(tx, token, "RENEWAL", { allowCompleted: true });
+      if (lockedLink.usedAt) {
+        const already = await tx.contract.findUniqueOrThrow({
+          where: { id: lockedLink.contractId },
+          include,
+        });
+        return publicView(already, pickPublicRenewal(already.renewals, true));
+      }
+
+      const pending = contract.renewals.find((row) => row.approvedAt == null);
+      if (!pending) throw contractError.renewalOfferRequired();
+
+      await tx.contractRenewal.update({
+        where: { id: pending.id },
+        data: { approvedAt: new Date() },
+      });
+      if (pending.additionalAmount <= 0) {
+        await paymentService.applyZeroAmountSettlement(tx, "RENEWAL", pending.id);
+        await markLinkUsed(tx, lockedLink.id);
+      }
+
+      const fresh = await tx.contract.findUniqueOrThrow({
+        where: { id: contract.id },
+        include,
+      });
+      return publicView(fresh, pickPublicRenewal(fresh.renewals, true));
+    });
   }
 
-  function publicView(row: {
-    contractNumber: string;
-    status: z.infer<typeof import("./contracts.schema").ContractStatusSchema>;
-    priceType: z.infer<typeof import("./contracts.schema").ContractPriceTypeSchema>;
-    rentalDays: number;
-    agreedAmount: number;
-    currency: string;
-    startAt: Date | null;
-    endAt: Date | null;
-    depositAmount: number | null;
-    termsVersion: string;
-    vehicle: {
-      vehicleName: string | null;
-      plateNumber: string | null;
-      color: string | null;
-      modelYear: number | null;
-      model: { name: string } | null;
-    };
-  }) {
+  function publicView(
+    row: {
+      contractNumber: string;
+      status: z.infer<typeof import("./contracts.schema").ContractStatusSchema>;
+      priceType: z.infer<typeof import("./contracts.schema").ContractPriceTypeSchema>;
+      rentalDays: number;
+      agreedAmount: number;
+      currency: string;
+      startAt: Date | null;
+      endAt: Date | null;
+      termsVersion: string;
+      vehicle: {
+        vehicleName: string | null;
+        plateNumber: string | null;
+        color: string | null;
+        modelYear: number | null;
+        model: { name: string } | null;
+      };
+    },
+    renewal?: ReturnType<typeof toPublicRenewal> | null,
+  ) {
     return {
+      office: { displayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT },
       contractNumber: row.contractNumber,
       status: row.status,
       priceType: row.priceType,
@@ -797,7 +1102,6 @@ export function createContractsService(fastify: FastifyInstance) {
       currency: row.currency,
       startAt: row.startAt,
       endAt: row.endAt,
-      depositAmount: row.depositAmount,
       termsVersion: row.termsVersion,
       vehicle: {
         displayName: vehicleDisplayName({
@@ -810,18 +1114,320 @@ export function createContractsService(fastify: FastifyInstance) {
         color: row.vehicle.color,
         modelYear: row.vehicle.modelYear,
       },
+      ...(renewal === undefined
+        ? {}
+        : {
+            renewal,
+            payment: { providerAvailable: createPaymentProvider().configured },
+          }),
     };
+  }
+
+  async function uploadDrivingLicense(token: string, file: MultipartFile) {
+    const preview = await resolveContractLink(prisma, token, "RENTAL");
+    const existing = await prisma.contract.findUnique({ where: { id: preview.contractId } });
+    if (!existing) throw contractError.notFound();
+    if (existing.status !== "AWAITING" && existing.status !== "FORM") {
+      throw contractError.invalidTransition(existing.status, existing.status);
+    }
+
+    const attachment = await files.save(file, null, {
+      allowedMime: DRIVING_LICENSE_UPLOAD_MIME,
+    });
+    const bytes = await readFile(
+      resolveStoragePath(env.FILE_STORAGE_DIR, (await prisma.attachment.findUniqueOrThrow({
+        where: { id: attachment.id },
+      })).storageKey),
+    );
+
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL");
+      await acquireAdvisoryLock(tx, CONTRACT_LICENSE_LOCK_NS, link.contractId);
+      const contract = await tx.contract.findUnique({ where: { id: link.contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status !== "AWAITING" && contract.status !== "FORM") {
+        throw contractError.invalidTransition(contract.status, contract.status);
+      }
+
+      await tx.contractDocument.updateMany({
+        where: { contractId: contract.id, type: "DRIVING_LICENSE", supersededAt: null },
+        data: { supersededAt: new Date() },
+      });
+      const document = await tx.contractDocument.create({
+        data: {
+          contractId: contract.id,
+          type: "DRIVING_LICENSE",
+          attachmentId: attachment.id,
+        },
+      });
+
+      const ocr = await createDrivingLicenseOcrProvider().analyzeDrivingLicense({
+        bytes,
+        mimeType: attachment.mimeType,
+      });
+      const evaluated = evaluateDrivingLicenseOcr(
+        ocr,
+        new Date(),
+        env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
+      );
+      const verification = await tx.drivingLicenseVerification.create({
+        data: {
+          contractId: contract.id,
+          documentId: document.id,
+          attachmentId: attachment.id,
+          status: evaluated.status,
+          licenseNumber: evaluated.licenseNumber,
+          expiryDate: evaluated.expiryDate,
+          confidence: evaluated.confidence,
+          provider: evaluated.provider,
+          providerVersion: evaluated.providerVersion,
+          verifiedAt: new Date(),
+        },
+      });
+      await emit(tx, "contract.license_uploaded", contract.id, {
+        documentId: document.id,
+        dedupe: document.id,
+      });
+      await emit(tx, "contract.license_verified", contract.id, {
+        verificationId: verification.id,
+        status: verification.status,
+        dedupe: verification.id,
+      });
+      return loadPublicRental(tx, contract.id);
+    });
+  }
+
+  async function getPublicRental(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
+      return loadPublicRental(tx, link.contractId);
+    });
+  }
+
+  async function getPaymentContext(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
+      const ctx = await loadPublicRental(tx, link.contractId);
+      if (ctx.contract.status !== "SIGNED" && ctx.flow.step !== "PAYMENT" && ctx.flow.step !== "READY_FOR_HANDOVER") {
+        throw contractError.paymentNotAllowed();
+      }
+      return {
+        office: ctx.office,
+        contractNumber: ctx.contract.contractNumber,
+        vehicle: {
+          displayName: ctx.vehicle.displayName,
+          plateNumber: ctx.vehicle.plateNumber,
+        },
+        rentalDays: ctx.rental.rentalDays,
+        agreedAmount: ctx.rental.agreedAmount,
+        currency: ctx.rental.currency,
+        payment: {
+          status: ctx.payment.status,
+          method: ctx.payment.method,
+        },
+        providerAvailable: ctx.payment.providerAvailable,
+      };
+    });
+  }
+
+  async function startCardPayment(token: string, idempotencyKey?: string) {
+    const run = async () => {
+      const link = await resolveContractLink(prisma, token, "RENTAL");
+      const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+
+      const verification = await latestLicense(prisma, contract.id);
+      assertLicenseProgress(verification?.status, verification?.expiryDate);
+
+      const result = await paymentService.startPayment({
+        purpose: "RENTAL",
+        targetId: contract.id,
+        validate: async (tx, obligation) => {
+          if (obligation.amount <= 0) throw contractError.paymentNotAllowed();
+        },
+      });
+      return {
+        payment: {
+          status: result.payment.status,
+          amount: result.payment.amount,
+          currency: result.payment.currency,
+          method: "CARD" as const,
+        },
+        checkoutUrl: result.payment.checkoutUrl,
+        statusToken: result.statusToken,
+        providerAvailable: result.providerAvailable,
+      };
+    };
+
+    if (!idempotencyKey) return run();
+    const outcome = await runIdempotent(
+      prisma,
+      {
+        scope: `contract:card-payment:${hashToken(token)}`,
+        key: idempotencyKey,
+        fingerprint: fingerprintIdempotentPayload({ method: "CARD" }),
+      },
+      run,
+    );
+    if (outcome.deduped) {
+      const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
+      const payment = await prisma.contractPayment.findFirst({
+        where: { contractId: link.contractId, purpose: "RENTAL" },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!payment) throw contractError.paymentAttemptNotFound();
+      return {
+        payment: {
+          status: payment.status,
+          amount: payment.amount,
+          currency: payment.currency,
+          method: payment.method,
+        },
+        checkoutUrl: payment.checkoutUrl,
+        statusToken: null,
+        providerAvailable: createPaymentProvider().configured,
+      };
+    }
+    return outcome.result!;
+  }
+
+  async function startReconciliationPayment(contractId: string, actorUserId: number) {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      include: { reconciliation: true },
+    });
+    if (!contract) throw contractError.notFound();
+    if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
+    if (!contract.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+    if (contract.reconciliation.finalAmount <= 0) {
+      await withTransaction(prisma, async (tx) => {
+        await paymentService.applyZeroAmountSettlement(
+          tx,
+          "RECONCILIATION",
+          contract.reconciliation!.id,
+        );
+      });
+      return {
+        payment: {
+          status: "CONFIRMED" as const,
+          amount: 0,
+          currency: contract.currency,
+          purpose: "RECONCILIATION" as const,
+          checkoutUrl: null,
+          checkoutExpiresAt: null,
+        },
+        checkoutUrl: null,
+        statusToken: null,
+        providerAvailable: createPaymentProvider().configured,
+        noPaymentRequired: true,
+      };
+    }
+    const result = await paymentService.startPayment({
+      purpose: "RECONCILIATION",
+      targetId: contract.reconciliation.id,
+      createdByUserId: actorUserId,
+      validate: async (tx) => {
+        const row = await tx.contract.findUnique({
+          where: { id: contractId },
+          include: { reconciliation: true },
+        });
+        if (!row?.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+      },
+    });
+    return {
+      payment: result.payment,
+      checkoutUrl: result.payment.checkoutUrl,
+      statusToken: result.statusToken,
+      providerAvailable: result.providerAvailable,
+    };
+  }
+
+  async function startPostClosePayment(
+    contractId: string,
+    receivableId: string,
+    actorUserId: number,
+  ) {
+    const receivable = await prisma.contractPostCloseReceivable.findFirst({
+      where: { id: receivableId, contractId },
+    });
+    if (!receivable) throw contractError.notFound();
+    if (receivable.status !== "OPEN") throw contractError.paymentAlreadySettled();
+
+    const result = await paymentService.startPayment({
+      purpose: "POST_CLOSE_RECEIVABLE",
+      targetId: receivable.id,
+      createdByUserId: actorUserId,
+    });
+    return {
+      payment: result.payment,
+      checkoutUrl: result.payment.checkoutUrl,
+      statusToken: result.statusToken,
+      providerAvailable: result.providerAvailable,
+    };
+  }
+
+  async function startRenewalPaymentPublic(token: string) {
+    const link = await resolveContractLink(prisma, token, "RENEWAL", { allowCompleted: true });
+    const renewal = await prisma.contractRenewal.findFirst({
+      where: {
+        contractId: link.contractId,
+        approvedAt: { not: null },
+        appliedAt: null,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!renewal) throw contractError.renewalOfferRequired();
+    if (renewal.additionalAmount <= 0) throw contractError.paymentNotAllowed();
+
+    const result = await paymentService.startPayment({
+      purpose: "RENEWAL",
+      targetId: renewal.id,
+      validate: async (tx) => {
+        const row = await tx.contractRenewal.findUnique({ where: { id: renewal.id } });
+        if (!row?.approvedAt) throw contractError.renewalOfferRequired();
+        if (row.appliedAt) throw contractError.paymentAlreadySettled();
+      },
+    });
+
+    if (result.payment.status === "CONFIRMED") {
+      await withTransaction(prisma, async (tx) => {
+        await markLinkUsed(tx, link.id);
+      });
+    }
+
+    return {
+      payment: {
+        status: result.payment.status,
+        amount: result.payment.amount,
+        currency: result.payment.currency,
+        method: "CARD" as const,
+      },
+      checkoutUrl: result.payment.checkoutUrl,
+      statusToken: result.statusToken,
+      providerAvailable: result.providerAvailable,
+    };
+  }
+
+  async function getPaymentStatusByToken(statusToken: string) {
+    return paymentService.getPaymentStatusByToken(statusToken);
   }
 
   async function getPublic(type: "RENTAL" | "RETURN" | "RENEWAL", token: string) {
     return withTransaction(prisma, async (tx) => {
-      const link = await resolveContractLink(tx, token, type);
+      const link = await resolveContractLink(tx, token, type, {
+        allowCompleted: type === "RETURN" || type === "RENEWAL",
+      });
       const contract = await tx.contract.findUnique({
         where: { id: link.contractId },
-        include: { vehicle: { include: { model: { select: { name: true } } } } },
+        include: {
+          vehicle: { include: { model: { select: { name: true } } } },
+          renewals: { orderBy: { createdAt: "desc" as const } },
+        },
       });
       if (!contract) throw contractError.notFound();
-      return publicView(contract);
+      if (type !== "RENEWAL") return publicView(contract);
+      return publicView(contract, pickPublicRenewal(contract.renewals, Boolean(link.usedAt)));
     });
   }
 
@@ -866,11 +1472,22 @@ export function createContractsService(fastify: FastifyInstance) {
     submitPublicForm,
     acceptPublic,
     carIn,
+    carInStaff,
     reconcile,
+    listReconciliationRoadLiabilities,
+    confirmRoadLiabilityCharge,
     close,
     renew,
     confirmRenewalPublic,
     getPublic,
+    getPublicRental,
+    uploadDrivingLicense,
+    getPaymentContext,
+    startCardPayment,
+    startReconciliationPayment,
+    startPostClosePayment,
+    startRenewalPaymentPublic,
+    getPaymentStatusByToken,
     openInspectionStream,
   };
 }

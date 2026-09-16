@@ -16,6 +16,7 @@ import { auditPlugin } from "src/plugins/audit";
 import { swaggerPlugin } from "src/plugins/dev/swagger";
 import { autoloadPlugin } from "src/plugins/autoload";
 import { schedulerPlugin } from "src/plugins/scheduler";
+import { devPreflightPlugin } from "src/plugins/dev-preflight";
 
 /**
  * Explicit, ordered plugin registration. Infrastructure first, then service
@@ -24,6 +25,7 @@ import { schedulerPlugin } from "src/plugins/scheduler";
  */
 export const registerPlugins = fp(async (fastify) => {
   await fastify.register(prismaPlugin);
+  await fastify.register(devPreflightPlugin);
   await fastify.register(corsPlugin);
   await fastify.register(rateLimitPlugin);
   await fastify.register(helmetPlugin);

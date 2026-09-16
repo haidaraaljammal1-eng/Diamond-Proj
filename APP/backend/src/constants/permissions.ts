@@ -6,8 +6,8 @@
 export const PERMISSIONS = {
   // --- Home dashboard (product) ---
   // Read the aggregated home dashboard. Sub-sections are additionally gated by
-  // their own domain read permissions inside the aggregator (executive/complaints/
-  // call-center/campaigns/…), so a limited user still sees only what they may see.
+  // their own domain read permissions inside the aggregator (finance / vehicles /
+  // contracts / gps / maintenance), so a limited user still sees only what they may see.
   DASHBOARD_READ: "dashboard.read",
 
   USERS_READ: "users.read",
@@ -80,6 +80,20 @@ export const PERMISSIONS = {
   VEHICLES_READ: "vehicles.read",
   VEHICLES_MANAGE: "vehicles.manage",
 
+  MAINTENANCE_READ: "maintenance.read",
+  MAINTENANCE_MANAGE: "maintenance.manage",
+
+  GPS_READ: "gps.read",
+
+  // Office WhatsApp: connection, Inbox read, send, optional Customer link. Permissions stay separate.
+  WHATSAPP_MANAGE_CONNECTION: "whatsapp.manage_connection",
+  WHATSAPP_READ: "whatsapp.read",
+  WHATSAPP_SEND: "whatsapp.send",
+  WHATSAPP_LINK_CUSTOMER: "whatsapp.link_customer",
+
+  VIOLATIONS_READ: "violations.read",
+  VIOLATIONS_CHARGE: "violations.charge",
+
   // --- Diamond rental contracts ---
   CONTRACTS_READ: "contracts.read",
   CONTRACTS_MANAGE: "contracts.manage",
@@ -89,6 +103,9 @@ export const PERMISSIONS = {
   CONTRACTS_RECONCILE: "contracts.reconcile",
   CONTRACTS_CLOSE: "contracts.close",
   CONTRACTS_RENEW: "contracts.renew",
+
+  FINANCE_READ: "finance.read",
+  FINANCE_MANAGE_EXPENSES: "finance.manage_expenses",
 
   PURCHASE_EXPERIENCES_READ: "purchase_experiences.read",
   PURCHASE_EXPERIENCES_MANAGE: "purchase_experiences.manage",
@@ -300,6 +317,51 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     category: "vehicles",
     description: "Create/update/(de)activate vehicles",
   },
+  {
+    key: PERMISSIONS.MAINTENANCE_READ,
+    category: "maintenance",
+    description: "View maintenance orders and summary",
+  },
+  {
+    key: PERMISSIONS.MAINTENANCE_MANAGE,
+    category: "maintenance",
+    description: "Create and manage maintenance orders",
+  },
+  {
+    key: PERMISSIONS.GPS_READ,
+    category: "gps",
+    description: "View GPS Operations summary, vehicle tracking, and map points",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_MANAGE_CONNECTION,
+    category: "whatsapp",
+    description: "Link, change, or disconnect the office WhatsApp Cloud API connection",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_READ,
+    category: "whatsapp",
+    description: "View WhatsApp conversations and messages, and mark conversations read internally",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_SEND,
+    category: "whatsapp",
+    description: "Send manual WhatsApp text, approved templates, and permitted media in an existing conversation",
+  },
+  {
+    key: PERMISSIONS.WHATSAPP_LINK_CUSTOMER,
+    category: "whatsapp",
+    description: "Explicitly link or unlink a WhatsApp conversation to a Diamond Customer",
+  },
+  {
+    key: PERMISSIONS.VIOLATIONS_READ,
+    category: "violations",
+    description: "View road liabilities (violations and Salik) summary, list, and detail",
+  },
+  {
+    key: PERMISSIONS.VIOLATIONS_CHARGE,
+    category: "violations",
+    description: "Confirm customer charges derived from road liabilities (reconciliation or post-close)",
+  },
   { key: PERMISSIONS.CONTRACTS_READ, category: "contracts", description: "View rental contracts" },
   {
     key: PERMISSIONS.CONTRACTS_MANAGE,
@@ -329,12 +391,22 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   {
     key: PERMISSIONS.CONTRACTS_CLOSE,
     category: "contracts",
-    description: "Close a reviewed contract and release the vehicle",
+    description: "Close a reviewed contract",
   },
   {
     key: PERMISSIONS.CONTRACTS_RENEW,
     category: "contracts",
     description: "Renew an active contract",
+  },
+  {
+    key: PERMISSIONS.FINANCE_READ,
+    category: "finance",
+    description: "View finance summary, ledger, open receivables, and manual expenses",
+  },
+  {
+    key: PERMISSIONS.FINANCE_MANAGE_EXPENSES,
+    category: "finance",
+    description: "Create, void, and correct manual company expenses",
   },
   {
     key: PERMISSIONS.PURCHASE_EXPERIENCES_READ,

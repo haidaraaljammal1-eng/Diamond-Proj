@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
+import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
+import {
+  confirmRentalPaymentViaStatusToken,
+  createFakePaymentProvider,
+} from "../helpers/fake-payment-provider";
 
 /**
  * Contracts V1 integration. Requires RUN_INTEGRATION=true and TEST_DATABASE_URL
@@ -85,6 +91,43 @@ if (!RUN) {
     token = res.json().data.accessToken;
   }
 
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+
+  function licenseMultipart() {
+    const boundary = "----ctlicense";
+    const payload = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="dl.png"\r\nContent-Type: image/png\r\n\r\n`,
+      ),
+      PNG,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    return { payload, headers: { "content-type": `multipart/form-data; boundary=${boundary}` } };
+  }
+
+  async function seedValidLicense(rentalToken: string) {
+    setDrivingLicenseOcrProviderForTests({
+      name: "test",
+      async analyzeDrivingLicense() {
+        return {
+          ok: true,
+          licenseNumber: "DL-1",
+          expiryDate: "2030-01-01",
+          confidence: 0.99,
+          provider: "test",
+        };
+      },
+    });
+    const { headers, payload } = licenseMultipart();
+    const up = await app.inject({
+      method: "POST",
+      url: `/contracts/rental/${rentalToken}/driving-license`,
+      headers,
+      payload,
+    });
+    assert.equal(up.statusCode, 200, up.body);
+  }
+
   let photoSeq = 0;
   async function dummyPhotos() {
     const ids: string[] = [];
@@ -104,6 +147,10 @@ if (!RUN) {
   }
 
   before(async () => {
+    const { env } = await import("src/config/env");
+    if (!/haidara_test(?:\?|$)/.test(env.DATABASE_URL)) {
+      throw new Error("contracts integration refuses to run unless DATABASE_URL is haidara_test");
+    }
     const { buildApp } = await import("src/app");
     app = await buildApp();
     prisma = app.prisma;
@@ -137,6 +184,7 @@ if (!RUN) {
   });
 
   after(async () => {
+    setDrivingLicenseOcrProviderForTests(undefined);
     await app.close();
   });
 
@@ -174,7 +222,6 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 1500,
-        depositAmount: 500,
       },
     });
     assert.equal(offer.statusCode, 201, offer.body);
@@ -196,19 +243,19 @@ if (!RUN) {
       url: `/contracts/rental/${rentalToken}`,
     });
     assert.equal(publicRental.statusCode, 200, publicRental.body);
-    const rentalView = publicRental.json().data as Record<string, unknown>;
-    assert.equal(rentalView.contractNumber, offer.json().data.contractNumber);
-    assert.equal(rentalView.id, undefined);
-    assert.equal(rentalView.customer, undefined);
-    assert.equal(rentalView.payments, undefined);
-    assert.equal(rentalView.snapshot, undefined);
-    assert.equal(rentalView.actions, undefined);
+    const rentalView = publicRental.json().data as {
+      contract: { contractNumber: string; status: string };
+      flow: { step: string };
+      customer: unknown;
+    };
+    assert.equal(rentalView.contract.contractNumber, offer.json().data.contractNumber);
+    assert.equal(rentalView.flow.step, "LICENSE_VERIFICATION");
+    assert.equal((publicRental.json().data as { id?: string }).id, undefined);
+    assert.equal(rentalView.customer, null);
+    assert.equal((publicRental.json().data as { snapshot?: unknown }).snapshot, undefined);
+    assert.equal((publicRental.json().data as { actions?: unknown }).actions, undefined);
 
-    const staffUnauth = await app.inject({ method: "GET", url: `/contracts/${contractId}` });
-    assert.equal(staffUnauth.statusCode, 401);
-
-    const invalid = await app.inject({ method: "GET", url: "/contracts/rental/not-a-real-token" });
-    assert.equal(invalid.statusCode, 401);
+    await seedValidLicense(rentalToken);
 
     const form = await app.inject({
       method: "POST",
@@ -218,12 +265,18 @@ if (!RUN) {
         mobile: "+971500000001",
         nationality: "AE",
         identityNumber: "784-1990-123",
-        drivingLicenseNumber: "DL-1",
-        drivingLicenseExpiry: "2030-01-01",
+        drivingLicenseNumber: "FORGED",
       },
     });
     assert.equal(form.statusCode, 200, form.body);
-    assert.equal(form.json().data.status, "FORM");
+    assert.equal(form.json().data.contract.status, "FORM");
+    assert.equal(form.json().data.licenseVerification.licenseNumber, "DL-1");
+
+    const staffUnauth = await app.inject({ method: "GET", url: `/contracts/${contractId}` });
+    assert.equal(staffUnauth.statusCode, 401);
+
+    const invalid = await app.inject({ method: "GET", url: "/contracts/rental/not-a-real-token" });
+    assert.equal(invalid.statusCode, 401);
 
     const accept = await app.inject({
       method: "POST",
@@ -231,10 +284,12 @@ if (!RUN) {
       payload: {},
     });
     assert.equal(accept.statusCode, 200, accept.body);
-    assert.equal(accept.json().data.status, "SIGNED");
+    assert.equal(accept.json().data.contract.status, "SIGNED");
 
     const reused = await app.inject({ method: "GET", url: `/contracts/rental/${rentalToken}` });
-    assert.equal(reused.statusCode, 401);
+    assert.equal(reused.statusCode, 200, reused.body);
+    assert.equal(reused.json().data.contract.status, "SIGNED");
+    assert.equal(reused.json().data.flow.step, "PAYMENT");
 
     const signed = await app.inject({
       method: "GET",
@@ -243,38 +298,31 @@ if (!RUN) {
     });
     const snapshotName = signed.json().data.snapshot.customer.name;
     assert.equal(snapshotName, "Omar Test");
+    assert.equal(signed.json().data.snapshot.customer.drivingLicenseNumber, "DL-1");
+    assert.equal(signed.json().data.snapshot.contractNumber, offer.json().data.contractNumber);
     await prisma.customer.update({
       where: { id: signed.json().data.customerId },
       data: { name: "Changed Later" },
     });
 
-    const payHeaders = { ...auth(), "idempotency-key": `pay-${contractId}` };
-    const pay = await app.inject({
+    const payments = createFakePaymentProvider(run);
+    setPaymentProviderForTests(payments.provider);
+    const paid = await confirmRentalPaymentViaStatusToken(
+      app,
+      payments,
+      rentalToken,
+      `pay-${contractId}`,
+    );
+    assert.equal(paid.contractStatus, "PAID");
+
+    const manualDisabled = await app.inject({
       method: "POST",
       url: `/contracts/${contractId}/payment/confirm`,
-      headers: payHeaders,
+      headers: auth(),
       payload: { method: "MANUAL" },
     });
-    assert.equal(pay.statusCode, 200, pay.body);
-    assert.equal(pay.json().data.status, "PAID");
-
-    const payReplay = await app.inject({
-      method: "POST",
-      url: `/contracts/${contractId}/payment/confirm`,
-      headers: payHeaders,
-      payload: { method: "MANUAL" },
-    });
-    assert.equal(payReplay.statusCode, 200, payReplay.body);
-    assert.equal(payReplay.json().data.status, "PAID");
-
-    const payMismatch = await app.inject({
-      method: "POST",
-      url: `/contracts/${contractId}/payment/confirm`,
-      headers: payHeaders,
-      payload: { method: "BANK_TRANSFER" },
-    });
-    assert.equal(payMismatch.statusCode, 409, payMismatch.body);
-    assert.equal(payMismatch.json().error.context.reason, "IDEMPOTENCY_KEY_CONFLICT");
+    assert.equal(manualDisabled.statusCode, 409);
+    assert.equal(manualDisabled.json().error.context.reason, "MANUAL_PAYMENT_DISABLED");
 
     const vehiclePaid = await app.inject({
       method: "GET",
@@ -338,6 +386,7 @@ if (!RUN) {
       method: "POST",
       url: `/contracts/${contractId}/renewal-link`,
       headers: auth(),
+      payload: { additionalDays: 2, additionalAmount: 800 },
     });
     assert.equal(renewalLink.statusCode, 200, renewalLink.body);
     const renewToken = renewalLink.json().data.link.token as string;
@@ -371,8 +420,63 @@ if (!RUN) {
     assert.equal(publicReturn.statusCode, 200, publicReturn.body);
     assert.equal(publicReturn.json().data.status, "RETOUT");
     assert.equal(publicReturn.json().data.id, undefined);
+    assert.equal(typeof publicReturn.json().data.office.displayName, "string");
+    assert.ok(publicReturn.json().data.office.displayName.length > 0);
+    assert.equal(publicReturn.json().data.reconciliation, undefined);
+
+    const afterReturn = await app.inject({
+      method: "GET",
+      url: `/vehicles/${lifeVehicleId}`,
+      headers: auth(),
+    });
+    assert.equal(afterReturn.json().data.operationalStatus, "rented");
+    assert.equal(afterReturn.json().data.currentRental.status, "retout");
+
+    const retoutDetail = await app.inject({
+      method: "GET",
+      url: `/contracts/${contractId}`,
+      headers: auth(),
+    });
+    assert.equal(retoutDetail.json().data.status, "RETOUT");
+    assert.equal(retoutDetail.json().data.actions.canCarIn, true);
+    assert.equal(retoutDetail.json().data.vehicle.operationalStatus, "RENTED");
+
+    const closeOnRetout = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/close`,
+      headers: auth(),
+    });
+    assert.equal(closeOnRetout.statusCode, 409);
+
+    const staffCarInUnauth = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/car-in`,
+      payload: { mileageIn: 1400, fuelIn: "1/2", photos: await dummyPhotos() },
+    });
+    assert.equal(staffCarInUnauth.statusCode, 401);
 
     const inPhotos = await dummyPhotos();
+    const staffCarIn = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/car-in`,
+      headers: auth(),
+      payload: { mileageIn: 1400, fuelIn: "1/2", notes: "office return", photos: inPhotos },
+    });
+    assert.equal(staffCarIn.statusCode, 200, staffCarIn.body);
+    assert.equal(staffCarIn.json().data.status, "REVIEW");
+    assert.equal(staffCarIn.json().data.carIn.mileageIn, 1400);
+    assert.equal(staffCarIn.json().data.carIn.photos.length, 8);
+    assert.equal(staffCarIn.json().data.vehicle.operationalStatus, "AVAILABLE");
+    assert.equal(staffCarIn.json().data.actions.canCarIn, false);
+
+    const publicReturnAfter = await app.inject({
+      method: "GET",
+      url: `/contracts/return/${returnToken}`,
+    });
+    assert.equal(publicReturnAfter.statusCode, 200, publicReturnAfter.body);
+    assert.equal(publicReturnAfter.json().data.status, "REVIEW");
+    assert.equal(publicReturnAfter.json().data.office.displayName, publicReturn.json().data.office.displayName);
+
     const carIn = await app.inject({
       method: "POST",
       url: `/contracts/return/${returnToken}/car-in`,
@@ -386,8 +490,8 @@ if (!RUN) {
       url: `/vehicles/${lifeVehicleId}`,
       headers: auth(),
     });
-    assert.equal(afterIn.json().data.operationalStatus, "rented");
-    assert.equal(afterIn.json().data.currentRental.status, "review");
+    assert.equal(afterIn.json().data.operationalStatus, "available");
+    assert.equal(afterIn.json().data.currentRental, null);
 
     const closeEarly = await app.inject({
       method: "POST",
@@ -402,14 +506,22 @@ if (!RUN) {
       headers: auth(),
       payload: {
         lines: [
+          { type: "DAMAGE", description: "bumper scuff", amount: 100 },
           { type: "FUEL", description: "fuel gap", amount: 80 },
-          { type: "SALIK", description: "salik ref only", amount: 40, sourceDomain: "salik" },
+          { type: "LATE", description: "late return", amount: 50 },
+          { type: "OTHER", description: "cleaning", amount: 270 },
         ],
       },
     });
     assert.equal(rec.statusCode, 200, rec.body);
-    assert.equal(rec.json().data.reconciliation.chargesTotal, 120);
-    assert.equal(rec.json().data.reconciliation.finalAmount, -380);
+    assert.equal(rec.json().data.reconciliation.chargesTotal, 500);
+    assert.equal(rec.json().data.reconciliation.finalAmount, 500);
+    assert.equal(rec.json().data.reconciliation.depositAmount, undefined);
+    assert.equal(rec.json().data.reconciliation.deductions, undefined);
+    assert.deepEqual(
+      rec.json().data.reconciliation.lines.map((line: { type: string }) => line.type).sort(),
+      ["DAMAGE", "FUEL", "LATE", "OTHER"],
+    );
 
     const closed = await app.inject({
       method: "POST",
@@ -462,6 +574,7 @@ if (!RUN) {
         headers: auth(),
       });
       const t = link.json().data.link.token as string;
+      await seedValidLicense(t);
       await app.inject({
         method: "POST",
         url: `/contracts/rental/${t}/form`,
@@ -470,32 +583,139 @@ if (!RUN) {
           mobile: "+971500000009",
           nationality: "AE",
           passportNumber: "P123",
-          drivingLicenseNumber: "DL9",
-          drivingLicenseExpiry: "2031-01-01",
         },
       });
       await app.inject({ method: "POST", url: `/contracts/rental/${t}/accept`, payload: {} });
+      return t;
     }
-    await sign(idA);
-    await sign(idB);
+    const payments = createFakePaymentProvider(`${run}-race`);
+    setPaymentProviderForTests(payments.provider);
+    const tokenA = await sign(idA);
+    const tokenB = await sign(idB);
+    async function tryPayRental(token: string, key: string) {
+      const start = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${token}/payment`,
+        headers: { "idempotency-key": key },
+      });
+      if (start.statusCode !== 200) return start;
+      payments.confirm();
+      return app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${start.json().data.statusToken as string}`,
+      });
+    }
     const [payA, payB] = await Promise.all([
-      app.inject({
-        method: "POST",
-        url: `/contracts/${idA}/payment/confirm`,
-        headers: auth(),
-        payload: { method: "MANUAL" },
-      }),
-      app.inject({
-        method: "POST",
-        url: `/contracts/${idB}/payment/confirm`,
-        headers: auth(),
-        payload: { method: "MANUAL" },
-      }),
+      tryPayRental(tokenA, `race-${idA}`),
+      tryPayRental(tokenB, `race-${idB}`),
     ]);
     const codes = [payA.statusCode, payB.statusCode].sort();
     assert.deepEqual(codes, [200, 409]);
     const failed = payA.statusCode === 409 ? payA : payB;
     assert.equal(failed.json().error.context.reason, "VEHICLE_ALREADY_RENTED");
+  });
+
+  test("REVIEW after Car-In is not currentRental and close does not steal a newer rental", async () => {
+    const v = await app.inject({
+      method: "POST",
+      url: "/vehicles",
+      headers: auth(),
+      payload: { vehicleName: `CT-REV-${run}`, plateNumber: `CT R ${run}` },
+    });
+    const vid = v.json().data.id as number;
+    const { normalizeEmail } = await import("src/lib/security/normalize");
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { email: normalizeEmail(admin.email) },
+    });
+    const customer = await prisma.customer.create({ data: { name: `CT Review ${run}` } });
+    const old = await prisma.contract.create({
+      data: {
+        contractNumber: `CT-OLD-${run}`,
+        status: "REVIEW",
+        vehicleId: vid,
+        customerId: customer.id,
+        createdByUserId: actor.id,
+        priceType: "DAILY",
+        rentalDays: 2,
+        agreedAmount: 800,
+        depositAmount: 0,
+        carOut: {
+          create: {
+            performedByUserId: actor.id,
+            occurredAt: new Date("2026-09-01T08:00:00.000Z"),
+            mileageOut: 10,
+            fuelOut: "F",
+          },
+        },
+        carIn: {
+          create: {
+            occurredAt: new Date("2026-09-01T11:00:00.000Z"),
+            mileageIn: 40,
+            fuelIn: "1/2",
+          },
+        },
+        reconciliation: {
+          create: {
+            chargesTotal: 0,
+            depositAmount: 0,
+            deductions: 0,
+            finalAmount: 0,
+            approvedAt: new Date("2026-09-01T11:20:00.000Z"),
+          },
+        },
+      },
+    });
+    await prisma.vehicle.update({ where: { id: vid }, data: { operationalStatus: "AVAILABLE" } });
+    const idle = await app.inject({ method: "GET", url: `/vehicles/${vid}`, headers: auth() });
+    assert.equal(idle.json().data.operationalStatus, "available");
+    assert.equal(idle.json().data.currentRental, null);
+
+    const next = await prisma.contract.create({
+      data: {
+        contractNumber: `CT-NEW-${run}`,
+        status: "PAID",
+        vehicleId: vid,
+        customerId: customer.id,
+        createdByUserId: actor.id,
+        priceType: "DAILY",
+        rentalDays: 2,
+        agreedAmount: 900,
+      },
+    });
+    await prisma.contractPayment.create({
+      data: {
+        contractId: next.id,
+        purpose: "RENTAL",
+        targetId: next.id,
+        amount: 900,
+        method: "MANUAL",
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+        createdByUserId: actor.id,
+      },
+    });
+    const photos = await dummyPhotos();
+    const out = await app.inject({
+      method: "POST",
+      url: `/contracts/${next.id}/car-out`,
+      headers: auth(),
+      payload: { mileageOut: 50, fuelOut: "F", photos },
+    });
+    assert.equal(out.statusCode, 200, out.body);
+    const rented = await app.inject({ method: "GET", url: `/vehicles/${vid}`, headers: auth() });
+    assert.equal(rented.json().data.operationalStatus, "rented");
+    assert.equal(rented.json().data.currentRental.contractId, next.id);
+
+    const closeOld = await app.inject({
+      method: "POST",
+      url: `/contracts/${old.id}/close`,
+      headers: auth(),
+    });
+    assert.equal(closeOld.statusCode, 200, closeOld.body);
+    assert.equal(closeOld.json().data.status, "CLOSED");
+    const still = await app.inject({ method: "GET", url: `/vehicles/${vid}`, headers: auth() });
+    assert.equal(still.json().data.operationalStatus, "rented");
+    assert.equal(still.json().data.currentRental.contractId, next.id);
   });
 
   test("expired and revoked rental links are rejected", async () => {
@@ -534,6 +754,75 @@ if (!RUN) {
     });
     const expired = await app.inject({ method: "GET", url: `/contracts/rental/${fresh}` });
     assert.equal(expired.statusCode, 401);
+  });
+
+  test("legacy stored deposit values do not reduce reconciliation finalAmount in API output", async () => {
+    const v = await app.inject({
+      method: "POST",
+      url: "/vehicles",
+      headers: auth(),
+      payload: { vehicleName: `CT-DEP-${run}`, plateNumber: `CT D ${run}` },
+    });
+    const vid = v.json().data.id as number;
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { email: (await import("src/lib/security/normalize")).normalizeEmail(admin.email) },
+    });
+    const customer = await prisma.customer.create({ data: { name: `CT Dep ${run}` } });
+    const legacy = await prisma.contract.create({
+      data: {
+        contractNumber: `CT-DEP-${run}`,
+        status: "REVIEW",
+        vehicleId: vid,
+        customerId: customer.id,
+        createdByUserId: actor.id,
+        priceType: "DAILY",
+        rentalDays: 2,
+        agreedAmount: 800,
+        depositAmount: 500,
+        carOut: {
+          create: {
+            performedByUserId: actor.id,
+            occurredAt: new Date("2026-09-01T08:00:00.000Z"),
+            mileageOut: 10,
+            fuelOut: "F",
+          },
+        },
+        carIn: {
+          create: {
+            occurredAt: new Date("2026-09-01T11:00:00.000Z"),
+            mileageIn: 40,
+            fuelIn: "1/2",
+          },
+        },
+        reconciliation: {
+          create: {
+            chargesTotal: 570,
+            depositAmount: 500,
+            deductions: 500,
+            finalAmount: 70,
+            approvedAt: new Date("2026-09-01T11:20:00.000Z"),
+            lines: {
+              create: [
+                { type: "DAMAGE", description: "damage", amount: 300 },
+                { type: "FUEL", description: "fuel", amount: 50 },
+                { type: "LATE", description: "late", amount: 100 },
+                { type: "VIOLATION", description: "rta", amount: 120 },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/contracts/${legacy.id}`,
+      headers: auth(),
+    });
+    assert.equal(detail.statusCode, 200, detail.body);
+    assert.equal(detail.json().data.reconciliation.chargesTotal, 570);
+    assert.equal(detail.json().data.reconciliation.finalAmount, 570);
+    assert.equal(detail.json().data.depositAmount, undefined);
   });
   });
 }

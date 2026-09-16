@@ -48,6 +48,18 @@ export function sanitizeForAudit(input: unknown, depth = 0): unknown {
   return REDACTED; // functions, symbols, etc.
 }
 
+/**
+ * Strip webhook verify tokens from URLs before they reach logs.
+ * Fastify's default request serializer includes the query string.
+ */
+export function redactSensitiveUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  return url
+    .replace(/([?&](?:hub\.)?verify_token=)[^&]*/gi, "$1[REDACTED]")
+    .replace(/([?&]token=)[^&]*/gi, "$1[REDACTED]")
+    .replace(/(\/whatsapp\/webhooks\/ultramsg\/)[^/?#]+/gi, "$1[REDACTED]");
+}
+
 /** Mask the last octet of an IPv4 address for audit storage. */
 export function maskIp(ip: string | undefined): string | undefined {
   if (!ip) return ip;

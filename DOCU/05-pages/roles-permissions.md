@@ -350,6 +350,25 @@ name. Editing changes name/description only; grants stay Backend-owned.
 - Separate states for "no roles", "empty permission catalog", "no search match",
   "no access" and "request failed" (with retry).
 
+## Development cleanup
+
+Integration tests (`RUN_INTEGRATION=true`) can leave disposable role rows in a
+local dev database (keys like `veh_reader_MTR8F2WB`). To reset roles to the
+seeded system admin only:
+
+```bash
+cd APP/backend && npm run db:cleanup:dev-roles:only-system-admin
+```
+
+To remove only obvious integration-test role keys while keeping manually created
+dev roles:
+
+```bash
+cd APP/backend && npm run db:cleanup:dev-roles
+```
+
+Refuses production and non-local `DATABASE_URL`. System roles are never deleted.
+
 ## Scope and known limitations
 
 - No delete, clone or user assignment, even though the Backend exposes

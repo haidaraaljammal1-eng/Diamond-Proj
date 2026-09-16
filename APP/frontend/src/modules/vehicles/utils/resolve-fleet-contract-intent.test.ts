@@ -10,7 +10,6 @@ const paid = {
 };
 const active = { ...paid, contractId: "ct-active", status: "active" as const };
 const retout = { ...paid, contractId: "ct-retout", status: "retout" as const };
-const review = { ...paid, contractId: "ct-review", status: "review" as const };
 
 describe("resolveFleetPrimaryIntent", () => {
   it("A. AVAILABLE + no currentRental → Set Rental Price", () => {
@@ -50,13 +49,10 @@ describe("resolveFleetPrimaryIntent", () => {
     );
   });
 
-  it("G. REVIEW → Reconciliation", () => {
+  it("G. After Car-In the vehicle is AVAILABLE with no currentRental → Set Rental Price", () => {
     assert.deepEqual(
-      resolveFleetPrimaryIntent({
-        operationalStatus: "rented",
-        currentRental: review,
-      }),
-      { type: "reconcile", contractId: "ct-review" },
+      resolveFleetPrimaryIntent({ operationalStatus: "available", currentRental: null }),
+      { type: "set-rental-price" },
     );
   });
 

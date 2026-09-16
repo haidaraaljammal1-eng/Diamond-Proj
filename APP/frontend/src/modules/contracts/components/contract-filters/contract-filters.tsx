@@ -2,7 +2,8 @@
 
 import { Button } from "@/shared/components/ui/button";
 import { DataSearch } from "@/shared/components/data-search";
-import { Input } from "@/shared/components/ui/input";
+import { DateRangePicker } from "@/shared/components/ui/date-range-picker";
+import type { DateRangePickerLabels } from "@/shared/components/ui/date-range-picker";
 import { Select } from "@/shared/components/ui/select";
 import type { SelectOption } from "@/shared/components/ui/select";
 import type {
@@ -26,8 +27,7 @@ export interface ContractFiltersLabels {
   searchButton: string;
   searchClear: string;
   sortLabel: string;
-  fromLabel: string;
-  toLabel: string;
+  dateRange: DateRangePickerLabels;
   clear: string;
   activeCount: string;
 }
@@ -37,11 +37,13 @@ export interface ContractFiltersProps {
   activeFilterCount: number;
   searchLoading: boolean;
   resultsLabel: string;
+  locale: string;
   labels: ContractFiltersLabels;
   onStatusChange: (status: ContractStatusFilter) => void;
   onSearchSubmit: (search: string) => void;
   onSearchClear: () => void;
-  onDateRangeChange: (from: string, to: string) => void;
+  onDateRangeApply: (from: string, to: string) => void;
+  onDateRangeClear: () => void;
   onSortChange: (sort: ContractSortKey) => void;
   onClear: () => void;
 }
@@ -51,11 +53,13 @@ export function ContractFilters({
   activeFilterCount,
   searchLoading,
   resultsLabel,
+  locale,
   labels,
   onStatusChange,
   onSearchSubmit,
   onSearchClear,
-  onDateRangeChange,
+  onDateRangeApply,
+  onDateRangeClear,
   onSortChange,
   onClear,
 }: ContractFiltersProps) {
@@ -116,25 +120,16 @@ export function ContractFilters({
           />
         </div>
 
-        <label className={styles.date}>
-          <span className={styles.dateLabel}>{labels.fromLabel}</span>
-          <Input
-            type="date"
-            value={filters.from}
-            onChange={(event) => onDateRangeChange(event.target.value, filters.to)}
-            aria-label={labels.fromLabel}
+        <div className={styles.dateRange}>
+          <DateRangePicker
+            value={{ from: filters.from, to: filters.to }}
+            locale={locale}
+            labels={labels.dateRange}
+            onApply={(range) => onDateRangeApply(range.from, range.to)}
+            onClear={onDateRangeClear}
+            disabled={searchLoading}
           />
-        </label>
-
-        <label className={styles.date}>
-          <span className={styles.dateLabel}>{labels.toLabel}</span>
-          <Input
-            type="date"
-            value={filters.to}
-            onChange={(event) => onDateRangeChange(filters.from, event.target.value)}
-            aria-label={labels.toLabel}
-          />
-        </label>
+        </div>
 
         <div className={styles.control}>
           <Select

@@ -3,38 +3,31 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
-import { Chip } from "@/shared/components/ui/chip";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListRow } from "@/shared/components/ui/list-row";
+import { ContractStatusChip } from "@/modules/contracts/components/contract-status/contract-status";
 import { ContractFileIcon } from "../../dashboard.icons";
-import { contractStatusPresentation } from "../../utils/contract-status";
-import type { RecentContract } from "../../types/dashboard.types";
+import type { RecentContractDto } from "../../types/dashboard.types";
 import styles from "./recent-contracts-card.module.css";
 
 export interface RecentContractsCardProps {
-  contracts: RecentContract[];
-  /** The owner view adds the "from all staff" chip and the issuing employee. */
-  isOwner: boolean;
+  contracts: RecentContractDto[] | null;
+  onOpenContract: (id: string) => void;
+  onGenerateLink?: () => void;
 }
 
-/** Demo Dashboard "أحدث العقود" card. */
-export function RecentContractsCard({ contracts, isOwner }: RecentContractsCardProps) {
+export function RecentContractsCard({
+  contracts,
+  onOpenContract,
+  onGenerateLink,
+}: RecentContractsCardProps) {
   const t = useTranslations("Dashboard");
-  const shell = useTranslations("Shell");
+
+  if (contracts == null) return null;
 
   return (
     <Card as="section">
-      <Card.Title
-        trailing={
-          isOwner ? (
-            <Chip tone="gold" dot>
-              {t("fromAllStaff")}
-            </Chip>
-          ) : null
-        }
-      >
-        {t("latestContracts")}
-      </Card.Title>
+      <Card.Title>{t("latestContracts")}</Card.Title>
 
       {contracts.length === 0 ? (
         <EmptyState
@@ -42,41 +35,34 @@ export function RecentContractsCard({ contracts, isOwner }: RecentContractsCardP
           title={t("empty.title")}
           description={t("empty.description")}
           action={
-            <Button
-              type="button"
-              size="sm"
-              aria-disabled="true"
-              title={`${t("generateLink")} — ${shell("navigationActionNote")}`}
-            >
-              {t("generateLink")}
-            </Button>
+            onGenerateLink ? (
+              <Button type="button" size="sm" onClick={onGenerateLink}>
+                {t("generateLink")}
+              </Button>
+            ) : undefined
           }
         />
       ) : (
         <div className={styles.list}>
           {contracts.map((contract) => {
-            const status = contractStatusPresentation(contract.status);
-
+            const customer = contract.customerName ?? t("customerPending");
             return (
               <ListRow
                 key={contract.id}
                 icon={<ContractFileIcon />}
-                title={`${contract.customerName} · ${contract.vehicleName}`}
+                title={`${customer} · ${contract.vehicleName}`}
                 meta={
                   <>
                     <span className={styles.contractId} dir="ltr">
-                      {contract.id}
+                      {contract.contractNumber}
                     </span>
-                    {isOwner && contract.employeeName
+                    {contract.employeeName
                       ? ` · ${t("issuedBy", { name: contract.employeeName })}`
                       : null}
                   </>
                 }
-                trailing={
-                  <Chip tone={status.tone} dot>
-                    {t(`status.${status.translationKey}`)}
-                  </Chip>
-                }
+                trailing={<ContractStatusChip status={contract.status} />}
+                onClick={() => onOpenContract(contract.id)}
               />
             );
           })}

@@ -19,16 +19,6 @@ function DashboardIcon(props: IconProps) {
   );
 }
 
-function OperationsIcon(props: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" {...props}>
-      <path d="M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" />
-      <path d="M12 6V3.5a.5.5 0 0 1 .5-.5h1.5M12 18v2.5a.5.5 0 0 0 .5.5h1.5M6 12H3.5a.5.5 0 0 0-.5.5v1.5M18 12h2.5a.5.5 0 0 1 .5.5v1.5M7.1 7.1l-1.8-1.8M16.9 16.9l1.8 1.8M16.9 7.1l1.8-1.8M7.1 16.9l-1.8-1.8" />
-      <circle cx="12" cy="12" r="2.2" />
-    </svg>
-  );
-}
-
 function CarsIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" {...props}>
@@ -128,7 +118,6 @@ export const NAVIGATION_ICONS: Record<
   ComponentType<SVGProps<SVGSVGElement>>
 > = {
   dashboard: DashboardIcon,
-  operations: OperationsIcon,
   cars: CarsIcon,
   gps: GpsIcon,
   maintenance: MaintenanceIcon,

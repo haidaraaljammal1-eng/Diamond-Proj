@@ -23,6 +23,8 @@ ORDERS_READ: "orders.read",
 Keys are `resource.action`. Conventional actions: `read`, `create`, `update`, `delete`,
 `manage`, `export`, plus scope-widening keys like `view_all_branches` and audience keys
 like `<x>.receive`. Seeding is automatic (`prisma/seed/index.ts`) and idempotent.
+After adding keys, run `npm run dev:bootstrap` (or `npm run db:seed`) on each local
+database — Git does not sync permission rows.
 
 ## Gating a route
 

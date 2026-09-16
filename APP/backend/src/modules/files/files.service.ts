@@ -30,10 +30,12 @@ export function createFilesService(fastify: FastifyInstance) {
 
   async function save(
     file: MultipartFile,
-    uploadedById: number,
+    uploadedById: number | null,
+    options?: { allowedMime?: readonly string[] },
   ): Promise<AttachmentPublic> {
     const declaredMime = file.mimetype;
-    if (!env.ALLOWED_UPLOAD_MIME.includes(declaredMime)) {
+    const allowed = [...(options?.allowedMime ?? env.ALLOWED_UPLOAD_MIME)];
+    if (!allowed.includes(declaredMime)) {
       throw new AppError({
         code: ErrorCode.VALIDATION_ERROR,
         message: "File type is not allowed",
@@ -41,7 +43,7 @@ export function createFilesService(fastify: FastifyInstance) {
     }
 
     const buffer = await file.toBuffer();
-    if (file.file.truncated) {
+    if (file.file.truncated || buffer.length > env.MAX_UPLOAD_SIZE) {
       throw new AppError({
         code: ErrorCode.VALIDATION_ERROR,
         statusCode: 413,
@@ -71,7 +73,7 @@ export function createFilesService(fastify: FastifyInstance) {
         mimeType: detected,
         size: buffer.length,
         checksum,
-        uploadedById,
+        uploadedById: uploadedById ?? null,
       },
     });
     return toAttachmentPublic(attachment);

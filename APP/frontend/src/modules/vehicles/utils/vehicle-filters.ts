@@ -1,3 +1,4 @@
+import { VEHICLES_PAGE_SIZE } from "../api/vehicles.api.types.ts";
 import type {
   VehicleFiltersState,
   VehicleSortKey,
@@ -35,7 +36,7 @@ export const VEHICLE_SORT_KEYS = Object.keys(
 export function buildVehiclesQuery(params: VehiclesListQuery): string {
   const search = new URLSearchParams();
   search.set("page", String(params.page ?? 1));
-  search.set("pageSize", String(params.pageSize ?? 100));
+  search.set("pageSize", String(params.pageSize ?? VEHICLES_PAGE_SIZE));
   search.set("active", "true");
 
   if (params.status && params.status !== "all") {

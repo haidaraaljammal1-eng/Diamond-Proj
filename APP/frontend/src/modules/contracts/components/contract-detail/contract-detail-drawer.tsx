@@ -1,22 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Drawer } from "@/shared/components/ui/drawer";
+import { StripePaymentActions } from "@/modules/payments/components/stripe-payment-actions";
+import { useStripeCheckout } from "@/modules/payments/hooks/use-stripe-checkout";
+import {
+  startPostCloseReceivablePayment,
+  startReconciliationPayment,
+} from "@/modules/payments/api/payments.api";
 import { useContract } from "../../hooks/use-contract";
 import { ContractStatusChip } from "../contract-status/contract-status";
 import { ContractTimeline } from "../contract-timeline/contract-timeline";
 import { ContractInspectionImage } from "../contract-inspection-image/contract-inspection-image";
+import { ContractTarsStatus } from "../contract-tars/contract-tars-status";
+import { ContractTarsInlineStatus } from "../contract-tars/contract-tars-inline-status";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
+import { renewalHistoryState } from "../../utils/renewal-history";
 import styles from "./contract-detail-drawer.module.css";
 
 export interface ContractDetailDrawerProps {
   contractId: string | null;
   onClose: () => void;
   onGenerateRentalLink: (id: string) => void;
-  onConfirmPayment: (id: string) => void;
   onCarOut: (id: string) => void;
+  onCarIn: (id: string) => void;
   onReturnLink: (id: string) => void;
   onRenew: (id: string) => void;
   onReconcile: (id: string) => void;
@@ -37,15 +46,18 @@ export function ContractDetailDrawer({
   contractId,
   onClose,
   onGenerateRentalLink,
-  onConfirmPayment,
   onCarOut,
+  onCarIn,
   onReturnLink,
   onRenew,
   onReconcile,
   onCloseContract,
 }: ContractDetailDrawerProps) {
   const t = useTranslations("Contracts");
+  const tPay = useTranslations("Payments");
   const format = useFormatter();
+  const checkout = useStripeCheckout();
+  const [providerAvailable, setProviderAvailable] = useState(true);
   const {
     detail,
     detailStatus,
@@ -100,12 +112,6 @@ export function ContractDetailDrawer({
               label={t("detail.amount")}
               value={money(detail.agreedAmount, detail.currency)}
             />
-            {detail.depositAmount != null ? (
-              <Kv
-                label={t("detail.deposit")}
-                value={money(detail.depositAmount, detail.currency)}
-              />
-            ) : null}
             {detail.startAt ? (
               <Kv
                 label={t("detail.start")}
@@ -152,8 +158,10 @@ export function ContractDetailDrawer({
           ) : null}
 
           {detail.carIn ? (
-            <section className={styles.section}>
+            <section className={styles.section} data-testid="contract-custody">
               <p className={styles.sectionTitle}>{t("detail.carIn")}</p>
+              <p className={styles.custody}>{t("detail.carInReturned")}</p>
+              <p className={styles.custodyMuted}>{t("detail.custodyEnded")}</p>
               <Kv label={t("carOut.mileage")} value={format.number(detail.carIn.mileageIn)} />
               <Kv label={t("carOut.fuel")} value={detail.carIn.fuelIn} />
               {detail.carIn.photos.length > 0 ? (
@@ -168,6 +176,73 @@ export function ContractDetailDrawer({
                   ))}
                 </div>
               ) : null}
+              <ContractTarsInlineStatus
+                contractId={detail.id}
+                operation="returnDocumentation"
+                className={styles.inlineIntegration}
+              />
+            </section>
+          ) : null}
+
+          {detail.roadLiabilitySignals?.hasSalikGpsSignal ? (
+            <section className={styles.gpsFlag} data-testid="contract-gps-salik-flag">
+              <p className={styles.gpsTitle}>{t("detail.gpsSalikTitle")}</p>
+              {detail.roadLiabilitySignals.unconfirmedSalikGpsSignalCount > 0 ? (
+                <>
+                  <p className={styles.gpsBody}>{t("detail.gpsSalikBody")}</p>
+                  {detail.status === "CLOSED" ? (
+                    <p className={styles.gpsBody}>{t("detail.gpsSalikClosed")}</p>
+                  ) : null}
+                </>
+              ) : null}
+            </section>
+          ) : null}
+
+          {detail.postCloseReceivables && detail.postCloseReceivables.count > 0 ? (
+            <section className={styles.section} data-testid="contract-post-close">
+              <p className={styles.sectionTitle}>{t("detail.postClose")}</p>
+              {detail.postCloseReceivables.items.map((item) => (
+                <div key={item.id} className={styles.postCloseItem}>
+                  <div className={styles.kv}>
+                    <span>
+                      {item.roadLiabilityType === "SALIK_TOLL"
+                        ? t("reconcile.type.SALIK")
+                        : t("reconcile.type.VIOLATION")}
+                      {" · "}
+                      {item.status === "SETTLED" ? tPay("collected") : t("detail.postCloseOpen")}
+                    </span>
+                    <b dir="ltr">{money(item.amount, item.currency)}</b>
+                  </div>
+                  {item.status === "OPEN" ? (
+                    <StripePaymentActions
+                      providerAvailable={providerAvailable}
+                      settled={false}
+                      amountDue={item.amount}
+                      currency={item.currency}
+                      pending={checkout.pending}
+                      checkoutUrl={checkout.lastCheckoutUrl}
+                      onCreateLink={() => {
+                        if (!detail) return;
+                        void checkout
+                          .runCheckout(() =>
+                            startPostCloseReceivablePayment(detail.id, item.id),
+                          )
+                          .then((result) => {
+                            setProviderAvailable(result.providerAvailable);
+                            void loadContract(detail.id);
+                          })
+                          .catch(() => setProviderAvailable(false));
+                      }}
+                      onCopyLink={() => void checkout.copyCheckoutLink()}
+                      onOpenLink={() => {
+                        if (checkout.lastCheckoutUrl) {
+                          window.open(checkout.lastCheckoutUrl, "_blank", "noopener,noreferrer");
+                        }
+                      }}
+                    />
+                  ) : null}
+                </div>
+              ))}
             </section>
           ) : null}
 
@@ -182,17 +257,60 @@ export function ContractDetailDrawer({
                 label={t("reconcile.final")}
                 value={money(detail.reconciliation.finalAmount, detail.currency)}
               />
+              <StripePaymentActions
+                providerAvailable={providerAvailable}
+                settled={Boolean(detail.reconciliation.settled)}
+                amountDue={detail.reconciliation.finalAmount}
+                currency={detail.currency}
+                pending={checkout.pending}
+                checkoutUrl={checkout.lastCheckoutUrl}
+                onCreateLink={() => {
+                  void checkout
+                    .runCheckout(() => startReconciliationPayment(detail.id))
+                    .then((result) => {
+                      setProviderAvailable(result.providerAvailable);
+                      void loadContract(detail.id);
+                    })
+                    .catch(() => setProviderAvailable(false));
+                }}
+                onCopyLink={() => void checkout.copyCheckoutLink()}
+                onOpenLink={() => {
+                  if (checkout.lastCheckoutUrl) {
+                    window.open(checkout.lastCheckoutUrl, "_blank", "noopener,noreferrer");
+                  }
+                }}
+              />
             </section>
           ) : null}
 
           {detail.renewals.length > 0 ? (
-            <section className={styles.section}>
+            <section className={styles.section} data-testid="renewal-history">
               <p className={styles.sectionTitle}>{t("detail.renewals")}</p>
-              {detail.renewals.map((renewal) => (
-                <p key={renewal.id} className={styles.muted}>
-                  +{format.number(renewal.additionalDays)} / {money(renewal.additionalAmount, detail.currency)}
-                </p>
-              ))}
+              <ol className={styles.renewalList}>
+                {detail.renewals.map((renewal) => {
+                  const state = renewalHistoryState(renewal.approvedAt);
+                  const stamp = renewal.approvedAt ?? renewal.createdAt;
+                  return (
+                    <li key={renewal.id} className={styles.renewalItem}>
+                      <p className={styles.renewalMeta}>
+                        {format.dateTime(new Date(stamp), { dateStyle: "medium", timeStyle: "short" })}
+                        {" · "}
+                        {t(`detail.renewalState.${state}`)}
+                      </p>
+                      <p className={styles.muted}>
+                        {format.dateTime(new Date(renewal.previousEndAt), { dateStyle: "medium" })}
+                        {" → "}
+                        {format.dateTime(new Date(renewal.newEndAt), { dateStyle: "medium" })}
+                      </p>
+                      <p className={styles.muted}>
+                        +{format.number(renewal.additionalDays)} {t("detail.days").toLowerCase()}
+                        {" · "}
+                        {money(renewal.additionalAmount, detail.currency)}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ol>
             </section>
           ) : null}
 
@@ -201,16 +319,13 @@ export function ContractDetailDrawer({
             <ContractTimeline status={detail.status} />
           </section>
 
+          <ContractTarsStatus contractId={detail.id} />
+
           {actions ? (
             <div className={styles.actions}>
               {actions.showGenerateRentalLink ? (
                 <Button type="button" size="sm" onClick={() => onGenerateRentalLink(detail.id)}>
                   {t("actions.rentalLink")}
-                </Button>
-              ) : null}
-              {actions.showConfirmPayment ? (
-                <Button type="button" size="sm" onClick={() => onConfirmPayment(detail.id)}>
-                  {t("actions.confirmPayment")}
                 </Button>
               ) : null}
               {actions.showCarOut ? (
@@ -221,6 +336,11 @@ export function ContractDetailDrawer({
               {actions.showGenerateReturnLink ? (
                 <Button type="button" size="sm" onClick={() => onReturnLink(detail.id)}>
                   {t("actions.returnLink")}
+                </Button>
+              ) : null}
+              {actions.showCarIn ? (
+                <Button type="button" size="sm" onClick={() => onCarIn(detail.id)}>
+                  {t("actions.carIn")}
                 </Button>
               ) : null}
               {actions.showReturnWaiting ? (
@@ -235,6 +355,11 @@ export function ContractDetailDrawer({
                 <Button type="button" size="sm" onClick={() => onReconcile(detail.id)}>
                   {t("actions.reconcile")}
                 </Button>
+              ) : null}
+              {detail.reconciliation &&
+              detail.reconciliation.finalAmount > 0 &&
+              !detail.reconciliation.settled ? (
+                <p className={styles.muted}>{tPay("closeBlocked")}</p>
               ) : null}
               {actions.showClose ? (
                 <Button type="button" size="sm" onClick={() => onCloseContract(detail.id)}>

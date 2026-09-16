@@ -25,8 +25,8 @@ interface DraftLine {
   externalReference: string;
 }
 
-const emptyLine = (): DraftLine => ({
-  type: "OTHER",
+const emptyLine = (type: ReconciliationLineType = "OTHER"): DraftLine => ({
+  type,
   description: "",
   amount: "",
   externalReference: "",
@@ -77,7 +77,11 @@ function ReconcileForm({
     permissions,
     loadContract,
   } = useContract();
-  const [lines, setLines] = useState<DraftLine[]>([emptyLine()]);
+  const [lines, setLines] = useState<DraftLine[]>([
+    emptyLine("SALIK"),
+    emptyLine("VIOLATION"),
+    emptyLine("OTHER"),
+  ]);
 
   useEffect(() => {
     void loadContract(contractId);
@@ -103,19 +107,44 @@ function ReconcileForm({
     <>
       {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
 
+      <p className={styles.hint}>{t("reconcile.hint")}</p>
+
+      <ul className={styles.categories} aria-label={t("reconcile.categoriesLabel")}>
+        {RECONCILIATION_LINE_TYPES.map((type) => (
+          <li
+            key={type}
+            className={
+              type === "SALIK" || type === "VIOLATION" ? styles.categoryEmphasis : undefined
+            }
+          >
+            {t(`reconcile.type.${type}`)}
+          </li>
+        ))}
+      </ul>
+
       {detail?.carOut && detail.carIn ? (
         <div className={styles.compare}>
           <p>
-            {t("carOut.mileage")}: {format.number(detail.carOut.mileageOut)} → {format.number(detail.carIn.mileageIn)}
+            {t("carOut.mileage")}:{" "}
+            <span dir="ltr">
+              {format.number(detail.carOut.mileageOut)} → {format.number(detail.carIn.mileageIn)}
+            </span>
           </p>
           <p>
-            {t("carOut.fuel")}: {detail.carOut.fuelOut} → {detail.carIn.fuelIn}
+            {t("carOut.fuel")}:{" "}
+            <span dir="ltr">
+              {detail.carOut.fuelOut} → {detail.carIn.fuelIn}
+            </span>
           </p>
         </div>
       ) : null}
 
       {lines.map((line, index) => (
-        <div key={index} className={styles.line}>
+        <div
+          key={index}
+          className={styles.line}
+          data-testid={`reconcile-line-${line.type}`}
+        >
           <Select
             size="sm"
             options={RECONCILIATION_LINE_TYPES.map((type) => ({
@@ -132,7 +161,11 @@ function ReconcileForm({
           />
           <Input
             value={line.description}
-            placeholder={t("reconcile.descriptionField")}
+            placeholder={
+              line.type === "SALIK" || line.type === "VIOLATION"
+                ? t(`reconcile.placeholder.${line.type}`)
+                : t("reconcile.descriptionField")
+            }
             onChange={(event) => {
               const next = [...lines];
               next[index] = { ...line, description: event.target.value };
@@ -151,7 +184,11 @@ function ReconcileForm({
           />
           <Input
             value={line.externalReference}
-            placeholder={t("reconcile.reference")}
+            placeholder={
+              line.type === "SALIK" || line.type === "VIOLATION"
+                ? t(`reconcile.referenceHint.${line.type}`)
+                : t("reconcile.reference")
+            }
             onChange={(event) => {
               const next = [...lines];
               next[index] = { ...line, externalReference: event.target.value };

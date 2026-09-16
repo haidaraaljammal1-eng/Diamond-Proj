@@ -1,0 +1,83 @@
+// ---------------------------------------------------------------------------
+// TARS integration state. This file stores TECHNICAL INTEGRATION METADATA ONLY:
+// external references, synchronization state and operation history. Contract,
+// Customer, Vehicle, rental terms, Car-Out/Car-In and Attachments stay in their
+// existing Diamond domains and are never duplicated here.
+//
+// No official TARS API documentation exists yet, so nothing in this file
+// assumes a TARS endpoint, authentication scheme or payload field name. The
+// operation types are Diamond capability names, not vendor endpoint names.
+// TARS state is independent of Contract.status — see DOCU/04-api-contracts/tars-integration.md.
+// ---------------------------------------------------------------------------
+
+/// The five mandatory TARS procedures Diamond will integrate. Customer, vehicle
+/// and rental data are part of REGISTER_CONTRACT — they are not separate syncs.
+enum TarsOperationType {
+  REGISTER_CONTRACT
+  CONTRACT_ACCEPTANCE
+  HANDOVER
+  RETURN_DOCUMENTATION
+  COMPLETE_CONTRACT
+}
+
+/// Minimal execution state machine. "not configured" is a provider capability
+/// state, not an operation status — an unconfigured run persists nothing.
+/// A missing operation projects as NOT_STARTED; no placeholder row is written.
+enum TarsOperationStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+/// One integration record per Diamond Contract. `externalContractId` is written
+/// only from an authoritative provider success and never fabricated.
+model TarsContractIntegration {
+  id                   String    @id @default(uuid())
+  contractId           String    @unique
+  contract             Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  /// Future TARS-side contract reference. Never replaces Contract.contractNumber.
+  externalContractId   String?
+  lastSuccessfulSyncAt DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  operations TarsOperation[]
+
+  @@index([externalContractId])
+  @@map("tars_contract_integrations")
+}
+
+/// Auditable attempt history. There is deliberately NO unique constraint on
+/// (contractId, operationType): a failed mandatory procedure must be retryable
+/// and every attempt stays visible. Concurrent duplicate PROCESSING attempts are
+/// prevented at runtime by the `tars_operation` advisory lock.
+///
+/// Privacy: this table never stores a TARS request/response body, credentials,
+/// authorization headers, document bytes, signatures or OTP values.
+model TarsOperation {
+  id                  String                  @id @default(uuid())
+  integrationId       String
+  integration         TarsContractIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  /// Denormalized so per-contract projections do not need a join.
+  contractId          String
+  contract            Contract                @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  operationType       TarsOperationType
+  status              TarsOperationStatus     @default(PENDING)
+  idempotencyKey      String?
+  /// SHA-256 of the normalized Diamond input — never the input itself.
+  requestFingerprint  String?
+  attemptNumber       Int                     @default(1)
+  externalReference   String?
+  providerOperationId String?
+  /// Stable Diamond error code (e.g. TARS_PROVIDER_ERROR). Never a raw body.
+  lastErrorCode       String?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  @@index([contractId, operationType, createdAt])
+  @@index([integrationId, status])
+  @@map("tars_operations")
+}

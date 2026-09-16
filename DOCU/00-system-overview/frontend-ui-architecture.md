@@ -43,6 +43,11 @@ The Diamond HTML Demo is the visual source of truth. Its original HTML, complete
 - `src/shared/components/ui/switch` is the shared toggle switch (Demo
   `.switch`). Use it for every on/off control; the ON state uses the primary
   gold palette — feature modules must not recreate switch styling.
+- `src/shared/components/ui/popover` is the shared anchored popover (body
+  portal, outside dismiss, Escape close). `DateRangePicker` composes it.
+- `src/shared/components/ui/date-range-picker` is the shared date-range filter
+  control (React DayPicker v9 engine, Diamond CSS only). Use it for explicit
+  Apply/Clear date filters; see [Date Range Picker](./ui-date-range-picker.md).
 
 Shared UI components do not know about APIs, Zustand, routing, or business permissions. Pages use domain hooks as their UI facade.
 

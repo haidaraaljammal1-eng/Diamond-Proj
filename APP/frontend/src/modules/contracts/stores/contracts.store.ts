@@ -16,11 +16,13 @@ import {
   reconcileContract as reconcileRequest,
   renewContract as renewRequest,
   submitCarOut as submitCarOutRequest,
+  submitCarIn as submitCarInRequest,
   uploadContractAttachment,
 } from "../api/contracts.api";
 import type { PageMeta } from "../api/contracts.api.types";
 import { CONTRACTS_PAGE_SIZE } from "../api/contracts.api.types";
 import type {
+  CarInPayload,
   CarOutPayload,
   ConfirmContractPaymentPayload,
   ContractDetailDto,
@@ -64,6 +66,7 @@ interface ContractsState {
   rentalLink: MutationSlot;
   payment: MutationSlot;
   carOut: MutationSlot;
+  carIn: MutationSlot;
   returnLink: MutationSlot;
   renewSlot: MutationSlot;
   reconcileSlot: MutationSlot;
@@ -93,14 +96,26 @@ interface ContractsState {
     },
     idempotencyKey: string,
   ) => Promise<boolean>;
+  submitCarIn: (
+    id: string,
+    payload: Omit<CarInPayload, "photos"> & {
+      photos: { angle: InspectionAngle; file: File }[];
+    },
+    idempotencyKey: string,
+  ) => Promise<boolean>;
   generateReturnLink: (id: string, locale: string) => Promise<boolean>;
-  generateRenewalLink: (id: string, locale: string) => Promise<boolean>;
+  generateRenewalLink: (
+    id: string,
+    locale: string,
+    payload: RenewPayload,
+  ) => Promise<boolean>;
   renew: (id: string, payload: RenewPayload, idempotencyKey: string) => Promise<boolean>;
   reconcile: (id: string, payload: ReconcilePayload) => Promise<boolean>;
   close: (id: string, idempotencyKey: string) => Promise<boolean>;
   clearOfferError: () => void;
   clearPaymentError: () => void;
   clearCarOutError: () => void;
+  clearCarInError: () => void;
   clearRenewError: () => void;
   clearReconcileError: () => void;
   clearCloseError: () => void;
@@ -188,6 +203,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     rentalLink: IDLE_SLOT,
     payment: IDLE_SLOT,
     carOut: IDLE_SLOT,
+    carIn: IDLE_SLOT,
     returnLink: IDLE_SLOT,
     renewSlot: IDLE_SLOT,
     reconcileSlot: IDLE_SLOT,
@@ -326,6 +342,33 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         return false;
       }
     },
+    async submitCarIn(id, payload, idempotencyKey) {
+      set({ carIn: { pending: true, error: null } });
+      try {
+        const photos: InspectionPhotoInput[] = [];
+        for (const photo of payload.photos) {
+          const attachment = await uploadContractAttachment(photo.file);
+          photos.push({ attachmentId: attachment.id, angle: photo.angle });
+        }
+        const detail = await submitCarInRequest(
+          id,
+          {
+            occurredAt: payload.occurredAt,
+            mileageIn: payload.mileageIn,
+            fuelIn: payload.fuelIn,
+            notes: payload.notes,
+            photos,
+          },
+          idempotencyKey,
+        );
+        set({ carIn: IDLE_SLOT, detail, detailStatus: "ready" });
+        await refreshAll();
+        return true;
+      } catch (error) {
+        set({ carIn: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
     async generateReturnLink(id, locale) {
       set({ returnLink: { pending: true, error: null } });
       try {
@@ -338,10 +381,10 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         return false;
       }
     },
-    async generateRenewalLink(id, locale) {
+    async generateRenewalLink(id, locale, payload) {
       set({ renewSlot: { pending: true, error: null } });
       try {
-        const issued = await generateRenewalLinkRequest(id);
+        const issued = await generateRenewalLinkRequest(id, payload);
         set({ renewSlot: IDLE_SLOT, issuedLink: toIssuedLink(issued, locale) });
         await refreshAll();
         return true;
@@ -394,6 +437,9 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     },
     clearCarOutError() {
       set({ carOut: { ...get().carOut, error: null } });
+    },
+    clearCarInError() {
+      set({ carIn: { ...get().carIn, error: null } });
     },
     clearRenewError() {
       set({ renewSlot: { ...get().renewSlot, error: null } });

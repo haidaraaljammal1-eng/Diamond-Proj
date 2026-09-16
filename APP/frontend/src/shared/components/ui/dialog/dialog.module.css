@@ -1,9 +1,10 @@
 /* Dialog — the Demo modal, value for value (`.scrim` / `.modal` / `.mclose`
-   after the final Pearl Ivory cascade). No new visual vocabulary. */
+   after the final Pearl Ivory cascade). No new visual vocabulary.
+   Stacks above Drawer (drawer scrim 95 / panel 96). */
 .scrim {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 110;
   display: flex;
   align-items: center;
   justify-content: center;

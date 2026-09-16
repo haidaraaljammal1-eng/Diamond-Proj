@@ -1,0 +1,220 @@
+.section {
+  margin-bottom: 28px;
+}
+
+.header {
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--diamond-border, #d8cdb8);
+  border-radius: 12px;
+  background: var(--diamond-surface, #faf7f0);
+}
+
+.table {
+  --ledger-col-date: 15%;
+  --ledger-col-movement: 12%;
+  --ledger-col-source: 13%;
+  --ledger-col-reference: 22%;
+  --ledger-col-contract: 16%;
+  --ledger-col-amount: 12%;
+  --ledger-col-action: 10%;
+  width: 100%;
+  min-width: 64rem;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.colDate { width: var(--ledger-col-date); }
+.colMovement { width: var(--ledger-col-movement); }
+.colSource { width: var(--ledger-col-source); }
+.colReference { width: var(--ledger-col-reference); }
+.colContract { width: var(--ledger-col-contract); }
+.colAmount { width: var(--ledger-col-amount); }
+.colAction { width: var(--ledger-col-action); }
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ece4d4;
+  text-align: start;
+  vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellClip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amountCell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.actionCell {
+  white-space: nowrap;
+}
+
+.table th {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--diamond-muted, #6f6556);
+  background: #f5efe3;
+}
+
+.amountCollection {
+  color: #2f6b3f;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amountExpense {
+  color: #7a3b2d;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amountReversal {
+  color: #5a4a2d;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amountVoided {
+  color: var(--diamond-muted, #6f6556);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: line-through;
+}
+
+.empty,
+.error {
+  padding: 18px;
+  text-align: center;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.skeletonRow {
+  height: 42px;
+  margin: 8px 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f3efe6 25%, #ebe4d6 50%, #f3efe6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+.count {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.movementCollection,
+.movementExpense,
+.movementReversal,
+.movementVoided {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.movementCollection {
+  color: #2f6b3f;
+  background: #e7f3ea;
+}
+
+.movementExpense {
+  color: #7a3b2d;
+  background: #f7ebe6;
+}
+
+.movementReversal {
+  color: #5a4a2d;
+  background: #f3ead6;
+  border: 1px solid #c9a15c;
+}
+
+.movementVoided {
+  color: #6f6556;
+  background: #eee8dc;
+  border: 1px dashed #c4b69a;
+}
+
+.cards {
+  display: none;
+}
+
+.card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid #ece4d4;
+}
+
+.cardDate {
+  font-size: 0.78rem;
+  color: var(--diamond-muted, #6f6556);
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .hideMd,
+  .colContract {
+    width: 0;
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .table {
+    display: none;
+  }
+
+  .cards {
+    display: grid;
+  }
+}

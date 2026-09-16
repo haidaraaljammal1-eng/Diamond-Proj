@@ -16,7 +16,12 @@ export type ContractLinkType = "RENTAL" | "RETURN" | "RENEWAL";
 
 export type ContractPaymentMethod = "BANK_TRANSFER" | "CARD" | "MANUAL";
 
-export type ContractPaymentStatus = "PENDING" | "CONFIRMED" | "FAILED" | "CANCELLED";
+export type ContractPaymentStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "CONFIRMED"
+  | "FAILED"
+  | "CANCELLED";
 
 export type ReconciliationLineType =
   | "DAMAGE"
@@ -62,6 +67,7 @@ export interface ContractListItemDto {
   startAt: string | null;
   endAt: string | null;
   createdAt: string;
+  hasSalikGpsSignal: boolean;
 }
 
 export interface ContractActionsDto {
@@ -69,6 +75,7 @@ export interface ContractActionsDto {
   canConfirmPayment: boolean;
   canCarOut: boolean;
   canGenerateReturnLink: boolean;
+  canCarIn: boolean;
   canReconcile: boolean;
   canClose: boolean;
   canRenew: boolean;
@@ -134,10 +141,10 @@ export interface ContractReconciliationLineDto {
 export interface ContractReconciliationDto {
   id: string;
   chargesTotal: number;
-  depositAmount: number;
-  deductions: number;
   finalAmount: number;
   approvedAt: string | null;
+  settledAt?: string | null;
+  settled?: boolean;
   lines: ContractReconciliationLineDto[];
 }
 
@@ -149,6 +156,31 @@ export interface ContractRenewalDto {
   newEndAt: string;
   createdAt: string;
   approvedAt: string | null;
+  appliedAt?: string | null;
+  awaitingPayment?: boolean;
+}
+
+export interface ContractRoadLiabilitySignalsDto {
+  hasSalikGpsSignal: boolean;
+  salikGpsSignalCount: number;
+  unconfirmedSalikGpsSignalCount: number;
+  latestSalikGpsSignalAt: string | null;
+}
+
+export interface ContractPostCloseReceivableItemDto {
+  id: string;
+  amount: number;
+  currency: string;
+  status: "OPEN" | "SETTLED" | "VOID";
+  settledAt?: string | null;
+  roadLiabilityType: "RTA_VIOLATION" | "SALIK_TOLL" | "SALIK_VIOLATION";
+  createdAt: string;
+}
+
+export interface ContractPostCloseReceivablesSummaryDto {
+  count: number;
+  openAmount: number;
+  items: ContractPostCloseReceivableItemDto[];
 }
 
 export interface ContractDetailDto {
@@ -165,7 +197,6 @@ export interface ContractDetailDto {
   currency: string;
   startAt: string | null;
   endAt: string | null;
-  depositAmount: number | null;
   termsVersion: string;
   snapshot: unknown;
   activatedAt: string | null;
@@ -180,6 +211,8 @@ export interface ContractDetailDto {
   reconciliation: ContractReconciliationDto | null;
   renewals: ContractRenewalDto[];
   actions: ContractActionsDto;
+  roadLiabilitySignals: ContractRoadLiabilitySignalsDto;
+  postCloseReceivables: ContractPostCloseReceivablesSummaryDto;
 }
 
 export interface CreateContractOfferPayload {
@@ -189,7 +222,6 @@ export interface CreateContractOfferPayload {
   agreedAmount: number;
   startAt?: string;
   endAt?: string;
-  depositAmount?: number;
   customerId?: number;
 }
 
@@ -208,6 +240,14 @@ export interface CarOutPayload {
   occurredAt?: string;
   mileageOut: number;
   fuelOut: FuelLevel;
+  notes?: string;
+  photos: InspectionPhotoInput[];
+}
+
+export interface CarInPayload {
+  occurredAt?: string;
+  mileageIn: number;
+  fuelIn: FuelLevel;
   notes?: string;
   photos: InspectionPhotoInput[];
 }

@@ -11,6 +11,7 @@ import {
   type NavigationItem,
   type UseNavigationResult,
 } from "../navigation.types";
+import { isNavigationItemVisible } from "../utils/navigation-visibility";
 
 const LOCALE_PATTERN = /^\/(ar|en)(?=\/|$)/;
 
@@ -43,21 +44,13 @@ export function useNavigation(): UseNavigationResult {
     const currentPath = pathname.replace(LOCALE_PATTERN, "") || "/";
 
     /**
-     * Visibility: Backend permission when declared and held; otherwise the Demo
-     * `adminonly` heuristic (`system_admin` role) for items/groups without a
-     * matching permission in the session.
+     * Visibility: declared Backend permissions are required. Items with no
+     * catalog permission still use the Demo `adminOnly` / `system_admin` heuristic.
      */
     const isItemVisible = (
       item: NavigationItem,
       group: NavigationGroup,
-    ): boolean => {
-      const required = [
-        ...(item.permission ? [item.permission] : []),
-        ...(item.permissions ?? []),
-      ];
-      if (required.length > 0 && required.every(hasPermission)) return true;
-      return (!item.adminOnly && !group.adminOnly) || isAdmin;
-    };
+    ): boolean => isNavigationItemVisible(item, group, hasPermission, isAdmin);
 
     const groups: TranslatedNavigationGroup[] = navigationConfig
       .map((group) => {

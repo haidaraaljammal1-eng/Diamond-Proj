@@ -15,6 +15,7 @@ export interface ContractUiActions {
   showConfirmPayment: boolean;
   showCarOut: boolean;
   showGenerateReturnLink: boolean;
+  showCarIn: boolean;
   showReturnWaiting: boolean;
   showRenew: boolean;
   showReconcile: boolean;
@@ -26,6 +27,7 @@ const NONE: ContractUiActions = {
   showConfirmPayment: false,
   showCarOut: false,
   showGenerateReturnLink: false,
+  showCarIn: false,
   showReturnWaiting: false,
   showRenew: false,
   showReconcile: false,
@@ -54,7 +56,9 @@ export function getContractActions(
       status === "ACTIVE" &&
       actions.canGenerateReturnLink &&
       permissions.canReturn,
-    showReturnWaiting: status === "RETOUT",
+    showCarIn: status === "RETOUT" && actions.canCarIn && permissions.canReturn,
+    showReturnWaiting:
+      status === "RETOUT" && !(actions.canCarIn && permissions.canReturn),
     showRenew: actions.canRenew && permissions.canRenew && status === "ACTIVE",
     showReconcile: actions.canReconcile && permissions.canReconcile,
     showClose: actions.canClose && permissions.canClose,

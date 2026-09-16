@@ -78,6 +78,56 @@ const EnvSchema = z
       .default("image/png,image/jpeg,application/pdf")
       .transform(csv),
 
+    OFFICE_DISPLAY_NAME: z.string().trim().min(1).default("Diamond Rent Car"),
+    // Asia/Dubai (UTC+4, no DST). License expiry uses this offset, not the client clock.
+    BUSINESS_TIMEZONE_OFFSET_MINUTES: z.coerce.number().int().default(240),
+    DOCUMENT_OCR_PROVIDER: z.enum(["none", "azure"]).default("none"),
+    AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: z.string().optional().default(""),
+    AZURE_DOCUMENT_INTELLIGENCE_KEY: z.string().optional().default(""),
+    DOCUMENT_OCR_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
+    PAYMENT_PROVIDER: z.enum(["none", "stripe"]).default("none"),
+    STRIPE_SECRET_KEY: z.string().optional().default(""),
+    STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
+    STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
+
+    // TARS mandatory-procedure integration. There is no official TARS API
+    // documentation yet, so this flag only expresses intent — no adapter,
+    // endpoint, credential or payload contract is assumed. Execution stays
+    // fail-closed (TARS_NOT_CONFIGURED) until a real TarsApiProvider exists.
+    TARS_ENABLED: envBool(false),
+
+    // GPS Operations. There is no official GPS vendor yet, so GPS_ENABLED is
+    // intent only — runtime always uses GpsUnconfiguredProvider until a real
+    // adapter exists. Do not add vendor URL/key env vars here.
+    GPS_ENABLED: envBool(false),
+    GPS_OFFLINE_AFTER_MINUTES: z.coerce.number().int().positive().default(10),
+    GPS_MOVING_SPEED_THRESHOLD_KPH: z.coerce.number().min(0).default(3),
+
+    // WhatsApp Cloud API / Embedded Signup. Optional: empty values keep the
+    // rest of Diamond usable and WhatsApp mutating endpoints fail closed with
+    // WHATSAPP_PROVIDER_NOT_CONFIGURED. META_APP_SECRET is server-only.
+    META_APP_ID: z.string().optional().default(""),
+    META_APP_SECRET: z.string().optional().default(""),
+    // Documented Graph API version from Meta Embedded Signup (v25.0). Overridable.
+    META_GRAPH_API_VERSION: z
+      .string()
+      .regex(/^v\d+\.\d+$/, "META_GRAPH_API_VERSION must look like v25.0")
+      .default("v25.0"),
+    META_WHATSAPP_CONFIG_ID: z.string().optional().default(""),
+    // Server-only Meta webhook verify token (GET hub.verify_token). Never frontend.
+    META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional().default(""),
+
+    // Active WhatsApp operational provider. UltraMsg is the current deployment default
+    // when configured; Meta Cloud API remains available when selected and configured.
+    WHATSAPP_PROVIDER: z.enum(["META_CLOUD_API", "ULTRAMSG"]).default("META_CLOUD_API"),
+    ULTRAMSG_INSTANCE_ID: z.string().optional().default(""),
+    ULTRAMSG_API_URL: z.string().optional().default(""),
+    ULTRAMSG_TOKEN: z.string().optional().default(""),
+    ULTRAMSG_WEBHOOK_CALLBACK_KEY: z.string().optional().default(""),
+    ULTRAMSG_CONFIGURE_WEBHOOK: envBool(false),
+    ULTRAMSG_TEST_RECIPIENT: z.string().optional().default(""),
+    PUBLIC_BACKEND_URL: z.string().optional().default(""),
+
     EMAIL_ENABLED: envBool(false),
     SMTP_HOST: z.string().optional().default(""),
     SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -145,6 +195,20 @@ const EnvSchema = z
         code: "custom",
         path: ["DEV_ADMIN_PASSWORD"],
         message: "DEV_ADMIN_PASSWORD is required when SEED_DEV_ADMIN=true",
+      });
+    }
+    if (val.NODE_ENV === "production" && val.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN.includes("replace-with")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["META_WHATSAPP_WEBHOOK_VERIFY_TOKEN"],
+        message: "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN still uses the example placeholder value in production",
+      });
+    }
+    if (val.NODE_ENV === "production" && val.ULTRAMSG_TOKEN.includes("replace-with")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["ULTRAMSG_TOKEN"],
+        message: "ULTRAMSG_TOKEN still uses the example placeholder value in production",
       });
     }
   });

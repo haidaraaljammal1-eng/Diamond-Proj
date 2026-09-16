@@ -22,7 +22,9 @@ export const CHART_COLORS = {
 
 /** Sequential gold ramp, light → dark, for parts-of-a-whole (donut) slices. */
 export const CHART_SEQUENTIAL = [
+  "#6f5126",
   "#8a6630",
+  "#a77834",
   "#b98a3e",
   "#d8b678",
   "#ebd4a6",

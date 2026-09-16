@@ -1,7 +1,95 @@
 # Changelog
 
+## 2026-09-14
+
+- WhatsApp operational provider migrated from Meta Cloud API to UltraMsg (env-provided instance id) without rebuilding Inbox. Additive Prisma fields, capability-driven UI, QR connection management, isolated UltraMsg webhook (callback-key compensating control, not HMAC), ACK mapping, no 24h/template gating, no provider queue-while-offline sends. Meta implementation retained inactive. Live webhook/send gated on public URL + explicit env. Token never documented. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+
+## 2026-09-13
+
+- WhatsApp final completion: approved templates, authenticated media proxy + outbound image/document/audio/video, Embedded Signup / webhook activate in Inbox Manage WhatsApp, optional explicit Customer match/link (`whatsapp.link_customer`). Manual office communication only. On-demand media proxy (no Attachment archive). Live Meta verification still deferred. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+
+## 2026-09-12
+
+- WhatsApp Phase 6: authenticated SSE Inbox notifications (`GET /whatsapp/realtime`, `whatsapp.read`). SSE is not the source of truth; DB/REST remain authoritative. JWT stays in `Authorization` (never the query string). Events are ids-only, published after commit via `DomainOutboxEvent` + in-process hub, with a 15-minute replay window and REST reconciliation. No polling. Simulation stays frontend-only. Live Meta not required. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+- WhatsApp Phase 5: manual staff TEXT send (`POST /whatsapp/conversations/:id/messages`, `whatsapp.send`). Recipient is derived server-side. 24-hour customer service window is enforced from `lastInboundAt`. Idempotent (`Idempotency-Key`); no automatic Meta POST retry. Provider HTTP accept is `ACCEPTED`, not `SENT`. Webhook owns SENT/DELIVERED/READ/FAILED. Ambiguous send is `UNKNOWN` with no auto-resend. Simulation send stays frontend-only. Live Meta send verification deferred. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
+- WhatsApp Phase 4 frontend: real Inbox at `/[locale]/whatsapp` (`whatsapp.read`) using conversation/message APIs, All/Unread, search, internal mark-read, disabled composer. Optional frontend-only simulation. No outbound send, media download, Customer link, or Dock. `GET /whatsapp/connection` is readable with `whatsapp.read` (sanitized; mutations stay `whatsapp.manage_connection`). See `DOCU/05-pages/whatsapp.md`.
+- WhatsApp Phase 3 backend: `WhatsAppConversation` + `WhatsAppMessage` from normalized `MESSAGE_RECEIVED` events; office unread; `whatsapp.read` list/detail/messages/mark-read APIs. No Inbox UI, outbound send, media download, Customer auto-link, or auto-reply. See `DOCU/05-pages/whatsapp-backend.md`.
+- WhatsApp Phase 2 backend: secure Meta Cloud API webhook foundation (`GET`/`POST /whatsapp/webhooks/meta`, raw-body HMAC, verify token, idempotent `WhatsAppWebhookEvent`, WABA/`phone_number_id` routing). No inbox, conversations, outbound send, media download, or auto-reply. Live Meta verification deferred. See `DOCU/05-pages/whatsapp-backend.md`.
+- WhatsApp Phase 1 backend: secure Meta Cloud API connection foundation (`WhatsAppConnection` + short-lived `WhatsAppConnectionAttempt`, encrypted credentials, `whatsapp.manage_connection`). No messaging, webhooks, or phone migration. Missing Meta config fails closed. See `DOCU/05-pages/whatsapp-backend.md`.
+- Sidebar cleanup: brand wordmark is `DIAMOND` (ELITE removed); New Contract shortcut and the mock fleet-status block are gone from the rail; Operations Center is removed from navigation, i18n, and frontend routing (no dedicated page or backend module existed). Dashboard Quick Access, GPS, Contracts, Maintenance, Finance, and remaining rail items are unchanged. See `DOCU/00-system-overview/app-shell-architecture.md`.
+
+## 2026-09-11
+
+- Dashboard weekly charts use the last 7 consecutive calendar days (weekends included, zero-activity days retained). The financial donut is interactive (hover/tap slice detail from existing Finance breakdown). Optional frontend-only Dashboard Simulation (`NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`) is a removable overlay and does not change Real-mode APIs. See `DOCU/05-pages/dashboard.md` and `DOCU/05-pages/dashboard-backend.md`.
+- Dashboard is a live operational aggregation (`GET /dashboard/overview`): KPI, fleet, weekly finance donut, Car-Out/Car-In rental activity, today’s deliveries, and permission-aware Quick Access. Demo dashboard fixtures are removed. See `DOCU/05-pages/dashboard.md` and `DOCU/05-pages/dashboard-backend.md`.
+- Finance Manual Expense Correct is an in-place update of the same record (same ID, ACTIVE) with immutable Correction History inside expense details. Void remains a separate cancellation workflow. Financial Ledger header/body share one column definition. See `DOCU/05-pages/finance.md`.
+- Finance ledger table order: Financial Ledger now sits above analytics / Open Receivables (Open Receivables moved to the former ledger position). Voided Manual Expense is shown as a single operational row (**Voided / ملغى**, Source Manual Expense, original amount struck through). The technical reversal stays in backend accounting and is hidden from the main Ledger. Expense filter = active expenses; Voided filter = voided Manual Expenses. Standalone Void still requires a reason. Ledger read projection exposes `manualExpenseStatus` and omits `MANUAL_EXPENSE_REVERSAL` from the operational list without changing financial totals. See `DOCU/05-pages/finance.md`.
+- Finance ledger Movement vs Source semantics: Source is origin (Rental Payment, Maintenance, Manual Expense, …); Expense Reversal is a Movement, not a Source. Frontend-only Finance Demo Simulation overlay (`NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`) derives KPIs/breakdowns from one fixture set and never writes to Finance/Stripe/DB. See `DOCU/05-pages/finance.md`.
+- Finance Frontend V1: `/[locale]/finance` administrative operations center (`finance.read`) — KPIs, Open Receivables, analytics, ledger, manual expense add/void/correct (`finance.manage_expenses`). Backend-authoritative totals; Stripe-only collections; no invoices/deposit/manual income. See `DOCU/05-pages/finance.md`.
+- Finance Manual Expense forms pass relative FormError keys (`required`, `wholeAed`, `positiveAmount`, `tooLong`) — never `validation.*` prefixes.
+- Finance Backend V1: `FinancialLedgerEntry` + `ManualExpense`; Stripe-only Collected; Open Receivables projection; summary/ledger/analytics APIs; maintenance completion expense recognition; manual expense void/correct. Permissions `finance.read` / `finance.manage_expenses`. See `DOCU/05-pages/finance-backend.md`.
+- Unified Stripe payment foundation verification: dedicated reconciliation/post-close/security integration tests; public renewal payment UX; TARS integration tests use test payment provider double; manual `payment/confirm` hidden from active OpenAPI; historical `MANUAL` rows preserved. See `DOCU/05-pages/payments-backend.md`.
+- Unified Stripe payment foundation (Phase 2): shared payment engine for rental, renewal, reconciliation, and post-close receivable; Stripe Checkout + webhook idempotency; manual `payment/confirm` disabled; renewal applies only after payment; close blocked until reconciliation settled. See `DOCU/05-pages/payments-backend.md`.
+
+## 2026-09-10
+
+- Diamond V1 deposit removal: rental deposits are out of scope. Reconciliation `finalAmount` equals `chargesTotal`; no deposit collection, deduction, credit, or refund. Legacy DB columns remain but are ignored in active API/UI. See `DOCU/05-pages/contracts-backend.md` and `DOCU/05-pages/contracts.md`.
+- Vehicle custody vs Contract lifecycle: Car-In ends possession (RETOUT → REVIEW and Vehicle RENTED → AVAILABLE). REVIEW is financial review, not currentRental. Close no longer releases the vehicle. Late official RTA/Salik on CLOSED Contracts create Post-Close Receivables without reopening the Contract. One `RoadLiabilityCustomerCharge` per liability. GPS Salik Contract flag is derived and informational. See `DOCU/05-pages/contracts-backend.md`, `DOCU/05-pages/violations-salik.md`, and `DOCU/05-pages/gps.md`.
+- Violations & Salik customer charge review (frontend): staff confirm the customer charge from the Liability Drawer; official amount stays read-only; increase requires a reason; backend creates one locked reconciliation line **or** a post-close receivable. GPS predictions and users without `violations.charge` cannot confirm. See `DOCU/05-pages/violations-salik.md`.
+- Road Liability → Reconciliation customer charge review (backend): official RTA/Salik amount stays immutable; staff may increase customer charge before attach; unique `roadLiabilityId` + idempotent confirm-charge; new manual SALIK/VIOLATION lines rejected. See `DOCU/05-pages/violations-salik.md` and `DOCU/05-pages/contracts-backend.md`.
+- Violations & Salik UX simplification: server-derived `workState` + `queue`/`channel` list queries + unique `needsAttentionCount`; staff UI uses 3 KPIs, work-queue tabs, one toolbar, and a single operational status. Detailed confirmation/attribution/collection stay in the Drawer and Advanced Filters. No schema migration. See `DOCU/05-pages/violations-salik.md`.
+- Violations & Salik frontend: `/[locale]/violations` (`violations.read`), Road Liabilities operations center (summary/list/detail, three status dimensions, GPS prediction vs official confirmation, Contract Drawer + GPS deep-link, production-safe empty state, existing Demo Simulation overlay). See `DOCU/05-pages/violations-salik.md`.
+- Road Liabilities backend foundation (Violations & Salik): observations vs canonical liabilities, unconfigured RTA/Salik providers, GPS segment-crossing inference (never authoritative), Car-Out/Car-In custody attribution, staff read APIs `GET /road-liabilities/summary|/` `/:id` (`violations.read`). No manual create routes, no fake gates/events. See `DOCU/05-pages/violations-salik.md`.
+- GPS Operations Center frontend: `/[locale]/gps` (`gps.read`), Leaflet/OpenStreetMap map-first layout, compact KPIs, vehicle panel, detail Drawer, Fleet `?vehicleId` deep-link, presentation-only GPS simulation. See `DOCU/05-pages/gps.md`.
+- GPS summary `online` is the fresh-location total (`moving` + `parked` + row-level unknown-motion `online`). Row-level `trackingStatus` is unchanged. See `DOCU/05-pages/gps.md`.
+- GPS Operations backend foundation: staff `GET /gps/summary`, `/gps/vehicles`, `/gps/map-points`, `/gps/vehicles/:vehicleId` (`gps.read`). `GpsUnconfiguredProvider` — no vendor, no fake coordinates. `VehicleGpsBinding` + `VehicleGpsLatestState` only (no history table). Tracking status is derived centrally. See `DOCU/05-pages/gps.md`.
+- Maintenance sidebar + list projection: Maintenance Center remains in the Demo operational rail after Fleet/GPS (`/maintenance`, `maintenance.read`). `GET /maintenance` now includes the Vehicle projection used by cards and history, so the frontend no longer hydrates each row with `GET /maintenance/:id`. Detail fetch stays for opening one order. See `DOCU/05-pages/maintenance.md`.
+- Maintenance Center frontend: `/[locale]/maintenance` wired to the existing Maintenance APIs (list, summary, detail, create, patch, start/ready/complete/cancel). Demo layout preserved (KPIs, overdue banner, status chips, cards, سجل الصيانة). Add Vehicle to Maintenance dialog uses a plate-forward `vehicleId` selector (`GET /vehicles?status=available&active=true`). Cost is optional and editable later. Completed orders are history and read-only. Permissions: `maintenance.read` / `maintenance.manage`. See `DOCU/05-pages/maintenance.md`.
+
+## 2026-09-09
+
+- Demo Simulation Mode (frontend-only, `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`): labeled in-memory overlay for public rental OCR/payment progression and staff TARS status display. Shared local enablement lives in committed `APP/frontend/.env.development` (`npm run dev`); production stays off unless the host sets the flag. No Azure, Stripe, or TARS calls, no database writes, no persisted simulation. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/04-api-contracts/tars-integration.md`.
+- Contract renewal flow completion: staff Generate Renewal Link stores a pending
+  `ContractRenewal` offer; public `/[locale]/renew/[token]` confirms server-owned
+  days/amount on the same ACTIVE Contract; Vehicle stays RENTED. Used tokens can
+  reload the success state. Drawer shows compact renewal history. No TARS
+  renewal execution and no Stripe step. See `DOCU/05-pages/contracts.md` and
+  `DOCU/05-pages/contracts-backend.md`.
+- Return / Car-In flow completion: public `/[locale]/return/[token]` page, staff
+  `POST /contracts/:id/car-in` (RETOUT → REVIEW, vehicle stays RENTED), Salik /
+  Violation reconciliation labels, Dialog stacked above Drawer. Close remains the
+  only step that sets Vehicle AVAILABLE. TARS stays status-only. See
+  `DOCU/05-pages/contracts.md` and `DOCU/05-pages/contracts-backend.md`.
+- Reconciliation dialog opens with empty Salik, Violation, and Other rows plus
+  emphasized category chips (manual categories only — no amounts invented, no
+  Salik/Violations APIs). Visual e2e covers dialog stacking, TARS Return /
+  Completion display, and public return EN/AR/mobile.
+
+- TARS integration status frontend (read-only): a new section in the existing Contract
+  Detail Drawer showing the connection state and the five mandatory procedures, plus
+  compact indicators in the Car-Out dialog, the Car-In record and the Close dialog. No
+  execution or retry controls, no lifecycle change, no customer-facing TARS state; the
+  unconfigured provider renders as a neutral "Not Connected", not an error. See
+  `DOCU/04-api-contracts/tars-integration.md` and `DOCU/05-pages/contracts.md`.
+
+- TARS mandatory integration foundation (backend only): new `src/modules/integrations/tars`
+  module with a five-capability `TarsProvider` abstraction, normalized Diamond-owned DTOs,
+  a centralized mapper, `TarsContractIntegration` / `TarsOperation` persistence, and a
+  read-only `GET /contracts/:id/tars` projection. No real TARS API, no fake success, no
+  lifecycle wiring; execution fails closed with `TARS_NOT_CONFIGURED`. See
+  `DOCU/04-api-contracts/tars-integration.md` and `DOCU/05-pages/contracts-backend.md`.
+
+- Customer Public Rental Flow V2 frontend: `/[locale]/rental/[token]` three-step journey (license, official contract, payment) driven by Backend `flow.step`, with no AppShell, no fake OCR, and no fake payment. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/05-pages/contracts.md`.
+- Public Rental Flow V2 backend: token-scoped license upload, OCR/payment provider boundaries (no fake success), multi-request Rental links, and ContractPayment electronic attempts. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/05-pages/contracts-backend.md`.
+- NextAuth now re-hydrates effective permissions from `GET /auth/me` on access-token refresh and session revalidation, so new domain permissions (for example `contracts.read`) apply without a manual re-login. Backend authorization is unchanged. See `DOCU/05-pages/authentication.md`.
+
 ## 2026-09-08
 
+- Contracts date filters upgraded to shared React DayPicker-based
+  `DateRangePicker` (explicit Apply/Clear, quick presets, two-month desktop).
+  See `DOCU/05-pages/contracts.md` and `DOCU/00-system-overview/ui-date-range-picker.md`.
+- DateRangePicker calendar grid fix: outside-day cells no longer collapse;
+  weekday alignment preserved; outer-edge Previous/Next navigation.
 - Contracts Backend V1: Contract aggregate, explicit lifecycle, hashed public
   links, payment/Car-Out/Car-In/reconciliation/renewal foundations, and real
   `currentRental` on Vehicles. See `DOCU/05-pages/contracts-backend.md`.

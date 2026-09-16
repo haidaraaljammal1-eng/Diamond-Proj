@@ -7,8 +7,9 @@ const LINK_PATH: Record<ContractLinkType, string> = {
 };
 
 /**
- * Customer URL the staff copies/opens. Public pages are not built in V1;
- * the token and path are still the real Backend public-route contract.
+ * Customer URL the staff copies or opens. Rental, return, and renewal public
+ * pages live at `/[locale]/rental|return|renew/[token]`. Open Link remains a
+ * Development / QA preview, not an operational staff action.
  */
 export function buildPublicContractUrl(
   origin: string,

@@ -52,11 +52,12 @@ model Customer {
   drivingLicenseExpiry DateTime?
   address              String?
 
-  experiences    PurchaseExperience[]
-  callQueueItems CallCenterQueueItem[]
-  complaints     Complaint[]
-  contracts      Contract[]
-  documents      CustomerDocument[]
+  experiences            PurchaseExperience[]
+  callQueueItems         CallCenterQueueItem[]
+  complaints             Complaint[]
+  contracts              Contract[]
+  documents              CustomerDocument[]
+  whatsAppConversations  WhatsAppConversation[]
 
   @@index([mobile])
   @@index([email])
@@ -91,9 +92,15 @@ model Vehicle {
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt
 
-  experiences PurchaseExperience[]
-  photos      VehiclePhoto[]
-  contracts   Contract[]
+  experiences               PurchaseExperience[]
+  photos                    VehiclePhoto[]
+  contracts                 Contract[]
+  maintenanceOrders         MaintenanceOrder[]
+  manualExpenses            ManualExpense[]
+  gpsBinding                VehicleGpsBinding?
+  gpsLatestState            VehicleGpsLatestState?
+  roadLiabilities           RoadLiability[]
+  roadLiabilityObservations RoadLiabilityObservation[]
 
   @@index([modelId])
   @@index([isActive])

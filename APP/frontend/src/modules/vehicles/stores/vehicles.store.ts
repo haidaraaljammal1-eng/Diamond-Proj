@@ -13,7 +13,7 @@ import {
   uploadVehiclePhoto,
 } from "../api/vehicles.api";
 import type { PageMeta } from "../api/vehicles.api.types";
-import { VEHICLES_MAX_PAGE_SIZE } from "../api/vehicles.api.types";
+import { VEHICLES_PAGE_SIZE } from "../api/vehicles.api.types";
 import type {
   CreateVehiclePayload,
   UpdateVehicleRatesPayload,
@@ -22,6 +22,7 @@ import type {
   VehicleFiltersState,
 } from "../types/vehicle.types";
 import { DEFAULT_VEHICLE_FILTERS } from "../utils/vehicle-filters";
+import { resolveFleetPageAfterFetch } from "../utils/vehicles-pagination";
 import { useFleetTypeLookupStore } from "./fleet-type-lookup.store";
 
 export type VehiclesLoadStatus = "idle" | "loading" | "ready" | "error";
@@ -101,6 +102,26 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     set({ status: "loading", error: null });
     try {
       const result = await getVehicles(query);
+      const correctedPage = resolveFleetPageAfterFetch(
+        query.page,
+        result.meta,
+        result.data.length,
+      );
+
+      if (correctedPage != null && correctedPage !== query.page) {
+        set((state) => ({
+          query: { ...state.query, page: correctedPage },
+        }));
+        const corrected = await getVehicles(get().query);
+        set({
+          vehicles: corrected.data,
+          meta: corrected.meta,
+          status: "ready",
+          error: null,
+        });
+        return;
+      }
+
       set({
         vehicles: result.data,
         meta: result.meta,
@@ -130,7 +151,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     query: {
       ...DEFAULT_VEHICLE_FILTERS,
       page: 1,
-      pageSize: VEHICLES_MAX_PAGE_SIZE,
+      pageSize: VEHICLES_PAGE_SIZE,
     },
     status: "idle",
     error: null,

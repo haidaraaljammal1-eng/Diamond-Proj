@@ -3,6 +3,7 @@ import { apiRequest } from "@/infrastructure/api/client";
 import { ApiRequestError } from "@/infrastructure/api/errors";
 import type { ApiErrorResponse, ApiResponse } from "@/infrastructure/api/types";
 import type {
+  CarInPayload,
   CarOutPayload,
   ConfirmContractPaymentPayload,
   ContractDetailDto,
@@ -145,13 +146,31 @@ export async function generateReturnLink(
   return response.data;
 }
 
+/** `POST /contracts/:id/car-in` (`contracts.return`). */
+export async function submitCarIn(
+  id: string,
+  payload: CarInPayload,
+  idempotencyKey?: string,
+): Promise<ContractDetailDto> {
+  const response = await apiRequest<ContractDetailDto>(
+    `${CONTRACTS_PATH}/${id}/car-in`,
+    {
+      method: "POST",
+      body: payload,
+      headers: withIdempotency(idempotencyKey),
+    },
+  );
+  return response.data;
+}
+
 /** `POST /contracts/:id/renewal-link` (`contracts.renew`). */
 export async function generateRenewalLink(
   id: string,
+  payload: RenewPayload,
 ): Promise<ContractLinkIssuedDto> {
   const response = await apiRequest<ContractLinkIssuedDto>(
     `${CONTRACTS_PATH}/${id}/renewal-link`,
-    { method: "POST" },
+    { method: "POST", body: payload },
   );
   return response.data;
 }

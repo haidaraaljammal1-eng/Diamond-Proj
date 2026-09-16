@@ -1,7 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import { DashboardScreen } from "@/modules/dashboard";
 
-/** Home dashboard — the Demo owner/employee overview. */
+/** Home dashboard — live operational aggregation from GET /dashboard/overview. */
 export default async function DashboardPage({
   params,
 }: {

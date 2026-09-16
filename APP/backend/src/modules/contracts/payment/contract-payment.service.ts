@@ -1,0 +1,683 @@
+import type {
+  ContractPayment,
+  ContractPaymentPurpose,
+  ContractPaymentStatus,
+  Prisma,
+  PrismaClient,
+} from "@prisma/client";
+import { env } from "src/config/env";
+import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
+import { writeOutboxEvent } from "src/lib/db/outbox";
+import { withTransaction, type Tx } from "src/lib/db/transaction";
+import { isUniqueViolation } from "src/lib/db/prisma-error";
+import { expiryFromNow, generateOpaqueToken, hashToken } from "src/lib/security/tokens";
+import {
+  ACTIVE_PAYMENT_STATUSES,
+  CONTRACT_CURRENCY,
+  CONTRACT_PAYMENT_LOCK_NS,
+  PAYMENT_STATUS_TOKEN_TTL_SECONDS,
+} from "src/modules/contracts/contracts.constants";
+import { assertTransition } from "src/modules/contracts/contracts-status";
+import { completeRentalLinks } from "src/modules/contracts/contracts-links";
+import { contractError } from "src/modules/contracts/contracts.errors";
+import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental-guard";
+import { assertPositiveAedAmount, assertAedCurrency, aedToStripeMinorUnits } from "src/modules/contracts/payment/money";
+import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
+import type { ProviderPaymentStatus } from "src/modules/contracts/payment/payment-provider.types";
+import { recordStripePaymentLedger } from "src/modules/finance/finance-ledger.service";
+
+export interface PaymentObligation {
+  contractId: string;
+  purpose: ContractPaymentPurpose;
+  targetId: string;
+  amount: number;
+  currency: string;
+}
+
+export interface StartPaymentResult {
+  payment: {
+    id: string;
+    status: ContractPaymentStatus;
+    amount: number;
+    currency: string;
+    purpose: ContractPaymentPurpose;
+    checkoutUrl: string | null;
+    checkoutExpiresAt: Date | null;
+  };
+  statusToken: string | null;
+  providerAvailable: boolean;
+  alreadySettled?: boolean;
+  noPaymentRequired?: boolean;
+}
+
+function paymentCallbackUrl(statusToken: string, outcome: "success" | "cancel"): string {
+  const base = env.FRONTEND_URL.replace(/\/$/, "");
+  return `${base}/en/payment/callback?statusToken=${encodeURIComponent(statusToken)}&outcome=${outcome}`;
+}
+
+async function emitPayment(
+  tx: Tx,
+  eventType: string,
+  contractId: string,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  await writeOutboxEvent(tx, {
+    eventType,
+    aggregateType: "contract",
+    aggregateId: contractId,
+    dedupeKey: `${eventType}:${contractId}:${extra.dedupe ?? "v1"}`,
+    payload: { contractId, ...extra, dedupe: undefined },
+  });
+}
+
+async function loadObligation(
+  tx: Tx,
+  purpose: ContractPaymentPurpose,
+  targetId: string,
+): Promise<PaymentObligation> {
+  switch (purpose) {
+    case "RENTAL": {
+      const contract = await tx.contract.findUnique({ where: { id: targetId } });
+      if (!contract) throw contractError.notFound();
+      assertPositiveAedAmount(contract.agreedAmount);
+      assertAedCurrency(contract.currency);
+      return {
+        contractId: contract.id,
+        purpose,
+        targetId: contract.id,
+        amount: contract.agreedAmount,
+        currency: contract.currency,
+      };
+    }
+    case "RENEWAL": {
+      const renewal = await tx.contractRenewal.findUnique({ where: { id: targetId } });
+      if (!renewal) throw contractError.notFound();
+      const contract = await tx.contract.findUnique({ where: { id: renewal.contractId } });
+      if (!contract) throw contractError.notFound();
+      assertAedCurrency(contract.currency);
+      if (renewal.additionalAmount <= 0) {
+        return {
+          contractId: renewal.contractId,
+          purpose,
+          targetId: renewal.id,
+          amount: 0,
+          currency: contract.currency,
+        };
+      }
+      assertPositiveAedAmount(renewal.additionalAmount);
+      return {
+        contractId: renewal.contractId,
+        purpose,
+        targetId: renewal.id,
+        amount: renewal.additionalAmount,
+        currency: contract.currency,
+      };
+    }
+    case "RECONCILIATION": {
+      const reconciliation = await tx.contractReconciliation.findUnique({
+        where: { id: targetId },
+      });
+      if (!reconciliation) throw contractError.notFound();
+      const contract = await tx.contract.findUnique({ where: { id: reconciliation.contractId } });
+      if (!contract) throw contractError.notFound();
+      assertAedCurrency(contract.currency);
+      if (reconciliation.finalAmount <= 0) {
+        return {
+          contractId: reconciliation.contractId,
+          purpose,
+          targetId: reconciliation.id,
+          amount: 0,
+          currency: contract.currency,
+        };
+      }
+      assertPositiveAedAmount(reconciliation.finalAmount);
+      return {
+        contractId: reconciliation.contractId,
+        purpose,
+        targetId: reconciliation.id,
+        amount: reconciliation.finalAmount,
+        currency: contract.currency,
+      };
+    }
+    case "POST_CLOSE_RECEIVABLE": {
+      const receivable = await tx.contractPostCloseReceivable.findUnique({ where: { id: targetId } });
+      if (!receivable) throw contractError.notFound();
+      assertPositiveAedAmount(receivable.amount);
+      assertAedCurrency(receivable.currency);
+      return {
+        contractId: receivable.contractId,
+        purpose,
+        targetId: receivable.id,
+        amount: receivable.amount,
+        currency: receivable.currency,
+      };
+    }
+    default:
+      throw contractError.paymentNotAllowed();
+  }
+}
+
+async function isObligationSettled(
+  tx: Tx,
+  purpose: ContractPaymentPurpose,
+  targetId: string,
+): Promise<boolean> {
+  const confirmed = await tx.contractPayment.findFirst({
+    where: { purpose, targetId, status: "CONFIRMED" },
+  });
+  if (confirmed) return true;
+
+  if (purpose === "RECONCILIATION") {
+    const reconciliation = await tx.contractReconciliation.findUnique({ where: { id: targetId } });
+    return Boolean(reconciliation?.settledAt);
+  }
+  if (purpose === "POST_CLOSE_RECEIVABLE") {
+    const receivable = await tx.contractPostCloseReceivable.findUnique({ where: { id: targetId } });
+    return receivable?.status === "SETTLED";
+  }
+  if (purpose === "RENEWAL") {
+    const renewal = await tx.contractRenewal.findUnique({ where: { id: targetId } });
+    return Boolean(renewal?.appliedAt);
+  }
+  return false;
+}
+
+function isCheckoutUsable(payment: ContractPayment): boolean {
+  if (!ACTIVE_PAYMENT_STATUSES.includes(payment.status as (typeof ACTIVE_PAYMENT_STATUSES)[number])) {
+    return false;
+  }
+  if (!payment.checkoutUrl) return false;
+  if (payment.checkoutExpiresAt && payment.checkoutExpiresAt.getTime() <= Date.now()) return false;
+  return true;
+}
+
+async function settleRoadLiabilitiesForReconciliation(tx: Tx, reconciliationId: string): Promise<void> {
+  const lines = await tx.contractReconciliationLine.findMany({
+    where: { reconciliationId, roadLiabilityId: { not: null } },
+    select: { roadLiabilityId: true },
+  });
+  const ids = lines.map((line) => line.roadLiabilityId).filter((id): id is string => Boolean(id));
+  if (ids.length === 0) return;
+  await tx.roadLiability.updateMany({
+    where: { id: { in: ids } },
+    data: { collectionStatus: "SETTLED" },
+  });
+}
+
+async function settleRoadLiabilityForPostClose(tx: Tx, receivableId: string): Promise<void> {
+  const receivable = await tx.contractPostCloseReceivable.findUnique({
+    where: { id: receivableId },
+    select: { roadLiabilityId: true },
+  });
+  if (!receivable) return;
+  await tx.roadLiability.update({
+    where: { id: receivable.roadLiabilityId },
+    data: { collectionStatus: "SETTLED" },
+  });
+}
+
+async function applyRenewal(
+  tx: Tx,
+  renewalId: string,
+  paymentId?: string | null,
+): Promise<void> {
+  const renewal = await tx.contractRenewal.findUnique({ where: { id: renewalId } });
+  if (!renewal) throw contractError.notFound();
+  if (renewal.appliedAt) return;
+
+  const contract = await tx.contract.findUnique({ where: { id: renewal.contractId } });
+  if (!contract) throw contractError.notFound();
+  await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
+
+  await tx.contractRenewal.update({
+    where: { id: renewal.id },
+    data: {
+      approvedAt: renewal.approvedAt ?? new Date(),
+      appliedAt: new Date(),
+      ...(paymentId ? { settledPaymentId: paymentId } : {}),
+    },
+  });
+  await tx.contract.update({
+    where: { id: contract.id },
+    data: {
+      rentalDays: contract.rentalDays + renewal.additionalDays,
+      agreedAmount: contract.agreedAmount + renewal.additionalAmount,
+      endAt: renewal.newEndAt,
+      revision: { increment: 1 },
+    },
+  });
+  await tx.contractLink.updateMany({
+    where: {
+      contractId: contract.id,
+      type: "RENEWAL",
+      usedAt: null,
+      revokedAt: null,
+    },
+    data: { usedAt: new Date() },
+  });
+  await emitPayment(tx, "contract.renewed", contract.id, { additionalDays: renewal.additionalDays });
+}
+
+async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<void> {
+  switch (payment.purpose) {
+    case "RENTAL": {
+      const contract = await tx.contract.findUnique({ where: { id: payment.contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status === "SIGNED") {
+        assertTransition("SIGNED", "PAID");
+        await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
+        await tx.contract.update({
+          where: { id: contract.id },
+          data: { status: "PAID", revision: { increment: 1 } },
+        });
+        await completeRentalLinks(tx, contract.id);
+        await emitPayment(tx, "contract.paid", contract.id, { vehicleId: contract.vehicleId });
+      }
+      break;
+    }
+    case "RECONCILIATION": {
+      const reconciliation = await tx.contractReconciliation.findUnique({
+        where: { id: payment.targetId },
+      });
+      if (!reconciliation) throw contractError.notFound();
+      if (!reconciliation.settledAt) {
+        await tx.contractReconciliation.update({
+          where: { id: reconciliation.id },
+          data: { settledAt: new Date(), settledPaymentId: payment.id },
+        });
+        await settleRoadLiabilitiesForReconciliation(tx, reconciliation.id);
+      }
+      break;
+    }
+    case "POST_CLOSE_RECEIVABLE": {
+      const receivable = await tx.contractPostCloseReceivable.findUnique({
+        where: { id: payment.targetId },
+      });
+      if (!receivable) throw contractError.notFound();
+      if (receivable.status !== "SETTLED") {
+        await tx.contractPostCloseReceivable.update({
+          where: { id: receivable.id },
+          data: {
+            status: "SETTLED",
+            settledAt: new Date(),
+            settledPaymentId: payment.id,
+          },
+        });
+        await settleRoadLiabilityForPostClose(tx, receivable.id);
+      }
+      break;
+    }
+    case "RENEWAL":
+      await applyRenewal(tx, payment.targetId, payment.id);
+      break;
+    default:
+      break;
+  }
+}
+
+function verifyProviderAmount(
+  payment: ContractPayment,
+  amountMinor?: number,
+  currency?: string,
+): void {
+  if (currency && currency !== payment.currency) {
+    throw contractError.paymentAmountMismatch();
+  }
+  if (amountMinor != null) {
+    const expected = aedToStripeMinorUnits(payment.amount);
+    if (amountMinor !== expected) throw contractError.paymentAmountMismatch();
+  }
+}
+
+async function markPaymentTerminal(
+  tx: Tx,
+  payment: ContractPayment,
+  status: ContractPaymentStatus,
+  providerStatus?: string,
+): Promise<ContractPayment> {
+  const data: Prisma.ContractPaymentUpdateInput = {
+    status,
+    providerStatus: providerStatus ?? status,
+  };
+  if (status === "CONFIRMED") data.confirmedAt = new Date();
+  if (status === "FAILED" || status === "CANCELLED") data.failedAt = new Date();
+  return tx.contractPayment.update({ where: { id: payment.id }, data });
+}
+
+export function createContractPaymentService(prisma: PrismaClient) {
+  const provider = () => createPaymentProvider();
+
+  async function confirmPaymentAttempt(
+    tx: Tx,
+    payment: ContractPayment,
+    providerStatus?: string,
+    amountMinor?: number,
+    currency?: string,
+  ): Promise<ContractPayment> {
+    if (payment.status === "CONFIRMED") return payment;
+    if (payment.providerReference) {
+      verifyProviderAmount(payment, amountMinor, currency);
+    }
+    try {
+      const updated = await markPaymentTerminal(tx, payment, "CONFIRMED", providerStatus);
+      await applyDomainSettlement(tx, updated);
+      await recordStripePaymentLedger(tx, updated);
+      await emitPayment(tx, "payment.confirmed", payment.contractId, {
+        paymentId: payment.id,
+        purpose: payment.purpose,
+        contractId: payment.contractId,
+        targetId: payment.targetId,
+        amount: payment.amount,
+        currency: payment.currency,
+        dedupe: payment.id,
+      });
+      return updated;
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        const existing = await tx.contractPayment.findFirst({
+          where: { purpose: payment.purpose, targetId: payment.targetId, status: "CONFIRMED" },
+        });
+        if (existing) return existing;
+      }
+      throw error;
+    }
+  }
+
+  async function applyProviderPaymentStatus(tx: Tx, paymentId: string): Promise<ContractPayment | null> {
+    const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
+    if (!payment?.providerReference) return payment;
+    if (payment.status !== "PENDING" && payment.status !== "PROCESSING") return payment;
+
+    const result = await provider().getPaymentStatus(payment.providerReference);
+    if (result.status === "UNKNOWN") return payment;
+
+    if (result.status === "CONFIRMED") {
+      return confirmPaymentAttempt(
+        tx,
+        payment,
+        result.providerStatus,
+        result.amountMinor,
+        result.currency,
+      );
+    }
+
+    if (result.status === "FAILED" || result.status === "CANCELLED" || result.status === "EXPIRED") {
+      const terminalStatus: ContractPaymentStatus =
+        result.status === "EXPIRED" ? "CANCELLED" : result.status;
+      const updated = await markPaymentTerminal(tx, payment, terminalStatus, result.providerStatus);
+      await emitPayment(tx, "payment.failed", payment.contractId, {
+        paymentId: payment.id,
+        status: terminalStatus,
+        dedupe: payment.id,
+      });
+      return updated;
+    }
+
+    return payment;
+  }
+
+  async function startPayment(input: {
+    purpose: ContractPaymentPurpose;
+    targetId: string;
+    createdByUserId?: number | null;
+    validate?: (tx: Tx, obligation: PaymentObligation) => Promise<void>;
+  }): Promise<StartPaymentResult> {
+    const payProvider = provider();
+    if (!payProvider.configured) throw contractError.paymentProviderNotConfigured();
+
+    return withTransaction(prisma, async (tx) => {
+      const obligation = await loadObligation(tx, input.purpose, input.targetId);
+      await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `${input.purpose}:${obligation.targetId}`);
+      if (input.validate) await input.validate(tx, obligation);
+
+      if (obligation.amount <= 0) {
+        return {
+          payment: {
+            id: "",
+            status: "CONFIRMED",
+            amount: 0,
+            currency: obligation.currency,
+            purpose: obligation.purpose,
+            checkoutUrl: null,
+            checkoutExpiresAt: null,
+          },
+          statusToken: null,
+          providerAvailable: payProvider.configured,
+          noPaymentRequired: true,
+        };
+      }
+
+      if (await isObligationSettled(tx, obligation.purpose, obligation.targetId)) {
+        throw contractError.paymentAlreadySettled();
+      }
+
+      const active = await tx.contractPayment.findFirst({
+        where: {
+          purpose: obligation.purpose,
+          targetId: obligation.targetId,
+          status: { in: [...ACTIVE_PAYMENT_STATUSES] },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (active && isCheckoutUsable(active)) {
+        return {
+          payment: {
+            id: active.id,
+            status: active.status,
+            amount: active.amount,
+            currency: active.currency,
+            purpose: active.purpose,
+            checkoutUrl: active.checkoutUrl,
+            checkoutExpiresAt: active.checkoutExpiresAt,
+          },
+          statusToken: null,
+          providerAvailable: true,
+        };
+      }
+
+      const statusToken = generateOpaqueToken(32);
+      const payment = await tx.contractPayment.create({
+        data: {
+          contractId: obligation.contractId,
+          purpose: obligation.purpose,
+          targetId: obligation.targetId,
+          amount: obligation.amount,
+          currency: obligation.currency,
+          method: "CARD",
+          status: "PROCESSING",
+          createdByUserId: input.createdByUserId ?? null,
+          statusTokenHash: hashToken(statusToken),
+          statusTokenExpiresAt: expiryFromNow(PAYMENT_STATUS_TOKEN_TTL_SECONDS),
+        },
+      });
+
+      const created = await payProvider.createCheckoutSession({
+        paymentId: payment.id,
+        contractId: obligation.contractId,
+        purpose: obligation.purpose,
+        targetId: obligation.targetId,
+        amount: obligation.amount,
+        currency: obligation.currency,
+        successUrl: paymentCallbackUrl(statusToken, "success"),
+        cancelUrl: paymentCallbackUrl(statusToken, "cancel"),
+      });
+      if (!created.ok) throw contractError.paymentProviderNotConfigured();
+
+      const updated = await tx.contractPayment.update({
+        where: { id: payment.id },
+        data: {
+          provider: created.provider,
+          providerReference: created.providerReference,
+          providerStatus: created.providerStatus,
+          checkoutUrl: created.checkoutUrl,
+          checkoutExpiresAt: created.checkoutExpiresAt,
+          processingStartedAt: new Date(),
+        },
+      });
+
+      await emitPayment(tx, "payment.started", obligation.contractId, {
+        paymentId: updated.id,
+        dedupe: updated.id,
+      });
+      await emitPayment(tx, "payment.pending", obligation.contractId, {
+        paymentId: updated.id,
+        dedupe: `${updated.id}:pending`,
+      });
+
+      return {
+        payment: {
+          id: updated.id,
+          status: updated.status,
+          amount: updated.amount,
+          currency: updated.currency,
+          purpose: updated.purpose,
+          checkoutUrl: updated.checkoutUrl,
+          checkoutExpiresAt: updated.checkoutExpiresAt,
+        },
+        statusToken,
+        providerAvailable: true,
+      };
+    });
+  }
+
+  async function processWebhookEvent(
+    stripeEventId: string,
+    eventType: string,
+    paymentId: string,
+    providerReference: string,
+    status: ProviderPaymentStatus,
+    amountMinor?: number,
+    currency?: string,
+  ): Promise<"processed" | "duplicate" | "ignored"> {
+    try {
+      await prisma.stripeWebhookEvent.create({
+        data: { stripeEventId, eventType, outcome: "received" },
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) return "duplicate";
+      throw error;
+    }
+
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await withTransaction(prisma, async (tx) => {
+            const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
+            if (!payment) throw contractError.paymentAttemptNotFound();
+            if (payment.providerReference && payment.providerReference !== providerReference) {
+              throw contractError.paymentProviderReferenceMismatch();
+            }
+
+            if (status === "CONFIRMED") {
+              await confirmPaymentAttempt(tx, payment, "CONFIRMED", amountMinor, currency);
+            } else if (status === "FAILED" || status === "CANCELLED" || status === "EXPIRED") {
+              if (payment.status === "PENDING" || payment.status === "PROCESSING") {
+                const terminalStatus: ContractPaymentStatus =
+                  status === "EXPIRED" ? "CANCELLED" : status;
+                await markPaymentTerminal(tx, payment, terminalStatus, status);
+                await emitPayment(tx, "payment.failed", payment.contractId, {
+                  paymentId: payment.id,
+                  status: terminalStatus,
+                  dedupe: payment.id,
+                });
+              }
+            }
+
+            await tx.stripeWebhookEvent.update({
+              where: { stripeEventId },
+              data: { processedAt: new Date(), outcome: "processed" },
+            });
+          });
+          return "processed";
+        } catch (error) {
+          if (attempt === 0 && isUniqueViolation(error)) continue;
+          throw error;
+        }
+      }
+      return "processed";
+    } catch (error) {
+      const settled = await prisma.contractPayment.findUnique({ where: { id: paymentId } });
+      if (settled?.status === "CONFIRMED" || isUniqueViolation(error)) {
+        await prisma.stripeWebhookEvent.update({
+          where: { stripeEventId },
+          data: { processedAt: new Date(), outcome: "duplicate" },
+        });
+        return "duplicate";
+      }
+      await prisma.stripeWebhookEvent.update({
+        where: { stripeEventId },
+        data: {
+          processedAt: new Date(),
+          outcome: "error",
+          error: error instanceof Error ? error.message : "unknown",
+        },
+      });
+      throw error;
+    }
+  }
+
+  async function getPaymentStatusByToken(statusToken: string) {
+    const digest = hashToken(statusToken);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await withTransaction(prisma, async (tx) => {
+          const payment = await tx.contractPayment.findUnique({
+            where: { statusTokenHash: digest },
+          });
+          if (!payment) throw contractError.paymentStatusTokenInvalid();
+          if (!payment.statusTokenExpiresAt || payment.statusTokenExpiresAt.getTime() <= Date.now()) {
+            throw contractError.paymentStatusTokenExpired();
+          }
+          const updated = (await applyProviderPaymentStatus(tx, payment.id)) ?? payment;
+          const contract = await tx.contract.findUnique({
+            where: { id: updated.contractId },
+            select: { status: true },
+          });
+          return {
+            status: updated.status,
+            contractStatus: contract?.status ?? null,
+            purpose: updated.purpose,
+            checkoutUrl: updated.checkoutUrl,
+          };
+        });
+      } catch (error) {
+        if (attempt === 0 && isUniqueViolation(error)) continue;
+        throw error;
+      }
+    }
+    throw contractError.paymentStatusTokenInvalid();
+  }
+
+  async function applyZeroAmountSettlement(
+    tx: Tx,
+    purpose: ContractPaymentPurpose,
+    targetId: string,
+  ): Promise<void> {
+    const obligation = await loadObligation(tx, purpose, targetId);
+    if (obligation.amount > 0) throw contractError.paymentRequired();
+    if (purpose === "RENEWAL") {
+      await applyRenewal(tx, targetId, null);
+      return;
+    }
+    if (purpose === "RECONCILIATION") {
+      const reconciliation = await tx.contractReconciliation.findUnique({ where: { id: targetId } });
+      if (reconciliation && !reconciliation.settledAt) {
+        await tx.contractReconciliation.update({
+          where: { id: targetId },
+          data: { settledAt: new Date() },
+        });
+      }
+    }
+  }
+
+  return {
+    startPayment,
+    applyProviderPaymentStatus,
+    processWebhookEvent,
+    getPaymentStatusByToken,
+    loadObligation,
+    isObligationSettled,
+    applyZeroAmountSettlement,
+    applyRenewal,
+  };
+}

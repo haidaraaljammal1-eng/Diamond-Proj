@@ -6,6 +6,9 @@ export interface PageMeta {
   totalPages: number;
 }
 
+/** Fleet list default page size (server-side pagination). */
+export const VEHICLES_PAGE_SIZE = 20;
+
 /** Backend `pageSize` cap (`MAX_PAGE_SIZE` in `lib/http/pagination.ts`). */
 export const VEHICLES_MAX_PAGE_SIZE = 100;
 

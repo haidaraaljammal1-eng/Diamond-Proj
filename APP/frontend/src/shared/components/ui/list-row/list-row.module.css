@@ -8,10 +8,18 @@
   border: 1px solid rgba(201, 161, 92, 0.14);
   border-radius: 4px;
   background: rgba(201, 161, 92, 0.03);
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: start;
   transition:
     background 0.22s,
     border-color 0.22s,
     transform 0.22s;
+}
+
+button.row {
+  cursor: pointer;
 }
 
 .row:first-child {

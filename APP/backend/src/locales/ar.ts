@@ -234,4 +234,43 @@ export const ar: Record<string, string> = {
   "Identity number or passport number is required": "رقم الهوية أو جواز السفر مطلوب",
   "Customer form must be completed first": "يجب إكمال نموذج العميل أولاً",
   "Contract photo not found": "صورة العقد غير موجودة",
+  "A valid driving license is required": "يلزم رخصة قيادة سارية",
+  "Driving license verification is not configured": "التحقق من رخصة القيادة غير مُعدّ",
+  "Driving license could not be read": "تعذر قراءة رخصة القيادة",
+  "Driving license requires another photo": "رخصة القيادة تتطلب صورة أخرى",
+  "Driving license is expired": "رخصة القيادة منتهية",
+  "Public rental form is incomplete": "نموذج التأجير غير مكتمل",
+  "Rental is not ready for acceptance": "التأجير غير جاهز للقبول",
+  "Card payment is not configured": "الدفع بالبطاقة غير مُعدّ",
+  "Electronic payment is not allowed": "الدفع الإلكتروني غير مسموح",
+  "A payment attempt is already in progress": "توجد محاولة دفع قيد المعالجة",
+  "Payment attempt was not found": "محاولة الدفع غير موجودة",
+  "Payment status token is invalid": "رمز حالة الدفع غير صالح",
+  "Payment status token has expired": "انتهت صلاحية رمز حالة الدفع",
+
+  "WhatsApp provider is not configured": "مزود واتساب غير مُعدّ",
+  "WhatsApp connection attempt has expired": "انتهت صلاحية محاولة ربط واتساب",
+  "WhatsApp connection attempt has already been used": "تم استخدام محاولة ربط واتساب مسبقاً",
+  "WhatsApp provider authorization failed": "فشل تفويض مزود واتساب",
+  "Selected WhatsApp Business Account was not granted by Meta":
+    "حساب واتساب للأعمال المحدد لم يُمنح من ميتا",
+  "Selected WhatsApp phone number was not granted by Meta":
+    "رقم واتساب المحدد لم يُمنح من ميتا",
+  "WhatsApp connection could not be validated": "تعذر التحقق من ربط واتساب",
+  "WhatsApp connection was not found": "ربط واتساب غير موجود",
+  "WhatsApp connection was changed by another request": "تم تغيير ربط واتساب بواسطة طلب آخر",
+  "WhatsApp connection attempt was not found": "محاولة ربط واتساب غير موجودة",
+  "WhatsApp conversation was not found": "محادثة واتساب غير موجودة",
+  "WhatsApp conversation is not on the active office connection":
+    "هذه المحادثة ليست على ربط واتساب النشط للمكتب",
+  "WhatsApp inbound webhook is not active": "Webhook الوارد لواتساب غير مفعّل",
+  "The 24-hour WhatsApp customer service window has ended":
+    "انتهت نافذة خدمة العميل لمدة 24 ساعة",
+  "WhatsApp customer service window cannot be verified":
+    "تعذر التحقق من نافذة خدمة العميل في واتساب",
+  "WhatsApp provider rejected the message": "رفض مزود واتساب الرسالة",
+  "WhatsApp send outcome is uncertain": "حالة إرسال واتساب غير مؤكدة",
+  "WhatsApp send was rate limited": "تم تقييد معدل إرسال واتساب",
+  "WhatsApp send authorization failed": "فشل تفويض إرسال واتساب",
+  "WhatsApp message text is invalid": "نص رسالة واتساب غير صالح",
 };

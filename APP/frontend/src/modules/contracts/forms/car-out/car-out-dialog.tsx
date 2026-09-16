@@ -9,6 +9,7 @@ import type { FormField } from "@/shared/components/forms/form-builder";
 import { INSPECTION_ANGLES } from "../../constants/inspection";
 import type { InspectionAngle } from "../../types/contract.types";
 import { useContract } from "../../hooks/use-contract";
+import { ContractTarsInlineStatus } from "../../components/contract-tars/contract-tars-inline-status";
 import { carOutFormSchema, type CarOutFormValues } from "./car-out.schema";
 import { createIdempotencyKey } from "../../utils/contract-link";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
@@ -81,6 +82,12 @@ function CarOutForm({
   return (
     <>
       {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
+
+      <ContractTarsInlineStatus
+        contractId={contractId}
+        operation="handover"
+        className={styles.integration}
+      />
 
       <div className={styles.grid}>
         {INSPECTION_ANGLES.map((angle) => {

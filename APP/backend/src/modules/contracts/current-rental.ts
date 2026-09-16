@@ -4,16 +4,17 @@ import { CURRENT_RENTAL_STATUSES } from "src/modules/contracts/contracts.constan
 
 export type CurrentRentalDto = {
   contractId: string;
+  contractNumber: string;
   customerName: string;
+  startAt: Date | null;
   endAt: Date;
-  status: "paid" | "active" | "retout" | "review";
+  status: "paid" | "active" | "retout";
 };
 
-const STATUS_TO_DTO: Record<"PAID" | "ACTIVE" | "RETOUT" | "REVIEW", CurrentRentalDto["status"]> = {
+const STATUS_TO_DTO: Record<"PAID" | "ACTIVE" | "RETOUT", CurrentRentalDto["status"]> = {
   PAID: "paid",
   ACTIVE: "active",
   RETOUT: "retout",
-  REVIEW: "review",
 };
 
 type SnapshotCustomer = { name?: unknown };
@@ -34,14 +35,16 @@ function customerNameFromSnapshot(snapshot: unknown): string | null {
 
 function toCurrentRental(row: {
   id: string;
+  contractNumber: string;
   status: ContractStatus;
+  startAt: Date | null;
   endAt: Date | null;
   createdAt: Date;
   rentalDays: number;
   snapshot: unknown;
   customer: { name: string } | null;
 }): CurrentRentalDto | null {
-  if (row.status !== "PAID" && row.status !== "ACTIVE" && row.status !== "RETOUT" && row.status !== "REVIEW") {
+  if (row.status !== "PAID" && row.status !== "ACTIVE" && row.status !== "RETOUT") {
     return null;
   }
   const endAt =
@@ -50,7 +53,9 @@ function toCurrentRental(row: {
     customerNameFromSnapshot(row.snapshot) ?? row.customer?.name ?? "Customer";
   return {
     contractId: row.id,
+    contractNumber: row.contractNumber,
     customerName,
+    startAt: row.startAt,
     endAt,
     status: STATUS_TO_DTO[row.status],
   };
@@ -58,8 +63,8 @@ function toCurrentRental(row: {
 
 /**
  * Batch-load currentRental for a page of vehicles — one query, no N+1.
- * currentRental is the current blocking rental context (PAID/ACTIVE/RETOUT/REVIEW),
- * not only a physically started rental.
+ * currentRental is the current blocking rental context (PAID/ACTIVE/RETOUT),
+ * not only a physically started rental. REVIEW after Car-In is not possession.
  *
  * If corrupt data has more than one blocking contract per vehicle, the oldest
  * (`createdAt`, then `id`) wins and `onDuplicate` is invoked — never a random pick.
@@ -79,8 +84,10 @@ export async function loadCurrentRentalsByVehicleIds(
     },
     select: {
       id: true,
+      contractNumber: true,
       vehicleId: true,
       status: true,
+      startAt: true,
       endAt: true,
       createdAt: true,
       rentalDays: true,

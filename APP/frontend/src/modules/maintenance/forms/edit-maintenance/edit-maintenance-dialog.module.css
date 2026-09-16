@@ -1,0 +1,86 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--diamond-muted);
+}
+
+.req {
+  margin-inline-start: 4px;
+  color: var(--diamond-danger);
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--diamond-dim);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 8px 6px;
+  border: 0;
+  border-bottom: 1px solid rgb(201 161 92 / 30%);
+  resize: vertical;
+  color: var(--diamond-ink);
+  background: transparent;
+  font-family: var(--diamond-font-body);
+  font-size: 14px;
+}
+
+.textarea:focus {
+  outline: 0;
+  border-bottom-color: var(--diamond-gold-hi);
+}
+
+.ltr {
+  direction: ltr;
+  text-align: start;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 8px;
+}
+
+.actions > button:first-child {
+  flex: 1;
+}
+
+.error {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(194, 69, 60, 0.28);
+  background: rgba(194, 69, 60, 0.07);
+  color: var(--diamond-danger);
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

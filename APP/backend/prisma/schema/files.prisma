@@ -22,6 +22,8 @@ model Attachment {
   contractCarOutPhotos ContractCarOutPhoto[]
   contractCarInPhotos  ContractCarInPhoto[]  @relation("ContractCarInPhotoAttachment")
   contractSignatures   ContractAcceptance[]  @relation("ContractSignatureAttachment")
+  contractDocuments    ContractDocument[]    @relation("ContractDocumentAttachment")
+  manualExpenses       ManualExpense[]
 
   @@index([uploadedById])
   @@map("attachments")

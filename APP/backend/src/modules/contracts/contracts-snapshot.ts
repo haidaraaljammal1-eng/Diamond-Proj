@@ -5,6 +5,7 @@ import {
 } from "src/modules/contracts/contracts.constants";
 
 export interface ContractSnapshot {
+  contractNumber: string;
   customer: {
     name: string;
     mobile: string | null;
@@ -30,7 +31,6 @@ export interface ContractSnapshot {
     rentalDays: number;
     startAt: string | null;
     endAt: string | null;
-    depositAmount: number | null;
     currency: string;
   };
   termsVersion: string;
@@ -63,11 +63,11 @@ type CommercialSnapInput = {
   rentalDays: number;
   startAt: Date | null;
   endAt: Date | null;
-  depositAmount: number | null;
   currency?: string;
 };
 
 export function buildContractSnapshot(input: {
+  contractNumber: string;
   customer: CustomerSnapInput | null;
   vehicle: VehicleSnapInput;
   commercial: CommercialSnapInput;
@@ -75,6 +75,7 @@ export function buildContractSnapshot(input: {
 }): ContractSnapshot {
   const customer = input.customer;
   return {
+    contractNumber: input.contractNumber,
     customer: {
       name: customer?.name ?? "",
       mobile: customer?.mobile ?? null,
@@ -83,7 +84,9 @@ export function buildContractSnapshot(input: {
       identityNumber: customer?.identityNumber ?? null,
       passportNumber: customer?.passportNumber ?? null,
       drivingLicenseNumber: customer?.drivingLicenseNumber ?? null,
-      drivingLicenseExpiry: customer?.drivingLicenseExpiry?.toISOString() ?? null,
+      drivingLicenseExpiry: customer?.drivingLicenseExpiry
+        ? customer.drivingLicenseExpiry.toISOString().slice(0, 10)
+        : null,
       address: customer?.address ?? null,
     },
     vehicle: {
@@ -105,7 +108,6 @@ export function buildContractSnapshot(input: {
       rentalDays: input.commercial.rentalDays,
       startAt: input.commercial.startAt?.toISOString() ?? null,
       endAt: input.commercial.endAt?.toISOString() ?? null,
-      depositAmount: input.commercial.depositAmount,
       currency: input.commercial.currency ?? CONTRACT_CURRENCY,
     },
     termsVersion: input.termsVersion ?? CONTRACT_TERMS_VERSION,

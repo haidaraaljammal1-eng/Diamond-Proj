@@ -1,10 +1,21 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useCallback, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/button";
 import { PageHeader } from "@/shared/components/ui/page-header";
 import { StatCard } from "@/shared/components/ui/stat-card";
+import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
+import { GENERATE_RENTAL_LINK_HREF } from "../../utils/dashboard.routes";
+import { hasAnyDashboardSection } from "../../utils/dashboard.selectors";
 import { useDashboardOverview } from "../../hooks/use-dashboard-overview";
+import {
+  DashboardSimulationControls,
+  isDashboardSimulationId,
+  selectDashboardPresentation,
+  useDashboardSimulation,
+} from "../../simulation";
 import { ExpenseBreakdownCard } from "../expense-breakdown-card/expense-breakdown-card";
 import { FleetStatusCard } from "../fleet-status-card/fleet-status-card";
 import { QuickAccessCard } from "../quick-access-card/quick-access-card";
@@ -13,41 +24,77 @@ import { TodayDeliveriesCard } from "../today-deliveries-card/today-deliveries-c
 import { WeeklyMovementCard } from "../weekly-movement-card/weekly-movement-card";
 import styles from "./dashboard-screen.module.css";
 
-/**
- * Home dashboard — the Demo `vDash()` view: three KPI tiles, the latest
- * contracts list and the Quick Access card, in the Demo owner/employee split.
- *
- * Data comes from `useDashboardOverview` (Demo fixtures today, Backend later).
- * Every shortcut targets a page that does not exist yet, so — like the shell's
- * own placeholder actions — the controls render disabled with the "coming
- * later" note instead of linking nowhere.
- */
 export function DashboardScreen() {
   const t = useTranslations("Dashboard");
-  const shell = useTranslations("Shell");
-  const { overview, isOwner, isAllowed, viewerName } = useDashboardOverview();
+  const locale = useLocale();
+  const router = useRouter();
+  const {
+    overview: realOverview,
+    isAllowed,
+    isAuthLoading,
+    error,
+    viewerName,
+    canReadContracts,
+    canReadVehicles,
+    canGenerateLink,
+    quickAccess,
+    refresh,
+  } = useDashboardOverview();
+  const simulation = useDashboardSimulation();
+  const overview = selectDashboardPresentation(
+    realOverview,
+    simulation.active,
+    simulation.overview,
+  );
+  const [drawerId, setDrawerId] = useState<string | null>(null);
 
+  const isOfficeView = canReadContracts && canReadVehicles;
   const greeting = viewerName
-    ? t(isOwner ? "greetingOwner" : "greetingEmployee", { name: viewerName })
+    ? t(isOfficeView ? "greetingOwner" : "greetingEmployee", { name: viewerName })
     : t("greetingFallback");
+
+  const goVehicles = useCallback(() => {
+    router.push(`/${locale}${GENERATE_RENTAL_LINK_HREF}`);
+  }, [locale, router]);
+
+  const goContracts = useCallback(() => {
+    setDrawerId(null);
+    router.push(`/${locale}/contracts`);
+  }, [locale, router]);
+
+  const openContract = useCallback((id: string) => {
+    if (isDashboardSimulationId(id)) return;
+    setDrawerId(id);
+  }, []);
 
   const header = (
     <PageHeader
-      crumbs={isOwner ? t("crumbsOwner") : t("crumbsEmployee")}
+      crumbs={isOfficeView ? t("crumbsOwner") : t("crumbsEmployee")}
       title={greeting}
-      subtitle={isOwner ? t("subtitleOwner") : t("subtitleEmployee")}
+      subtitle={isOfficeView ? t("subtitleOwner") : t("subtitleEmployee")}
       actions={
-        <Button
-          type="button"
-          size="md"
-          aria-disabled="true"
-          title={`${t("generateNewLink")} — ${shell("navigationActionNote")}`}
-        >
-          {t("generateNewLink")}
-        </Button>
+        <>
+          <DashboardSimulationControls />
+          {canGenerateLink ? (
+            <Button type="button" size="md" onClick={goVehicles}>
+              {t("generateNewLink")}
+            </Button>
+          ) : null}
+        </>
       }
     />
   );
+
+  if (isAuthLoading) {
+    return (
+      <>
+        {header}
+        <section className={styles.panel} role="status">
+          <p className={styles.panelText}>{t("loading")}</p>
+        </section>
+      </>
+    );
+  }
 
   if (!isAllowed) {
     return (
@@ -61,61 +108,133 @@ export function DashboardScreen() {
     );
   }
 
+  if (error && !overview) {
+    return (
+      <>
+        {header}
+        <section className={styles.panel} role="alert">
+          <p className={styles.panelTitle}>{t("error.title")}</p>
+          <p className={styles.panelText}>{t("error.description")}</p>
+          <Button type="button" size="sm" onClick={() => void refresh()}>
+            {t("error.retry")}
+          </Button>
+        </section>
+      </>
+    );
+  }
+
+  if (!overview) {
+    return (
+      <>
+        {header}
+        <section className={styles.panel} role="status">
+          <p className={styles.panelText}>{t("loading")}</p>
+        </section>
+      </>
+    );
+  }
+
+  const kpis = overview.kpis;
+  const showKpis =
+    kpis.activeRentals != null ||
+    kpis.fleetTotal != null ||
+    kpis.pendingLinks != null ||
+    kpis.deliveriesToday != null;
+
   return (
     <>
       {header}
 
-      <div className={styles.kpis}>
-        <StatCard
-          label={t("kpi.activeContracts")}
-          value={overview.activeContracts}
-          note={t("kpi.activeContractsNote", { count: overview.ongoingRentals })}
-          noteTone="up"
-        />
-        <StatCard
-          label={t("kpi.fleet")}
-          value={overview.fleetRented}
-          suffix={`/${overview.fleetTotal}`}
-          note={t("kpi.fleetNote")}
-        />
-        <StatCard
-          label={t("kpi.pendingLinks")}
-          value={overview.pendingLinks}
-          note={t("kpi.pendingLinksNote")}
-        />
-        <StatCard
-          label={t("kpi.deliveriesToday")}
-          value={overview.deliveriesToday}
-          note={t("kpi.deliveriesTodayNote", { count: overview.readyForDelivery })}
-        />
-      </div>
+      {showKpis ? (
+        <div className={styles.kpis}>
+          {kpis.activeRentals != null ? (
+            <StatCard
+              label={t("kpi.activeRentals")}
+              value={kpis.activeRentals}
+              note={t("kpi.activeRentalsNote")}
+            />
+          ) : null}
+          {kpis.fleetTotal != null && kpis.fleetRented != null ? (
+            <StatCard
+              label={t("kpi.fleet")}
+              value={kpis.fleetRented}
+              suffix={`/${kpis.fleetTotal}`}
+              note={t("kpi.fleetNote")}
+            />
+          ) : null}
+          {kpis.pendingLinks != null ? (
+            <StatCard
+              label={t("kpi.pendingLinks")}
+              value={kpis.pendingLinks}
+              note={t("kpi.pendingLinksNote")}
+            />
+          ) : null}
+          {kpis.deliveriesToday != null ? (
+            <StatCard
+              label={t("kpi.deliveriesToday")}
+              value={kpis.deliveriesToday}
+              note={t("kpi.deliveriesTodayNote", {
+                count: kpis.readyForDelivery ?? 0,
+              })}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
-      <div className={styles.grid}>
-        <RecentContractsCard
-          contracts={overview.recentContracts}
-          isOwner={isOwner}
-        />
-        <QuickAccessCard
-          contractsTotal={overview.contractsTotal}
-          fleetRented={overview.fleetRented}
-          vehiclesInService={overview.vehiclesInService}
-          unreadMessages={overview.unreadMessages}
-          isOwner={isOwner}
-        />
-      </div>
+      {overview.recentContracts != null || quickAccess.length > 0 ? (
+        <div className={styles.grid}>
+          <RecentContractsCard
+            contracts={overview.recentContracts}
+            onOpenContract={openContract}
+            onGenerateLink={canGenerateLink ? goVehicles : undefined}
+          />
+          <QuickAccessCard
+            items={quickAccess}
+            locale={locale}
+            contractsTotal={kpis.contractsTotal}
+            fleetRented={kpis.fleetRented}
+            vehiclesInService={kpis.fleetService}
+            gpsOnline={overview.gpsOnline}
+          />
+        </div>
+      ) : null}
 
-      <div className={styles.grid}>
-        <WeeklyMovementCard week={overview.week} />
-        <ExpenseBreakdownCard expenses={overview.expenses} />
-      </div>
+      {overview.weeklyRentalActivity != null || overview.weeklyFinance != null ? (
+        <div className={styles.grid}>
+          <WeeklyMovementCard series={overview.weeklyRentalActivity} />
+          <ExpenseBreakdownCard finance={overview.weeklyFinance} />
+        </div>
+      ) : null}
 
-      <div className={[styles.grid, styles.gridWide].join(" ")}>
-        <TodayDeliveriesCard
-          deliveries={overview.todayDeliveries}
-          readyCount={overview.readyForDelivery}
-        />
-        <FleetStatusCard fleet={overview.fleet} fleetTotal={overview.fleetTotal} />
-      </div>
+      {overview.todayDeliveries != null || overview.fleetStatus != null ? (
+        <div className={[styles.grid, styles.gridWide].join(" ")}>
+          <TodayDeliveriesCard
+            deliveries={overview.todayDeliveries}
+            readyCount={kpis.readyForDelivery}
+            onOpenContract={openContract}
+          />
+          <FleetStatusCard fleet={overview.fleetStatus} />
+        </div>
+      ) : null}
+
+      {!hasAnyDashboardSection(overview) && quickAccess.length === 0 ? (
+        <section className={styles.panel} role="status">
+          <p className={styles.panelTitle}>{t("restricted.title")}</p>
+          <p className={styles.panelText}>{t("restricted.description")}</p>
+        </section>
+      ) : null}
+
+      <ContractDetailDrawer
+        contractId={drawerId}
+        onClose={() => setDrawerId(null)}
+        onGenerateRentalLink={goContracts}
+        onCarOut={goContracts}
+        onCarIn={goContracts}
+        onReturnLink={goContracts}
+        onRenew={goContracts}
+        onReconcile={goContracts}
+        onCloseContract={goContracts}
+      />
     </>
   );
 }

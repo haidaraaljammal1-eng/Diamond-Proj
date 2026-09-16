@@ -20,8 +20,7 @@ interface SidebarItemProps {
  *
  * Renders icon, label, demo decorative corner diamond, and demo badge.
  * `link` items use Next.js navigation (locale preserved); `action` items
- * (Demo WhatsApp dock) are rendered as disabled placeholders until their
- * feature is implemented in a later phase.
+ * are rendered as disabled placeholders until their feature is implemented.
  *
  * This component is render-only. Labels are supplied by `useNavigation`.
  */

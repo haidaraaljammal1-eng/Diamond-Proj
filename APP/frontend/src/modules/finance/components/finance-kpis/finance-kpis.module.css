@@ -1,0 +1,31 @@
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.skeleton {
+  height: 96px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f3efe6 25%, #ebe4d6 50%, #f3efe6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (max-width: 1080px) {
+  .kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 400px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+}

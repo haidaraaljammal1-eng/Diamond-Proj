@@ -8,6 +8,7 @@ const allTrue: ContractActionsDto = {
   canConfirmPayment: true,
   canCarOut: true,
   canGenerateReturnLink: true,
+  canCarIn: true,
   canReconcile: true,
   canClose: true,
   canRenew: true,
@@ -37,6 +38,7 @@ describe("getContractActions", () => {
       canConfirmPayment: false,
       canCarOut: false,
       canGenerateReturnLink: false,
+      canCarIn: false,
       canReconcile: false,
       canClose: false,
       canRenew: false,
@@ -44,6 +46,7 @@ describe("getContractActions", () => {
     assert.equal(actions.showGenerateRentalLink, true);
     assert.equal(actions.showConfirmPayment, false);
     assert.equal(actions.showCarOut, false);
+    assert.equal(actions.showCarIn, false);
     assert.equal(actions.showRenew, false);
   });
 
@@ -53,6 +56,7 @@ describe("getContractActions", () => {
       canConfirmPayment: false,
       canCarOut: false,
       canGenerateReturnLink: false,
+      canCarIn: false,
       canReconcile: false,
       canClose: false,
       canRenew: false,
@@ -69,6 +73,7 @@ describe("getContractActions", () => {
       canConfirmPayment: true,
       canCarOut: false,
       canGenerateReturnLink: false,
+      canCarIn: false,
       canReconcile: false,
       canClose: false,
       canRenew: false,
@@ -83,12 +88,14 @@ describe("getContractActions", () => {
       canConfirmPayment: false,
       canCarOut: true,
       canGenerateReturnLink: false,
+      canCarIn: false,
       canReconcile: false,
       canClose: false,
       canRenew: false,
     });
     assert.equal(actions.showCarOut, true);
     assert.equal(actions.showGenerateReturnLink, false);
+    assert.equal(actions.showCarIn, false);
   });
 
   it("ACTIVE shows return link and renew", () => {
@@ -97,6 +104,7 @@ describe("getContractActions", () => {
       canConfirmPayment: false,
       canCarOut: false,
       canGenerateReturnLink: true,
+      canCarIn: false,
       canReconcile: false,
       canClose: false,
       canRenew: true,
@@ -104,22 +112,41 @@ describe("getContractActions", () => {
     assert.equal(actions.showGenerateReturnLink, true);
     assert.equal(actions.showRenew, true);
     assert.equal(actions.showCarOut, false);
+    assert.equal(actions.showCarIn, false);
   });
 
-  it("RETOUT waits for return and hides renew", () => {
+  it("RETOUT shows staff Car-In and hides waiting when permitted", () => {
     const actions = actionsFor("RETOUT", {
       canGenerateRentalLink: false,
       canConfirmPayment: false,
       canCarOut: false,
       canGenerateReturnLink: false,
+      canCarIn: true,
       canReconcile: false,
       canClose: false,
       canRenew: false,
     });
-    assert.equal(actions.showReturnWaiting, true);
+    assert.equal(actions.showCarIn, true);
+    assert.equal(actions.showReturnWaiting, false);
     assert.equal(actions.showRenew, false);
     assert.equal(actions.showCarOut, false);
     assert.equal(actions.showGenerateRentalLink, false);
+    assert.equal(actions.showClose, false);
+  });
+
+  it("RETOUT waits when Car-In is not available", () => {
+    const actions = actionsFor("RETOUT", {
+      canGenerateRentalLink: false,
+      canConfirmPayment: false,
+      canCarOut: false,
+      canGenerateReturnLink: false,
+      canCarIn: false,
+      canReconcile: false,
+      canClose: false,
+      canRenew: false,
+    });
+    assert.equal(actions.showCarIn, false);
+    assert.equal(actions.showReturnWaiting, true);
   });
 
   it("REVIEW shows reconciliation", () => {
@@ -128,12 +155,14 @@ describe("getContractActions", () => {
       canConfirmPayment: false,
       canCarOut: false,
       canGenerateReturnLink: false,
+      canCarIn: false,
       canReconcile: true,
       canClose: false,
       canRenew: false,
     });
     assert.equal(actions.showReconcile, true);
     assert.equal(actions.showClose, false);
+    assert.equal(actions.showCarIn, false);
   });
 
   it("REVIEW with approved reconciliation shows close", () => {
@@ -142,6 +171,7 @@ describe("getContractActions", () => {
       canConfirmPayment: false,
       canCarOut: false,
       canGenerateReturnLink: false,
+      canCarIn: false,
       canReconcile: true,
       canClose: true,
       canRenew: false,
@@ -156,11 +186,24 @@ describe("getContractActions", () => {
       showConfirmPayment: false,
       showCarOut: false,
       showGenerateReturnLink: false,
+      showCarIn: false,
       showReturnWaiting: false,
       showRenew: false,
       showReconcile: false,
       showClose: false,
     });
+  });
+
+  it("hides Car-In without return permission", () => {
+    const actions = getContractActions(
+      {
+        status: "RETOUT",
+        actions: { ...allTrue, canCarIn: true },
+      },
+      { ...perms, canReturn: false },
+    );
+    assert.equal(actions.showCarIn, false);
+    assert.equal(actions.showReturnWaiting, true);
   });
 
   it("hides Car-Out without both activate and car_out permissions", () => {

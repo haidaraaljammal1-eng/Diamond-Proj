@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { PageHeader } from "@/shared/components/ui/page-header";
@@ -13,8 +13,8 @@ import { ContractFilters } from "../contract-filters/contract-filters";
 import { ContractsTable } from "../contracts-table/contracts-table";
 import { ContractDetailDrawer } from "../contract-detail/contract-detail-drawer";
 import { ContractLinkResultDialog } from "../contract-link-result/contract-link-result-dialog";
-import { PaymentConfirmDialog } from "../../forms/payment/payment-confirm-dialog";
 import { CarOutDialog } from "../../forms/car-out/car-out-dialog";
+import { CarInDialog } from "../../forms/car-in/car-in-dialog";
 import { RenewDialog } from "../../forms/renew/renew-dialog";
 import { ReconcileDialog } from "../../forms/reconcile/reconcile-dialog";
 import { CloseContractDialog } from "../../forms/close/close-contract-dialog";
@@ -22,6 +22,8 @@ import styles from "./contracts-screen.module.css";
 
 export function ContractsScreen() {
   const t = useTranslations("Contracts");
+  const tDateRange = useTranslations("DateRangePicker");
+  const locale = useLocale();
   const {
     contracts,
     meta,
@@ -43,11 +45,8 @@ export function ContractsScreen() {
   const { generateRentalLink, generateReturnLink } = useContract();
 
   const [drawerId, setDrawerId] = useState<string | null>(null);
-  const [paymentTarget, setPaymentTarget] = useState<{
-    id: string;
-    agreedAmount: number;
-  } | null>(null);
   const [carOutId, setCarOutId] = useState<string | null>(null);
+  const [carInId, setCarInId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeTarget, setCloseTarget] = useState<{ id: string; number?: string } | null>(null);
@@ -87,19 +86,34 @@ export function ContractsScreen() {
       searchButton: t("search.button"),
       searchClear: t("search.clear"),
       sortLabel: t("filters.sortLabel"),
-      fromLabel: t("filters.from"),
-      toLabel: t("filters.to"),
+      dateRange: {
+        fieldLabel: t("filters.dateRange"),
+        placeholder: tDateRange("placeholder"),
+        apply: tDateRange("apply"),
+        clear: tDateRange("clear"),
+        daysSelected: (count: number) => tDateRange("daysSelected", { count }),
+        previousMonth: tDateRange("previousMonth"),
+        nextMonth: tDateRange("nextMonth"),
+        presets: {
+          today: tDateRange("presets.today"),
+          last7: tDateRange("presets.last7"),
+          last30: tDateRange("presets.last30"),
+          thisMonth: tDateRange("presets.thisMonth"),
+          lastMonth: tDateRange("presets.lastMonth"),
+          custom: tDateRange("presets.custom"),
+        },
+      },
       clear: t("filters.clear"),
       activeCount: t("filters.activeCount", { count: activeFilterCount }),
     }),
-    [t, activeFilterCount],
+    [t, tDateRange, activeFilterCount],
   );
 
   const openAction = useCallback(
     (contract: ContractListItemDto) => {
       if (contract.status === "AWAITING" || contract.status === "FORM" || contract.status === "SIGNED") {
         if (contract.status === "SIGNED") {
-          setPaymentTarget({ id: contract.id, agreedAmount: contract.agreedAmount });
+          setDrawerId(contract.id);
           return;
         }
         void generateRentalLink(contract.id);
@@ -188,11 +202,13 @@ export function ContractsScreen() {
             activeFilterCount={activeFilterCount}
             searchLoading={isLoading}
             resultsLabel={t("filters.results", { count: meta?.total ?? 0 })}
+            locale={locale}
             labels={filterLabels}
             onStatusChange={setStatusFilter}
             onSearchSubmit={applySearch}
             onSearchClear={clearSearch}
-            onDateRangeChange={setDateRange}
+            onDateRangeApply={setDateRange}
+            onDateRangeClear={() => setDateRange("", "")}
             onSortChange={setSort}
             onClear={clearFilters}
           />
@@ -255,23 +271,16 @@ export function ContractsScreen() {
         contractId={drawerId}
         onClose={() => setDrawerId(null)}
         onGenerateRentalLink={(id) => void generateRentalLink(id)}
-        onConfirmPayment={(id) => {
-          const row = contracts.find((item) => item.id === id);
-          setPaymentTarget({ id, agreedAmount: row?.agreedAmount ?? 0 });
-        }}
         onCarOut={setCarOutId}
+        onCarIn={setCarInId}
         onReturnLink={(id) => void generateReturnLink(id)}
         onRenew={setRenewId}
         onReconcile={setReconcileId}
         onCloseContract={(id) => setCloseTarget({ id })}
       />
 
-      <PaymentConfirmDialog
-        contractId={paymentTarget?.id ?? null}
-        amount={paymentTarget?.agreedAmount ?? 0}
-        onClose={() => setPaymentTarget(null)}
-      />
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
+      <CarInDialog contractId={carInId} onClose={() => setCarInId(null)} />
       <RenewDialog contractId={renewId} onClose={() => setRenewId(null)} />
       <ReconcileDialog
         contractId={reconcileId}

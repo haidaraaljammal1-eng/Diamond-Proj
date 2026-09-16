@@ -1,0 +1,38 @@
+.drop {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 18px;
+  border: 1px dashed var(--diamond-line);
+  border-radius: 16px;
+  background: var(--diamond-onyx2);
+}
+
+.preview {
+  width: min(100%, 360px);
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid var(--diamond-hair);
+}
+
+.hint {
+  margin: 0;
+  color: var(--diamond-muted);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

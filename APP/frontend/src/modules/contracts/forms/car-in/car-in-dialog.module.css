@@ -1,0 +1,57 @@
+.error {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--diamond-warn);
+}
+
+/* Read-only TARS state for this step — it never gates Car-In. */
+.integration {
+  margin-bottom: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 72px;
+  padding: 10px;
+  border: 1px dashed rgba(201, 161, 92, 0.4);
+  border-radius: 10px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.4);
+  position: relative;
+}
+
+.file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.angle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.state {
+  font-size: 10.5px;
+  color: var(--diamond-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

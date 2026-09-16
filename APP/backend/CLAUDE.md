@@ -59,4 +59,4 @@ Project skills live in `.claude/skills/`: `add-module`, `prisma-change`,
 
 ## Commands
 
-`npm run dev | build | start | typecheck | lint | test`, `npm run db:generate | db:migrate | db:deploy | db:seed`, `npm run openapi:export`.
+`npm run dev | build | start | typecheck | lint | test`, `npm run dev:bootstrap | dev:check`, `npm run db:generate | db:migrate | db:deploy | db:seed | db:seed:demo`, `npm run openapi:export`.

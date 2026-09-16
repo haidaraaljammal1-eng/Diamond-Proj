@@ -1,0 +1,147 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.amount {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--diamond-gold-hi);
+  font-variant-numeric: tabular-nums;
+}
+
+.awaiting {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #b07f1f;
+}
+
+.section {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--diamond-gold-hi);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.photo {
+  width: 88px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: cover;
+  background:
+    radial-gradient(130% 160% at 20% 0%, rgba(201, 161, 92, 0.28), transparent 52%),
+    linear-gradient(160deg, #f7f0e2, #efe6d2 60%);
+}
+
+.photo[data-empty="true"] {
+  box-shadow: inset 0 0 0 1px rgba(201, 161, 92, 0.22);
+}
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--diamond-hair);
+  font-size: 13px;
+}
+
+.statusRow span {
+  color: var(--diamond-muted);
+}
+
+.name {
+  margin: 0;
+  font-size: 16px;
+  color: var(--diamond-ink);
+}
+
+.plate {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--diamond-muted);
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--diamond-hair);
+  font-size: 13px;
+}
+
+.kv span {
+  color: var(--diamond-muted);
+}
+
+.kv b {
+  font-weight: 600;
+  color: var(--diamond-ink);
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--diamond-muted);
+  line-height: 1.45;
+}
+
+.warn {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(223, 169, 59, 0.35);
+  background: rgba(223, 169, 59, 0.1);
+  color: #8a6418;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.muted {
+  color: var(--diamond-muted);
+  font-size: 13px;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(194, 69, 60, 0.22);
+  background: rgba(194, 69, 60, 0.06);
+  color: var(--diamond-danger);
+  font-size: 12px;
+}

@@ -1,0 +1,99 @@
+.bubble {
+  max-width: 72%;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  border-radius: 4px;
+}
+
+.in {
+  align-self: flex-start;
+  background: rgba(28, 29, 35, 0.95);
+  border: 1px solid rgba(200, 194, 178, 0.14);
+  color: var(--diamond-ivory);
+}
+
+.out {
+  align-self: flex-end;
+  background: var(--diamond-gold, linear-gradient(160deg, #f2e0b4, #c9a15c));
+  border: none;
+  color: #241b08;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(201, 161, 92, 0.22);
+}
+
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.placeholder {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.placeTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.placeBody {
+  margin: 2px 0 0;
+  font-size: 11px;
+  opacity: 0.78;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 8.5px;
+  color: var(--diamond-muted);
+}
+
+.out .meta {
+  color: rgba(36, 27, 8, 0.62);
+}
+
+.status {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.mediaImg {
+  display: block;
+  max-width: 220px;
+  max-height: 220px;
+  margin-top: 6px;
+  border-radius: 4px;
+}
+
+.player {
+  display: block;
+  width: min(220px, 100%);
+  margin-top: 6px;
+}
+
+.download {
+  display: inline-block;
+  margin-top: 6px;
+  color: inherit;
+  font-size: 12px;
+}
+
+.simMedia {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.mediaBody {
+  min-width: 0;
+}

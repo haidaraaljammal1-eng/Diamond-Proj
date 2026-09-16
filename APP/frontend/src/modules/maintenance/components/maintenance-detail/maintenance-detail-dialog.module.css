@@ -1,0 +1,56 @@
+.summ {
+  border: 1px solid var(--diamond-hair);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: rgba(201, 161, 92, 0.05);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--diamond-muted);
+  padding: 4.5px 0;
+}
+
+.row b {
+  color: var(--diamond-champagne);
+  font-weight: 600;
+  text-align: end;
+}
+
+.tot {
+  border-top: 1px dashed var(--diamond-hair);
+  margin-top: 5px;
+  padding-top: 10px;
+  font-size: 13px;
+}
+
+.tot b {
+  color: var(--diamond-gold-hi);
+  font-size: 16px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--diamond-muted);
+}
+
+.error {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--diamond-danger);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}

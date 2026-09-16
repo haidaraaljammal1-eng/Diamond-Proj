@@ -17,9 +17,12 @@ export interface OutboxEventInput {
   availableAt?: Date;
 }
 
-export async function writeOutboxEvent(tx: Tx, input: OutboxEventInput): Promise<void> {
+export async function writeOutboxEvent(
+  tx: Tx,
+  input: OutboxEventInput,
+): Promise<{ id: number } | null> {
   try {
-    await tx.domainOutboxEvent.create({
+    const row = await tx.domainOutboxEvent.create({
       data: {
         eventType: input.eventType,
         aggregateType: input.aggregateType,
@@ -28,9 +31,12 @@ export async function writeOutboxEvent(tx: Tx, input: OutboxEventInput): Promise
         payload: input.payload as Prisma.InputJsonValue,
         availableAt: input.availableAt,
       },
+      select: { id: true },
     });
+    return row;
   } catch (err) {
     // A duplicate event (same dedupeKey) is a no-op — the event is already durable.
     if (!isUniqueViolation(err)) throw err;
+    return null;
   }
 }

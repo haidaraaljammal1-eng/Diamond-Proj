@@ -44,46 +44,59 @@ model User {
   // honoured at most once, so a code observed in transit cannot be replayed.
   twoFactorLastUsedStep           Int?
 
-  roles                           UserRole[]
-  sessions                        AuthSession[]
-  securityTokens                  SecurityToken[]
-  notifications                   Notification[]
-  notificationPreferences         NotificationPreference[]
-  auditLogs                       AuditLog[]                 @relation("audit_actor")
-  attachments                     Attachment[]
+  roles                                UserRole[]
+  sessions                             AuthSession[]
+  securityTokens                       SecurityToken[]
+  notifications                        Notification[]
+  notificationPreferences              NotificationPreference[]
+  auditLogs                            AuditLog[]                   @relation("audit_actor")
+  attachments                          Attachment[]
   // Product-domain link (master-data.prisma): a login account may back at most
   // one Salesperson. Optional back-relation required by Prisma for the FK.
-  salesperson                     Salesperson?
+  salesperson                          Salesperson?
   // Import pipeline (import.prisma): jobs this user created. Back-relation
   // required by Prisma for the ImportJob.createdBy FK.
-  importJobs                      ImportJob[]
+  importJobs                           ImportJob[]
   // Communication templates (communication.prisma).
-  messageTemplates                MessageTemplate[]
-  publishedTemplateVersions       MessageTemplateVersion[]
+  messageTemplates                     MessageTemplate[]
+  publishedTemplateVersions            MessageTemplateVersion[]
   // Response domain (master-data.prisma): branches this user manages.
-  managedBranches                 Branch[]                   @relation("BranchManager")
+  managedBranches                      Branch[]                     @relation("BranchManager")
   // Call center (call-center.prisma): queue items assigned to / calls made by this user.
-  callQueueAssignments            CallCenterQueueItem[]      @relation("CallQueueAssignee")
-  callSessions                    CallSession[]              @relation("CallSessionAgent")
+  callQueueAssignments                 CallCenterQueueItem[]        @relation("CallQueueAssignee")
+  callSessions                         CallSession[]                @relation("CallSessionAgent")
   // Branch membership — drives hard branch-scoped visibility (call center, later others).
-  branchAssignments               UserBranchAssignment[]
+  branchAssignments                    UserBranchAssignment[]
   // Department membership (complaints.prisma): assignee eligibility + escalation audience.
-  departmentAssignments           UserDepartmentAssignment[]
+  departmentAssignments                UserDepartmentAssignment[]
   // Complaints (complaints.prisma): complaints assigned to this user.
-  complaintAssignments            Complaint[]                @relation("ComplaintAssignee")
+  complaintAssignments                 Complaint[]                  @relation("ComplaintAssignee")
   // Routing rules that suggest this user as the assignee (complaints.prisma).
-  routingRuleAssignments          ComplaintRoutingRule[]     @relation("RoutingRuleAssignee")
+  routingRuleAssignments               ComplaintRoutingRule[]       @relation("RoutingRuleAssignee")
   // Escalation history: cases handed OFF by / handed TO this user (complaints.prisma).
-  escalationsFrom                 ComplaintEscalation[]      @relation("EscalationFromUser")
-  escalationsTo                   ComplaintEscalation[]      @relation("EscalationToUser")
-  twoFactorRecoveryCodes          TwoFactorRecoveryCode[]
-  contractsCreated                Contract[]                 @relation("ContractCreatedBy")
-  contractsAssigned               Contract[]                 @relation("ContractAssignedEmployee")
-  contractLinksCreated            ContractLink[]             @relation("ContractLinkCreatedBy")
-  contractPaymentsCreated         ContractPayment[]          @relation("ContractPaymentCreatedBy")
-  contractCarOutsPerformed        ContractCarOut[]           @relation("ContractCarOutPerformedBy")
-  contractReconciliationsApproved ContractReconciliation[]   @relation("ContractReconciliationApprovedBy")
-  contractRenewalsCreated         ContractRenewal[]          @relation("ContractRenewalCreatedBy")
+  escalationsFrom                      ComplaintEscalation[]        @relation("EscalationFromUser")
+  escalationsTo                        ComplaintEscalation[]        @relation("EscalationToUser")
+  twoFactorRecoveryCodes               TwoFactorRecoveryCode[]
+  contractsCreated                     Contract[]                   @relation("ContractCreatedBy")
+  contractsAssigned                    Contract[]                   @relation("ContractAssignedEmployee")
+  contractLinksCreated                 ContractLink[]               @relation("ContractLinkCreatedBy")
+  contractPaymentsCreated              ContractPayment[]            @relation("ContractPaymentCreatedBy")
+  contractCarOutsPerformed             ContractCarOut[]             @relation("ContractCarOutPerformedBy")
+  contractReconciliationsApproved      ContractReconciliation[]     @relation("ContractReconciliationApprovedBy")
+  contractReconciliationLinesConfirmed ContractReconciliationLine[] @relation("ContractReconciliationLineConfirmedBy")
+  roadLiabilityChargesConfirmed        RoadLiabilityCustomerCharge[] @relation("RoadLiabilityCustomerChargeConfirmedBy")
+  contractRenewalsCreated              ContractRenewal[]            @relation("ContractRenewalCreatedBy")
+  maintenanceOrdersCreated             MaintenanceOrder[]           @relation("MaintenanceOrderCreatedBy")
+  manualExpensesCreated                ManualExpense[]              @relation("ManualExpenseCreatedBy")
+  manualExpensesVoided                 ManualExpense[]              @relation("ManualExpenseVoidedBy")
+  manualExpenseRevisions               ManualExpenseRevision[]      @relation("ManualExpenseRevisionChangedBy")
+  whatsAppConnectionsConnected         WhatsAppConnection[]         @relation("WhatsAppConnectionConnectedBy")
+  whatsAppConnectionsDisconnected      WhatsAppConnection[]         @relation("WhatsAppConnectionDisconnectedBy")
+  whatsAppConnectionAttempts           WhatsAppConnectionAttempt[]  @relation("WhatsAppConnectionAttemptInitiatedBy")
+  whatsAppConversationsLastRead        WhatsAppConversation[]       @relation("WhatsAppConversationLastReadBy")
+  whatsAppConversationsCustomerLinked  WhatsAppConversation[]       @relation("WhatsAppConversationCustomerLinkedBy")
+  whatsAppMessagesSent                 WhatsAppMessage[]            @relation("WhatsAppMessageSentBy")
+  whatsAppOutboundAttempts             WhatsAppOutboundAttempt[]    @relation("WhatsAppOutboundAttemptActor")
 
   @@index([status])
   @@map("users")

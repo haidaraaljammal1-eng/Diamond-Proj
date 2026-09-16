@@ -71,7 +71,7 @@ Source of truth for operational status: `Vehicle.operationalStatus`, synchronize
 - `PUT /vehicles/:id` (including default-rate updates) → `409 CONFLICT`
 - `POST /vehicles/:id/deactivate` → `409 CONFLICT`
 
-Rejected when `operationalStatus = RENTED` **or** a blocking Contract exists (`PAID | ACTIVE | RETOUT | REVIEW`) via shared `vehicleHasBlockingContract`. Do not bypass Contract-owned rental state.
+Rejected when `operationalStatus = RENTED` **or** a blocking Contract exists (`PAID | ACTIVE | RETOUT`) via shared `vehicleHasBlockingContract`. Do not bypass Contract-owned rental state. REVIEW after Car-In is not blocking.
 
 ## Endpoints
 
@@ -194,13 +194,13 @@ Weekly price in Demo (`daily × 7 × 0.88`) stays derived on the client; no `wee
 
 `currentRental` is resolved from Contracts — never denormalized onto `Vehicle`. List and detail batch-load with `loadCurrentRentalsByVehicleIds` (one query for the page, no N+1).
 
-It is the current **blocking rental context** (`PAID | ACTIVE | RETOUT | REVIEW`), not only a started rental:
+It is the current **possession/reservation context** (`PAID | ACTIVE | RETOUT`), not every financially-open Contract:
 
 ```json
-{ "contractId": "…", "customerName": "…", "endAt": "…", "status": "paid"|"active"|"retout"|"review" }
+{ "contractId": "…", "customerName": "…", "endAt": "…", "status": "paid"|"active"|"retout" }
 ```
 
-At PAID the vehicle stays `AVAILABLE` (Car-Out pending) but `currentRental.status` is `"paid"` and fleet mutations stay 409 via the Contract guard. Otherwise `null` (no blocking contract, including CLOSED). Customer name prefers the Contract snapshot. Seed fleet rows still have no fake renter data.
+At PAID the vehicle stays `AVAILABLE` (Car-Out pending) but `currentRental.status` is `"paid"` and fleet mutations stay 409 via the Contract guard. REVIEW after Car-In is `null` (vehicle may be rented again). Otherwise `null` (no blocking contract, including CLOSED). Customer name prefers the Contract snapshot. Seed fleet rows still have no fake renter data.
 
 ## Photos
 

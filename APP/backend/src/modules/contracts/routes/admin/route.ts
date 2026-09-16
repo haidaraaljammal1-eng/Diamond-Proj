@@ -3,26 +3,37 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { createContractsService } from "src/modules/contracts/contracts.service";
 import {
+  CarInSchema,
   CarOutSchema,
   ConfirmPaymentSchema,
+  ConfirmRoadLiabilityChargeParam,
+  ConfirmRoadLiabilityChargeSchema,
   ContractDetailSchema,
   ContractIdParam,
   ContractLinkIssuedSchema,
   ContractListItemSchema,
   CreateOfferSchema,
   ListContractsQuerySchema,
+  PaymentCheckoutSchema,
   ReconcileSchema,
+  ReconciliationRoadLiabilitiesSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
+import { ContractTarsResponseSchema } from "src/modules/integrations/tars/tars.schema";
+import { createTarsIntegrationService } from "src/modules/integrations/tars/tars.service";
 import { commonErrorResponses, dataResponse, listResponse } from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { requireAuth } from "src/lib/context/auth-context";
 
 const InspectionPhotoParam = ContractIdParam.extend({ photoId: z.string().uuid() });
+const PostCloseReceivableParam = ContractIdParam.extend({ receivableId: z.string().uuid() });
 
 export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const contracts = createContractsService(fastify);
+  // Read-only integration state. Contracts business logic never calls TARS —
+  // see DOCU/04-api-contracts/tars-integration.md.
+  const tars = createTarsIntegrationService(fastify);
 
   app.get(
     "/",
@@ -52,6 +63,25 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.get(request.params.id) }),
+  );
+
+  app.get(
+    "/:id/tars",
+    {
+      schema: {
+        summary: "Get TARS integration state for a contract",
+        operationId: "getContractTarsState",
+        tags: ["Contracts"],
+        // Reading integration state is part of reading the contract — no
+        // separate TARS permission is invented for a read-only projection.
+        permissions: [PERMISSIONS.CONTRACTS_READ],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ContractTarsResponseSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({
+      data: { tars: await tars.getIntegrationState(request.params.id) },
+    }),
   );
 
   app.post(
@@ -107,9 +137,13 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
     "/:id/payment/confirm",
     {
       schema: {
-        summary: "Confirm payment and reserve the vehicle",
+        summary: "[Deprecated] Manual payment confirmation is disabled in V1",
+        description:
+          "Stripe is the only supported V1 customer payment method. This route always returns MANUAL_PAYMENT_DISABLED.",
         operationId: "confirmContractPayment",
         tags: ["Contracts"],
+        deprecated: true,
+        hide: true,
         permissions: [PERMISSIONS.CONTRACTS_MANAGE],
         params: ContractIdParam,
         body: ConfirmPaymentSchema,
@@ -190,6 +224,36 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   );
 
   app.post(
+    "/:id/car-in",
+    {
+      schema: {
+        summary: "Record Car-In and move the contract to REVIEW",
+        operationId: "contractCarIn",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam,
+        body: CarInSchema,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.carInStaff(
+        request.params.id,
+        request.body,
+        typeof key === "string" ? key : undefined,
+      );
+      request.setAudit({
+        action: "contracts.car_in",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
     "/:id/reconcile",
     {
       schema: {
@@ -207,6 +271,109 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       const data = await contracts.reconcile(request.params.id, request.body, actor.id);
       request.setAudit({
         action: "contracts.reconcile",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.get(
+    "/:id/reconciliation/road-liabilities",
+    {
+      schema: {
+        summary: "List chargeable and attached road liabilities for reconciliation",
+        operationId: "listContractReconciliationRoadLiabilities",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ReconciliationRoadLiabilitiesSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const data = await contracts.listReconciliationRoadLiabilities(request.params.id);
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/road-liabilities/:roadLiabilityId/confirm-charge",
+    {
+      schema: {
+        summary: "Confirm the customer charge for a confirmed road liability",
+        operationId: "confirmContractRoadLiabilityCharge",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ConfirmRoadLiabilityChargeParam,
+        body: ConfirmRoadLiabilityChargeSchema,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.confirmRoadLiabilityCharge(
+        request.params.id,
+        request.params.roadLiabilityId,
+        request.body,
+        actor.id,
+        typeof key === "string" ? key : undefined,
+      );
+      request.setAudit({
+        action: "contracts.confirm_road_liability_charge",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/payment",
+    {
+      schema: {
+        summary: "Start Stripe checkout for an approved reconciliation balance",
+        operationId: "startReconciliationPayment",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(PaymentCheckoutSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.startReconciliationPayment(request.params.id, actor.id);
+      request.setAudit({
+        action: "contracts.reconciliation_payment",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/post-close-receivables/:receivableId/payment",
+    {
+      schema: {
+        summary: "Start Stripe checkout for an open post-close receivable",
+        operationId: "startPostCloseReceivablePayment",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.VIOLATIONS_CHARGE],
+        params: PostCloseReceivableParam,
+        response: { 200: dataResponse(PaymentCheckoutSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.startPostClosePayment(
+        request.params.id,
+        request.params.receivableId,
+        actor.id,
+      );
+      request.setAudit({
+        action: "contracts.post_close_payment",
         entityType: "contract",
         entityId: request.params.id,
       });
@@ -252,12 +419,18 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
         tags: ["Contracts"],
         permissions: [PERMISSIONS.CONTRACTS_RENEW],
         params: ContractIdParam,
+        body: RenewSchema,
         response: { 200: dataResponse(ContractLinkIssuedSchema), ...commonErrorResponses },
       },
     },
     async (request) => {
       const actor = requireAuth(request);
-      const data = await contracts.generateLink(request.params.id, "RENEWAL", actor.id);
+      const data = await contracts.generateLink(
+        request.params.id,
+        "RENEWAL",
+        actor.id,
+        request.body,
+      );
       request.setAudit({
         action: "contracts.renewal_link",
         entityType: "contract",

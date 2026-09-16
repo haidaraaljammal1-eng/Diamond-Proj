@@ -6,11 +6,26 @@ Fastify at `APP/backend` is the authentication authority. The frontend uses Auth
 
 `useAuth` and `useLogin` are the only UI facades. Credentials are sent by the Auth.js Credentials provider to `POST /auth/login`. A successful non-2FA response is verified through `GET /auth/me` and stored in the encrypted Auth.js JWT. The access token is exposed only where the browser API client needs it. The refresh token remains server-side in the Auth.js JWT and is never part of the client session, Zustand, storage APIs, logs, or URLs.
 
-Auth.js refreshes the rotating Backend token when its access token is near expiry. A failed refresh invalidates the token and the session. Logout calls Fastify `POST /auth/logout` through the Auth.js sign-out event, then removes the frontend session. Fastify `403` remains an authorization error; it is not logout.
+Auth.js refreshes the rotating Backend token when its access token is near expiry. After a successful rotation it re-reads `GET /auth/me` and replaces the session permission snapshot. A failed refresh invalidates the token and the session. Logout calls Fastify `POST /auth/logout` through the Auth.js sign-out event, then removes the frontend session. Fastify `403` remains an authorization error; it is not logout.
 
 The authenticated session lasts 7 days (`ACCESS_TOKEN_TTL=604800` and Auth.js `session.maxAge`). The refresh token remains longer-lived so a session that is still in use can rotate before expiry.
 
 The Backend's `requiresTwoFactor` login response creates no Auth.js session. The challenge must be completed at `POST /auth/two-factor/verify` or `/auth/two-factor/recovery` before a session can exist. The current frontend exposes the architecture for this flow but does not invent a 2FA page.
+
+## Effective permissions (UX mirror)
+
+Backend database effective permissions are the authorization authority. `GET /auth/me` exposes them. The Auth.js JWT copies that list so frontend guards and navigation can mirror it. The access token is not permission authority — every protected Backend request still loads effective permissions from the database.
+
+Frontend permission snapshots are loaded and replaced (never merged) from `GET /auth/me` at:
+
+- Credentials login (after `POST /auth/login`)
+- successful access-token refresh
+- explicit session update (`trigger === "update"`)
+- JWT revalidation when the snapshot is missing (existing sessions) or older than 5 minutes
+
+`usePermissions()` and `hasPermission("contracts.read")` read `session.user.permissions` only. They do not call `/auth/me` on React render. Concurrent NextAuth `jwt` callbacks share one in-flight `/auth/me` per access token.
+
+New domain permissions require: catalog → seed → `RolePermission` → `GET /auth/me` verification → frontend session verification after the next revalidation. A manual logout is not required for the snapshot to catch up.
 
 ## Route guards
 
@@ -18,7 +33,8 @@ The single `src/proxy.ts` combines next-intl and Auth.js. Authenticated users ar
 
 ## Main files
 
-- `APP/frontend/src/auth.ts`: Credentials provider, JWT refresh, session projection, Backend logout.
+- `APP/frontend/src/auth.ts`: Credentials provider, JWT refresh, permission re-hydration from `GET /auth/me`, session projection, Backend logout.
+- `APP/frontend/src/infrastructure/auth/session-permissions.ts`: when and how the JWT permission snapshot is replaced.
 - `APP/frontend/src/proxy.ts`: locale-aware pre-render route guards.
 - `APP/frontend/src/app/api/auth/[...nextauth]/route.ts`: Auth.js App Router handler.
 - `APP/frontend/src/modules/auth/hooks/`: UI authentication facades.

@@ -1,0 +1,353 @@
+// ---------------------------------------------------------------------------
+// WhatsApp office connection, webhook ingress, conversation/message domain,
+// manual outbound text/template/media, and optional Customer link.
+// META_APP_SECRET is never stored here.
+// ---------------------------------------------------------------------------
+
+enum WhatsAppProvider {
+  META_CLOUD_API
+  ULTRAMSG
+}
+
+/// Normalized UltraMsg instance session. Distinct from Diamond connection.status.
+enum WhatsAppProviderSessionStatus {
+  INITIALIZING
+  QR_REQUIRED
+  RETRYING
+  LOADING
+  AUTHENTICATED
+  DISCONNECTED
+  STANDBY
+  UNKNOWN
+}
+
+/// Current office connection. V1 allows at most one non-DISCONNECTED row
+/// (enforced by a partial unique index in the migration + advisory lock).
+enum WhatsAppConnectionStatus {
+  DISCONNECTED
+  LINKING
+  LINKED
+  REAUTH_REQUIRED
+  ERROR
+}
+
+enum WhatsAppConnectionAttemptStatus {
+  PENDING
+  AUTHORIZED
+  SELECTED
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+/// Distinct from connection.status (LINKED). LINKED is credentials; this is webhook flow.
+enum WhatsAppConnectionWebhookStatus {
+  NOT_CONFIGURED
+  PENDING
+  ACTIVE
+  ERROR
+}
+
+enum WhatsAppWebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum WhatsAppWebhookEventType {
+  MESSAGE_RECEIVED
+  MESSAGE_STATUS
+  TEMPLATE_STATUS
+  ACCOUNT_EVENT
+  PHONE_EVENT
+  UNKNOWN
+}
+
+enum WhatsAppMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum WhatsAppMessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  AUDIO
+  VIDEO
+  LOCATION
+  CONTACTS
+  INTERACTIVE
+  REACTION
+  STICKER
+  TEMPLATE
+  UNKNOWN
+}
+
+/// Outbound provider delivery state. INBOUND rows leave this null.
+enum WhatsAppMessageProviderStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+/// Diamond-to-provider send attempt outcome. Distinct from providerStatus
+/// (webhook SENT/DELIVERED/READ/FAILED). INBOUND rows leave this null.
+enum WhatsAppMessageSendState {
+  PENDING
+  ACCEPTED
+  FAILED
+  UNKNOWN
+}
+
+model WhatsAppConnection {
+  id       String                  @id @default(uuid())
+  provider WhatsAppProvider        @default(META_CLOUD_API)
+  status   WhatsAppConnectionStatus @default(DISCONNECTED)
+
+  /// Legacy Meta Cloud API identifiers. Nullable for UltraMsg connections.
+  wabaId              String?
+  phoneNumberId       String?
+  displayPhoneNumber  String?
+  verifiedName        String?
+  businessAccountName String?
+
+  /// UltraMsg instance identity. Never a token.
+  providerInstanceId String?
+  providerApiUrl     String?
+  providerSessionStatus     WhatsAppProviderSessionStatus?
+  providerSessionCheckedAt  DateTime?
+  /// Encrypted webhook callback key (`enc:v1:`). Never returned or logged.
+  webhookCallbackCiphertext String?
+
+  /// AES-256-GCM ciphertext (`enc:v1:` prefix). Never returned, logged, or audited.
+  credentialCiphertext  String?
+  credentialExpiresAt   DateTime?
+
+  connectedByUserId Int?
+  connectedBy       User?     @relation("WhatsAppConnectionConnectedBy", fields: [connectedByUserId], references: [id], onDelete: SetNull)
+  connectedAt       DateTime?
+  lastValidatedAt   DateTime?
+
+  disconnectedAt       DateTime?
+  disconnectedByUserId Int?
+  disconnectedBy       User?     @relation("WhatsAppConnectionDisconnectedBy", fields: [disconnectedByUserId], references: [id], onDelete: SetNull)
+
+  /// Diamond domain code or sanitized Graph code (e.g. graph:190). Never a raw body.
+  lastProviderErrorCode String?
+
+  webhookStatus WhatsAppConnectionWebhookStatus @default(NOT_CONFIGURED)
+  lastWebhookAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  webhookEvents     WhatsAppWebhookEvent[]
+  conversations     WhatsAppConversation[]
+  messages          WhatsAppMessage[]
+  outboundAttempts  WhatsAppOutboundAttempt[]
+
+  @@index([status])
+  @@index([wabaId, phoneNumberId])
+  @@map("whatsapp_connections")
+}
+
+/// Durable Meta webhook receipt (Phase 2). Not Conversation / WhatsAppMessage.
+model WhatsAppWebhookEvent {
+  id       String           @id @default(uuid())
+  provider WhatsAppProvider @default(META_CLOUD_API)
+
+  /// Deterministic dedupe key (e.g. wamid:... ). Unique.
+  providerEventKey String @unique
+  wabaId           String?
+  phoneNumberId    String?
+
+  eventType WhatsAppWebhookEventType
+  /// Sanitized provider JSON. Never access tokens / app secrets.
+  payload   Json
+  receivedAt DateTime
+  processedAt DateTime?
+  status      WhatsAppWebhookEventStatus @default(RECEIVED)
+  failureCode String?
+
+  connectionId String?
+  connection   WhatsAppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  providerMessageId    String?
+  customerWaId         String?
+  customerDisplayName  String?
+  occurredAt           DateTime?
+  messageType          String?
+  textBody             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages WhatsAppMessage[]
+
+  @@index([connectionId, receivedAt])
+  @@index([status, receivedAt])
+  @@index([wabaId, phoneNumberId])
+  @@map("whatsapp_webhook_events")
+}
+
+/// Diamond staff conversation. Identity is connection + provider wa_id.
+/// Office-level unread (not per-user, not Meta read receipts).
+model WhatsAppConversation {
+  id           String @id @default(uuid())
+  connectionId String
+  connection   WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+
+  /// Exact Meta wa_id, or UltraMsg digits derived from `@c.us`. Never a Diamond Customer.
+  customerWaId         String
+  /// Provider-neutral 1:1 chat id. UltraMsg stores exact `number@c.us`. Null on historical Meta rows.
+  providerChatId       String?
+  customerDisplayName  String?
+
+  lastMessageId      String?
+  lastMessage        WhatsAppMessage? @relation("WhatsAppConversationLastMessage", fields: [lastMessageId], references: [id], onDelete: SetNull)
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  lastMessageType    WhatsAppMessageType?
+
+  unreadCount Int @default(0)
+
+  lastInboundAt  DateTime?
+  lastOutboundAt DateTime?
+
+  /// Diamond-internal read cursor. Not a Meta read receipt.
+  lastReadAt       DateTime?
+  lastReadByUserId Int?
+  lastReadBy       User? @relation("WhatsAppConversationLastReadBy", fields: [lastReadByUserId], references: [id], onDelete: SetNull)
+
+  /// Explicit staff link only. Never auto-created or auto-matched into authority.
+  customerId             Int?
+  customer               Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerLinkedAt       DateTime?
+  customerLinkedByUserId Int?
+  customerLinkedBy       User?     @relation("WhatsAppConversationCustomerLinkedBy", fields: [customerLinkedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages         WhatsAppMessage[]         @relation("WhatsAppConversationMessages")
+  outboundAttempts WhatsAppOutboundAttempt[]
+
+  @@unique([connectionId, customerWaId])
+  @@index([connectionId, providerChatId])
+  @@index([lastMessageAt])
+  @@index([unreadCount])
+  @@index([customerDisplayName])
+  @@index([customerId])
+  @@map("whatsapp_conversations")
+}
+
+/// Normalized business message. Provider JSON stays on WhatsAppWebhookEvent.
+model WhatsAppMessage {
+  id             String @id @default(uuid())
+  conversationId String
+  conversation   WhatsAppConversation @relation("WhatsAppConversationMessages", fields: [conversationId], references: [id], onDelete: Restrict)
+  connectionId   String
+  connection     WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+
+  providerMessageId String?
+  direction         WhatsAppMessageDirection
+  messageType       WhatsAppMessageType
+  textBody          String?
+  /// Safe provider media id only. Never a binary, never a download URL.
+  providerMediaId   String?
+  caption           String?
+  mediaMimeType     String?
+  mediaFilename     String?
+  mediaSizeBytes    Int?
+  templateName      String?
+  templateLanguage  String?
+  templatePreview   String?
+  /// Sanitized location/contacts/reaction/interactive. Never raw webhook JSON.
+  displayPayload    Json?
+
+  providerOccurredAt DateTime?
+  receivedAt         DateTime
+  providerStatus     WhatsAppMessageProviderStatus?
+
+  /// Authenticated staff for OUTBOUND only. INBOUND is always null.
+  sentByUserId Int?
+  sentBy       User? @relation("WhatsAppMessageSentBy", fields: [sentByUserId], references: [id], onDelete: SetNull)
+  sendState    WhatsAppMessageSendState?
+
+  webhookEventId String?
+  webhookEvent   WhatsAppWebhookEvent? @relation(fields: [webhookEventId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lastMessageOf    WhatsAppConversation[]     @relation("WhatsAppConversationLastMessage")
+  outboundAttempt  WhatsAppOutboundAttempt?
+
+  @@unique([connectionId, providerMessageId])
+  @@index([conversationId, providerOccurredAt])
+  @@index([conversationId, createdAt])
+  @@map("whatsapp_messages")
+}
+
+/// Short-lived OAuth/Embedded Signup attempt. Starting an attempt must not
+/// mutate the active WhatsAppConnection. The plaintext state nonce is returned
+/// once; only SHA-256 is stored.
+model WhatsAppConnectionAttempt {
+  id                String                           @id @default(uuid())
+  initiatedByUserId Int
+  initiatedBy       User                             @relation("WhatsAppConnectionAttemptInitiatedBy", fields: [initiatedByUserId], references: [id], onDelete: Restrict)
+  status            WhatsAppConnectionAttemptStatus  @default(PENDING)
+
+  stateNonceHash String    @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+
+  /// Temporary encrypted access token until select promotes it. Never plaintext.
+  temporaryCredentialCiphertext String?
+  temporaryCredentialExpiresAt  DateTime?
+
+  /// Sanitized granted WABAs/phones only. Never tokens or app secrets.
+  providerGrantMetadata Json?
+
+  lastErrorCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([initiatedByUserId, createdAt])
+  @@index([status, expiresAt])
+  @@map("whatsapp_connection_attempts")
+}
+
+/// One reserved Meta send per staff idempotency key. External POST is never
+/// retried automatically. Unique (actor, key hash) is the create-first lock.
+model WhatsAppOutboundAttempt {
+  id             String @id @default(uuid())
+  messageId      String @unique
+  message        WhatsAppMessage @relation(fields: [messageId], references: [id], onDelete: Restrict)
+  conversationId String
+  conversation   WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  connectionId   String
+  connection     WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+
+  actorUserId Int
+  actor       User @relation("WhatsAppOutboundAttemptActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  idempotencyKeyHash String
+  requestFingerprint String
+
+  state WhatsAppMessageSendState @default(PENDING)
+
+  providerMessageId     String?
+  safeProviderErrorCode String?
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@unique([actorUserId, idempotencyKeyHash])
+  @@index([conversationId, createdAt])
+  @@map("whatsapp_outbound_attempts")
+}

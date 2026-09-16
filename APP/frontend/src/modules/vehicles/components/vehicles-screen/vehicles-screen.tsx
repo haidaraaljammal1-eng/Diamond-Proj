@@ -18,8 +18,13 @@ import { EditDefaultRateDialog } from "../../forms/edit-rates/edit-default-rate-
 import { VehicleDeactivateDialog } from "../../forms/deactivate/vehicle-deactivate-dialog";
 import { useContract } from "@/modules/contracts/hooks/use-contract";
 import { resolveFleetPrimaryIntent } from "../../utils/resolve-fleet-contract-intent";
+import {
+  isFleetNextDisabled,
+  isFleetPreviousDisabled,
+  shouldShowFleetPagination,
+} from "../../utils/vehicles-pagination";
 import { CarOutDialog } from "@/modules/contracts/forms/car-out/car-out-dialog";
-import { PaymentConfirmDialog } from "@/modules/contracts/forms/payment/payment-confirm-dialog";
+import { CarInDialog } from "@/modules/contracts/forms/car-in/car-in-dialog";
 import { RenewDialog } from "@/modules/contracts/forms/renew/renew-dialog";
 import { ContractLinkResultDialog } from "@/modules/contracts/components/contract-link-result/contract-link-result-dialog";
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
@@ -49,6 +54,7 @@ export function VehiclesScreen() {
     setVehicleType,
     setSort,
     clearFilters,
+    setPage,
   } = useVehicles();
   const { types, isLoading: typesLoading } = useFleetTypeLookup();
   const { generateReturnLink, generateRentalLink } = useContract();
@@ -60,10 +66,10 @@ export function VehiclesScreen() {
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [carOutId, setCarOutId] = useState<string | null>(null);
+  const [carInId, setCarInId] = useState<string | null>(null);
   const [contractDrawerId, setContractDrawerId] = useState<string | null>(null);
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeId, setCloseId] = useState<string | null>(null);
-  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
 
   const filterLabels = useMemo(
@@ -214,6 +220,9 @@ export function VehiclesScreen() {
     );
   }
 
+  const showEmptyFleet = isReady && (meta?.total ?? 0) === 0;
+  const showPagination = meta != null && shouldShowFleetPagination(meta);
+
   return (
     <>
       {header}
@@ -238,7 +247,7 @@ export function VehiclesScreen() {
         onClear={clearFilters}
       />
 
-      {vehicles.length === 0 ? (
+      {showEmptyFleet ? (
         <EmptyState
           title={activeFilterCount === 0 ? t("empty.title") : t("empty.filteredTitle")}
           description={
@@ -259,15 +268,52 @@ export function VehiclesScreen() {
           }
         />
       ) : (
-        <VehiclesGrid
-          vehicles={vehicles}
-          canManage={canManage}
-          onOpen={setDetailVehicle}
-          onPrimaryAction={handlePrimaryAction}
-          onEditRates={setEditRatesVehicle}
-          onDelete={setDeactivateVehicle}
-          onGps={() => showNotice(t("boundary.gpsPending"))}
-        />
+        <>
+          <VehiclesGrid
+            vehicles={vehicles}
+            canManage={canManage}
+            onOpen={setDetailVehicle}
+            onPrimaryAction={handlePrimaryAction}
+            onEditRates={setEditRatesVehicle}
+            onDelete={setDeactivateVehicle}
+            onGps={(vehicle) => router.push(`/${locale}/gps?vehicleId=${vehicle.id}`)}
+          />
+
+          {showPagination ? (
+            <nav
+              className={styles.pagination}
+              aria-label={t("pagination.label")}
+              data-testid="vehicles-pagination"
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                disabled={isFleetPreviousDisabled(meta, isLoading)}
+                aria-label={t("pagination.previous")}
+                onClick={() => setPage(meta.page - 1)}
+              >
+                {t("pagination.previous")}
+              </Button>
+              <span className={styles.paginationStatus}>
+                {t("pagination.page", {
+                  page: meta.page,
+                  totalPages: meta.totalPages,
+                })}
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                disabled={isFleetNextDisabled(meta, isLoading)}
+                aria-label={t("pagination.next")}
+                onClick={() => setPage(meta.page + 1)}
+              >
+                {t("pagination.next")}
+              </Button>
+            </nav>
+          ) : null}
+        </>
       )}
 
       <VehicleDetailDialog
@@ -276,7 +322,7 @@ export function VehiclesScreen() {
         onClose={() => setDetailVehicle(null)}
         onSetPrice={setPriceVehicle}
         onPrimaryAction={handlePrimaryAction}
-        onGps={() => showNotice(t("boundary.gpsPending"))}
+        onGps={(vehicle) => router.push(`/${locale}/gps?vehicleId=${vehicle.id}`)}
         onMaintenance={() => router.push(`/${locale}/maintenance`)}
         onPhotoNotice={showNotice}
       />
@@ -287,19 +333,15 @@ export function VehiclesScreen() {
       />
 
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
-      <PaymentConfirmDialog
-        contractId={paymentId}
-        amount={0}
-        onClose={() => setPaymentId(null)}
-      />
+      <CarInDialog contractId={carInId} onClose={() => setCarInId(null)} />
       <RenewDialog contractId={renewId} onClose={() => setRenewId(null)} />
       <ContractLinkResultDialog />
       <ContractDetailDrawer
         contractId={contractDrawerId}
         onClose={() => setContractDrawerId(null)}
         onGenerateRentalLink={(id) => void generateRentalLink(id)}
-        onConfirmPayment={setPaymentId}
         onCarOut={setCarOutId}
+        onCarIn={setCarInId}
         onReturnLink={(id) => void generateReturnLink(id)}
         onRenew={setRenewId}
         onReconcile={setReconcileId}

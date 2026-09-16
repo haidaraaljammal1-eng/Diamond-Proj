@@ -63,24 +63,13 @@
   display: grid;
   align-items: end;
   gap: 10px;
-  grid-template-columns: minmax(160px, 1.4fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(130px, 0.8fr);
+  grid-template-columns: minmax(160px, 1.4fr) minmax(180px, 1fr) minmax(130px, 0.8fr);
 }
 
 .search,
 .control,
-.date {
+.dateRange {
   min-width: 0;
-}
-
-.date {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.dateLabel {
-  font-size: 10.5px;
-  color: var(--diamond-dim);
 }
 
 .badge {

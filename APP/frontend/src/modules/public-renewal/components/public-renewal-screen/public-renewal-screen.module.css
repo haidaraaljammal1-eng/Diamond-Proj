@@ -1,0 +1,93 @@
+.root {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  padding: 16px 16px 40px;
+}
+
+.shell {
+  display: grid;
+  gap: 16px;
+  width: min(640px, 100%);
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0 0 16px;
+  color: var(--diamond-champagne);
+  font-family: var(--diamond-font-display);
+  font-size: 22px;
+}
+
+.sectionTitle {
+  margin: 0 0 10px;
+  color: var(--diamond-gold-hi);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.block {
+  margin-bottom: 18px;
+}
+
+.facts {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.facts div {
+  display: grid;
+  grid-template-columns: minmax(0, 140px) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.facts dt {
+  margin: 0;
+  color: var(--diamond-muted);
+  font-size: 12px;
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--diamond-ivory);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.instructions {
+  margin: 0 0 16px;
+  color: var(--diamond-ivory);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.error {
+  margin: 0 0 12px;
+  color: var(--diamond-warn);
+  font-size: 13px;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  min-height: 40vh;
+  color: var(--diamond-muted);
+  font-size: 13px;
+}
+
+@media (min-width: 900px) {
+  .root {
+    padding: 28px 24px 56px;
+  }
+}
+
+@media (max-width: 560px) {
+  .facts div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

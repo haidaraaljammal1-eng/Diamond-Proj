@@ -89,6 +89,24 @@ min 8 characters, at least one letter, at least one number, confirmation match.
 The Backend hashes the password (argon2id) and creates the account `ACTIVE`.
 No phone field. Edit dialog does not change the password.
 
+## Development cleanup
+
+Integration tests (`RUN_INTEGRATION=true`) can leave disposable staff rows in a
+local dev database (emails like `veh-admin-*@example.test`). To reset the staff
+list to the seeded admin only:
+
+```bash
+cd APP/backend && npm run db:cleanup:dev-users
+```
+
+Keeps `DEV_ADMIN_EMAIL`; removes `@example.test`, `@ex.test`, and known test-prefix
+emails only. To reset staff to **only** the seeded admin (remove every other
+account, including manually created dev rows):
+
+```bash
+cd APP/backend && npm run db:cleanup:dev-users:only-admin
+```
+
 ## Demo vs Backend gaps
 
 | Demo              | Backend / page behaviour                          |

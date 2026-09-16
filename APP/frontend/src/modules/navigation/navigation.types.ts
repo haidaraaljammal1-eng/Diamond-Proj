@@ -1,17 +1,15 @@
 /**
  * Navigation types — Diamond Rent Car
  *
- * The config mirrors the Demo rail exactly. Items are:
+ * The config is the single source for the Diamond operational rail. Items are:
  * - `link`   → a route navigation item (`href` without locale prefix).
- * - `action` → a Demo control that is not a page route (e.g. WhatsApp dock).
+ * - `action` → a Demo control that is not a page route.
  *
  * Visibility rules (in evaluation order):
- * 1. `permission`  → filtered by the real Backend permission (JWT session).
- *    Only permissions that actually exist in the Backend are wired today
- *    (`dashboard.read`). No permission is ever invented.
- * 2. `adminOnly`   → mirrors the Demo `adminonly` owner/employee behavior.
- *    In the Backend the only shipped role is `system_admin`; an `adminOnly`
- *    item is shown only to a user whose session carries that role.
+ * 1. Declared `permission` / `permissions` → the session must hold every
+ *    listed Backend key. This is UX only; the Backend remains authority.
+ * 2. `adminOnly`   → used only when no catalog permission is declared.
+ *    Mirrors the Demo `adminonly` owner/employee behavior.
  */
 
 export const SYSTEM_ADMIN_ROLE = "system_admin";
@@ -19,7 +17,6 @@ export const SYSTEM_ADMIN_ROLE = "system_admin";
 export type NavigationTranslationKey =
   | "home"
   | "dashboard"
-  | "operations"
   | "cars"
   | "gps"
   | "maintenance"
@@ -36,7 +33,6 @@ export type NavigationItemType = "link" | "action";
 
 export type NavigationIconKey =
   | "dashboard"
-  | "operations"
   | "cars"
   | "gps"
   | "maintenance"

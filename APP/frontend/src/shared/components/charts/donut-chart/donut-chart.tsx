@@ -1,6 +1,6 @@
 "use client";
 
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer, Sector } from "recharts";
 import { CHART_SEQUENTIAL } from "../chart-theme";
 import styles from "./donut-chart.module.css";
 
@@ -21,6 +21,14 @@ export interface DonutChartProps {
   /** Formats each legend value. */
   format: (value: number) => string;
   size?: number;
+  /** Highlighted slice. `null` is the default (no hover). */
+  activeIndex?: number | null;
+  /** Hover, tap, and keyboard focus. Omit to keep the chart static. */
+  onActiveChange?: (index: number | null) => void;
+}
+
+function pointerCanHover(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
 }
 
 /**
@@ -34,9 +42,22 @@ export function DonutChart({
   centerLabel,
   format,
   size = 168,
+  activeIndex = null,
+  onActiveChange,
 }: DonutChartProps) {
+  const interactive = Boolean(onActiveChange);
+
+  const setActive = (index: number | null) => {
+    onActiveChange?.(index);
+  };
+
   return (
-    <div className={styles.wrap}>
+    <div
+      className={styles.wrap}
+      onMouseLeave={() => {
+        if (interactive && pointerCanHover()) setActive(null);
+      }}
+    >
       <div className={styles.plot} style={{ width: size, height: size }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -50,11 +71,25 @@ export function DonutChart({
               stroke="#ffffff"
               strokeWidth={2}
               isAnimationActive={false}
+              {...(activeIndex != null ? { activeIndex } : {})}
+              activeShape={(props: { outerRadius?: number }) => (
+                <Sector {...props} outerRadius={(props.outerRadius ?? 0) + 4} />
+              )}
+              onMouseEnter={(_, index) => {
+                if (interactive) setActive(index);
+              }}
+              onClick={(_, index) => {
+                if (interactive) setActive(index);
+              }}
             >
               {slices.map((slice, index) => (
                 <Cell
                   key={slice.label}
                   fill={CHART_SEQUENTIAL[index % CHART_SEQUENTIAL.length]}
+                  opacity={
+                    activeIndex == null || activeIndex === index ? 1 : 0.42
+                  }
+                  style={interactive ? { cursor: "pointer", outline: "none" } : undefined}
                 />
               ))}
             </Pie>
@@ -69,8 +104,8 @@ export function DonutChart({
       </div>
 
       <ul className={styles.legend}>
-        {slices.map((slice, index) => (
-          <li key={slice.label} className={styles.legendRow}>
+        {slices.map((slice, index) => {
+          const swatch = (
             <span
               className={styles.swatch}
               style={{
@@ -78,15 +113,49 @@ export function DonutChart({
               }}
               aria-hidden="true"
             />
-            <span className={styles.legendLabel}>{slice.label}</span>
-            <span className={styles.legendValue} dir="ltr">
-              {format(slice.value)}
-            </span>
-            <span className={styles.legendShare} dir="ltr">
-              {slice.share}%
-            </span>
-          </li>
-        ))}
+          );
+          const body = (
+            <>
+              {swatch}
+              <span className={styles.legendLabel}>{slice.label}</span>
+              <span className={styles.legendValue} dir="ltr">
+                {format(slice.value)}
+              </span>
+              <span className={styles.legendShare} dir="ltr">
+                {slice.share}%
+              </span>
+            </>
+          );
+
+          if (!interactive) {
+            return (
+              <li key={slice.label} className={styles.legendRow}>
+                {body}
+              </li>
+            );
+          }
+
+          return (
+            <li key={slice.label}>
+              <button
+                type="button"
+                className={[
+                  styles.legendRow,
+                  styles.legendButton,
+                  activeIndex === index ? styles.legendRowActive : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-pressed={activeIndex === index}
+                onMouseEnter={() => setActive(index)}
+                onFocus={() => setActive(index)}
+                onClick={() => setActive(index)}
+              >
+                {body}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

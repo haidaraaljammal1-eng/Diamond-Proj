@@ -41,6 +41,145 @@ export const contractError = {
     ),
   alreadyClosed: () =>
     err(ErrorCode.CONFLICT, "Contract is already closed", "CONTRACT_ALREADY_CLOSED"),
+  renewalOfferRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A renewal offer must be issued before confirmation",
+      "CONTRACT_RENEWAL_OFFER_REQUIRED",
+    ),
   vehicleNotFound: () => AppError.notFound("Vehicle not found"),
   customerNotFound: () => AppError.notFound("Customer not found"),
+  drivingLicenseRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A valid driving license is required",
+      "DRIVING_LICENSE_REQUIRED",
+    ),
+  drivingLicenseOcrNotConfigured: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Driving license verification is not configured",
+      "DRIVING_LICENSE_OCR_NOT_CONFIGURED",
+    ),
+  drivingLicenseUnreadable: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Driving license could not be read",
+      "DRIVING_LICENSE_UNREADABLE",
+    ),
+  drivingLicenseReviewRequired: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Driving license requires another photo",
+      "DRIVING_LICENSE_REVIEW_REQUIRED",
+    ),
+  drivingLicenseExpired: (expiryDate?: string) =>
+    err(
+      ErrorCode.CONFLICT,
+      "Driving license is expired",
+      "DRIVING_LICENSE_EXPIRED",
+      expiryDate ? { expiryDate } : {},
+    ),
+  publicFormIncomplete: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Public rental form is incomplete",
+      "PUBLIC_RENTAL_FORM_INCOMPLETE",
+    ),
+  notReadyForAcceptance: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Rental is not ready for acceptance",
+      "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE",
+    ),
+  paymentProviderNotConfigured: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Card payment is not configured",
+      "PAYMENT_PROVIDER_NOT_CONFIGURED",
+    ),
+  paymentNotAllowed: () =>
+    err(ErrorCode.CONFLICT, "Electronic payment is not allowed", "PAYMENT_NOT_ALLOWED"),
+  paymentAlreadyProcessing: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A payment attempt is already in progress",
+      "PAYMENT_ALREADY_PROCESSING",
+    ),
+  paymentAttemptNotFound: () =>
+    err(ErrorCode.NOT_FOUND, "Payment attempt was not found", "PAYMENT_ATTEMPT_NOT_FOUND"),
+  paymentStatusTokenInvalid: () =>
+    err(ErrorCode.TOKEN_INVALID, "Payment status token is invalid", "PAYMENT_STATUS_TOKEN_INVALID"),
+  paymentStatusTokenExpired: () =>
+    err(ErrorCode.TOKEN_EXPIRED, "Payment status token has expired", "PAYMENT_STATUS_TOKEN_EXPIRED"),
+  paymentAlreadySettled: () =>
+    err(ErrorCode.CONFLICT, "This obligation is already settled", "ALREADY_PAID"),
+  reconciliationPaymentRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Reconciliation charges must be collected before closing",
+      "RECONCILIATION_PAYMENT_REQUIRED",
+    ),
+  manualPaymentDisabled: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Manual payment confirmation is not available in V1",
+      "MANUAL_PAYMENT_DISABLED",
+    ),
+  invalidPaymentAmount: () =>
+    err(ErrorCode.VALIDATION_ERROR, "Payment amount is invalid", "INVALID_PAYMENT_AMOUNT"),
+  invalidPaymentCurrency: (currency: string) =>
+    err(ErrorCode.VALIDATION_ERROR, "Payment currency is not supported", "INVALID_PAYMENT_CURRENCY", {
+      currency,
+    }),
+  paymentAmountMismatch: () =>
+    err(ErrorCode.CONFLICT, "Provider payment amount does not match", "PAYMENT_AMOUNT_MISMATCH"),
+  paymentProviderReferenceMismatch: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Provider reference does not match the payment attempt",
+      "PAYMENT_PROVIDER_REFERENCE_MISMATCH",
+    ),
+  roadLiabilityRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Salik and traffic violation charges must originate from a confirmed Road Liability",
+      "ROAD_LIABILITY_REQUIRED",
+    ),
+  roadLiabilityNotChargeable: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This road liability is not eligible for customer charge review",
+      "ROAD_LIABILITY_NOT_CHARGEABLE",
+    ),
+  roadLiabilityContractMismatch: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This road liability is not attributed to this contract",
+      "ROAD_LIABILITY_CONTRACT_MISMATCH",
+    ),
+  roadLiabilityAlreadyCharged: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This road liability already has a confirmed customer charge",
+      "ROAD_LIABILITY_ALREADY_CHARGED",
+    ),
+  customerChargeBelowOfficial: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Customer charge cannot be lower than the official amount",
+      "CUSTOMER_CHARGE_BELOW_OFFICIAL",
+    ),
+  adjustmentReasonRequired: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "An adjustment reason is required when the customer charge is higher than the official amount",
+      "ADJUSTMENT_REASON_REQUIRED",
+    ),
+  invalidCustomerCharge: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Customer charge must be a positive whole AED amount",
+      "INVALID_CUSTOMER_CHARGE",
+    ),
 };

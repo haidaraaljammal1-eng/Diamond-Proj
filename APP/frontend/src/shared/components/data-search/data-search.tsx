@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import { useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
@@ -23,6 +24,7 @@ export function DataSearch({
   loading = false,
   inputTestId,
   className,
+  embedded = false,
 }: DataSearchProps) {
   const [draft, setDraft] = useState(appliedValue);
   const [syncedApplied, setSyncedApplied] = useState(appliedValue);
@@ -43,22 +45,23 @@ export function DataSearch({
     onClear();
   }
 
-  const showClear = hasSearchContent(draft, appliedValue);
+  function handleEmbeddedKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    submitSearch();
+  }
 
-  return (
-    <form
-      className={[styles.form, className].filter(Boolean).join(" ")}
-      onSubmit={(event) => {
-        event.preventDefault();
-        submitSearch();
-      }}
-      data-testid="data-search"
-    >
+  const showClear = hasSearchContent(draft, appliedValue);
+  const classNames = [styles.form, className].filter(Boolean).join(" ");
+
+  const fields = (
+    <>
       <div className={styles.inputWrap}>
         <Input
           type="search"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={embedded ? handleEmbeddedKeyDown : undefined}
           className={styles.input}
           placeholder={placeholder}
           aria-label={inputLabel}
@@ -78,16 +81,38 @@ export function DataSearch({
       </div>
 
       <Button
-        type="submit"
+        type={embedded ? "button" : "submit"}
         variant="secondary"
         size="sm"
         loading={loading}
         className={styles.searchButton}
         data-testid="data-search-submit"
+        onClick={embedded ? submitSearch : undefined}
       >
         <Icon name="mdi:magnify" size={16} />
         {searchButtonLabel}
       </Button>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className={classNames} data-testid="data-search">
+        {fields}
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className={classNames}
+      onSubmit={(event) => {
+        event.preventDefault();
+        submitSearch();
+      }}
+      data-testid="data-search"
+    >
+      {fields}
     </form>
   );
 }

@@ -33,9 +33,6 @@ export function resolveFleetPrimaryIntent(vehicle: FleetIntentSource): FleetPrim
     if (rental?.status === "retout") {
       return { type: "open-contract", contractId: rental.contractId };
     }
-    if (rental?.status === "review") {
-      return { type: "reconcile", contractId: rental.contractId };
-    }
     return { type: "no-contract" };
   }
 

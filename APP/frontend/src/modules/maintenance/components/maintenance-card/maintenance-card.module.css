@@ -1,0 +1,151 @@
+.card {
+  position: relative;
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.72),
+    rgba(251, 246, 235, 0.92)
+  );
+  cursor: pointer;
+  transition:
+    transform 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 161, 92, 0.35),
+    transparent
+  );
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(201, 161, 92, 0.3);
+  box-shadow: 0 14px 32px rgba(122, 96, 48, 0.1);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
+.head {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.photo {
+  width: 76px;
+  height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: none;
+  object-fit: cover;
+  border: 1px solid var(--diamond-hair);
+  background: rgba(201, 161, 92, 0.08);
+}
+
+.headBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+  line-height: 1.3;
+}
+
+.garage {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+}
+
+.plate {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--diamond-gold-hi);
+  font-variant-numeric: tabular-nums;
+}
+
+.chipRow {
+  margin-top: 5px;
+}
+
+.id {
+  font-size: 10px;
+  color: var(--diamond-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.type {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--diamond-ivory, var(--diamond-ink));
+}
+
+.issue {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--diamond-muted);
+  line-height: 1.55;
+}
+
+.dates {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+}
+
+.notes {
+  margin: 5px 0 0;
+  font-size: 10.5px;
+  color: var(--diamond-muted);
+  line-height: 1.6;
+}
+
+.foot {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-top: 11px;
+  flex-wrap: wrap;
+}
+
+.cost {
+  font-size: 13px;
+  color: var(--diamond-gold-hi);
+  font-weight: 700;
+  margin-inline-end: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}

@@ -1,7 +1,9 @@
 # Home Dashboard Page
 
-The Demo `vDash()` view: KPI tiles, the latest contracts list and Quick Access,
-with the Demo owner/employee split. **UI phase only** — see “Data source”.
+Live operational home for Diamond Rent Car. The layout stays the Demo
+`vDash()` identity (KPI tiles, latest contracts, Quick Access, weekly charts,
+today’s deliveries, fleet status). Values come from `GET /dashboard/overview`,
+not from demo fixtures.
 
 ## Route
 
@@ -14,106 +16,121 @@ Navigation key: `dashboard`.
 
 ## Required permissions
 
-| Permission       | Used for                                    |
-| ---------------- | ------------------------------------------- |
-| `dashboard.read` | Page access (a viewer without it sees a notice) |
+| Permission          | Used for |
+| ------------------- | -------- |
+| `dashboard.read`    | Page access |
+| `contracts.read`    | Active rentals, pending links, deliveries, latest contracts, weekly rental activity |
+| `vehicles.read`     | Fleet KPI and Fleet Status (active vehicles only) |
+| `finance.read`      | Weekly Financial Summary donut |
+| `gps.read`          | GPS Quick Access tile (online count when the provider is configured) |
+| `maintenance.read`  | Maintenance Quick Access tile |
+| `contracts.manage` + `vehicles.read` | Generate New Link → Fleet, where Generate Link already exists |
 
-The owner view (office-wide sections, the contracts shortcut, the “from all
-staff” chip and the issuing employee on each row) is the Demo `adminonly`
-behavior: the session must carry the `system_admin` role.
+Missing domain permissions hide that section (`null` from the API). They never
+show a fabricated zero. Role names are not hardcoded.
 
-## Data source — Demo fixtures, not the Backend
+Frontend path:
 
-The Backend has **no Diamond rental domain** yet: there is no `Contract`,
-rental link, fleet status, invoice, maintenance or WhatsApp model, and the
-existing `GET /dashboard/overview` aggregates the template's complaints /
-call-center KPIs, none of which belong to this page.
+`DashboardScreen` → `useDashboardOverview` → Dashboard Zustand store →
+`GET /dashboard/overview` → Fastify. Charts and cards do not call fetch.
 
-So the page renders the Demo's own records:
+## KPI rules
 
-- `src/modules/dashboard/data/dashboard.demo-data.ts` — the Demo `CARS`, `EMP`,
-  `CONTRACTS` (after `seedOpsDemo()`) and the `CHATS` unread total, verbatim.
-- `src/modules/dashboard/utils/dashboard.selectors.ts` — pure derivations, the
-  same ones `vDash()` performs. Unit-tested against the Demo's numbers.
-- `src/modules/dashboard/hooks/use-dashboard-overview.ts` — the single UI
-  facade. **Wiring the Backend later changes this file only**: return the same
-  `DashboardOverview` from the API instead of the fixtures.
+| Card | Source |
+| ---- | ------ |
+| Active Rentals | Contracts in `ACTIVE` + `RETOUT` (physical custody). **PAID is not rented.** **REVIEW after Car-In is not custody.** |
+| Fleet | Active vehicles (`Vehicle.isActive = true`): rented / total |
+| Pending Links | `AWAITING` + `FORM` |
+| Deliveries Today | Contracts whose canonical `startAt` falls on today’s business day and whose Car-Out is not done (`AWAITING`, `FORM`, `SIGNED`, `PAID`). Ready count = `PAID`. |
 
-`types/dashboard.types.ts` is the contract the Backend must satisfy.
+Fake month-over-month / `▲` trend text is removed. The Active Rentals note is
+“currently with customers”.
 
-Two deliberate deviations from the Demo:
+## Quick Access
 
-- The greeting uses the session user's name (the Demo hardcodes one).
-- The Demo forces “pending links” to a minimum of 1 (`|| 1`); we report the real
-  count.
+Existing tiles only, permission-filtered, locale-aware:
 
-## Sections
+| Tile | Route |
+| ---- | ----- |
+| Fleet / Vehicles | `/[locale]/vehicles` |
+| Contracts | `/[locale]/contracts` |
+| GPS | `/[locale]/gps` |
+| Maintenance | `/[locale]/maintenance` |
 
-| Section              | Content                                                             |
-| -------------------- | ------------------------------------------------------------------- |
-| KPI tiles            | Active contracts · Fleet rented/total · Pending links · Deliveries today |
-| Latest contracts     | 5 newest, customer · vehicle, contract number, issuing employee, status chip |
-| Quick Access         | Vehicles · Contracts (owner) · GPS · Maintenance · Office WhatsApp   |
-| This week            | Revenue vs expense bars + the net line, last 7 days (Recharts)       |
-| Expense structure    | 7-day spending by category as a donut with values and shares        |
-| Today hand-overs     | Contracts due today: customer · vehicle, slot, number, status chip  |
-| Fleet status         | Rented / available / in maintenance, with the utilization rate      |
+Generate New Link goes to `/[locale]/vehicles` (the existing Generate Link
+workflow). No parallel screen and no invented query parameters. The Demo
+WhatsApp / chats tile is gone — there is no real destination.
 
-The 4th KPI, the GPS/Maintenance shortcuts and the whole second row (today's
-hand-overs + fleet status) are Diamond additions on top of the Demo view; they are derived from the same
-fixtures and are expected to be re-pointed at real data with everything else.
+Row actions on latest contracts and today’s deliveries open the existing
+Contract Detail Drawer; lifecycle actions continue on `/contracts`.
 
-Every action targets a page that does not exist yet, so — like the rail's own
-action items — the controls render disabled with the shell's
-`Shell.navigationActionNote` note. Contract rows are not clickable for the same
-reason (no contract drawer yet), so they carry no hover affordance.
+## Weekly Financial Summary (donut)
 
-## Shared components introduced by this page
+Last **7 consecutive calendar days** in the business timezone, including
+Saturday and Sunday. Days with no movement stay in the range as zero. Outstanding
+is **not** in this chart.
 
-Built here, owned by `src/shared/components/ui`, and meant for Ops Center,
-Finance, Fleet and the rest:
+- **Collections:** Rental Payment, Renewal Payment, Return Reconciliation, Post-Close Charge (trusted Stripe Collected — same Finance rules).
+- **Expenses:** Maintenance + Manual Expenses (effective Finance expenses). Voided Manual Expense nets to zero; a corrected expense uses its current ledger amount.
+- Compact totals: Collected, Expenses, **Net Movement** (`Collected − Expenses`). Never labelled Profit / Revenue / Net Profit.
+- Zero categories are omitted from slices. AED formatting matches Finance.
+- Hover / tap a slice to show a compact detail beside the chart: category name, amount, share, and Collection / Expense. The donut center stays **Net Movement**. Summary cards stay in sync with the same Finance totals. No second finance engine.
 
-| Component     | Demo origin | Used for                                       |
-| ------------- | ----------- | ---------------------------------------------- |
-| `StatCard`    | `.kpi`      | Any KPI tile (label, value, suffix, delta note) |
-| `ListRow`     | `.lrow`     | Icon + title + meta + trailing rows             |
-| `ActionTile`  | `.qa`       | Shortcut tiles with icon, meta, count badge     |
-| `Chip`        | `.chip`     | Status chips with the diamond dot (`ok/warn/bad/gold`) |
-| `EmptyState`  | `.ops-empty`| “Nothing here yet” blocks                       |
-| `Card.Title`  | `.card h3`  | Card heading with gold icon + end slot          |
-| `Button` `sm` | `.btn.sm`   | 31px action inside cards and rows               |
-| `TrendChart`  | Demo finance | Bars + net line on one shared value axis        |
-| `DonutChart`  | Demo finance | Parts of a whole with a total in the ring       |
+## Weekly Rental Activity (bars)
 
-`Badge` stays the rounded role pill (Users); `Chip` is the Demo status chip.
+Last **7 consecutive calendar days** (weekends included). Two integer series:
 
-## Fixed along the way
+- **Rented** = completed Car-Out (`ContractCarOut.occurredAt`)
+- **Returned** = completed Car-In (`ContractCarIn.occurredAt`)
 
-`GET /auth/me` returns roles as objects (`{id, key, name}`) while the session
-type declared `string[]`, so `roles.includes("system_admin")` was always false:
-the owner was shown the employee shell everywhere. The session now stores role
-**keys** (`src/auth.ts`), and `AuthUser.roles` is typed `BackendRole[]`.
+Not `createdAt`, payment date, `PAID`, `CLOSED`, or reconciliation approval.
+Every day in the window is a chart bucket; a quiet day is `0`. Labels are
+localized weekday + date (`Fri 05`).
+
+## Fleet Status
+
+Active fleet only (`isActive = true`):
+
+`available + rented + service = total`
+
+from canonical `operationalStatus` (`AVAILABLE` / `RENTED` / `SERVICE`).
+
+## Today's Deliveries
+
+Canonical date: Contract `startAt` (agreed pickup) in the backend business
+timezone. Pending hand-overs only — Car-Out already completed (`ACTIVE`,
+`RETOUT`, `REVIEW`, `CLOSED`) is excluded. Empty copy:
+
+- EN: No deliveries scheduled today
+- AR: لا توجد تسليمات مجدولة اليوم
 
 ## Charts
 
-`recharts@3` renders both charts; the Diamond chart tokens live in
-`src/shared/components/charts/chart-theme.ts`.
+Existing Recharts infrastructure: `DonutChart` + `GroupedBarChart` (same tokens
+as `TrendChart`). No new chart library. Donut hover uses the chart’s
+active-slice / legend focus — not a second data source.
 
-- Series colors are `#B98A3E` (revenue) and `#A8433C` (expense) — validated on
-  the white card surface: lightness band, chroma floor, CVD separation
-  (ΔE 14.9 deutan / 16.6 tritan), normal-vision separation (ΔE 18.1) and
-  ≥3:1 contrast all pass. The UI gold `#C9A15C` FAILS chroma and contrast as a
-  data mark, so it is never used to fill one.
-- The net is a neutral 2px line (a different mark), not a third hue, and both
-  charts carry a legend plus direct values — identity never rests on color.
-- One value axis only; the donut uses a single-hue gold ramp, light → dark.
-- Numbers are Latin digits, LTR, formatted in `utils/money.ts`.
+## Dashboard Simulation (removable, frontend-only)
 
-The app ships light-only (Pearl Ivory), so no dark-mode palette is defined; if a
-dark theme lands, re-validate these colors against the dark surface.
+Optional presentation overlay behind `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`.
+When the flag is off, the Simulation control is hidden and the page is the
+real Dashboard only.
 
-## Tests
+```
+REAL: GET /dashboard/overview → store → cards/charts
+SIM:  local fixture overlay → the same cards/charts
+```
 
-`src/modules/dashboard/utils/dashboard.selectors.test.ts` — asserts the Demo's
-numbers (4 active / 3 ongoing, 4 of 12 rented, 2 pending links, 11 contracts,
-3 unread, the 5 recent contract ids in order) and the employee scope.
+Rules:
+
+- No backend writes, no fake Dashboard API, no Stripe, no DB rows.
+- Real and simulated values never mix.
+- Switching off restores the live API overview immediately.
+- Quick Access still uses real routes and real permissions.
+- Simulated contract rows do not open the real Contract drawer.
+- Real store / API / `useDashboardOverview` do not import simulation.
+
+Disable later by setting the env flag to false, or delete
+`APP/frontend/src/modules/dashboard/simulation/` plus the overlay import in
+`DashboardScreen`. Neither path needs backend, API, or business-logic changes.
+`dashboard.demo-data.ts` stays deleted and is not used in Real mode.

@@ -60,6 +60,20 @@
   flex-wrap: wrap;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.paginationStatus {
+  font-size: 11px;
+  color: var(--diamond-muted);
+  text-align: center;
+}
+
 @keyframes pulse {
   0%,
   100% {

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { useContract } from "../../hooks/use-contract";
+import { ContractTarsInlineStatus } from "../../components/contract-tars/contract-tars-inline-status";
 import { createIdempotencyKey } from "../../utils/contract-link";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
 import styles from "./close-dialog.module.css";
@@ -59,6 +60,11 @@ function CloseForm({
   return (
     <>
       {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
+      <ContractTarsInlineStatus
+        contractId={contractId}
+        operation="completeContract"
+        className={styles.integration}
+      />
       <div className={styles.actions}>
         <Button
           type="button"

@@ -1,0 +1,192 @@
+import Stripe from "stripe";
+import { env } from "src/config/env";
+import { aedToStripeMinorUnits, assertAedCurrency } from "src/modules/contracts/payment/money";
+import type {
+  CreateCheckoutInput,
+  CreateCheckoutResult,
+  PaymentProvider,
+  PaymentStatusResult,
+  ProviderPaymentStatus,
+  WebhookVerifyResult,
+} from "src/modules/contracts/payment/payment-provider.types";
+
+function mapSessionStatus(status: Stripe.Checkout.Session.Status | null): ProviderPaymentStatus {
+  switch (status) {
+    case "complete":
+      return "CONFIRMED";
+    case "expired":
+      return "EXPIRED";
+    case "open":
+      return "PROCESSING";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status | null): ProviderPaymentStatus {
+  switch (status) {
+    case "succeeded":
+      return "CONFIRMED";
+    case "processing":
+      return "PROCESSING";
+    case "canceled":
+      return "CANCELLED";
+    case "requires_payment_method":
+    case "requires_confirmation":
+    case "requires_action":
+      return "FAILED";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+/**
+ * Production Stripe adapter. When credentials are missing, configured=false and
+ * every call fails closed — no fake URLs or confirmed payments.
+ */
+export class StripePaymentProvider implements PaymentProvider {
+  readonly name = "stripe";
+  readonly configured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
+
+  private client(): Stripe {
+    if (!env.STRIPE_SECRET_KEY) {
+      throw new Error("Stripe secret key is not configured");
+    }
+    return new Stripe(env.STRIPE_SECRET_KEY);
+  }
+
+  async createCheckoutSession(input: CreateCheckoutInput): Promise<CreateCheckoutResult> {
+    if (!this.configured) {
+      return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
+    }
+    assertAedCurrency(input.currency);
+    const unitAmount = aedToStripeMinorUnits(input.amount);
+    const session = await this.client().checkout.sessions.create({
+      mode: "payment",
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
+      client_reference_id: input.paymentId,
+      metadata: {
+        paymentId: input.paymentId,
+        purpose: input.purpose,
+        contractId: input.contractId,
+        targetId: input.targetId,
+      },
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: input.currency.toLowerCase(),
+            unit_amount: unitAmount,
+            product_data: {
+              name: `Diamond ${input.purpose}`,
+            },
+          },
+        },
+      ],
+    });
+    if (!session.url || !session.id) {
+      return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
+    }
+    const expiresAt =
+      session.expires_at != null
+        ? new Date(session.expires_at * 1000)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000);
+    return {
+      ok: true,
+      provider: this.name,
+      providerReference: session.id,
+      providerStatus: session.status ?? "open",
+      checkoutUrl: session.url,
+      checkoutExpiresAt: expiresAt,
+    };
+  }
+
+  async getPaymentStatus(providerReference: string): Promise<PaymentStatusResult> {
+    if (!this.configured) return { status: "UNKNOWN" };
+    const session = await this.client().checkout.sessions.retrieve(providerReference, {
+      expand: ["payment_intent"],
+    });
+    const paymentIntent =
+      typeof session.payment_intent === "object" && session.payment_intent
+        ? session.payment_intent
+        : null;
+    const status = paymentIntent
+      ? mapPaymentIntentStatus(paymentIntent.status)
+      : mapSessionStatus(session.status);
+    return {
+      status,
+      providerStatus: paymentIntent?.status ?? session.status ?? undefined,
+      amountMinor: session.amount_total ?? undefined,
+      currency: session.currency?.toUpperCase(),
+    };
+  }
+
+  async verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult> {
+    if (!this.configured || !env.STRIPE_WEBHOOK_SECRET) {
+      return { ok: false, reason: "NOT_CONFIGURED" };
+    }
+    let event: Stripe.Event;
+    try {
+      event = this.client().webhooks.constructEvent(payload, signature, env.STRIPE_WEBHOOK_SECRET);
+    } catch {
+      return { ok: false, reason: "INVALID_SIGNATURE" };
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const paymentId = session.metadata?.paymentId;
+      if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
+      return {
+        ok: true,
+        event: {
+          stripeEventId: event.id,
+          eventType: event.type,
+          providerReference: session.id,
+          paymentId,
+          status: "CONFIRMED",
+          amountMinor: session.amount_total ?? undefined,
+          currency: session.currency?.toUpperCase(),
+        },
+      };
+    }
+
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const paymentId = session.metadata?.paymentId;
+      if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
+      return {
+        ok: true,
+        event: {
+          stripeEventId: event.id,
+          eventType: event.type,
+          providerReference: session.id,
+          paymentId,
+          status: "EXPIRED",
+        },
+      };
+    }
+
+    if (event.type === "payment_intent.payment_failed") {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      const paymentId = intent.metadata?.paymentId;
+      if (!paymentId) return { ok: false, reason: "IGNORED" };
+      const providerReference =
+        typeof intent.metadata?.checkoutSessionId === "string"
+          ? intent.metadata.checkoutSessionId
+          : intent.id;
+      return {
+        ok: true,
+        event: {
+          stripeEventId: event.id,
+          eventType: event.type,
+          providerReference,
+          paymentId,
+          status: "FAILED",
+        },
+      };
+    }
+
+    return { ok: false, reason: "IGNORED" };
+  }
+}

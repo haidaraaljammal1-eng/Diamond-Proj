@@ -1,45 +1,97 @@
 import { z } from "zod";
-import { CallCenterReportSchema, ComplaintReportSchema, ExecutiveKpisSchema } from "src/modules/reports/reports.schema";
 
 /**
- * Home dashboard aggregate. Every cross-domain section is NULLABLE: it is null when
- * the viewer lacks the section's domain read permission, or when that section failed
- * to compute (error isolation — one broken widget never fails the whole dashboard).
- * `null` therefore means "not available to you / errored", never "zero".
+ * Diamond home dashboard aggregate. Cross-domain sections are NULLABLE: null
+ * when the viewer lacks the section's domain read permission, or when that
+ * section failed to compute. `null` means "not available", never "zero".
  */
 
-const ComplaintsNowSchema = z.object({
-  openCount: z.number().int(), lateCount: z.number().int(), closedThisMonth: z.number().int(),
-  averageClosureDurationHours: z.number().nullable(),
-  openedFromCallCenter: z.number().int(), openedAutomatically: z.number().int(), escalatedCount: z.number().int(),
+const ContractStatusSchema = z.enum([
+  "AWAITING",
+  "FORM",
+  "SIGNED",
+  "PAID",
+  "ACTIVE",
+  "RETOUT",
+  "REVIEW",
+  "CLOSED",
+]);
+
+const DashboardKpisSchema = z.object({
+  activeRentals: z.number().int().nullable(),
+  fleetTotal: z.number().int().nullable(),
+  fleetRented: z.number().int().nullable(),
+  fleetAvailable: z.number().int().nullable(),
+  fleetService: z.number().int().nullable(),
+  pendingLinks: z.number().int().nullable(),
+  deliveriesToday: z.number().int().nullable(),
+  readyForDelivery: z.number().int().nullable(),
+  contractsTotal: z.number().int().nullable(),
 });
 
-const OverdueComplaintSchema = z.object({
-  id: z.number().int(), publicNumber: z.string(),
-  category: z.string().nullable(), priority: z.string(), lifecycleStatus: z.string(),
-  isLate: z.boolean(), isEscalated: z.boolean(),
-  resolutionDueAt: z.date().nullable(), remainingMinutes: z.number().int().nullable(),
+const WeeklyFinanceSliceSchema = z.object({
+  key: z.enum([
+    "RENTAL_PAYMENT",
+    "RENEWAL_PAYMENT",
+    "RECONCILIATION_PAYMENT",
+    "POST_CLOSE_RECEIVABLE_PAYMENT",
+    "MAINTENANCE_EXPENSE",
+    "MANUAL_EXPENSE",
+  ]),
+  direction: z.enum(["COLLECTION", "EXPENSE"]),
+  amount: z.number().int(),
 });
 
-const CallCenterTodaySchema = z.object({
-  callsToday: z.number().int(), customersFollowedUpToday: z.number().int(),
-  pendingQueue: z.number().int(), dueCallbacks: z.number().int(), unreachableCount: z.number().int(), complaintRequests: z.number().int(),
-  averageCallDurationSeconds: z.number().nullable(),
+const WeeklyFinanceSchema = z.object({
+  from: z.date(),
+  to: z.date(),
+  collected: z.number().int(),
+  expenses: z.number().int(),
+  netMovement: z.number().int(),
+  currency: z.string(),
+  breakdown: z.array(WeeklyFinanceSliceSchema),
+});
+
+const WeeklyRentalActivityPointSchema = z.object({
+  date: z.string(),
+  rented: z.number().int(),
+  returned: z.number().int(),
+});
+
+const FleetStatusSchema = z.object({
+  total: z.number().int(),
+  available: z.number().int(),
+  rented: z.number().int(),
+  service: z.number().int(),
+});
+
+const TodayDeliverySchema = z.object({
+  id: z.string(),
+  contractNumber: z.string(),
+  customerName: z.string().nullable(),
+  vehicleName: z.string(),
+  startAt: z.date(),
+  status: ContractStatusSchema,
+});
+
+const RecentContractSchema = z.object({
+  id: z.string(),
+  contractNumber: z.string(),
+  customerName: z.string().nullable(),
+  vehicleName: z.string(),
+  employeeName: z.string().nullable(),
+  status: ContractStatusSchema,
 });
 
 export const DashboardOverviewSchema = z.object({
-  period: z.object({ from: z.date(), to: z.date(), previousFrom: z.date().nullable(), previousTo: z.date().nullable(), type: z.string() }),
-  // The business-timezone calendar day every "today" counter was computed over.
-  today: z.object({ from: z.date(), to: z.date(), offsetMinutes: z.number().int() }),
-  scope: z.object({ allBranches: z.boolean(), branchIds: z.array(z.number().int()) }),
   generatedAt: z.date(),
-
-  kpis: ExecutiveKpisSchema.nullable(),
-  callCenterToday: CallCenterTodaySchema.nullable(),
-  callCenterPeriod: CallCenterReportSchema.nullable(),
-  complaintsNow: ComplaintsNowSchema.nullable(),
-  complaintsPeriod: ComplaintReportSchema.nullable(),
-  overdueComplaints: z.array(OverdueComplaintSchema).nullable(),
-  entityCounts: z.object({ purchaseExperiences: z.number().int().nullable() }),
-  urgentItems: z.array(z.object({ kind: z.string(), count: z.number().int() })),
+  range: z.object({ from: z.date(), to: z.date() }),
+  today: z.object({ from: z.date(), to: z.date(), offsetMinutes: z.number().int() }),
+  kpis: DashboardKpisSchema,
+  weeklyFinance: WeeklyFinanceSchema.nullable(),
+  weeklyRentalActivity: z.array(WeeklyRentalActivityPointSchema).nullable(),
+  fleetStatus: FleetStatusSchema.nullable(),
+  todayDeliveries: z.array(TodayDeliverySchema).nullable(),
+  recentContracts: z.array(RecentContractSchema).nullable(),
+  gpsOnline: z.number().int().nullable(),
 });

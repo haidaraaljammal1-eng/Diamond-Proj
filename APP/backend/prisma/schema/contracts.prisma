@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
 // Diamond rental contracts. Contract is the single rental aggregate — there is
 // no parallel Rental model. Vehicle.operationalStatus is synchronized from
-// this domain (RENTED at Car-Out, AVAILABLE at CLOSE only).
+// this domain (RENTED at Car-Out, AVAILABLE at Car-In). Close does not release
+// the vehicle.
 // ---------------------------------------------------------------------------
 
 enum ContractStatus {
@@ -36,9 +37,30 @@ enum ContractPaymentMethod {
 
 enum ContractPaymentStatus {
   PENDING
+  PROCESSING
   CONFIRMED
   FAILED
   CANCELLED
+}
+
+enum ContractPaymentPurpose {
+  RENTAL
+  RENEWAL
+  RECONCILIATION
+  POST_CLOSE_RECEIVABLE
+}
+
+enum ContractDocumentType {
+  DRIVING_LICENSE
+}
+
+enum DrivingLicenseVerificationStatus {
+  PENDING
+  VALID
+  EXPIRED
+  UNREADABLE
+  REVIEW_REQUIRED
+  PROVIDER_UNAVAILABLE
 }
 
 enum CustomerDocumentType {
@@ -97,6 +119,7 @@ model Contract {
   currency      String            @default("AED")
   startAt       DateTime?
   endAt         DateTime?
+  /// Legacy column — Diamond V1 does not use rental deposits. Kept for non-destructive migration.
   depositAmount Int?
 
   /// Frozen legal facts. Written no later than SIGNED; never rewritten after that.
@@ -110,13 +133,21 @@ model Contract {
   updatedAt   DateTime  @updatedAt
   revision    Int       @default(0)
 
-  links          ContractLink[]
-  acceptance     ContractAcceptance?
-  payments       ContractPayment[]
-  carOut         ContractCarOut?
-  carIn          ContractCarIn?
-  reconciliation ContractReconciliation?
-  renewals       ContractRenewal[]
+  links                ContractLink[]
+  acceptance           ContractAcceptance?
+  payments             ContractPayment[]
+  documents            ContractDocument[]
+  licenseVerifications DrivingLicenseVerification[]
+  carOut               ContractCarOut?
+  carIn                ContractCarIn?
+  reconciliation       ContractReconciliation?
+  renewals             ContractRenewal[]
+  /// TARS integration metadata only. Contract lifecycle never depends on it.
+  tarsIntegration      TarsContractIntegration?
+  tarsOperations       TarsOperation[]
+  roadLiabilities      RoadLiability[]
+  customerCharges      RoadLiabilityCustomerCharge[]
+  postCloseReceivables ContractPostCloseReceivable[]
 
   @@index([vehicleId, status])
   @@index([customerId])
@@ -160,21 +191,94 @@ model ContractAcceptance {
 }
 
 model ContractPayment {
-  id                String                @id @default(uuid())
-  contractId        String
-  contract          Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  amount            Int
-  currency          String                @default("AED")
-  method            ContractPaymentMethod
-  status            ContractPaymentStatus @default(PENDING)
-  externalReference String?
-  confirmedAt       DateTime?
-  createdAt         DateTime              @default(now())
-  createdByUserId   Int?
-  createdBy         User?                 @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  id                   String                 @id @default(uuid())
+  contractId           String
+  contract             Contract               @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  purpose              ContractPaymentPurpose @default(RENTAL)
+  /// Obligation target: contractId (RENTAL), renewalId, reconciliationId, or receivableId.
+  targetId             String
+  amount               Int
+  currency             String                 @default("AED")
+  method               ContractPaymentMethod
+  status               ContractPaymentStatus  @default(PENDING)
+  externalReference    String?
+  provider             String?
+  providerReference    String?
+  providerStatus       String?
+  checkoutUrl          String?
+  checkoutExpiresAt    DateTime?
+  processingStartedAt  DateTime?
+  confirmedAt          DateTime?
+  failedAt             DateTime?
+  /// SHA-256 of the one-time payment-status token. Raw value is never stored.
+  statusTokenHash      String?                @unique
+  statusTokenExpiresAt DateTime?
+  createdAt            DateTime               @default(now())
+  createdByUserId      Int?
+  createdBy            User?                  @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  reconciliationSettlement ContractReconciliation?     @relation("ReconciliationSettlement")
+  postCloseSettlement      ContractPostCloseReceivable?  @relation("PostCloseSettlement")
+  renewalSettlement        ContractRenewal?            @relation("RenewalSettlement")
+  ledgerEntries            FinancialLedgerEntry[]
 
   @@index([contractId, status])
+  @@index([purpose, targetId, status])
   @@map("contract_payments")
+}
+
+/// DB-backed Stripe webhook idempotency. Same event must not apply business effects twice.
+model StripeWebhookEvent {
+  id            String    @id @default(uuid())
+  stripeEventId String    @unique
+  eventType     String
+  receivedAt    DateTime  @default(now())
+  processedAt   DateTime?
+  outcome       String?
+  error         String?
+
+  @@index([receivedAt])
+  @@map("stripe_webhook_events")
+}
+
+/// Contract-scoped file (customer may not exist yet). One active driving license
+/// per contract for the public rental verification flow (`supersededAt` null).
+model ContractDocument {
+  id           String               @id @default(uuid())
+  contractId   String
+  contract     Contract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  type         ContractDocumentType
+  attachmentId String
+  attachment   Attachment           @relation("ContractDocumentAttachment", fields: [attachmentId], references: [id], onDelete: Restrict)
+  supersededAt DateTime?
+  createdAt    DateTime             @default(now())
+
+  verifications DrivingLicenseVerification[]
+
+  @@index([contractId, type, supersededAt])
+  @@map("contract_documents")
+}
+
+model DrivingLicenseVerification {
+  id              String                           @id @default(uuid())
+  contractId      String
+  contract        Contract                         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  documentId      String
+  document        ContractDocument                 @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  attachmentId    String
+  status          DrivingLicenseVerificationStatus @default(PENDING)
+  licenseNumber   String?
+  /// Calendar date stored at UTC noon so timezone offsets cannot shift the day.
+  expiryDate      DateTime?
+  confidence      Float?
+  provider        String?
+  providerVersion String?
+  verifiedAt      DateTime?
+  createdAt       DateTime                         @default(now())
+  updatedAt       DateTime                         @updatedAt
+
+  @@index([contractId, createdAt])
+  @@map("driving_license_verifications")
 }
 
 model ContractCarOut {
@@ -246,12 +350,16 @@ model ContractReconciliation {
   contractId       String    @unique
   contract         Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
   chargesTotal     Int
+  /// Legacy columns — Diamond V1 reconciliation uses finalAmount = chargesTotal only.
   depositAmount    Int       @default(0)
   deductions       Int       @default(0)
   finalAmount      Int
   approvedAt       DateTime?
   approvedByUserId Int?
   approvedBy       User?     @relation("ContractReconciliationApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  settledAt        DateTime?
+  settledPaymentId String?   @unique
+  settledPayment   ContractPayment? @relation("ReconciliationSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -261,16 +369,28 @@ model ContractReconciliation {
 }
 
 model ContractReconciliationLine {
-  id                String                         @id @default(uuid())
-  reconciliationId  String
-  reconciliation    ContractReconciliation         @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
-  type              ContractReconciliationLineType
-  description       String
-  amount            Int
+  id                     String                         @id @default(uuid())
+  reconciliationId       String
+  reconciliation         ContractReconciliation         @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  type                   ContractReconciliationLineType
+  description            String
+  /// Final customer charge. For RoadLiability-backed lines this is customerChargeAmount, not the official RTA/Salik amount.
+  amount                 Int
   /// Opaque reference into Salik/Violations/Finance — no engine lives here.
-  externalReference String?
-  sourceDomain      String?
-  createdAt         DateTime                       @default(now())
+  externalReference      String?
+  sourceDomain           String?
+  /// Unique double-charge guard. One RoadLiability may back at most one line.
+  roadLiabilityId        String?                        @unique
+  roadLiability          RoadLiability?                 @relation(fields: [roadLiabilityId], references: [id], onDelete: Restrict)
+  officialAmountSnapshot Int?
+  adjustmentAmount       Int?
+  adjustmentReason       String?
+  adjustmentNote         String?
+  confirmedByUserId      Int?
+  confirmedBy            User?                          @relation("ContractReconciliationLineConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  confirmedAt            DateTime?
+  customerCharge         RoadLiabilityCustomerCharge?
+  createdAt              DateTime                       @default(now())
 
   @@index([reconciliationId])
   @@map("contract_reconciliation_lines")
@@ -285,7 +405,11 @@ model ContractRenewal {
   previousEndAt    DateTime
   newEndAt         DateTime
   createdAt        DateTime  @default(now())
+  /// Customer accepted the offer. Contract extension applies only after payment (or zero amount).
   approvedAt       DateTime?
+  appliedAt        DateTime?
+  settledPaymentId String?   @unique
+  settledPayment   ContractPayment? @relation("RenewalSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdByUserId  Int?
   createdBy        User?     @relation("ContractRenewalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 

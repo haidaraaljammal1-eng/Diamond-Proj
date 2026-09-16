@@ -1,0 +1,41 @@
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px 8px;
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+.label,
+.name,
+.meta {
+  margin: 0;
+}
+
+.name {
+  color: var(--diamond-champagne);
+  font-weight: 600;
+}
+
+.results {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.results button {
+  width: 100%;
+  text-align: start;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.error {
+  width: 100%;
+  color: #df5b52;
+}

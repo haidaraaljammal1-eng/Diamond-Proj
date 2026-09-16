@@ -58,8 +58,7 @@ export function countActiveContractFilters(filters: ContractFiltersState): numbe
   let count = 0;
   if (filters.status !== DEFAULT_CONTRACT_FILTERS.status) count += 1;
   if (filters.search.trim()) count += 1;
-  if (filters.from.trim()) count += 1;
-  if (filters.to.trim()) count += 1;
+  if (filters.from.trim() || filters.to.trim()) count += 1;
   if (filters.sort !== DEFAULT_CONTRACT_FILTERS.sort) count += 1;
   return count;
 }

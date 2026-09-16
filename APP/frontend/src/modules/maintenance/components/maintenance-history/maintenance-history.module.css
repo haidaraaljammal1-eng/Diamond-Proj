@@ -1,0 +1,112 @@
+.card {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(251, 246, 235, 0.9)
+  );
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 161, 92, 0.35),
+    transparent
+  );
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.count {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--diamond-gold-gradient, linear-gradient(180deg, #e8c98a, #c9a15c));
+  color: #231a08;
+  font-weight: 700;
+}
+
+.wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 9px 12px;
+  text-align: start;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--diamond-dim);
+  border-bottom: 1px solid var(--diamond-hair);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--diamond-champagne);
+  border-bottom: 1px solid rgba(201, 161, 92, 0.08);
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  cursor: pointer;
+}
+
+.table tbody tr:hover {
+  background: rgba(201, 161, 92, 0.05);
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--diamond-gold-hi);
+}
+
+.muted {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--diamond-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.mutedCell {
+  color: var(--diamond-dim);
+}
+
+.num,
+.amount {
+  font-variant-numeric: tabular-nums;
+}
