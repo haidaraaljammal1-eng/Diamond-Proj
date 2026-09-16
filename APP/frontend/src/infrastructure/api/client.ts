@@ -8,6 +8,27 @@ async function getAccessToken(): Promise<string | undefined> {
   return (await getSession())?.accessToken;
 }
 
+/**
+ * Codes the Backend uses for a session that cannot be recovered by refreshing.
+ * `next-auth`'s own `useSession()` only learns about a dead session on its next
+ * focus/interval refetch, so a page can sit on a stale "authenticated" session
+ * showing a generic load error instead of being sent to `/login`. Redirecting
+ * here, the moment the API itself reports one of these codes, closes that gap.
+ */
+const DEAD_SESSION_CODES = new Set(["TOKEN_INVALID", "TOKEN_EXPIRED", "UNAUTHORIZED"]);
+
+let loggingOut = false;
+
+function redirectToLogin(): void {
+  if (typeof window === "undefined" || loggingOut) return;
+  if (window.location.pathname.includes("/login")) return;
+  loggingOut = true;
+  const locale = window.location.pathname.split("/")[1] === "en" ? "en" : "ar";
+  void import("next-auth/react").then(({ signOut }) =>
+    signOut({ redirectTo: `/${locale}/login` }),
+  );
+}
+
 async function requestWithToken(
   path: string,
   options: ApiRequestOptions,
@@ -70,15 +91,17 @@ export async function apiRequest<T>(
   const payload = await readJson(response);
 
   if (!response.ok) {
-    if (isApiErrorResponse(payload))
-      throw new ApiRequestError(payload.error, response.status);
-    throw new ApiRequestError(
-      {
-        code: `HTTP_${response.status}`,
-        message: response.statusText || "Request failed",
-      },
-      response.status,
-    );
+    const apiError = isApiErrorResponse(payload)
+      ? new ApiRequestError(payload.error, response.status)
+      : new ApiRequestError(
+          {
+            code: `HTTP_${response.status}`,
+            message: response.statusText || "Request failed",
+          },
+          response.status,
+        );
+    if (DEAD_SESSION_CODES.has(apiError.code)) redirectToLogin();
+    throw apiError;
   }
 
   if (typeof payload !== "object" || payload === null || !("data" in payload)) {

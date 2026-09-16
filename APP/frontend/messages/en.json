@@ -218,6 +218,8 @@
       "retry": "Try again",
       "FORBIDDEN": "Your account is not allowed to read roles or permissions.",
       "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
+      "TOKEN_INVALID": "Your session has expired. Please sign in again.",
       "RATE_LIMITED": "Too many requests. Please wait a moment and try again.",
       "NETWORK_ERROR": "Could not reach the server. Check your connection and try again.",
       "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
@@ -402,6 +404,8 @@
       "retry": "Try again",
       "FORBIDDEN": "Your account is not allowed to read users.",
       "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
+      "TOKEN_INVALID": "Your session has expired. Please sign in again.",
       "RATE_LIMITED": "Too many requests. Please wait a moment and try again.",
       "NETWORK_ERROR": "Could not reach the server. Check your connection and try again.",
       "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
@@ -522,7 +526,9 @@
       "generic": "Something went wrong while loading the data. Please try again.",
       "retry": "Try again",
       "FORBIDDEN": "Your account is not allowed to read vehicles.",
-      "UNAUTHORIZED": "Your session has expired. Please sign in again."
+      "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
+      "TOKEN_INVALID": "Your session has expired. Please sign in again."
     },
     "empty": {
       "title": "No vehicles in the fleet",
@@ -688,6 +694,8 @@
       "retry": "Try again",
       "FORBIDDEN": "Your account is not allowed to read contracts.",
       "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
+      "TOKEN_INVALID": "Your session has expired. Please sign in again.",
       "CONTRACT_NOT_FOUND": "This contract was not found.",
       "CONTRACT_INVALID_TRANSITION": "This status change is not allowed.",
       "VEHICLE_NOT_AVAILABLE": "This vehicle is not available for rental.",
