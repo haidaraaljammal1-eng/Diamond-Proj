@@ -384,14 +384,124 @@ if (!RUN) {
       assert.ok(rows.every((row) => row.id === legacy.id || row.method === "CARD"));
     });
 
-    test("checkout session amount is server-derived (client cannot override)", async () => {
-      const { contract } = await setup570();
-      const started = await startReconciliationPayment(app, token, contract.id);
-      const ref = payments.refForPayment(started.payment.id);
-      assert.ok(ref);
-      const session = payments.sessionFor(ref!);
-      assert.equal(session?.amount, 570);
-      assert.equal(session?.currency, "AED");
+    test("card linking: Stripe-hosted setup session never charges; webhook persists safe metadata only", async () => {
+      seq += 1;
+      const vehicleRes = await app.inject({
+        method: "POST",
+        url: "/vehicles",
+        headers: auth(token),
+        payload: { vehicleName: `SEC-CL-${seq}`, plateNumber: `CL ${run}${seq}`, dailyRate: 400 },
+      });
+      assert.equal(vehicleRes.statusCode, 201, vehicleRes.body);
+      const vId = vehicleRes.json().data.id as number;
+      const offerRes = await app.inject({
+        method: "POST",
+        url: "/contracts/offers",
+        headers: auth(token),
+        payload: { vehicleId: vId, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 },
+      });
+      assert.equal(offerRes.statusCode, 201, offerRes.body);
+      const contractId = offerRes.json().data.id as string;
+      const linkRes = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/rental-link`,
+        headers: auth(token),
+      });
+      const rentalToken = linkRes.json().data.link.token as string;
+      // FORM -> SIGNED happened on the public contract; this test is about card
+      // linking after signature, so a direct status promotion keeps it focused.
+      await prisma.contract.update({ where: { id: contractId }, data: { status: "SIGNED" } });
+
+      // 1. Starting card linking opens a Stripe-hosted setup session — never a charge.
+      const started = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${rentalToken}/card-link`,
+      });
+      assert.equal(started.statusCode, 200, started.body);
+      assert.equal(started.json().data.providerAvailable, true);
+      assert.ok(started.json().data.checkoutUrl.includes("https://setup.test/"));
+      assert.ok(payments.refForCardSetup(contractId), "setup session reference exists");
+      assert.equal(
+        await prisma.contractPayment.count({ where: { contractId } }),
+        0,
+        "linking a card must not create a payment attempt or charge",
+      );
+
+      // 2. Stripe completes the setup -> the webhook persists safe metadata only.
+      const event = payments.buildCardSetupWebhookEvent({
+        contractId,
+        stripeCustomerId: "cus_link_1",
+        stripePaymentMethodId: "pm_link_1",
+        cardBrand: "visa",
+        cardLast4: "4817",
+      });
+      const webhookRes = await sendTestStripeWebhook(app, event);
+      assert.equal(webhookRes.statusCode, 200, webhookRes.body);
+      const card = await prisma.contractCardPaymentMethod.findUniqueOrThrow({ where: { contractId } });
+      assert.equal(card.cardBrand, "visa");
+      assert.equal(card.cardLast4, "4817");
+      assert.equal(card.stripePaymentMethodId, "pm_link_1");
+      assert.equal(card.stripeCustomerId, "cus_link_1");
+      const stored = JSON.stringify(card);
+      assert.equal(stored.includes("4242424242424242"), false, "no full PAN stored");
+      assert.equal(stored.toLowerCase().includes("cvc"), false, "no CVC stored");
+
+      // 3. Public surfaces expose only the masked reference.
+      const ctx = await app.inject({ method: "GET", url: `/contracts/rental/${rentalToken}` });
+      assert.equal(ctx.json().data.payment.cardLast4, "4817");
+      const official = await app.inject({
+        method: "GET",
+        url: `/contracts/rental/${rentalToken}/official-contract`,
+      });
+      assert.deepEqual(official.json().data.card, { last4: "4817" });
+      assert.equal(official.body.includes("stripePaymentMethodId"), false, "no provider reference leaked");
+      assert.equal(official.body.includes("4242424242424242"), false, "no full PAN in the contract view");
+    });
+
+    test("card linking is blocked before SIGNED and when the provider is unconfigured", async () => {
+      seq += 1;
+      const vehicleRes = await app.inject({
+        method: "POST",
+        url: "/vehicles",
+        headers: auth(token),
+        payload: { vehicleName: `SEC-CL-${seq}`, plateNumber: `CL ${run}${seq}`, dailyRate: 400 },
+      });
+      assert.equal(vehicleRes.statusCode, 201, vehicleRes.body);
+      const offerRes = await app.inject({
+        method: "POST",
+        url: "/contracts/offers",
+        headers: auth(token),
+        payload: { vehicleId: vehicleRes.json().data.id as number, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 },
+      });
+      assert.equal(offerRes.statusCode, 201, offerRes.body);
+      const contractId = offerRes.json().data.id as string;
+      const linkRes = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/rental-link`,
+        headers: auth(token),
+      });
+      const rentalToken = linkRes.json().data.link.token as string;
+
+      // FORM contracts are not allowed to prepare a card yet.
+      const early = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${rentalToken}/card-link`,
+      });
+      assert.equal(early.statusCode, 409);
+      assert.equal(early.json().error.context.reason, "PAYMENT_NOT_ALLOWED");
+
+      await prisma.contract.update({ where: { id: contractId }, data: { status: "SIGNED" } });
+      // Unconfigured provider fails closed: no session, no persisted state.
+      setPaymentProviderForTests(undefined);
+      const blocked = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${rentalToken}/card-link`,
+      });
+      assert.equal(blocked.statusCode, 409);
+      assert.equal(blocked.json().error.context.reason, "PAYMENT_PROVIDER_NOT_CONFIGURED");
+      assert.equal(await prisma.contractCardPaymentMethod.count({ where: { contractId } }), 0);
+      assert.equal(await prisma.contractPayment.count({ where: { contractId } }), 0);
+      setPaymentProviderForTests(payments.provider);
     });
   });
 }

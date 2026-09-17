@@ -29,9 +29,9 @@ export type OfficialContractSaveStatus = "idle" | "saving" | "saved" | "error";
 export type OfficialContractSignStatus = "idle" | "signing" | "signed" | "error";
 
 /**
- * In-memory review state. Never persisted in the browser. Local edits,
- * drawings, marks and typed card digits survive a failed save. The full card
- * number stays here; only its last 4 digits are ever sent.
+ * In-memory review state. Never persisted in the browser. Local text edits,
+ * drawings and signature captures survive a failed save. Card entry is
+ * Stripe-hosted, never a Diamond-owned PAN input.
  */
 interface OfficialContractState {
   token: string | null;
@@ -39,7 +39,6 @@ interface OfficialContractState {
   view: OfficialContractView | null;
   loadError: ApiRequestError | null;
   edits: OfficialContractEdits;
-  cardDigits: string | null;
   damageOut: DamageMark[] | undefined;
   pendingSignatures: Partial<Record<OfficialSignatureSlot, Blob | "CLEAR">>;
   saveStatus: OfficialContractSaveStatus;
@@ -50,7 +49,6 @@ interface OfficialContractState {
   missingSignatures: OfficialSignatureSlot[];
   load: (token: string) => Promise<void>;
   setEdit: (field: OfficialContractReviewField, value: string) => void;
-  setCardDigits: (digits: string) => void;
   setDamageOut: (marks: DamageMark[]) => void;
   setSignature: (slot: OfficialSignatureSlot, image: Blob | null) => void;
   /** Saves pending changes. Resolves true when nothing is pending afterwards. */
@@ -66,7 +64,6 @@ const empty = {
   view: null as OfficialContractView | null,
   loadError: null as ApiRequestError | null,
   edits: {} as OfficialContractEdits,
-  cardDigits: null as string | null,
   damageOut: undefined as DamageMark[] | undefined,
   pendingSignatures: {} as Partial<Record<OfficialSignatureSlot, Blob | "CLEAR">>,
   saveStatus: "idle" as OfficialContractSaveStatus,
@@ -79,10 +76,9 @@ const empty = {
 
 let loadSeq = 0;
 
-export function hasPendingChanges(state: Pick<OfficialContractState, "edits" | "cardDigits" | "damageOut" | "pendingSignatures">): boolean {
+export function hasPendingChanges(state: Pick<OfficialContractState, "edits" | "damageOut" | "pendingSignatures">): boolean {
   return (
     Object.keys(state.edits).length > 0 ||
-    state.cardDigits !== null ||
     state.damageOut !== undefined ||
     Object.keys(state.pendingSignatures).length > 0
   );
@@ -118,14 +114,6 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
       }));
     },
 
-    setCardDigits(digits) {
-      set((state) => ({
-        cardDigits: digits.replace(/\D/g, ""),
-        invalidFields: state.invalidFields.filter((f) => f !== "cardNumberLast4"),
-        ...touched(),
-      }));
-    },
-
     setDamageOut(marks) {
       set({ damageOut: marks, ...touched() });
     },
@@ -138,9 +126,9 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
     },
 
     async save(options = {}) {
-      const { token, view, edits, cardDigits, damageOut, pendingSignatures } = get();
+      const { token, view, edits, pendingSignatures } = get();
       if (!token || !view) return false;
-      const patch = buildReviewPatch(view, edits, { cardDigits, damageOut });
+      const patch = buildReviewPatch(view, edits);
       const invalid = invalidReviewFields(patch);
       if (invalid.length > 0) {
         set({ invalidFields: invalid, saveStatus: "error", saveError: null });
@@ -148,7 +136,7 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
       }
       const signatureEntries = Object.entries(pendingSignatures) as Array<[OfficialSignatureSlot, Blob | "CLEAR"]>;
       if (Object.keys(patch).length === 0 && signatureEntries.length === 0) {
-        set({ edits: {}, cardDigits: null, damageOut: undefined, saveStatus: "idle", saveError: null, invalidFields: [] });
+        set({ edits: {}, damageOut: undefined, saveStatus: "idle", saveError: null, invalidFields: [] });
         return true;
       }
       // Demo simulation keeps everything in the browser.
@@ -161,7 +149,7 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
         let reconciled = view;
         if (Object.keys(patch).length > 0) {
           reconciled = await reviewPublicOfficialContract(token, patch);
-          set({ view: reconciled, edits: {}, cardDigits: null, damageOut: undefined });
+          set({ view: reconciled, edits: {}, damageOut: undefined });
         }
         for (const [slot, image] of signatureEntries) {
           const path = SIGNATURE_SLOT_PATHS[slot];

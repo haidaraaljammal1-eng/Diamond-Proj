@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
@@ -53,6 +54,9 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   const [fileHint, setFileHint] = useState<string | null>(null);
   const [passportPreviewUrl, setPassportPreviewUrl] = useState<string | null>(null);
   const [passportHint, setPassportHint] = useState<string | null>(null);
+  // Notice after returning from the free Stripe-hosted card-linking page.
+  const searchParams = useSearchParams();
+  const [cardLinkNotice, setCardLinkNotice] = useState<string | null>(null);
 
   if (boundToken !== token) {
     setBoundToken(token);
@@ -68,6 +72,24 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   useEffect(() => {
     clearRentalOverlay();
   }, [token, clearRentalOverlay]);
+
+  // After a free Stripe-hosted card-linking redirect (?card=linked|cancelled):
+  // refresh the Backend-derived card state and surface the return outcome once.
+  useEffect(() => {
+    const outcome = searchParams.get("card");
+    if (outcome !== "linked" && outcome !== "cancelled") return;
+    setCardLinkNotice(
+      outcome === "linked" ? t("cardLinkedNotice") : t("cardLinkCancelledNotice"),
+    );
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("card");
+      window.history.replaceState(null, "", url.toString());
+    }
+    void rental.load(token);
+    // rental.load and translate are stable; the query param is the trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, token]);
 
   useEffect(() => {
     return () => {
@@ -248,12 +270,19 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 payPending={rental.payPending || simulation.snapshot.payment.payPending}
                 statusPending={rental.statusPending}
                 linkExpiredDuringPayment={rental.linkExpiredDuringPayment}
+                cardLinkPending={rental.cardLinkPending}
+                cardLinkError={Boolean(rental.cardLinkError)}
+                linkNotice={cardLinkNotice}
                 onPay={() => {
                   if (shouldSkipRentalMutation(simulation.active)) {
                     void simulation.simulatePayment();
                     return;
                   }
                   void rental.startPayment();
+                }}
+                onLinkCard={() => {
+                  if (shouldSkipRentalMutation(simulation.active)) return;
+                  void rental.linkCard();
                 }}
                 onRefreshStatus={() => {
                   if (shouldSkipRentalMutation(simulation.active)) return;

@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import { PaginationQuerySchema } from "src/lib/http/pagination";
 import { UuidIdParam } from "src/lib/http/common-schemas";
 import {
@@ -457,7 +457,7 @@ export const PublicLicenseVerificationSchema = z.object({
   confidence: z.number().nullable(),
 });
 
-/** Normalized passport fields only — never a raw OCR payload. */
+/** Normalized passport fields only ظ¤ never a raw OCR payload. */
 export const PublicPassportFieldsSchema = z.object({
   fullName: z.string().nullable(),
   passportNumber: z.string().nullable(),
@@ -542,8 +542,6 @@ export const PublicRentalContextSchema = z.object({
     amount: z.number().int().nullable(),
     currency: z.string(),
     providerAvailable: z.boolean(),
-    /** Safe Stripe-derived card reference after free card linking; never PAN/CVV. */
-    cardLast4: z.string().nullable().optional(),
   }),
 });
 
@@ -586,11 +584,6 @@ export const PublicPaymentAttemptSchema = PaymentCheckoutSchema.extend({
   }),
 });
 
-export const PublicCardSetupSchema = z.object({
-  checkoutUrl: z.string().url(),
-  providerAvailable: z.boolean(),
-});
-
 export const PublicPaymentStatusSchema = z.object({
   status: ContractPaymentStatusSchema,
   contractStatus: ContractStatusSchema.nullable(),
@@ -615,7 +608,7 @@ export const AttachmentRefSchema = z.object({
   size: z.number().int(),
 });
 
-// ── Official contract (one authoritative DTO; sections follow the paper agreement) ──
+// ظ¤ظ¤ Official contract (one authoritative DTO; sections follow the paper agreement) ظ¤ظ¤
 
 const SignatureStatusSchema = z.enum(["NOT_SIGNED", "SIGNED"]);
 const CustodyEventStatusSchema = z.enum(["NOT_AVAILABLE", "RECORDED"]);
@@ -708,19 +701,8 @@ export const OfficialContractViewSchema = z.object({
   permissions: z.object({
     canEdit: z.boolean(),
     editableFields: z.array(z.string()),
-    /** Backend-owned custody capabilities. Public contract review keeps both locked. */
-    vehicleOut: z.object({
-      canEditDamage: z.boolean(),
-      canEditMileage: z.boolean(),
-      canEditFuel: z.boolean(),
-      canSign: z.boolean(),
-    }),
-    vehicleIn: z.object({
-      canEditDamage: z.boolean(),
-      canEditMileage: z.boolean(),
-      canEditFuel: z.boolean(),
-      canSign: z.boolean(),
-    }),
+    /** Customer may mark Vehicle OUT damage on the diagrams. */
+    canMarkDamageOut: z.boolean(),
     /** Signature slots the customer may capture now. */
     signableSlots: z.array(OfficialSignatureSlotSchema),
     /** All sign preconditions except the action itself are satisfied. */
@@ -757,6 +739,9 @@ export const OfficialContractReviewPatchSchema = z
     additionalDriverLicenseNumber: ReviewText(50),
     sponsorName: ReviewText(200),
     sponsorIdNumber: ReviewText(50),
+    /** Exactly the last 4 digits. A full card number is rejected. */
+    cardNumberLast4: z.string().regex(/^\d{4}$/, "Last 4 digits only").nullable(),
+    damageOut: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).nullable(),
   })
   .partial()
   .strict()

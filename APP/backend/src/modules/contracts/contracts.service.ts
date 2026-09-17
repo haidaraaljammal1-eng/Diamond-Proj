@@ -1733,6 +1733,21 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  async function startCardLink(token: string) {
+    const link = await resolveContractLink(prisma, token, "RENTAL");
+    const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
+    if (!contract) throw contractError.notFound();
+    if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+    const provider = createPaymentProvider();
+    const result = await provider.createCardSetupSession({
+      contractId: contract.id,
+      successUrl: `${env.FRONTEND_URL.replace(/\/$/, "")}/en/rental/${token}?card=linked`,
+      cancelUrl: `${env.FRONTEND_URL.replace(/\/$/, "")}/en/rental/${token}?card=cancelled`,
+    });
+    if (!result.ok) throw contractError.paymentProviderNotConfigured();
+    return { checkoutUrl: result.checkoutUrl, providerAvailable: true };
+  }
+
   async function startReconciliationPayment(contractId: string, actorUserId: number) {
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
@@ -1934,6 +1949,7 @@ export function createContractsService(fastify: FastifyInstance) {
     updateOfficialContractTerms,
     getPaymentContext,
     startCardPayment,
+    startCardLink,
     startReconciliationPayment,
     startPostClosePayment,
     startRenewalPaymentPublic,

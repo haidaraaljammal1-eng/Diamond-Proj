@@ -51,9 +51,14 @@ const EDITABLE = [
   "additionalDriverLicenseNumber",
   "sponsorName",
   "sponsorIdNumber",
-  "cardNumberLast4",
-  "damageOut",
 ];
+
+const LOCKED_CUSTODY = {
+  canEditDamage: false,
+  canEditMileage: false,
+  canEditFuel: false,
+  canSign: false,
+};
 
 function view(overrides: Partial<OfficialContractView> = {}): OfficialContractView {
   const custody = { status: "NOT_AVAILABLE" as const, occurredAt: null, mileage: null, fuel: null, inspectionAngles: [], damage: [], signatureStatus: "NOT_SIGNED" as const };
@@ -95,8 +100,9 @@ function view(overrides: Partial<OfficialContractView> = {}): OfficialContractVi
     permissions: {
       canEdit: true,
       editableFields: [...EDITABLE],
-      canMarkDamageOut: true,
-      signableSlots: ["HIRER", "ADDITIONAL_DRIVER", "SPONSOR", "VEHICLE_OUT_HIRER"],
+      vehicleOut: LOCKED_CUSTODY,
+      vehicleIn: LOCKED_CUSTODY,
+      signableSlots: ["HIRER", "ADDITIONAL_DRIVER", "SPONSOR"],
       canSign: false,
       missingRequirements: ["SIGNATURE_HIRER"],
     },
@@ -268,7 +274,7 @@ describe("official contract — editing", () => {
   it("store keeps edits on failure and uses only the single GET + review PATCH", () => {
     const store = read("../stores/official-contract.store.ts");
     assert.ok(store.includes('set({ saveStatus: "error", saveError: normalizeApiError(error) })'));
-    assert.ok(store.includes("set({ view: reconciled, edits: {}, cardDigits: null, damageOut: undefined })"));
+    assert.ok(store.includes("set({ view: reconciled, edits: {}, damageOut: undefined })"));
     const imports = /import \{([^}]*)\} from "\.\.\/api\/public-rental\.api"/.exec(store)![1]!;
     assert.deepEqual(imports.split(",").map((s) => s.trim()).filter(Boolean).sort(), [
       "clearPublicOfficialSignature",
@@ -426,7 +432,7 @@ describe("official contract — interactive completion", () => {
     assert.equal(f["vehicle.notes"]!.editableField, null);
   });
 
-  it("damage map: tap toggles a structured mark per zone; OUT editable, IN read-only", () => {
+  it("damage map: zones exist, but OUT and IN are locked during contract signing", () => {
     let marks = toggleDamageMark([], "TOP.HOOD", "SCRATCH");
     marks = toggleDamageMark(marks, "LEFT.FRONT_DOOR", "DENT");
     marks = toggleDamageMark(marks, "TOP.HOOD", "BROKEN");
@@ -437,26 +443,22 @@ describe("official contract — interactive completion", () => {
     assert.ok(ids.includes("FRONT_REAR.BUMPER"));
 
     const doc = buildOfficialContractDocument(view(), { mode: "REVIEW", damageOut: marks });
-    assert.equal(doc.vehicleOut.damageEditable, true);
+    assert.equal(doc.vehicleOut.damageEditable, false);
     assert.equal(doc.vehicleIn.damageEditable, false);
     assert.deepEqual(doc.vehicleOut.damage, marks);
     assert.equal(buildOfficialContractDocument(view(), { mode: "READONLY", damageOut: marks }).vehicleOut.damageEditable, false);
-    assert.deepEqual(buildPatch(view(), {}, { damageOut: marks }).damageOut, marks);
-    assert.equal(buildPatch(view(), {}, { damageOut: [] }).damageOut, undefined, "unchanged empty marks are not sent");
+    assert.equal("damageOut" in buildPatch(view(), {}), false);
   });
 
-  it("card boxes: full digits stay local; PATCH carries only the last 4; incomplete is flagged", () => {
-    const doc = buildOfficialContractDocument(view(), { mode: "REVIEW", cardDigits: "4242424242424242" });
-    assert.equal(doc.card.boxes.join(""), "4242424242424242");
-    assert.equal(doc.card.editable, true);
-    const patch = buildPatch(view(), {}, { cardDigits: "4242 4242 4242 4817" });
-    assert.deepEqual(patch, { cardNumberLast4: "4817" });
-    assert.equal(JSON.stringify(patch).includes("424242"), false);
-    assert.deepEqual(invalidReviewFields(buildPatch(view(), {}, { cardDigits: "4242" })), ["cardNumberLast4"]);
+  it("card boxes: display-only masked Stripe card reference, no Diamond PAN input", () => {
+    const doc = buildOfficialContractDocument(view(), { mode: "REVIEW" });
+    assert.equal(doc.card.boxes.join(""), "");
+    assert.equal(JSON.stringify(buildPatch(view(), {})).includes("cardNumberLast4"), false);
     const masked = buildOfficialContractDocument(view({ card: { last4: "4817" } }), { mode: "READONLY" });
     assert.equal(masked.card.boxes.join(""), "••••••••••••4817");
-    assert.deepEqual(buildPatch(view({ card: { last4: "4817" } }), {}, { cardDigits: "" }), { cardNumberLast4: null });
     const component = read("../components/official-contract-a4/contract-paper-widgets.tsx");
+    assert.equal(component.includes("<input"), false);
+    assert.equal(/Card digit|inputMode|autoComplete/i.test(component), false);
     assert.equal(/cvv|expir/i.test(component), false);
   });
 
@@ -485,7 +487,7 @@ describe("official contract — interactive completion", () => {
     assert.equal(doc.signatures.hirer.status, "SIGNED");
     assert.equal(doc.signatures.hirer.required, true);
     assert.equal(doc.signatures.hirer.editable, true);
-    assert.equal(doc.signatures.vehicleOutHirer.editable, true);
+    assert.equal(doc.signatures.vehicleOutHirer.editable, false);
     assert.equal(doc.signatures.vehicleInHirer.editable, false);
     const readonly = buildOfficialContractDocument(view(), { mode: "READONLY" });
     assert.equal(readonly.signatures.hirer.editable, false);
@@ -497,7 +499,7 @@ describe("official contract — interactive completion", () => {
     const locked = view({
       contract: { ...view().contract, status: "AWAITING" },
       identity: { identityReady: false },
-      permissions: { ...view().permissions, canEdit: false, canMarkDamageOut: false },
+      permissions: { ...view().permissions, canEdit: false },
     });
     const ctx = {
       identity: { licenseStatus: "LICENSE_VALID", passport: { status: "READY", fields: null }, identityReady: true },
@@ -505,9 +507,8 @@ describe("official contract — interactive completion", () => {
     } as unknown as PublicRentalContext;
     const opened = withNormalizedIdentity(locked, ctx);
     assert.equal(opened.permissions.canEdit, true);
-    assert.equal(opened.permissions.canMarkDamageOut, true);
+    assert.equal(opened.permissions.vehicleOut.canEditDamage, false);
     const doc = buildOfficialContractDocument(opened, { mode: "REVIEW" });
-    assert.equal(doc.card.editable, true);
     assert.equal(doc.signatures.hirer.editable, true);
     const signed = withNormalizedIdentity(
       view({ contract: { ...view().contract, status: "SIGNED" }, permissions: { ...view().permissions, canEdit: false, editableFields: [], signableSlots: [] } }),

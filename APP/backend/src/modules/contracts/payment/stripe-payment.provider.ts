@@ -4,6 +4,8 @@ import { aedToStripeMinorUnits, assertAedCurrency } from "src/modules/contracts/
 import type {
   CreateCheckoutInput,
   CreateCheckoutResult,
+  CreateCardSetupInput,
+  CreateCardSetupResult,
   PaymentProvider,
   PaymentStatusResult,
   ProviderPaymentStatus,
@@ -102,6 +104,26 @@ export class StripePaymentProvider implements PaymentProvider {
     };
   }
 
+  async createCardSetupSession(input: CreateCardSetupInput): Promise<CreateCardSetupResult> {
+    if (!this.configured) return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
+    const session = await this.client().checkout.sessions.create({
+      mode: "setup",
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
+      metadata: { kind: "CARD_SETUP", contractId: input.contractId },
+      payment_method_types: ["card"],
+    });
+    if (!session.url || !session.id) return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
+    return {
+      ok: true,
+      provider: this.name,
+      providerReference: session.id,
+      providerStatus: session.status ?? "open",
+      checkoutUrl: session.url,
+      checkoutExpiresAt: session.expires_at ? new Date(session.expires_at * 1000) : new Date(Date.now() + 86400000),
+    };
+  }
+
   async getPaymentStatus(providerReference: string): Promise<PaymentStatusResult> {
     if (!this.configured) return { status: "UNKNOWN" };
     const session = await this.client().checkout.sessions.retrieve(providerReference, {
@@ -135,12 +157,34 @@ export class StripePaymentProvider implements PaymentProvider {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+      if (session.metadata?.kind === "CARD_SETUP") {
+        const contractId = session.metadata.contractId;
+        const setupIntentId = typeof session.setup_intent === "string" ? session.setup_intent : null;
+        if (!contractId || !setupIntentId) return { ok: false, reason: "IGNORED" };
+        const setupIntent = await this.client().setupIntents.retrieve(setupIntentId, { expand: ["payment_method"] });
+        const method = typeof setupIntent.payment_method === "object" && setupIntent.payment_method?.type === "card"
+          ? setupIntent.payment_method.card
+          : null;
+        if (!method || !setupIntent.payment_method || typeof setupIntent.payment_method === "string") return { ok: false, reason: "IGNORED" };
+        return { ok: true, event: {
+          kind: "CARD_SETUP",
+          stripeEventId: event.id,
+          eventType: event.type,
+          providerReference: session.id,
+          contractId,
+          stripeCustomerId: typeof setupIntent.customer === "string" ? setupIntent.customer : undefined,
+          stripePaymentMethodId: setupIntent.payment_method.id,
+          cardBrand: method.brand,
+          cardLast4: method.last4,
+        }};
+      }
       const paymentId = session.metadata?.paymentId;
       if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
       return {
         ok: true,
         event: {
           stripeEventId: event.id,
+          kind: "PAYMENT",
           eventType: event.type,
           providerReference: session.id,
           paymentId,
@@ -159,6 +203,7 @@ export class StripePaymentProvider implements PaymentProvider {
         ok: true,
         event: {
           stripeEventId: event.id,
+          kind: "PAYMENT",
           eventType: event.type,
           providerReference: session.id,
           paymentId,
@@ -179,6 +224,7 @@ export class StripePaymentProvider implements PaymentProvider {
         ok: true,
         event: {
           stripeEventId: event.id,
+          kind: "PAYMENT",
           eventType: event.type,
           providerReference,
           paymentId,

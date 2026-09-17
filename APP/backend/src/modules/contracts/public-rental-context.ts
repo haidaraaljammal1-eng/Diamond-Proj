@@ -21,6 +21,9 @@ export const PUBLIC_RENTAL_INCLUDE = {
   vehicle: { include: { model: { select: { name: true } } } },
   customer: true,
   payments: { orderBy: { createdAt: "desc" as const }, take: 1 },
+  // Stripe-hosted card linking stores safe metadata only; the last 4 digits are
+  // renderer truth for the A4 boxes and the payment summary.
+  cardPaymentMethod: true,
   carOut: { select: { occurredAt: true } },
   carIn: { select: { occurredAt: true } },
   licenseVerifications: { orderBy: { createdAt: "desc" as const }, take: 1 },
@@ -130,6 +133,9 @@ export function toPublicRentalContext(
       amount: payment?.amount ?? row.agreedAmount,
       currency: row.currency,
       providerAvailable: createPaymentProvider().configured,
+      // Safe Stripe-derived card reference (never PAN/CVV). Shows the saved
+      // card state after the free Stripe-hosted card-linking step.
+      cardLast4: row.cardPaymentMethod?.cardLast4 ?? null,
     },
   };
 }

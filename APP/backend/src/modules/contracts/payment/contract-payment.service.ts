@@ -616,6 +616,58 @@ export function createContractPaymentService(prisma: PrismaClient) {
     }
   }
 
+  async function processCardSetupWebhook(input: {
+    stripeEventId: string;
+    eventType: string;
+    providerReference: string;
+    contractId: string;
+    stripeCustomerId?: string;
+    stripePaymentMethodId: string;
+    cardBrand: string;
+    cardLast4: string;
+  }): Promise<"processed" | "duplicate"> {
+    try {
+      await prisma.stripeWebhookEvent.create({
+        data: { stripeEventId: input.stripeEventId, eventType: input.eventType, outcome: "received" },
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) return "duplicate";
+      throw error;
+    }
+    await withTransaction(prisma, async (tx) => {
+      const contract = await tx.contract.findUnique({ where: { id: input.contractId } });
+      if (!contract) throw contractError.notFound();
+      await tx.contractCardPaymentMethod.upsert({
+        where: { contractId: input.contractId },
+        create: {
+          contractId: input.contractId,
+          provider: "stripe",
+          stripeCustomerId: input.stripeCustomerId ?? null,
+          stripePaymentMethodId: input.stripePaymentMethodId,
+          cardBrand: input.cardBrand,
+          cardLast4: input.cardLast4,
+        },
+        update: {
+          provider: "stripe",
+          stripeCustomerId: input.stripeCustomerId ?? null,
+          stripePaymentMethodId: input.stripePaymentMethodId,
+          cardBrand: input.cardBrand,
+          cardLast4: input.cardLast4,
+        },
+      });
+      await tx.officialContractReviewDraft.upsert({
+        where: { contractId: input.contractId },
+        create: { contractId: input.contractId, cardNumberLast4: input.cardLast4, reviewedAt: new Date() },
+        update: { cardNumberLast4: input.cardLast4, reviewedAt: new Date(), revision: { increment: 1 } },
+      });
+      await tx.stripeWebhookEvent.update({
+        where: { stripeEventId: input.stripeEventId },
+        data: { processedAt: new Date(), outcome: "processed" },
+      });
+    });
+    return "processed";
+  }
+
   async function getPaymentStatusByToken(statusToken: string) {
     const digest = hashToken(statusToken);
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -674,6 +726,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
     startPayment,
     applyProviderPaymentStatus,
     processWebhookEvent,
+    processCardSetupWebhook,
     getPaymentStatusByToken,
     loadObligation,
     isObligationSettled,

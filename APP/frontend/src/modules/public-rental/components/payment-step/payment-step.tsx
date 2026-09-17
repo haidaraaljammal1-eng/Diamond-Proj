@@ -10,7 +10,9 @@ import type {
 import { formatRentalAmount, formatRentalDays } from "../../utils/format-money";
 import {
   canRetryPayment,
+  canStartCardLink,
   canStartCardPayment,
+  maskCardLast4,
   paymentPanelFromStatus,
 } from "../../utils/payment-view";
 import styles from "./payment-step.module.css";
@@ -21,7 +23,13 @@ interface PaymentStepProps {
   payPending: boolean;
   statusPending: boolean;
   linkExpiredDuringPayment: boolean;
+  /** Free Stripe-hosted card linking (no charge) request state. */
+  cardLinkPending: boolean;
+  cardLinkError: boolean;
+  /** Notice after returning from the Stripe-hosted setup page (?card=linked|cancelled). */
+  linkNotice: string | null;
   onPay: () => void;
+  onLinkCard: () => void;
   onRefreshStatus: () => void;
 }
 
@@ -31,7 +39,11 @@ export function PaymentStep({
   payPending,
   statusPending,
   linkExpiredDuringPayment,
+  cardLinkPending,
+  cardLinkError,
+  linkNotice,
   onPay,
+  onLinkCard,
   onRefreshStatus,
 }: PaymentStepProps) {
   const t = useTranslations("PublicRental.payment");
@@ -49,12 +61,26 @@ export function PaymentStep({
   });
   const isDev = process.env.NODE_ENV === "development";
   const inFlight = panel === "processing" || panel === "pending" || payPending;
+  const cardLinked = Boolean(context.payment.cardLast4);
+  const cardMask = maskCardLast4(context.payment.cardLast4);
+  const canLink = canStartCardLink({
+    providerAvailable: context.payment.providerAvailable,
+    cardLinked,
+    payPending,
+    cardLinkPending,
+    paymentStatus: status,
+  });
 
   return (
     <Card data-testid="payment-step">
       <Card.Title>{t("title")}</Card.Title>
       {linkExpiredDuringPayment ? (
         <p className={styles.unavailable}>{t("linkExpiredDuring")}</p>
+      ) : null}
+      {linkNotice ? (
+        <p className={styles.notice} role="status" data-testid="payment-card-link-notice">
+          {linkNotice}
+        </p>
       ) : null}
 
       <div className={styles.total}>
@@ -126,6 +152,39 @@ export function PaymentStep({
           </div>
         </div>
       </div>
+
+      {/* Stripe-hosted card linking: prepares a saved payment method, never charges. */}
+      {cardLinked ? (
+        <div className={styles.method} data-testid="payment-card-linked">
+          <span className={styles.mark}>C</span>
+          <div className={styles.copy}>
+            <b>
+              {t("cardSaved")} <span dir="ltr">{cardMask}</span>
+            </b>
+            <span>{t("cardSavedHint")}</span>
+          </div>
+        </div>
+      ) : canLink ? (
+        <div className={styles.linkBlock} data-testid="payment-card-link">
+          <p className={styles.unavailable}>{t("linkCardHint")}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            loading={cardLinkPending}
+            disabled={cardLinkPending}
+            data-testid="payment-link-card"
+            onClick={onLinkCard}
+          >
+            {cardLinkPending ? t("linking") : t("linkCard")}
+          </Button>
+        </div>
+      ) : null}
+      {cardLinkError ? (
+        <p className={styles.unavailable} role="alert" data-testid="payment-card-link-error">
+          {t("linkCardFailed")}
+        </p>
+      ) : null}
 
       {panel === "unavailable" || !context.payment.providerAvailable ? (
         <p className={styles.unavailable} data-testid="payment-unavailable">

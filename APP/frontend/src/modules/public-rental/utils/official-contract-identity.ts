@@ -17,9 +17,7 @@ export function withNormalizedIdentity(
   const licenseValid = context.licenseVerification.status === "VALID";
   const fill = <T>(current: T | null, next: T | null | undefined): T | null =>
     current ?? next ?? null;
-  const reviewable =
-    (view.contract.status === "AWAITING" || view.contract.status === "FORM") &&
-    view.permissions.editableFields.length > 0;
+  const reviewable = view.contract.status === "AWAITING" || view.contract.status === "FORM";
 
   return {
     ...view,
@@ -45,7 +43,6 @@ export function withNormalizedIdentity(
     permissions: {
       ...view.permissions,
       canEdit: view.permissions.canEdit || (reviewable && context.identity.identityReady),
-      canMarkDamageOut: view.permissions.canMarkDamageOut || (reviewable && context.identity.identityReady),
     },
   };
 }

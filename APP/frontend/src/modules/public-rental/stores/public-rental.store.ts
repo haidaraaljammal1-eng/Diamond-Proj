@@ -7,6 +7,7 @@ import {
   acceptPublicRental,
   getPublicPaymentStatus,
   getPublicRental,
+  startPublicRentalCardLink,
   startPublicRentalPayment,
   submitPublicRentalForm,
   uploadPublicRentalLicense,
@@ -39,6 +40,9 @@ interface PublicRentalState {
   payPending: boolean;
   statusPending: boolean;
   paymentStatus: PublicPaymentStatus | null;
+  /** Free Stripe-hosted card linking request lifecycle (never charges). */
+  cardLinkPending: boolean;
+  cardLinkError: ApiRequestError | null;
   /** True when the rental link expired but a payment attempt can still be queried. */
   linkExpiredDuringPayment: boolean;
   /** Returned once for a real card attempt. Memory only — never persisted. */
@@ -49,6 +53,8 @@ interface PublicRentalState {
   submitForm: (payload: PublicRentalFormPayload) => Promise<boolean>;
   accept: () => Promise<boolean>;
   startPayment: () => Promise<boolean>;
+  /** Free Stripe-hosted card linking (no charge): redirects to Stripe setup. */
+  linkCard: () => Promise<boolean>;
   refreshPaymentStatus: () => Promise<void>;
   reset: () => void;
 }
@@ -66,6 +72,8 @@ const empty = {
   payPending: false,
   statusPending: false,
   paymentStatus: null as PublicPaymentStatus | null,
+  cardLinkPending: false,
+  cardLinkError: null as ApiRequestError | null,
   linkExpiredDuringPayment: false,
   statusToken: null as string | null,
 };
@@ -85,6 +93,7 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
         error: null,
         paymentStatus: null,
         linkExpiredDuringPayment: false,
+        cardLinkError: null,
       });
     } catch (error) {
       const normalized = normalizeApiError(error);
@@ -191,6 +200,29 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
       return true;
     } catch (error) {
       set({ payPending: false, error: normalizeApiError(error) });
+      return false;
+    }
+  },
+
+  async linkCard() {
+    const token = get().token;
+    if (!token) return false;
+    if (get().context?.payment.providerAvailable !== true) return false;
+    set({ cardLinkPending: true, cardLinkError: null, error: null });
+    try {
+      const setup = await startPublicRentalCardLink(token);
+      const checkoutUrl = setup.checkoutUrl ?? null;
+      set({ cardLinkPending: false });
+      if (checkoutUrl && typeof window !== "undefined") {
+        // Stripe-hosted setup page. It never charges; returning to
+        // ?card=linked/cancelled reloads the Backend-derived card state.
+        window.location.assign(checkoutUrl);
+        return true;
+      }
+      await get().load(token);
+      return true;
+    } catch (error) {
+      set({ cardLinkPending: false, cardLinkError: normalizeApiError(error) });
       return false;
     }
   },

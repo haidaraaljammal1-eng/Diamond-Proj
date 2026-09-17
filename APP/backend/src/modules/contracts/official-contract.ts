@@ -25,11 +25,12 @@ export const OFFICIAL_CONTRACT_TEMPLATE_VERSION = "DIAMOND_CONTRACT_V1";
 
 /**
  * Server-side field policy for the public review link. The link is a check of
- * the agreement: the customer only fills the payment-card boxes. Vehicle
- * condition (damage marks, fuel, custody signatures) is captured by staff at
- * Car-Out / Car-In. Everything not listed here is system-locked.
+ * the agreement: the customer captures contract-level signatures only. Card
+ * entry is Stripe-hosted, and vehicle condition (damage marks, fuel, custody
+ * signatures) is captured by staff at Car-Out / Car-In. Everything not listed
+ * here is system-locked.
  */
-export const OFFICIAL_CONTRACT_EDITABLE_FIELDS = ["cardNumberLast4"] as const;
+export const OFFICIAL_CONTRACT_EDITABLE_FIELDS = [] as const;
 export type OfficialContractEditableField = (typeof OFFICIAL_CONTRACT_EDITABLE_FIELDS)[number];
 
 export const OFFICIAL_CONTRACT_SYSTEM_LOCKED_FIELDS = [
@@ -81,6 +82,7 @@ export const OFFICIAL_CONTRACT_INCLUDE = {
     take: 1,
   },
   officialReviewDraft: true,
+  cardPaymentMethod: true,
   officialSignatures: { select: { slot: true, capturedAt: true } },
   carOut: { select: { occurredAt: true, mileageOut: true, fuelOut: true, photos: { select: { angle: true } } } },
   carIn: { select: { occurredAt: true, mileageIn: true, fuelIn: true, photos: { select: { angle: true } } } },
@@ -294,7 +296,7 @@ export function buildOfficialContractView(
         "OFFICIAL_CONTRACT_TERMS",
       ),
     },
-    card: { last4: fixed("card.last4", review?.cardNumberLast4, "CUSTOMER_REVIEW") },
+    card: { last4: fixed("card.last4", row.cardPaymentMethod?.cardLast4 ?? review?.cardNumberLast4, "CUSTOMER_REVIEW") },
     vehicleOut: custody(
       "vehicleOut",
       row.carOut
@@ -320,8 +322,9 @@ export function buildOfficialContractView(
       // carries the identity gate. The server enforces both on every write.
       canEdit,
       editableFields: reviewable ? [...OFFICIAL_CONTRACT_EDITABLE_FIELDS] : [],
-      // Vehicle OUT damage is marked by staff at Car-Out, never on the review link.
-      canMarkDamageOut: false,
+      // Public contract review never edits custody. Car-Out / Car-In workflows own these flags.
+      vehicleOut: { canEditDamage: false, canEditMileage: false, canEditFuel: false, canSign: false },
+      vehicleIn: { canEditDamage: false, canEditMileage: false, canEditFuel: false, canSign: false },
       signableSlots: reviewable ? [...PUBLIC_SIGNABLE_SLOTS] : [],
       canSign: canEdit && missingRequirements.length === 0,
       missingRequirements,

@@ -143,7 +143,6 @@ export function ContractReviewStep({
               contract={view}
               mode={signed ? "READONLY" : "REVIEW"}
               edits={contract.edits}
-              cardDigits={contract.cardDigits}
               damageOut={contract.damageOut}
               pendingSignatures={pendingMarks}
               invalidFields={contract.invalidFields}
@@ -151,7 +150,6 @@ export function ContractReviewStep({
                 publicOfficialSignatureUrl(token, SIGNATURE_SLOT_PATHS[slot], view.signatures[slot].signedAt ?? "")
               }
               onEdit={contract.setEdit}
-              onCardDigits={contract.setCardDigits}
               onDamageOut={contract.setDamageOut}
               onSignature={contract.setSignature}
             />

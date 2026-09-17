@@ -15,6 +15,7 @@ import {
   OfficialContractViewSchema,
   OfficialSignatureSlotParam,
   OFFICIAL_SIGNATURE_SLOT_PATHS,
+  PublicCardSetupSchema,
   PublicPaymentAttemptSchema,
   PublicPaymentContextSchema,
   PublicPaymentStatusSchema,
@@ -317,6 +318,21 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.getPaymentContext(request.params.token) }),
+  );
+
+  app.post(
+    "/rental/:token/card-link",
+    {
+      schema: {
+        summary: "Start Stripe-hosted card setup without charging",
+        operationId: "startPublicRentalCardLink",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(PublicCardSetupSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({ data: await contracts.startCardLink(request.params.token) }),
   );
 
   app.post(

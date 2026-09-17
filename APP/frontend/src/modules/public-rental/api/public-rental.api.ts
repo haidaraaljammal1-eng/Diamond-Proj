@@ -3,6 +3,7 @@ import { apiRequest } from "@/infrastructure/api/client";
 import { ApiRequestError } from "@/infrastructure/api/errors";
 import type { ApiErrorResponse, ApiResponse } from "@/infrastructure/api/types";
 import type {
+  PublicCardSetup,
   PublicIdentityDraft,
   PublicPaymentAttempt,
   PublicPaymentContext,
@@ -292,6 +293,19 @@ export async function startPublicRentalPayment(
       headers: { "Idempotency-Key": idempotencyKey },
       publicRequest: true,
     },
+  );
+  return response.data;
+}
+
+/**
+ * Starts a free Stripe-hosted card setup (never charges). The hosted session
+ * collects the real card; only safe metadata returns from the webhook. The
+ * returned URL redirects the customer to Stripe.
+ */
+export async function startPublicRentalCardLink(token: string): Promise<PublicCardSetup> {
+  const response = await apiRequest<PublicCardSetup>(
+    `${CONTRACTS_PATH}/rental/${token}/card-link`,
+    { method: "POST", publicRequest: true },
   );
   return response.data;
 }

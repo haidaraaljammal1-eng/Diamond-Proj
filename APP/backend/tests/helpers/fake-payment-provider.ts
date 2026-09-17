@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type {
+  CreateCardSetupInput,
   CreateCheckoutInput,
   PaymentProvider,
   ProviderPaymentStatus,
@@ -19,10 +20,23 @@ export interface TestWebhookPayload {
   currency?: string;
 }
 
+export interface TestCardSetupPayload {
+  stripeEventId: string;
+  eventType: string;
+  providerReference: string;
+  contractId: string;
+  stripeCustomerId?: string;
+  stripePaymentMethodId: string;
+  cardBrand: string;
+  cardLast4: string;
+}
+
 export function createFakePaymentProvider(run: string) {
   const statuses = new Map<string, ProviderPaymentStatus>();
   const sessions = new Map<string, CreateCheckoutInput>();
   const paymentRefs = new Map<string, string>();
+  const setupSessions = new Map<string, CreateCardSetupInput>();
+  const setupRefs = new Map<string, string>();
   let n = 0;
   let eventSeq = 0;
 
@@ -48,6 +62,22 @@ export function createFakePaymentProvider(run: string) {
         checkoutExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
       };
     },
+    async createCardSetupSession(input: CreateCardSetupInput) {
+      n += 1;
+      const ref = `setu_test_${run}_${n}`;
+      setupSessions.set(ref, input);
+      setupRefs.set(input.contractId, ref);
+      provider.lastRef = ref;
+      provider.lastPaymentId = null;
+      return {
+        ok: true,
+        provider: "stripe",
+        providerReference: ref,
+        providerStatus: "open",
+        checkoutUrl: `https://setup.test/${ref}`,
+        checkoutExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      };
+    },
     async getPaymentStatus(ref: string) {
       const input = sessions.get(ref);
       return {
@@ -61,13 +91,33 @@ export function createFakePaymentProvider(run: string) {
         return { ok: false, reason: "INVALID_SIGNATURE" };
       }
       try {
-        const body = JSON.parse(payload.toString()) as TestWebhookPayload;
-        if (!body.paymentId || !body.providerReference || !body.stripeEventId) {
+        const body = JSON.parse(payload.toString()) as TestWebhookPayload | TestCardSetupPayload;
+        if (!body.stripeEventId || !body.providerReference) {
+          return { ok: false, reason: "INVALID_SIGNATURE" };
+        }
+        if ("contractId" in body && body.stripePaymentMethodId) {
+          return {
+            ok: true,
+            event: {
+              kind: "CARD_SETUP",
+              stripeEventId: body.stripeEventId,
+              eventType: body.eventType ?? "setup_intent.succeeded",
+              providerReference: body.providerReference,
+              contractId: body.contractId,
+              stripeCustomerId: body.stripeCustomerId,
+              stripePaymentMethodId: body.stripePaymentMethodId,
+              cardBrand: body.cardBrand,
+              cardLast4: body.cardLast4,
+            },
+          };
+        }
+        if (!body.paymentId || !body.status) {
           return { ok: false, reason: "INVALID_SIGNATURE" };
         }
         return {
           ok: true,
           event: {
+            kind: "PAYMENT",
             stripeEventId: body.stripeEventId,
             eventType: body.eventType ?? "checkout.session.completed",
             paymentId: body.paymentId,
@@ -87,6 +137,12 @@ export function createFakePaymentProvider(run: string) {
     provider,
     refForPayment(paymentId: string) {
       return paymentRefs.get(paymentId) ?? null;
+    },
+    refForCardSetup(contractId: string) {
+      return setupRefs.get(contractId) ?? null;
+    },
+    setupSessionFor(ref: string) {
+      return setupSessions.get(ref);
     },
     nextEventId() {
       eventSeq += 1;
@@ -111,6 +167,28 @@ export function createFakePaymentProvider(run: string) {
         status: input.status ?? "CONFIRMED",
         amountMinor: input.amountMinor ?? (session ? session.amount * 100 : undefined),
         currency: input.currency ?? session?.currency,
+      };
+    },
+    buildCardSetupWebhookEvent(input: {
+      contractId: string;
+      providerReference?: string;
+      stripeEventId?: string;
+      stripeCustomerId?: string;
+      stripePaymentMethodId: string;
+      cardBrand: string;
+      cardLast4: string;
+    }): TestCardSetupPayload {
+      const providerReference = input.providerReference ?? setupRefs.get(input.contractId);
+      if (!providerReference) throw new Error(`No setup session for contract ${input.contractId}`);
+      return {
+        stripeEventId: input.stripeEventId ?? `evt_test_${run}_${++eventSeq}`,
+        eventType: "setup_intent.succeeded",
+        providerReference,
+        contractId: input.contractId,
+        stripeCustomerId: input.stripeCustomerId,
+        stripePaymentMethodId: input.stripePaymentMethodId,
+        cardBrand: input.cardBrand,
+        cardLast4: input.cardLast4,
       };
     },
     confirm(ref?: string) {

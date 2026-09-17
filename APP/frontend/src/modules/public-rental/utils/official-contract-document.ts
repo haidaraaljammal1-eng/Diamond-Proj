@@ -67,7 +67,6 @@ export interface SignatureModel {
 export interface CardModel {
   /** One character per paper box: a digit, "•" for a stored masked digit, or "". */
   boxes: string[];
-  editable: boolean;
 }
 
 export interface OfficialContractDocument {
@@ -83,8 +82,6 @@ export interface OfficialContractDocument {
 
 export interface ContractInteractiveState {
   edits?: OfficialContractEdits;
-  /** Locally typed card digits (full number stays in the browser). */
-  cardDigits?: string | null;
   /** Local Vehicle OUT damage marks; undefined = unchanged from the Backend. */
   damageOut?: DamageMark[];
   /** Locally drawn ("DRAWN") or cleared ("CLEAR") signatures not yet saved. */
@@ -205,18 +202,8 @@ function custody(
   };
 }
 
-function cardBoxes(view: OfficialContractView, digits: string | null | undefined): string[] {
+function cardBoxes(view: OfficialContractView): string[] {
   const boxes = Array.from({ length: CARD_BOXES }, () => "");
-  if (digits !== undefined && digits !== null) {
-    digits
-      .replace(/\D/g, "")
-      .slice(0, CARD_BOXES)
-      .split("")
-      .forEach((d, i) => {
-        boxes[i] = d;
-      });
-    return boxes;
-  }
   if (view.card.last4) {
     for (let i = 0; i < CARD_BOXES - 4; i++) boxes[i] = "•";
     view.card.last4.split("").forEach((d, i) => {
@@ -278,13 +265,12 @@ export function buildOfficialContractDocument(
     vehicleOut: custody(
       view.vehicleOut,
       options.damageOut ?? view.vehicleOut.damage,
-      options.mode === "REVIEW" && view.permissions.canMarkDamageOut,
+      options.mode === "REVIEW" && view.permissions.vehicleOut.canEditDamage,
     ),
     // Vehicle IN damage belongs to the return workflow: shown, never editable here.
     vehicleIn: custody(view.vehicleIn, view.vehicleIn.damage, false),
     card: {
-      boxes: cardBoxes(view, options.cardDigits),
-      editable: isEditable(view, options.mode, "cardNumberLast4"),
+      boxes: cardBoxes(view),
     },
     signatures: {
       hirer: signature("hirer"),
@@ -330,24 +316,14 @@ export function requiredSignatureSlots(
   return slots;
 }
 
-function sameMarks(a: readonly DamageMark[], b: readonly DamageMark[]): boolean {
-  const key = (marks: readonly DamageMark[]) =>
-    marks
-      .map((m) => `${m.zone}:${m.type}`)
-      .sort()
-      .join("|");
-  return key(a) === key(b);
-}
-
 /**
  * PATCH body from local state: only fields the Backend lists as editable and
- * whose value changed. An emptied text field sends `null`. The card sends only
- * its last 4 digits — the full number never leaves the browser.
+ * whose value changed. Card metadata is linked through Stripe-hosted UI, never
+ * through Diamond-owned card-number inputs.
  */
 export function buildReviewPatch(
   view: OfficialContractView,
   edits: OfficialContractEdits,
-  extras: Pick<ContractInteractiveState, "cardDigits" | "damageOut"> = {},
 ): OfficialContractReviewPatch {
   const patch: OfficialContractReviewPatch = {};
   if (!view.permissions.canEdit) return patch;
@@ -356,22 +332,6 @@ export function buildReviewPatch(
     const next = raw.replace(/\s+/g, " ").trim();
     if (next === reviewFieldValue(view, key)) continue;
     patch[key] = next === "" ? null : next;
-  }
-  if (extras.cardDigits !== undefined && extras.cardDigits !== null && view.permissions.editableFields.includes("cardNumberLast4")) {
-    const digits = extras.cardDigits.replace(/\D/g, "");
-    const last4 = digits.length >= 4 ? digits.slice(-4) : null;
-    if (digits.length === 0) {
-      if (view.card.last4 !== null) patch.cardNumberLast4 = null;
-    } else if (last4 !== view.card.last4 || digits.length < 12) {
-      patch.cardNumberLast4 = digits.length < 12 ? "INCOMPLETE" : last4;
-    }
-  }
-  if (
-    extras.damageOut !== undefined &&
-    view.permissions.canMarkDamageOut &&
-    !sameMarks(extras.damageOut, view.vehicleOut.damage)
-  ) {
-    patch.damageOut = extras.damageOut.length ? extras.damageOut : null;
   }
   return patch;
 }
@@ -392,7 +352,6 @@ export const officialContractReviewPatchSchema = z
     sponsorName: reviewText(200),
     sponsorIdNumber: reviewText(50),
     cardNumberLast4: z.string().regex(/^\d{4}$/).nullable(),
-    damageOut: z.array(z.object({ zone: z.string(), type: z.string() })).nullable(),
   })
   .partial();
 

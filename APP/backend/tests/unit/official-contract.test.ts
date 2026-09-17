@@ -242,8 +242,10 @@ test("patch schema rejects system-locked fields (mass assignment)", () => {
   assert.equal(OfficialContractReviewPatchSchema.safeParse({}).success, false);
   assert.equal(OfficialContractReviewPatchSchema.safeParse({ hirerName: "  " }).success, false);
   assert.equal(OfficialContractReviewPatchSchema.safeParse({ telephone: "abc" }).success, false);
-  // The review link accepts the payment-card boxes only; the server rejects every other key.
-  assert.deepEqual([...OFFICIAL_CONTRACT_EDITABLE_FIELDS], ["cardNumberLast4"]);
-  assert.equal(OfficialContractReviewPatchSchema.safeParse({ cardNumberLast4: "4242" }).success, true);
+  // The review link is read-only: card metadata comes only from the Stripe-hosted
+  // card-linking webhook (never customer PATCH), so every card key is system-locked.
+  assert.deepEqual([...OFFICIAL_CONTRACT_EDITABLE_FIELDS], []);
+  assert.equal(OfficialContractReviewPatchSchema.safeParse({ cardNumberLast4: "4242" }).success, false, "PAN/CVV/last4 cannot be sent by the review link");
+  assert.equal(OfficialContractReviewPatchSchema.safeParse({ hirerName: "OK", cardNumberLast4: "4242" }).success, false);
   assert.equal(OfficialContractReviewPatchSchema.safeParse({ address: null }).success, true);
 });

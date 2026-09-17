@@ -23,9 +23,8 @@ export interface DamageMark {
 }
 
 export type OfficialContractReviewPatch = Partial<Record<OfficialContractReviewField, string | null>> & {
-  /** Last 4 digits only — the full card number never leaves the browser. */
+  /** Safe Stripe-derived card metadata only. Full PAN/CVV never enter Diamond forms or APIs. */
   cardNumberLast4?: string | null;
-  damageOut?: DamageMark[] | null;
 };
 
 /** Local, unsaved review text values keyed by PATCH field. */
@@ -116,10 +115,18 @@ export interface OfficialContractView {
   permissions: {
     canEdit: boolean;
     editableFields: string[];
-    canMarkDamageOut: boolean;
+    vehicleOut: CustodyCapabilities;
+    vehicleIn: CustodyCapabilities;
     signableSlots: OfficialSignatureSlotKey[];
     canSign: boolean;
     missingRequirements: string[];
   };
   layout: { sections: string[]; infoGrid: string[][][] };
+}
+
+interface CustodyCapabilities {
+  canEditDamage: boolean;
+  canEditMileage: boolean;
+  canEditFuel: boolean;
+  canSign: boolean;
 }

@@ -119,22 +119,31 @@ if (!RUN) {
       assert.equal(bad.statusCode, 422);
     });
 
-    test("review link is read-only except the card boxes: text fields and damage marks rejected; IN damage is staff-only", async () => {
+    test("review link is read-only: personal text fields rejected; card/damage keys are schema-locked", async () => {
       const ctx = await offer();
       await seedReadyIdentity(app, ctx.token);
+      // Schema-valid personal keys are service-locked because the review link is
+      // a check + signature only (editableFields is empty).
       for (const payload of [
         { hirerName: "EDITED" },
         { telephone: "+971 50 000 0000" },
         { sponsorName: "X" },
-        { damageOut: [{ zone: "TOP.HOOD", type: "SCRATCH" }] },
-        { cardNumberLast4: "4817", address: "X" },
       ]) {
         const res = await patch(ctx.token, payload);
         assert.equal(res.statusCode, 403, `${JSON.stringify(payload)} ${res.body}`);
         assert.equal(res.json().error.context.reason, "OFFICIAL_CONTRACT_FIELD_LOCKED");
       }
+      // Card metadata and damage marks no longer exist on the review PATCH: the
+      // schema itself rejects them (mass-assignment guard).
+      for (const payload of [
+        { cardNumberLast4: "4817", address: "X" },
+        { damageOut: [{ zone: "TOP.HOOD", type: "SCRATCH" }] },
+      ]) {
+        const res = await patch(ctx.token, payload);
+        assert.equal(res.statusCode, 422, `${JSON.stringify(payload)} ${res.body}`);
+      }
       const view = (await get(ctx.token)).json().data;
-      assert.deepEqual(view.permissions.editableFields, ["cardNumberLast4"]);
+      assert.deepEqual(view.permissions.editableFields, []);
       assert.equal(view.permissions.canMarkDamageOut, false);
       assert.deepEqual(view.permissions.signableSlots, ["HIRER", "ADDITIONAL_DRIVER", "SPONSOR"]);
 
@@ -148,24 +157,42 @@ if (!RUN) {
       assert.deepEqual(staffIn.json().data.vehicleIn.damage, [{ zone: "FRONT_REAR.BUMPER", type: "BROKEN" }]);
     });
 
-    test("card number: only the last 4 digits are accepted and stored; never in audit or outbox", async () => {
+    test("card boxes are display-only: metadata comes from Stripe-hosted linking; PAN/CVV never enter the review link", async () => {
       const ctx = await offer();
       await seedReadyIdentity(app, ctx.token);
+      // No card key is accepted anywhere on the review link (A4 boxes are display-only).
       assert.equal((await patch(ctx.token, { cardNumberLast4: "4242424242424242" })).statusCode, 422);
-      assert.equal((await patch(ctx.token, { cardNumber: "4242424242424242" })).statusCode, 422);
       assert.equal((await patch(ctx.token, { cardNumberLast4: "42a2" })).statusCode, 422);
+      assert.equal((await patch(ctx.token, { cardNumber: "4242424242424242" })).statusCode, 422);
+      assert.equal((await patch(ctx.token, { cardNumberLast4: "4817" })).statusCode, 422);
 
-      const ok = await patch(ctx.token, { cardNumberLast4: "4817" });
-      assert.equal(ok.statusCode, 200, ok.body);
-      assert.deepEqual(ok.json().data.card, { last4: "4817" });
+      // Stripe-hosted card linking (webhook) is the only writer: safe metadata only.
+      await prisma.contractCardPaymentMethod.create({
+        data: {
+          contractId: ctx.contractId,
+          provider: "stripe",
+          stripeCustomerId: "cus_test_1",
+          stripePaymentMethodId: "pm_test_1",
+          cardBrand: "visa",
+          cardLast4: "4817",
+        },
+      });
 
-      const draft = await prisma.officialContractReviewDraft.findUniqueOrThrow({ where: { contractId: ctx.contractId } });
-      assert.equal(draft.cardNumberLast4, "4817");
+      const view = (await get(ctx.token)).json().data;
+      assert.deepEqual(view.card, { last4: "4817" });
+      assert.equal(JSON.stringify(view).includes("4242424242424242"), false, "no full PAN in the view");
+      assert.equal(JSON.stringify(view).includes("stripePaymentMethodId"), false, "no provider reference leakage");
+      assert.equal(JSON.stringify(view).toLowerCase().includes("cvv"), false);
+
+      const row = await prisma.contractCardPaymentMethod.findUniqueOrThrow({ where: { contractId: ctx.contractId } });
+      assert.equal(row.cardLast4, "4817");
+      assert.equal(row.cardBrand, "visa");
+      assert.equal(row.stripePaymentMethodId, "pm_test_1");
+
       const audit = JSON.stringify(await prisma.auditLog.findMany({ where: { entityId: ctx.contractId } }));
       const outbox = JSON.stringify(await prisma.domainOutboxEvent.findMany({ where: { aggregateId: ctx.contractId } }));
-      assert.equal(audit.includes("4817"), false);
-      assert.equal(outbox.includes("4817"), false);
-      assert.ok(audit.includes("cardNumberLast4"), "field name only");
+      assert.equal(audit.includes("4817"), false, "digits never reach audit");
+      assert.equal(outbox.includes("4817"), false, "digits never reach outbox");
     });
 
     test("signatures: PNG capture/replace/clear, token-scoped stream, lifecycle-locked slots", async () => {
@@ -226,7 +253,17 @@ if (!RUN) {
       assert.deepEqual(res.json().error.context.missing, ["SIGNATURE_HIRER"]);
 
       await putSignature(ctx.token, "hirer");
-      await patch(ctx.token, { cardNumberLast4: "4817" });
+      // Stripe-hosted linking already persisted the safe card reference before signing.
+      await prisma.contractCardPaymentMethod.create({
+        data: {
+          contractId: ctx.contractId,
+          provider: "stripe",
+          stripeCustomerId: "cus_snap_1",
+          stripePaymentMethodId: "pm_snap_1",
+          cardBrand: "mastercard",
+          cardLast4: "4817",
+        },
+      });
       await prisma.officialContractReviewDraft.update({ where: { contractId: ctx.contractId }, data: { sponsorName: "TEST SPONSOR" } });
       const view = (await get(ctx.token)).json().data;
       assert.equal(view.signatures.sponsor.required, true);
@@ -262,7 +299,7 @@ if (!RUN) {
       assert.equal(await prisma.contractPayment.count({ where: { contractId: ctx.contractId } }), 0);
 
       // Locked after signing; the legal content stays frozen.
-      assert.equal((await patch(ctx.token, { cardNumberLast4: "1111" })).statusCode, 409);
+      assert.equal((await patch(ctx.token, { sponsorName: "Y" })).statusCode, 409);
       assert.equal((await putSignature(ctx.token, "hirer")).statusCode, 409);
       assert.equal((await sign(ctx.token)).statusCode, 409);
       await prisma.officialContractReviewDraft.update({ where: { contractId: ctx.contractId }, data: { hirerName: "TAMPERED" } });

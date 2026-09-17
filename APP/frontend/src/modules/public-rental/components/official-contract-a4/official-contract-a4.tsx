@@ -38,14 +38,12 @@ interface OfficialContractA4Props {
   contract: OfficialContractView;
   mode: OfficialContractMode;
   edits?: OfficialContractEdits;
-  cardDigits?: string | null;
   damageOut?: DamageMark[];
   pendingSignatures?: Partial<Record<OfficialSignatureSlot, "DRAWN" | "CLEAR">>;
   invalidFields?: readonly string[];
   /** Image URL for a stored signature (the page shell knows the token). */
   signatureImageUrl?: (slot: OfficialSignatureSlot) => string | null;
   onEdit?: (field: OfficialContractReviewField, value: string) => void;
-  onCardDigits?: (digits: string) => void;
   onDamageOut?: (marks: DamageMark[]) => void;
   onSignature?: (slot: OfficialSignatureSlot, image: Blob | null) => void;
 }
@@ -67,20 +65,17 @@ export function OfficialContractA4({
   contract,
   mode,
   edits,
-  cardDigits,
   damageOut,
   pendingSignatures,
   invalidFields = [],
   signatureImageUrl,
   onEdit,
-  onCardDigits,
   onDamageOut,
   onSignature,
 }: OfficialContractA4Props) {
   const doc = buildOfficialContractDocument(contract, {
     mode,
     edits,
-    cardDigits,
     damageOut,
     pendingSignatures,
   });
@@ -262,8 +257,6 @@ export function OfficialContractA4({
           <div data-invalid={invalidFields.includes("cardNumberLast4") || undefined} className={styles.ccWrap}>
             <CardNumberBoxes
               boxes={doc.card.boxes}
-              editable={doc.card.editable && Boolean(onCardDigits)}
-              onChange={(digits) => onCardDigits?.(digits)}
             />
           </div>
         </div>

@@ -11,6 +11,12 @@ export interface CreateCheckoutInput {
   cancelUrl: string;
 }
 
+export interface CreateCardSetupInput {
+  contractId: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
 export interface CreateCheckoutSuccess {
   ok: true;
   provider: string;
@@ -27,6 +33,17 @@ export interface CreateCheckoutFailure {
 }
 
 export type CreateCheckoutResult = CreateCheckoutSuccess | CreateCheckoutFailure;
+
+export interface CreateCardSetupSuccess {
+  ok: true;
+  provider: string;
+  providerReference: string;
+  providerStatus: string;
+  checkoutUrl: string;
+  checkoutExpiresAt: Date;
+}
+
+export type CreateCardSetupResult = CreateCardSetupSuccess | CreateCheckoutFailure;
 
 export type ProviderPaymentStatus =
   | "PENDING"
@@ -45,6 +62,7 @@ export interface PaymentStatusResult {
 }
 
 export interface ParsedWebhookPaymentEvent {
+  kind: "PAYMENT";
   stripeEventId: string;
   eventType: string;
   providerReference: string;
@@ -54,9 +72,21 @@ export interface ParsedWebhookPaymentEvent {
   currency?: string;
 }
 
+export interface ParsedWebhookCardSetupEvent {
+  kind: "CARD_SETUP";
+  stripeEventId: string;
+  eventType: string;
+  providerReference: string;
+  contractId: string;
+  stripeCustomerId?: string;
+  stripePaymentMethodId: string;
+  cardBrand: string;
+  cardLast4: string;
+}
+
 export interface WebhookVerifySuccess {
   ok: true;
-  event: ParsedWebhookPaymentEvent;
+  event: ParsedWebhookPaymentEvent | ParsedWebhookCardSetupEvent;
 }
 
 export interface WebhookVerifyFailure {
@@ -70,6 +100,7 @@ export interface PaymentProvider {
   readonly name: string;
   readonly configured: boolean;
   createCheckoutSession(input: CreateCheckoutInput): Promise<CreateCheckoutResult>;
+  createCardSetupSession(input: CreateCardSetupInput): Promise<CreateCardSetupResult>;
   getPaymentStatus(providerReference: string): Promise<PaymentStatusResult>;
   verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult>;
 }

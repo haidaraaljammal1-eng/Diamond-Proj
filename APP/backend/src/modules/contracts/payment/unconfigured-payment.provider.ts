@@ -1,6 +1,8 @@
 import type {
   CreateCheckoutInput,
   CreateCheckoutResult,
+  CreateCardSetupInput,
+  CreateCardSetupResult,
   PaymentProvider,
   PaymentStatusResult,
   WebhookVerifyResult,
@@ -11,6 +13,10 @@ export class UnconfiguredPaymentProvider implements PaymentProvider {
   readonly configured = false;
 
   async createCheckoutSession(_input: CreateCheckoutInput): Promise<CreateCheckoutResult> {
+    return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
+  }
+
+  async createCardSetupSession(_input: CreateCardSetupInput): Promise<CreateCardSetupResult> {
     return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
   }
 

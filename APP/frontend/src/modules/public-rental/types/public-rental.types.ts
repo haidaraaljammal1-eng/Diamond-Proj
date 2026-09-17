@@ -133,6 +133,8 @@ export interface PublicRentalContext {
     amount: number | null;
     currency: string;
     providerAvailable: boolean;
+    /** Safe Stripe-derived card reference after free card linking; never PAN/CVV. */
+    cardLast4: string | null;
   };
 }
 
@@ -147,6 +149,13 @@ export interface PublicPaymentContext {
     status: ContractPaymentStatus | null;
     method: ContractPaymentMethod | null;
   };
+  providerAvailable: boolean;
+  cardLast4: string | null;
+}
+
+/** `POST /contracts/rental/:token/card-link` — free Stripe-hosted setup session result. */
+export interface PublicCardSetup {
+  checkoutUrl: string;
   providerAvailable: boolean;
 }
 

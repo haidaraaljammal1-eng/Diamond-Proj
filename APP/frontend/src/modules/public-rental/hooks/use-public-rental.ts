@@ -27,6 +27,8 @@ export function usePublicRental(token: string) {
     payPending: store.payPending,
     statusPending: store.statusPending,
     paymentStatus: store.paymentStatus,
+    cardLinkPending: store.cardLinkPending,
+    cardLinkError: store.cardLinkError,
     linkExpiredDuringPayment: store.linkExpiredDuringPayment,
     load: store.load,
     uploadLicense: store.uploadLicense,
@@ -34,6 +36,7 @@ export function usePublicRental(token: string) {
     submitForm: store.submitForm,
     accept: store.accept,
     startPayment: store.startPayment,
+    linkCard: store.linkCard,
     refreshPaymentStatus: store.refreshPaymentStatus,
   };
 }

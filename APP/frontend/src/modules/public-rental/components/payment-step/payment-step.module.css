@@ -91,6 +91,25 @@
   font-weight: 400;
 }
 
+/* Free Stripe-hosted card linking (no charge) + saved-card state */
+.notice {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--diamond-onyx2);
+  border: 1px solid var(--diamond-line);
+  color: var(--diamond-champagne);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.linkBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .pay {
   margin-top: 16px;
 }

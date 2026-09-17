@@ -155,6 +155,7 @@ model Contract {
   links                ContractLink[]
   acceptance           ContractAcceptance?
   payments             ContractPayment[]
+  cardPaymentMethod    ContractCardPaymentMethod?
   documents            ContractDocument[]
   licenseVerifications DrivingLicenseVerification[]
   passportExtractions  PassportExtraction[]
@@ -176,6 +177,21 @@ model Contract {
   @@index([status])
   @@index([createdAt])
   @@map("contracts")
+}
+
+model ContractCardPaymentMethod {
+  id                    String   @id @default(uuid())
+  contractId            String   @unique
+  contract              Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  provider              String   @default("stripe")
+  stripeCustomerId      String?
+  stripePaymentMethodId String   @unique
+  cardBrand             String
+  cardLast4             String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("contract_card_payment_methods")
 }
 
 model ContractLink {

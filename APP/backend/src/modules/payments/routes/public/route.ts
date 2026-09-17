@@ -39,15 +39,17 @@ export default async function paymentsPublicRoutes(fastify: FastifyInstance) {
           return reply.status(status).send({ error: { code: verified.reason } });
         }
 
-        const outcome = await paymentService.processWebhookEvent(
-          verified.event.stripeEventId,
-          verified.event.eventType,
-          verified.event.paymentId,
-          verified.event.providerReference,
-          verified.event.status,
-          verified.event.amountMinor,
-          verified.event.currency,
-        );
+        const outcome = verified.event.kind === "CARD_SETUP"
+          ? await paymentService.processCardSetupWebhook(verified.event)
+          : await paymentService.processWebhookEvent(
+              verified.event.stripeEventId,
+              verified.event.eventType,
+              verified.event.paymentId,
+              verified.event.providerReference,
+              verified.event.status,
+              verified.event.amountMinor,
+              verified.event.currency,
+            );
 
         if (outcome === "duplicate") {
           return reply.status(200).send({ data: { duplicate: true } });

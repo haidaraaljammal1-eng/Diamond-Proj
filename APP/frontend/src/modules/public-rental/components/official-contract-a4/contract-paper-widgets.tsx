@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ClipboardEvent, type KeyboardEvent } from "react";
+import type { KeyboardEvent } from "react";
 import type { DamageMark, DamageMarkType } from "../../types/official-contract.types";
 import {
   DAMAGE_MARK_LABELS,
@@ -9,7 +9,7 @@ import {
   zoneCenter,
   type DiagramView,
 } from "../../utils/official-contract-damage-zones";
-import { CARD_BOXES, FUEL_LEVELS } from "../../utils/official-contract-document";
+import { FUEL_LEVELS } from "../../utils/official-contract-document";
 
 type FuelLevel = (typeof FUEL_LEVELS)[number];
 import styles from "./official-contract-a4.module.css";
@@ -185,67 +185,15 @@ export function FuelBar({
   );
 }
 
-/** Paper card-number boxes. Digits stay local; the store sends only the last 4. */
-export function CardNumberBoxes({
-  boxes,
-  editable,
-  onChange,
-}: {
-  boxes: string[];
-  editable: boolean;
-  onChange: (digits: string) => void;
-}) {
-  const refs = useRef<Array<HTMLInputElement | null>>([]);
-  const masked = boxes.some((b) => b === "•");
-  const digits = masked ? "" : boxes.join("");
-
-  // Digits stay contiguous: typing past the end appends; clearing a box removes that digit.
-  const setAt = (index: number, value: string) => {
-    const base = masked ? "" : digits;
-    const at = Math.min(index, base.length);
-    onChange(value ? base.slice(0, at) + value + base.slice(at + 1) : base.slice(0, at) + base.slice(at + 1));
-  };
-
-  const paste = (event: ClipboardEvent<HTMLInputElement>) => {
-    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, CARD_BOXES);
-    if (!pasted) return;
-    event.preventDefault();
-    onChange(pasted);
-    refs.current[Math.min(pasted.length, CARD_BOXES - 1)]?.focus();
-  };
-
+/** Paper card-number boxes are display-only; Stripe Elements owns actual card entry. */
+export function CardNumberBoxes({ boxes }: { boxes: string[] }) {
   return (
-    <div className={styles.ccgrid} dir="ltr" role="group" aria-label="Card number">
-      {boxes.map((value, index) =>
-        editable ? (
-          <input
-            key={index}
-            ref={(node) => {
-              refs.current[index] = node;
-            }}
-            className={styles.ccbox}
-            data-group-end={(index + 1) % 4 === 0 || undefined}
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={1}
-            aria-label={`Card digit ${index + 1}`}
-            value={value}
-            onPaste={paste}
-            onChange={(event) => {
-              const char = event.target.value.replace(/\D/g, "").slice(-1);
-              setAt(index, char);
-              if (char) refs.current[index + 1]?.focus();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Backspace" && !value) refs.current[index - 1]?.focus();
-            }}
-          />
-        ) : (
-          <span key={index} className={styles.ccbox} data-group-end={(index + 1) % 4 === 0 || undefined}>
-            {value}
-          </span>
-        ),
-      )}
+    <div className={styles.ccgrid} dir="ltr" role="img" aria-label="Masked card number">
+      {boxes.map((value, index) => (
+        <span key={index} className={styles.ccbox} data-group-end={(index + 1) % 4 === 0 || undefined}>
+          {value}
+        </span>
+      ))}
     </div>
   );
 }
