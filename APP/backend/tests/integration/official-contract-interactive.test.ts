@@ -144,7 +144,18 @@ if (!RUN) {
       }
       const view = (await get(ctx.token)).json().data;
       assert.deepEqual(view.permissions.editableFields, []);
-      assert.equal(view.permissions.canMarkDamageOut, false);
+      assert.deepEqual(view.permissions.vehicleOut, {
+        canEditDamage: false,
+        canEditMileage: false,
+        canEditFuel: false,
+        canSign: false,
+      });
+      assert.deepEqual(view.permissions.vehicleIn, {
+        canEditDamage: false,
+        canEditMileage: false,
+        canEditFuel: false,
+        canSign: false,
+      });
       assert.deepEqual(view.permissions.signableSlots, ["HIRER", "ADDITIONAL_DRIVER", "SPONSOR"]);
 
       const staffIn = await app.inject({
@@ -171,8 +182,8 @@ if (!RUN) {
         data: {
           contractId: ctx.contractId,
           provider: "stripe",
-          stripeCustomerId: "cus_test_1",
-          stripePaymentMethodId: "pm_test_1",
+          stripeCustomerId: `cus_${run}_1`,
+          stripePaymentMethodId: `pm_${run}_1`,
           cardBrand: "visa",
           cardLast4: "4817",
         },
@@ -187,7 +198,7 @@ if (!RUN) {
       const row = await prisma.contractCardPaymentMethod.findUniqueOrThrow({ where: { contractId: ctx.contractId } });
       assert.equal(row.cardLast4, "4817");
       assert.equal(row.cardBrand, "visa");
-      assert.equal(row.stripePaymentMethodId, "pm_test_1");
+      assert.equal(row.stripePaymentMethodId, `pm_${run}_1`);
 
       const audit = JSON.stringify(await prisma.auditLog.findMany({ where: { entityId: ctx.contractId } }));
       const outbox = JSON.stringify(await prisma.domainOutboxEvent.findMany({ where: { aggregateId: ctx.contractId } }));
@@ -258,13 +269,19 @@ if (!RUN) {
         data: {
           contractId: ctx.contractId,
           provider: "stripe",
-          stripeCustomerId: "cus_snap_1",
-          stripePaymentMethodId: "pm_snap_1",
+          stripeCustomerId: `cus_${run}_snap`,
+          stripePaymentMethodId: `pm_${run}_snap`,
           cardBrand: "mastercard",
           cardLast4: "4817",
         },
       });
-      await prisma.officialContractReviewDraft.update({ where: { contractId: ctx.contractId }, data: { sponsorName: "TEST SPONSOR" } });
+      // Sponsor name is staff-recorded (no customer write path on the review link);
+      // the draft row may not exist yet since every customer PATCH key is locked.
+      await prisma.officialContractReviewDraft.upsert({
+        where: { contractId: ctx.contractId },
+        create: { contractId: ctx.contractId, sponsorName: "TEST SPONSOR" },
+        update: { sponsorName: "TEST SPONSOR" },
+      });
       const view = (await get(ctx.token)).json().data;
       assert.equal(view.signatures.sponsor.required, true);
       assert.equal(view.signatures.additionalDriver.required, false);

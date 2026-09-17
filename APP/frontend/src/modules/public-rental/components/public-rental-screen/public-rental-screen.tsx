@@ -73,20 +73,31 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     clearRentalOverlay();
   }, [token, clearRentalOverlay]);
 
-  // After a free Stripe-hosted card-linking redirect (?card=linked|cancelled):
-  // refresh the Backend-derived card state and surface the return outcome once.
+  // After a free Stripe-hosted card-linking redirect, validate the Stripe
+  // Checkout Session server-side before showing linked card state.
   useEffect(() => {
     const outcome = searchParams.get("card");
     if (outcome !== "linked" && outcome !== "cancelled") return;
-    setCardLinkNotice(
-      outcome === "linked" ? t("cardLinkedNotice") : t("cardLinkCancelledNotice"),
-    );
+    const setupSessionId = searchParams.get("setup_session_id");
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("card");
+      url.searchParams.delete("setup_session_id");
       window.history.replaceState(null, "", url.toString());
     }
-    void rental.load(token);
+    if (outcome === "cancelled") {
+      void Promise.resolve().then(() =>
+        setCardLinkNotice(t("payment.cardLinkCancelledNotice")),
+      );
+      void rental.load(token);
+      return;
+    }
+    if (!setupSessionId) {
+      return;
+    }
+    void rental.completeCardLink(setupSessionId).then((ok) => {
+      setCardLinkNotice(ok ? t("payment.cardLinkedNotice") : null);
+    });
     // rental.load and translate are stable; the query param is the trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, token]);

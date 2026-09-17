@@ -32,4 +32,15 @@ export interface PaymentStatusDto {
   contractStatus: string | null;
   purpose?: ContractPaymentPurpose;
   checkoutUrl?: string | null;
+  summary?: {
+    contractNumber: string;
+    vehicle: {
+      displayName: string;
+      plateNumber: string | null;
+    };
+    amount: number;
+    currency: string;
+    cardLast4: string | null;
+    cardBrand: string | null;
+  };
 }

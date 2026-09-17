@@ -4,6 +4,7 @@ import { ApiRequestError } from "@/infrastructure/api/errors";
 import type { ApiErrorResponse, ApiResponse } from "@/infrastructure/api/types";
 import type {
   PublicCardSetup,
+  PublicCardSetupReturn,
   PublicIdentityDraft,
   PublicPaymentAttempt,
   PublicPaymentContext,
@@ -306,6 +307,17 @@ export async function startPublicRentalCardLink(token: string): Promise<PublicCa
   const response = await apiRequest<PublicCardSetup>(
     `${CONTRACTS_PATH}/rental/${token}/card-link`,
     { method: "POST", publicRequest: true },
+  );
+  return response.data;
+}
+
+export async function completePublicRentalCardLink(
+  token: string,
+  setupSessionId: string,
+): Promise<PublicCardSetupReturn> {
+  const response = await apiRequest<PublicCardSetupReturn>(
+    `${CONTRACTS_PATH}/rental/${token}/card-link/return?setupSessionId=${encodeURIComponent(setupSessionId)}`,
+    { publicRequest: true },
   );
   return response.data;
 }

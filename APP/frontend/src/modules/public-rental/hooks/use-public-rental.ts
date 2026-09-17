@@ -37,6 +37,7 @@ export function usePublicRental(token: string) {
     accept: store.accept,
     startPayment: store.startPayment,
     linkCard: store.linkCard,
+    completeCardLink: store.completeCardLink,
     refreshPaymentStatus: store.refreshPaymentStatus,
   };
 }

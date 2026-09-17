@@ -5,6 +5,7 @@ import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
   acceptPublicRental,
+  completePublicRentalCardLink,
   getPublicPaymentStatus,
   getPublicRental,
   startPublicRentalCardLink,
@@ -55,6 +56,7 @@ interface PublicRentalState {
   startPayment: () => Promise<boolean>;
   /** Free Stripe-hosted card linking (no charge): redirects to Stripe setup. */
   linkCard: () => Promise<boolean>;
+  completeCardLink: (setupSessionId: string) => Promise<boolean>;
   refreshPaymentStatus: () => Promise<void>;
   reset: () => void;
 }
@@ -220,6 +222,24 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
         return true;
       }
       await get().load(token);
+      return true;
+    } catch (error) {
+      set({ cardLinkPending: false, cardLinkError: normalizeApiError(error) });
+      return false;
+    }
+  },
+
+  async completeCardLink(setupSessionId: string) {
+    const token = get().token;
+    if (!token) return false;
+    set({ cardLinkPending: true, cardLinkError: null, error: null });
+    try {
+      const result = await completePublicRentalCardLink(token, setupSessionId);
+      if (result.status !== "CONFIRMED") {
+        throw new Error("Card setup was not confirmed");
+      }
+      await get().load(token);
+      set({ cardLinkPending: false, cardLinkError: null });
       return true;
     } catch (error) {
       set({ cardLinkPending: false, cardLinkError: normalizeApiError(error) });

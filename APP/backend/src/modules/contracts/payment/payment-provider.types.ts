@@ -9,12 +9,17 @@ export interface CreateCheckoutInput {
   currency: string;
   successUrl: string;
   cancelUrl: string;
+  savedPaymentMethod?: {
+    stripeCustomerId: string | null;
+    stripePaymentMethodId: string;
+  } | null;
 }
 
 export interface CreateCardSetupInput {
   contractId: string;
   successUrl: string;
   cancelUrl: string;
+  stripeCustomerId?: string | null;
 }
 
 export interface CreateCheckoutSuccess {
@@ -44,6 +49,17 @@ export interface CreateCardSetupSuccess {
 }
 
 export type CreateCardSetupResult = CreateCardSetupSuccess | CreateCheckoutFailure;
+
+export interface CardSetupSessionResult {
+  status: ProviderPaymentStatus;
+  providerStatus?: string;
+  providerReference: string;
+  contractId?: string;
+  stripeCustomerId?: string;
+  stripePaymentMethodId?: string;
+  cardBrand?: string;
+  cardLast4?: string;
+}
 
 export type ProviderPaymentStatus =
   | "PENDING"
@@ -101,6 +117,7 @@ export interface PaymentProvider {
   readonly configured: boolean;
   createCheckoutSession(input: CreateCheckoutInput): Promise<CreateCheckoutResult>;
   createCardSetupSession(input: CreateCardSetupInput): Promise<CreateCardSetupResult>;
+  getCardSetupSession(providerReference: string): Promise<CardSetupSessionResult>;
   getPaymentStatus(providerReference: string): Promise<PaymentStatusResult>;
   verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult>;
 }

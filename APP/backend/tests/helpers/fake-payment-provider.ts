@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type {
+  CardSetupSessionResult,
   CreateCardSetupInput,
   CreateCheckoutInput,
   PaymentProvider,
@@ -37,6 +38,7 @@ export function createFakePaymentProvider(run: string) {
   const paymentRefs = new Map<string, string>();
   const setupSessions = new Map<string, CreateCardSetupInput>();
   const setupRefs = new Map<string, string>();
+  const setupResults = new Map<string, CardSetupSessionResult>();
   let n = 0;
   let eventSeq = 0;
 
@@ -67,6 +69,12 @@ export function createFakePaymentProvider(run: string) {
       const ref = `setu_test_${run}_${n}`;
       setupSessions.set(ref, input);
       setupRefs.set(input.contractId, ref);
+      setupResults.set(ref, {
+        status: "PROCESSING",
+        providerReference: ref,
+        providerStatus: "open",
+        contractId: input.contractId,
+      });
       provider.lastRef = ref;
       provider.lastPaymentId = null;
       return {
@@ -77,6 +85,9 @@ export function createFakePaymentProvider(run: string) {
         checkoutUrl: `https://setup.test/${ref}`,
         checkoutExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
       };
+    },
+    async getCardSetupSession(ref: string) {
+      return setupResults.get(ref) ?? { status: "UNKNOWN", providerReference: ref };
     },
     async getPaymentStatus(ref: string) {
       const input = sessions.get(ref);
@@ -95,7 +106,8 @@ export function createFakePaymentProvider(run: string) {
         if (!body.stripeEventId || !body.providerReference) {
           return { ok: false, reason: "INVALID_SIGNATURE" };
         }
-        if ("contractId" in body && body.stripePaymentMethodId) {
+        if ("contractId" in body) {
+          if (!body.stripePaymentMethodId) return { ok: false, reason: "INVALID_SIGNATURE" };
           return {
             ok: true,
             event: {
@@ -180,6 +192,16 @@ export function createFakePaymentProvider(run: string) {
     }): TestCardSetupPayload {
       const providerReference = input.providerReference ?? setupRefs.get(input.contractId);
       if (!providerReference) throw new Error(`No setup session for contract ${input.contractId}`);
+      setupResults.set(providerReference, {
+        status: "CONFIRMED",
+        providerStatus: "succeeded",
+        providerReference,
+        contractId: input.contractId,
+        stripeCustomerId: input.stripeCustomerId,
+        stripePaymentMethodId: input.stripePaymentMethodId,
+        cardBrand: input.cardBrand,
+        cardLast4: input.cardLast4,
+      });
       return {
         stripeEventId: input.stripeEventId ?? `evt_test_${run}_${++eventSeq}`,
         eventType: "setup_intent.succeeded",
@@ -211,7 +233,7 @@ export function createFakePaymentProvider(run: string) {
 
 export async function sendTestStripeWebhook(
   app: FastifyInstance,
-  payload: TestWebhookPayload,
+  payload: TestWebhookPayload | TestCardSetupPayload,
   signature = TEST_STRIPE_WEBHOOK_SIGNATURE,
 ) {
   return app.inject({

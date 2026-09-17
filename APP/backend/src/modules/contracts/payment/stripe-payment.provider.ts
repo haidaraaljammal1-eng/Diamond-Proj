@@ -63,7 +63,7 @@ export class StripePaymentProvider implements PaymentProvider {
     }
     assertAedCurrency(input.currency);
     const unitAmount = aedToStripeMinorUnits(input.amount);
-    const session = await this.client().checkout.sessions.create({
+    const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
@@ -86,7 +86,12 @@ export class StripePaymentProvider implements PaymentProvider {
           },
         },
       ],
-    });
+    };
+    if (input.savedPaymentMethod?.stripeCustomerId) {
+      params.customer = input.savedPaymentMethod.stripeCustomerId;
+      params.payment_method_collection = "if_required";
+    }
+    const session = await this.client().checkout.sessions.create(params);
     if (!session.url || !session.id) {
       return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
     }
@@ -106,11 +111,21 @@ export class StripePaymentProvider implements PaymentProvider {
 
   async createCardSetupSession(input: CreateCardSetupInput): Promise<CreateCardSetupResult> {
     if (!this.configured) return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
+    const stripe = this.client();
+    const customerId =
+      input.stripeCustomerId ??
+      (
+        await stripe.customers.create({
+          metadata: { contractId: input.contractId, purpose: "CARD_SETUP" },
+        })
+      ).id;
     const session = await this.client().checkout.sessions.create({
       mode: "setup",
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       metadata: { kind: "CARD_SETUP", contractId: input.contractId },
+      client_reference_id: input.contractId,
+      customer: customerId,
       payment_method_types: ["card"],
     });
     if (!session.url || !session.id) return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
@@ -121,6 +136,45 @@ export class StripePaymentProvider implements PaymentProvider {
       providerStatus: session.status ?? "open",
       checkoutUrl: session.url,
       checkoutExpiresAt: session.expires_at ? new Date(session.expires_at * 1000) : new Date(Date.now() + 86400000),
+    };
+  }
+
+  async getCardSetupSession(providerReference: string) {
+    if (!this.configured) return { status: "UNKNOWN" as const, providerReference };
+    const session = await this.client().checkout.sessions.retrieve(providerReference, {
+      expand: ["setup_intent.payment_method"],
+    });
+    const setupIntent =
+      typeof session.setup_intent === "object" && session.setup_intent
+        ? session.setup_intent
+        : null;
+    const paymentMethod =
+      setupIntent && typeof setupIntent.payment_method === "object"
+        ? setupIntent.payment_method
+        : null;
+    const card = paymentMethod?.type === "card" ? paymentMethod.card : null;
+    if (session.status !== "complete" || setupIntent?.status !== "succeeded" || !paymentMethod || !card) {
+      return {
+        status: mapSessionStatus(session.status),
+        providerStatus: setupIntent?.status ?? session.status ?? undefined,
+        providerReference,
+        contractId: session.metadata?.contractId,
+      };
+    }
+    return {
+      status: "CONFIRMED" as const,
+      providerStatus: setupIntent.status,
+      providerReference,
+      contractId: session.metadata?.contractId,
+      stripeCustomerId:
+        typeof setupIntent.customer === "string"
+          ? setupIntent.customer
+          : typeof session.customer === "string"
+            ? session.customer
+            : undefined,
+      stripePaymentMethodId: paymentMethod.id,
+      cardBrand: card.brand,
+      cardLast4: card.last4,
     };
   }
 

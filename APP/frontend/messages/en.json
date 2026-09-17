@@ -933,9 +933,14 @@
     "callback": {
       "title": "Payment status",
       "checking": "Checking payment status…",
-      "success": "Payment confirmed.",
+      "success": "Payment successful",
       "cancelled": "Payment was cancelled.",
-      "failed": "Payment did not complete."
+      "failed": "Payment did not complete.",
+      "contract": "Contract",
+      "vehicle": "Vehicle",
+      "amountPaid": "Amount paid",
+      "card": "Card",
+      "readyForHandover": "Ready for Vehicle Handover / Car-Out"
     }
   },
   "PublicRental": {
@@ -1088,7 +1093,17 @@
       "failed": "The payment did not complete. You can try again.",
       "cancelled": "The payment attempt was cancelled.",
       "confirmed": "Payment confirmed",
-      "linkExpiredDuring": "This rental link has expired. The current payment attempt is still shown. A new payment cannot be started."
+      "linkExpiredDuring": "This rental link has expired. The current payment attempt is still shown. A new payment cannot be started.",
+      "secureStripe": "Secure payment through Stripe",
+      "cardSaved": "Saved card",
+      "cardSavedHint": "Stripe will use this card when available and may ask for authentication.",
+      "linkCard": "Link payment card",
+      "linking": "Linking card...",
+      "linkCardHint": "Link a card securely through Stripe before payment.",
+      "linkCardFailed": "We could not confirm the saved card. Please try linking it again.",
+      "cardLinkedNotice": "Card linked successfully.",
+      "cardLinkCancelledNotice": "Card linking was cancelled.",
+      "completePayment": "Complete Payment"
     },
     "handover": {
       "title": "Payment confirmed",

@@ -8,33 +8,29 @@ import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { writeOutboxEvent } from "src/lib/db/outbox";
 import { runIdempotent, fingerprintIdempotentPayload } from "src/lib/db/idempotency";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
-import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { paginate, parseSort } from "src/lib/http/pagination";
 import { normalizeEmail, normalizePhone } from "src/lib/security/normalize";
 import { resolveStoragePath } from "src/lib/files/storage-key";
 import { env } from "src/config/env";
-import { expiryFromNow, generateOpaqueToken, hashToken } from "src/lib/security/tokens";
+import { hashToken } from "src/lib/security/tokens";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import {
   CONTRACT_CURRENCY,
   CONTRACT_LICENSE_LOCK_NS,
   CONTRACT_PASSPORT_LOCK_NS,
   CONTRACT_OFFICIAL_REVIEW_LOCK_NS,
-  CONTRACT_PAYMENT_LOCK_NS,
   CONTRACT_RECONCILE_LOCK_NS,
   CONTRACT_TERMS_VERSION,
   DRIVING_LICENSE_UPLOAD_MIME,
   INSPECTION_ANGLES,
   OFFICE_DISPLAY_NAME_DEFAULT,
   PASSPORT_UPLOAD_MIME,
-  PAYMENT_STATUS_TOKEN_TTL_SECONDS,
   VEHICLE_RENTAL_LOCK_NS,
 } from "src/modules/contracts/contracts.constants";
 import { allocateContractNumber } from "src/modules/contracts/contracts-number";
 import { assertStatus, assertTransition } from "src/modules/contracts/contracts-status";
 import { buildContractSnapshot } from "src/modules/contracts/contracts-snapshot";
 import {
-  completeRentalLinks,
   completeReturnLinks,
   issueContractLink,
   markLinkUsed,
@@ -1418,11 +1414,14 @@ export function createContractsService(fastify: FastifyInstance) {
     token: string,
     patch: OfficialContractReviewPatch,
   ) {
-    const editable: readonly string[] = OFFICIAL_CONTRACT_EDITABLE_FIELDS;
-    const locked = Object.keys(patch).filter((key) => !editable.includes(key));
-    if (locked.length > 0) throw contractError.officialContractFieldLocked(locked);
     return withTransaction(prisma, async (tx) => {
       const contract = await lockReviewableContract(tx, token);
+
+      // Lifecycle lock (409) takes precedence over field policy (403): once the
+      // agreement is no longer reviewable, every key is locked for that reason.
+      const editable: readonly string[] = OFFICIAL_CONTRACT_EDITABLE_FIELDS;
+      const locked = Object.keys(patch).filter((key) => !editable.includes(key));
+      if (locked.length > 0) throw contractError.officialContractFieldLocked(locked);
 
       const data: Prisma.OfficialContractReviewDraftUncheckedUpdateInput = {};
       for (const [key, value] of Object.entries(patch)) {
@@ -1667,6 +1666,8 @@ export function createContractsService(fastify: FastifyInstance) {
           method: ctx.payment.method,
         },
         providerAvailable: ctx.payment.providerAvailable,
+        cardLast4: ctx.payment.cardLast4 ?? null,
+        cardBrand: ctx.payment.cardBrand ?? null,
       };
     });
   }
@@ -1738,14 +1739,35 @@ export function createContractsService(fastify: FastifyInstance) {
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
     if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+    const saved = await prisma.contractCardPaymentMethod.findUnique({
+      where: { contractId: contract.id },
+    });
     const provider = createPaymentProvider();
     const result = await provider.createCardSetupSession({
       contractId: contract.id,
-      successUrl: `${env.FRONTEND_URL.replace(/\/$/, "")}/en/rental/${token}?card=linked`,
+      stripeCustomerId: saved?.stripeCustomerId ?? null,
+      successUrl: `${env.FRONTEND_URL.replace(/\/$/, "")}/en/rental/${token}?card=linked&setup_session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${env.FRONTEND_URL.replace(/\/$/, "")}/en/rental/${token}?card=cancelled`,
     });
     if (!result.ok) throw contractError.paymentProviderNotConfigured();
     return { checkoutUrl: result.checkoutUrl, providerAvailable: true };
+  }
+
+  async function completeCardLink(token: string, setupSessionId: string) {
+    const link = await resolveContractLink(prisma, token, "RENTAL");
+    const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
+    if (!contract) throw contractError.notFound();
+    if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+    const result = await paymentService.processCardSetupReturn({
+      contractId: contract.id,
+      providerReference: setupSessionId,
+    });
+    return {
+      status: result.status,
+      cardLast4: result.cardLast4,
+      cardBrand: result.cardBrand,
+      providerAvailable: createPaymentProvider().configured,
+    };
   }
 
   async function startReconciliationPayment(contractId: string, actorUserId: number) {
@@ -1950,6 +1972,7 @@ export function createContractsService(fastify: FastifyInstance) {
     getPaymentContext,
     startCardPayment,
     startCardLink,
+    completeCardLink,
     startReconciliationPayment,
     startPostClosePayment,
     startRenewalPaymentPublic,

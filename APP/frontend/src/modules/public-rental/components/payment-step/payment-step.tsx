@@ -63,6 +63,13 @@ export function PaymentStep({
   const inFlight = panel === "processing" || panel === "pending" || payPending;
   const cardLinked = Boolean(context.payment.cardLast4);
   const cardMask = maskCardLast4(context.payment.cardLast4);
+  const cardBrand = context.payment.cardBrand
+    ? context.payment.cardBrand.charAt(0).toUpperCase() + context.payment.cardBrand.slice(1)
+    : t("cardTitle");
+  const rentalPeriod =
+    context.rental.startAt && context.rental.endAt
+      ? `${context.rental.startAt.slice(0, 10)} - ${context.rental.endAt.slice(0, 10)}`
+      : duration;
   const canLink = canStartCardLink({
     providerAvailable: context.payment.providerAvailable,
     cardLinked,
@@ -89,8 +96,9 @@ export function PaymentStep({
       </div>
       <p className={styles.meta}>
         {context.vehicle.displayName}
+        {context.vehicle.plateNumber ? ` · ${context.vehicle.plateNumber}` : ""}
         {" · "}
-        <span dir="ltr">{duration}</span>
+        <span dir="ltr">{rentalPeriod}</span>
       </p>
       <p className={styles.meta}>
         {t("contract")}{" "}
@@ -159,7 +167,7 @@ export function PaymentStep({
           <span className={styles.mark}>C</span>
           <div className={styles.copy}>
             <b>
-              {t("cardSaved")} <span dir="ltr">{cardMask}</span>
+              {t("cardSaved")} <span dir="ltr">{cardBrand} {cardMask}</span>
             </b>
             <span>{t("cardSavedHint")}</span>
           </div>
@@ -196,6 +204,8 @@ export function PaymentStep({
         <p className={styles.dev}>{t("devNote")}</p>
       ) : null}
 
+      <p className={styles.meta}>{t("secureStripe")}</p>
+
       <Button
         type="button"
         className={styles.pay}
@@ -203,7 +213,7 @@ export function PaymentStep({
         loading={payPending}
         onClick={onPay}
       >
-        {canRetryPayment(status) ? t("retry") : t("pay")}
+        {canRetryPayment(status) ? t("retry") : t("completePayment")}
       </Button>
     </Card>
   );

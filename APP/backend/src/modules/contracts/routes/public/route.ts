@@ -13,6 +13,8 @@ import {
   OfficialContractReviewPatchSchema,
   OfficialContractSignSchema,
   OfficialContractViewSchema,
+  PublicCardSetupReturnQuerySchema,
+  PublicCardSetupReturnSchema,
   OfficialSignatureSlotParam,
   OFFICIAL_SIGNATURE_SLOT_PATHS,
   PublicCardSetupSchema,
@@ -333,6 +335,27 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.startCardLink(request.params.token) }),
+  );
+
+  app.get(
+    "/rental/:token/card-link/return",
+    {
+      schema: {
+        summary: "Validate a Stripe card setup return and persist safe card metadata",
+        operationId: "completePublicRentalCardLink",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        querystring: PublicCardSetupReturnQuerySchema,
+        response: { 200: dataResponse(PublicCardSetupReturnSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({
+      data: await contracts.completeCardLink(
+        request.params.token,
+        request.query.setupSessionId,
+      ),
+    }),
   );
 
   app.post(

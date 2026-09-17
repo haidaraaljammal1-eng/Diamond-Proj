@@ -135,6 +135,7 @@ export interface PublicRentalContext {
     providerAvailable: boolean;
     /** Safe Stripe-derived card reference after free card linking; never PAN/CVV. */
     cardLast4: string | null;
+    cardBrand?: string | null;
   };
 }
 
@@ -151,11 +152,19 @@ export interface PublicPaymentContext {
   };
   providerAvailable: boolean;
   cardLast4: string | null;
+  cardBrand: string | null;
 }
 
 /** `POST /contracts/rental/:token/card-link` — free Stripe-hosted setup session result. */
 export interface PublicCardSetup {
   checkoutUrl: string;
+  providerAvailable: boolean;
+}
+
+export interface PublicCardSetupReturn {
+  status: "PROCESSING" | "CONFIRMED" | "FAILED" | "CANCELLED" | "EXPIRED" | "UNKNOWN";
+  cardLast4: string | null;
+  cardBrand: string | null;
   providerAvailable: boolean;
 }
 

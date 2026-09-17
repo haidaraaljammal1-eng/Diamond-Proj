@@ -20,7 +20,6 @@ import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
   sendTestStripeWebhook,
-  TEST_STRIPE_WEBHOOK_SIGNATURE,
 } from "../helpers/fake-payment-provider";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
 
@@ -45,7 +44,7 @@ if (!RUN) {
     let vehicleId = 0;
     let customerId = 0;
     let seq = 0;
-    let payments = installPaymentProvider(run);
+    const payments = installPaymentProvider(run);
 
 
     async function seedLiability(contractId: string) {
@@ -420,6 +419,12 @@ if (!RUN) {
       assert.equal(started.statusCode, 200, started.body);
       assert.equal(started.json().data.providerAvailable, true);
       assert.ok(started.json().data.checkoutUrl.includes("https://setup.test/"));
+      assert.ok(
+        payments.setupSessionFor(payments.refForCardSetup(contractId)!)?.successUrl.includes(
+          "setup_session_id={CHECKOUT_SESSION_ID}",
+        ),
+        "Stripe setup return must carry the Checkout Session id",
+      );
       assert.ok(payments.refForCardSetup(contractId), "setup session reference exists");
       assert.equal(
         await prisma.contractPayment.count({ where: { contractId } }),
@@ -427,32 +432,52 @@ if (!RUN) {
         "linking a card must not create a payment attempt or charge",
       );
 
-      // 2. Stripe completes the setup -> the webhook persists safe metadata only.
+      // 2. Stripe completes setup and the browser return validates the Checkout
+      // Session server-side before any webhook arrives.
       const event = payments.buildCardSetupWebhookEvent({
         contractId,
-        stripeCustomerId: "cus_link_1",
-        stripePaymentMethodId: "pm_link_1",
+        stripeCustomerId: `cus_${run}_link`,
+        stripePaymentMethodId: `pm_${run}_link`,
         cardBrand: "visa",
         cardLast4: "4817",
       });
+      const returned = await app.inject({
+        method: "GET",
+        url: `/contracts/rental/${rentalToken}/card-link/return?setupSessionId=${event.providerReference}`,
+      });
+      assert.equal(returned.statusCode, 200, returned.body);
+      assert.equal(returned.json().data.status, "CONFIRMED");
+      assert.equal(returned.json().data.cardLast4, "4817");
+      const refreshed = await app.inject({
+        method: "GET",
+        url: `/contracts/rental/${rentalToken}/card-link/return?setupSessionId=${event.providerReference}`,
+      });
+      assert.equal(refreshed.statusCode, 200, refreshed.body);
+      assert.equal(refreshed.json().data.cardLast4, "4817");
+
+      // 3. The webhook converges idempotently on the same safe metadata.
       const webhookRes = await sendTestStripeWebhook(app, event);
       assert.equal(webhookRes.statusCode, 200, webhookRes.body);
       const card = await prisma.contractCardPaymentMethod.findUniqueOrThrow({ where: { contractId } });
       assert.equal(card.cardBrand, "visa");
       assert.equal(card.cardLast4, "4817");
-      assert.equal(card.stripePaymentMethodId, "pm_link_1");
-      assert.equal(card.stripeCustomerId, "cus_link_1");
+      assert.equal(card.stripePaymentMethodId, `pm_${run}_link`);
+      assert.equal(card.stripeCustomerId, `cus_${run}_link`);
       const stored = JSON.stringify(card);
       assert.equal(stored.includes("4242424242424242"), false, "no full PAN stored");
       assert.equal(stored.toLowerCase().includes("cvc"), false, "no CVC stored");
 
-      // 3. Public surfaces expose only the masked reference.
+      // 4. Public surfaces expose only the masked reference and reload without
+      // the generic public error.
       const ctx = await app.inject({ method: "GET", url: `/contracts/rental/${rentalToken}` });
+      assert.equal(ctx.statusCode, 200, ctx.body);
       assert.equal(ctx.json().data.payment.cardLast4, "4817");
+      assert.equal(ctx.json().data.payment.cardBrand, "visa");
       const official = await app.inject({
         method: "GET",
         url: `/contracts/rental/${rentalToken}/official-contract`,
       });
+      assert.equal(official.statusCode, 200, official.body);
       assert.deepEqual(official.json().data.card, { last4: "4817" });
       assert.equal(official.body.includes("stripePaymentMethodId"), false, "no provider reference leaked");
       assert.equal(official.body.includes("4242424242424242"), false, "no full PAN in the contract view");

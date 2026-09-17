@@ -136,6 +136,7 @@ export function toPublicRentalContext(
       // Safe Stripe-derived card reference (never PAN/CVV). Shows the saved
       // card state after the free Stripe-hosted card-linking step.
       cardLast4: row.cardPaymentMethod?.cardLast4 ?? null,
+      cardBrand: row.cardPaymentMethod?.cardBrand ?? null,
     },
   };
 }

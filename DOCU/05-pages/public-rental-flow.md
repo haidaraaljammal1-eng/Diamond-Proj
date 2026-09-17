@@ -100,13 +100,15 @@ Expired token → `CONTRACT_LINK_EXPIRED` on GET and all mutating customer actio
 
 `ContractPayment` is reused (no parallel attempt model). Statuses: `PENDING | PROCESSING | CONFIRMED | FAILED | CANCELLED`.
 
-`PaymentProvider`: `createPayment`, `getPaymentStatus`, `verifyWebhook`. `StripePaymentProvider` is a boundary only — no Stripe SDK, no charges, no fake success. `PAYMENT_PROVIDER=none|stripe`. Keys optional; boot succeeds. Unconfigured POST → `PAYMENT_PROVIDER_NOT_CONFIGURED`; Contract stays `SIGNED`; no payment row.
+`PaymentProvider`: creates Stripe Checkout sessions, checks provider status, validates Stripe-hosted card setup returns, and verifies webhooks. `PAYMENT_PROVIDER=none|stripe`. Keys optional; boot succeeds. Unconfigured POST → `PAYMENT_PROVIDER_NOT_CONFIGURED`; Contract stays `SIGNED`; no payment row.
 
 Amount and currency are re-read from Contract. The public POST body does not accept amount or duration.
 
 Eligibility: valid link, `SIGNED`, VALID license, no active PENDING/PROCESSING attempt, amount > 0, provider configured. One active attempt is enforced with `withTransaction` + advisory lock `contract_payment`. `runIdempotent` on `Idempotency-Key` (same key replays; different fingerprint → `IDEMPOTENCY_KEY_CONFLICT`). PROCESSING/PENDING block a new attempt (`PAYMENT_ALREADY_PROCESSING`). FAILED or CANCELLED allow a new attempt with a new key. UNKNOWN provider status stays PROCESSING/PENDING (never auto-FAILED).
 
 A success URL / redirect is **not** payment proof. Public clients cannot set `CONFIRMED` or `PAID`. Stripe webhook (primary) and `GET /contracts/payments/status/:statusToken` (poll fallback) may confirm; then `SIGNED → PAID`. Staff manual `POST /contracts/:id/payment/confirm` is disabled in V1 (`MANUAL_PAYMENT_DISABLED`). See `DOCU/05-pages/payments-backend.md`.
+
+Card linking uses Stripe Checkout setup mode before payment. `POST /contracts/rental/:token/card-link` returns a hosted setup URL. Stripe returns to `/rental/:token?card=linked&setup_session_id={CHECKOUT_SESSION_ID}`; the frontend then calls `GET /contracts/rental/:token/card-link/return?setupSessionId=...`. The backend resolves the public token, retrieves the Checkout Session/SetupIntent from Stripe, verifies it belongs to the same Contract, and persists only `stripeCustomerId`, `stripePaymentMethodId`, `cardBrand`, and `cardLast4`. Refreshing the return is idempotent. The browser never supplies a PaymentMethod id directly.
 
 If the Rental link expires while an attempt is PROCESSING/PENDING, `GET /contracts/payments/status/:statusToken` still resolves it. The status token is random, returned once, stored hashed, read-only, scoped to one `ContractPayment`, TTL 7 days, and cannot create payments or expose PII beyond `{ status, contractStatus }`.
 
@@ -130,6 +132,8 @@ Prefix `/contracts`. `public: true` (no staff JWT).
 | POST | `/contracts/rental/:token/form` |
 | POST | `/contracts/rental/:token/accept` |
 | GET | `/contracts/rental/:token/payment` |
+| POST | `/contracts/rental/:token/card-link` |
+| GET | `/contracts/rental/:token/card-link/return?setupSessionId=...` |
 | POST | `/contracts/rental/:token/payment` |
 | GET | `/contracts/payments/status/:statusToken` |
 

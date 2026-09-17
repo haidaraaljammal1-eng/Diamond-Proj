@@ -20,6 +20,10 @@ export class UnconfiguredPaymentProvider implements PaymentProvider {
     return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
   }
 
+  async getCardSetupSession() {
+    return { status: "UNKNOWN" as const, providerReference: "" };
+  }
+
   async getPaymentStatus(_providerReference: string): Promise<PaymentStatusResult> {
     return { status: "UNKNOWN" };
   }

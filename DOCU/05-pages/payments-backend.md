@@ -2,6 +2,8 @@
 
 Diamond V1 customer payments use **Stripe Checkout only**. Money is collected only after a verified provider confirmation (webhook primary, status poll fallback). There is no manual staff confirmation and no fake runtime success.
 
+Customers may first link a card through Stripe Checkout setup mode. The browser returns only a Checkout Session id; the backend retrieves the Stripe Session/SetupIntent, verifies the Contract metadata, and stores safe card metadata (`stripeCustomerId`, `stripePaymentMethodId`, brand, last4). Later rental Checkout prefers the saved Stripe customer when available, while Stripe still owns any 3DS/SCA customer action.
+
 ## Model
 
 `ContractPayment` rows are provider attempts tied to an obligation:
@@ -27,6 +29,8 @@ Settlement linkage:
 | Route | Auth | Purpose |
 |-------|------|---------|
 | `POST /contracts/rental/:token/payment` | Public token | Start rental checkout |
+| `POST /contracts/rental/:token/card-link` | Public token | Start card setup checkout |
+| `GET /contracts/rental/:token/card-link/return` | Public token | Validate setup return and persist safe card metadata |
 | `GET /contracts/payments/status/:statusToken` | Public token | Poll attempt status |
 | `POST /contracts/renew/:token/payment` | Public token | Start renewal checkout |
 | `POST /contracts/:id/reconciliation/payment` | `contracts.reconcile` | Reconciliation checkout |

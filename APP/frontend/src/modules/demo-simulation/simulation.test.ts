@@ -103,6 +103,7 @@ const realContext: PublicRentalContext = {
     amount: 3500,
     currency: "AED",
     providerAvailable: false,
+    cardLast4: null,
   },
 };
 

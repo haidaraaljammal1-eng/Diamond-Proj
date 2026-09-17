@@ -544,6 +544,7 @@ export const PublicRentalContextSchema = z.object({
     providerAvailable: z.boolean(),
     /** Safe Stripe-derived card reference after free card linking; never PAN/CVV. */
     cardLast4: z.string().nullable().optional(),
+    cardBrand: z.string().nullable().optional(),
   }),
 });
 
@@ -562,6 +563,8 @@ export const PublicPaymentContextSchema = z.object({
     method: ContractPaymentMethodSchema.nullable(),
   }),
   providerAvailable: z.boolean(),
+  cardLast4: z.string().regex(/^\d{4}$/).nullable(),
+  cardBrand: z.string().nullable(),
 });
 
 export const PaymentCheckoutSchema = z.object({
@@ -591,11 +594,35 @@ export const PublicCardSetupSchema = z.object({
   providerAvailable: z.boolean(),
 });
 
+export const PublicCardSetupReturnQuerySchema = z.object({
+  setupSessionId: z.string().min(8).max(255),
+});
+
+export const PublicCardSetupReturnSchema = z.object({
+  status: z.enum(["PROCESSING", "CONFIRMED", "FAILED", "CANCELLED", "EXPIRED", "UNKNOWN"]),
+  cardLast4: z.string().regex(/^\d{4}$/).nullable(),
+  cardBrand: z.string().nullable(),
+  providerAvailable: z.boolean(),
+});
+
 export const PublicPaymentStatusSchema = z.object({
   status: ContractPaymentStatusSchema,
   contractStatus: ContractStatusSchema.nullable(),
   purpose: z.enum(["RENTAL", "RENEWAL", "RECONCILIATION", "POST_CLOSE_RECEIVABLE"]).optional(),
   checkoutUrl: z.string().url().nullable().optional(),
+  summary: z
+    .object({
+      contractNumber: z.string(),
+      vehicle: z.object({
+        displayName: z.string(),
+        plateNumber: z.string().nullable(),
+      }),
+      amount: z.number().int(),
+      currency: z.string(),
+      cardLast4: z.string().regex(/^\d{4}$/).nullable(),
+      cardBrand: z.string().nullable(),
+    })
+    .optional(),
 });
 
 export const ContractPaymentPurposeSchema = z.enum([
