@@ -946,9 +946,34 @@
     "retry": "Try again",
     "progress": {
       "label": "Rental steps",
-      "license": "License Verification",
-      "contract": "Rental Contract",
-      "payment": "Payment"
+      "license": "Document Verification",
+      "contract": "Contract Review",
+      "payment": "Payment",
+      "signature": "Signature"
+    },
+    "review": {
+      "title": "Official Contract Review",
+      "instructionsInteractive": "Review your official rental agreement. You can correct your personal details, mark existing vehicle damage on the diagrams, enter your card number and sign directly on the contract.",
+      "instructionsReadOnly": "Review your official rental agreement.",
+      "instructionsSigned": "Your official rental agreement is signed.",
+      "loading": "Loading your rental agreement…",
+      "save": "Save Changes",
+      "saving": "Saving…",
+      "saved": "Your changes have been saved.",
+      "saveFailed": "Your changes could not be saved. Please try again.",
+      "invalidFields": "Please check the highlighted fields.",
+      "sign": "Sign Contract",
+      "signing": "Signing…",
+      "signFailed": "The contract could not be signed. Please try again.",
+      "missingSignatures": "Please sign: {slots}.",
+      "continue": "Continue",
+      "signatureSlots": {
+        "hirer": "Hirer Signature",
+        "additionalDriver": "Additional Driver Signature",
+        "sponsor": "Sponsor Signature",
+        "vehicleOutHirer": "Vehicle OUT Hirer Signature",
+        "vehicleInHirer": "Vehicle IN Hirer Signature"
+      }
     },
     "summary": {
       "title": "Rental summary",
@@ -982,6 +1007,31 @@
       "unavailableBody": "License verification cannot continue right now. Please contact the rental office.",
       "ocrDevNote": "OCR provider not configured",
       "invalidFile": "Please choose a JPEG or PNG image."
+    },
+    "passport": {
+      "title": "Passport",
+      "locked": "Available after your driving license is verified.",
+      "intro": "Capture the passport information page clearly — the page with your photo and details.",
+      "capture": "Take Passport Photo",
+      "retake": "Retake Passport",
+      "formats": "JPEG or PNG — the information page only",
+      "previewAlt": "Passport preview",
+      "uploading": "Uploading passport photo...",
+      "processing": "Reading passport details...",
+      "readyTitle": "Passport details captured",
+      "fullName": "Full name",
+      "passportNumber": "Passport number",
+      "nationality": "Nationality",
+      "notRecognizedTitle": "Passport not recognized",
+      "notRecognizedBody": "This does not look like a passport information page. Please retake a photo of the page with your photo and details.",
+      "failedTitle": "Passport could not be read",
+      "failedBody": "The passport details could not be read clearly. Please retake a clearer photo.",
+      "unavailableTitle": "Passport processing is currently unavailable.",
+      "unavailableBody": "Please try again later.",
+      "ocrDevNote": "Document OCR provider not configured",
+      "invalidFile": "Please choose a JPEG or PNG image.",
+      "continue": "Continue to contract review",
+      "continueHint": "Both your driving license and passport are required to continue."
     },
     "contract": {
       "numberLabel": "Contract Number:",
@@ -1046,12 +1096,12 @@
     },
     "link": {
       "CONTRACT_LINK_EXPIRED": {
-        "title": "This rental link has expired",
-        "body": "Please contact the rental office for a new rental link."
+        "title": "This link has expired.",
+        "body": "Please contact the rental office for a new link."
       },
       "CONTRACT_LINK_INVALID": {
-        "title": "This rental link is not valid",
-        "body": "Please contact the rental office for a new rental link."
+        "title": "This link is invalid.",
+        "body": "Please contact the rental office for a new link."
       },
       "CONTRACT_LINK_USED": {
         "title": "This rental link has already been used",
@@ -1073,6 +1123,11 @@
       "DRIVING_LICENSE_UNREADABLE": "The license could not be read clearly. Please retake the photo.",
       "DRIVING_LICENSE_REVIEW_REQUIRED": "The license needs review. Please upload a clearer photo.",
       "DRIVING_LICENSE_EXPIRED": "The driving license is expired and cannot be used to continue.",
+      "PASSPORT_LICENSE_REQUIRED": "Please verify a valid driving license before the passport.",
+      "CONTRACT_IDENTITY_NOT_READY": "Please complete driving license and passport verification first.",
+      "OFFICIAL_CONTRACT_INCOMPLETE": "Please complete the required contract details and signatures.",
+      "OFFICIAL_CONTRACT_REVIEW_LOCKED": "This contract can no longer be changed.",
+      "OFFICIAL_SIGNATURE_SLOT_UNAVAILABLE": "This signature is not available at this stage.",
       "PUBLIC_RENTAL_FORM_INCOMPLETE": "Complete your personal details to continue.",
       "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE": "The contract cannot be accepted until the form and license are complete.",
       "PAYMENT_PROVIDER_NOT_CONFIGURED": "Online card payment is currently unavailable.",
@@ -1420,6 +1475,10 @@
       "valid": "Valid",
       "expired": "Expired",
       "unreadable": "Unreadable"
+    },
+    "passport": {
+      "ready": "Passport ready",
+      "notRecognized": "Not recognized"
     },
     "contract": {
       "fill": "Fill demo customer"

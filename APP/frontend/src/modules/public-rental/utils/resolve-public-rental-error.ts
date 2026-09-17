@@ -25,9 +25,19 @@ export function resolvePublicRentalErrorMessage(
   return t("error.generic");
 }
 
+/**
+ * On a public link, a bare auth code without a reason still describes the
+ * link itself — never a staff session — so it renders the link error page.
+ */
+const PUBLIC_LINK_CODE_REASONS: Record<string, string> = {
+  TOKEN_INVALID: "CONTRACT_LINK_INVALID",
+  TOKEN_EXPIRED: "CONTRACT_LINK_EXPIRED",
+};
+
 export function publicRentalErrorReason(
   error: ApiRequestError | null,
 ): string | null {
   if (!error) return null;
-  return typeof error.context?.reason === "string" ? error.context.reason : null;
+  if (typeof error.context?.reason === "string") return error.context.reason;
+  return PUBLIC_LINK_CODE_REASONS[error.code] ?? null;
 }

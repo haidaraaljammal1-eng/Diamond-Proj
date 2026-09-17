@@ -13,6 +13,8 @@ import {
   ContractLinkIssuedSchema,
   ContractListItemSchema,
   CreateOfferSchema,
+  OfficialContractStaffTermsSchema,
+  OfficialContractViewSchema,
   ListContractsQuerySchema,
   PaymentCheckoutSchema,
   ReconcileSchema,
@@ -106,6 +108,34 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       });
       reply.status(201);
       return { data: contract };
+    },
+  );
+
+  app.patch(
+    "/:id/official-contract/terms",
+    {
+      schema: {
+        summary: "Set staff-owned official contract terms",
+        description:
+          "Plate Code, contract-visible Notes, included km per day, extra-km rate (before signing) and Vehicle IN damage marks. Customers see these read-only.",
+        operationId: "updateOfficialContractTerms",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_MANAGE],
+        params: ContractIdParam,
+        body: OfficialContractStaffTermsSchema,
+        response: { 200: dataResponse(OfficialContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const result = await contracts.updateOfficialContractTerms(request.params.id, request.body);
+      request.setAudit({
+        action: "contracts.official_contract_terms",
+        entityType: "contract",
+        entityId: request.params.id,
+        metadata: { fields: result.fields },
+      });
+      return { data: result.view };
     },
   );
 

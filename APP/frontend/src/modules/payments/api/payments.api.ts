@@ -8,6 +8,7 @@ export async function getPublicPaymentStatus(
 ): Promise<PaymentStatusDto> {
   const response = await apiRequest<PaymentStatusDto>(
     `${CONTRACTS_PATH}/payments/status/${encodeURIComponent(statusToken)}`,
+    { publicRequest: true },
   );
   return response.data;
 }

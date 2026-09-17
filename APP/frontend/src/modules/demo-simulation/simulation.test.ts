@@ -4,9 +4,13 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { publicRentalFormSchema } from "../public-rental/schemas/public-rental-form.schema.ts";
 import type { PublicRentalContext } from "../public-rental/types/public-rental.types.ts";
+import type { OfficialContractView } from "../public-rental/types/official-contract.types.ts";
+import { canContinueFromIdentity, passportPanelFromState } from "../public-rental/utils/passport-view.ts";
+import { withNormalizedIdentity } from "../public-rental/utils/official-contract-identity.ts";
 import {
   DEMO_CUSTOMER,
   DEMO_LICENSE_VALID,
+  DEMO_PASSPORT_READY,
   DEMO_PAYMENT_REFERENCE,
   DEMO_TARS_PRESETS,
 } from "./simulation.fixtures.ts";
@@ -16,6 +20,7 @@ import {
   applyRentalSimulation,
   applyTarsSimulation,
   licenseSimulationResult,
+  passportSimulationResult,
   paymentSimulationPhase,
   shouldHoldLicenseStage,
 } from "./simulation.utils.ts";
@@ -32,6 +37,12 @@ const idle: SimulationSnapshot = {
     status: null,
     licenseNumber: null,
     expiryDate: null,
+  },
+  passport: {
+    processing: false,
+    scenario: "ready",
+    status: null,
+    fields: null,
   },
   customer: null,
   formPending: false,
@@ -80,6 +91,11 @@ const realContext: PublicRentalContext = {
     licenseNumberMasked: null,
     expiryDate: null,
     confidence: null,
+  },
+  identity: {
+    licenseStatus: "LICENSE_INVALID",
+    passport: { status: "REQUIRED", fields: null },
+    identityReady: false,
   },
   payment: {
     status: null,
@@ -144,19 +160,22 @@ describe("applyRentalSimulation", () => {
 });
 
 describe("license simulation", () => {
-  it("VALID produces local verification and CONTRACT step", () => {
+  it("VALID alone verifies the license but, like the Backend, does not open the contract", () => {
     const result = licenseSimulationResult("valid");
     assert.equal(result.license.status, "VALID");
     assert.equal(result.license.licenseNumber, DEMO_LICENSE_VALID.licenseNumber);
-    assert.equal(result.flowStep, "CONTRACT");
+    assert.equal(result.flowStep, null);
     const next = applyRentalSimulation(realContext, {
       ...idle,
       active: true,
       license: result.license,
       flowStep: result.flowStep,
     });
-    assert.equal(next.flow.step, "CONTRACT");
     assert.equal(next.licenseVerification.status, "VALID");
+    assert.equal(next.identity.licenseStatus, "LICENSE_VALID");
+    assert.equal(next.identity.identityReady, false);
+    assert.equal(next.flow.step, "LICENSE_VERIFICATION");
+    assert.equal(canContinueFromIdentity(next.identity.identityReady, next.flow.step), false);
   });
 
   it("EXPIRED stays on license verification", () => {
@@ -182,6 +201,106 @@ describe("license simulation", () => {
     };
     assert.equal(shouldHoldLicenseStage(snapshot, null, "contract"), true);
     assert.equal(shouldHoldLicenseStage(snapshot, "contract", "contract"), false);
+  });
+});
+
+describe("passport simulation", () => {
+  const licensed = (extra: Partial<SimulationSnapshot> = {}): SimulationSnapshot => ({
+    ...idle,
+    active: true,
+    license: licenseSimulationResult("valid").license,
+    ...extra,
+  });
+
+  it("READY yields the normalized synthetic passport result", () => {
+    const passport = passportSimulationResult("ready");
+    assert.equal(passport.status, "READY");
+    assert.equal(passport.fields?.fullName, "DEMO CUSTOMER");
+    assert.equal(passport.fields?.passportNumber, "P1234567");
+    assert.equal(passport.fields?.nationality, "United Arab Emirates");
+    assert.deepEqual(Object.keys(passport.fields ?? {}).sort(), Object.keys(realContext.identity.passport.fields ?? {
+      fullName: null, passportNumber: null, nationality: null, dateOfBirth: null, sex: null,
+      passportIssueDate: null, passportExpiryDate: null, issuingCountry: null,
+    }).sort());
+  });
+
+  it("VALID license + READY passport → identityReady, CONTRACT step, Continue enabled", () => {
+    const next = applyRentalSimulation(realContext, licensed({ passport: passportSimulationResult("ready") }));
+    assert.equal(next.identity.licenseStatus, "LICENSE_VALID");
+    assert.equal(next.identity.passport.status, "READY");
+    assert.equal(next.identity.passport.fields?.fullName, DEMO_PASSPORT_READY.fullName);
+    assert.equal(next.identity.identityReady, true);
+    assert.equal(next.flow.step, "CONTRACT");
+    assert.equal(canContinueFromIdentity(next.identity.identityReady, next.flow.step), true);
+    assert.equal(
+      passportPanelFromState({ licenseStatus: next.licenseVerification.status, passportStatus: next.identity.passport.status, phase: "idle" }),
+      "ready",
+    );
+    // Commercial and vehicle context still come from the Backend.
+    assert.equal(next.vehicle.plateNumber, realContext.vehicle.plateNumber);
+    assert.equal(next.rental.rentalDays, realContext.rental.rentalDays);
+  });
+
+  it("retake with a not-recognized result revokes readiness; expired license blocks too", () => {
+    const retake = applyRentalSimulation(realContext, licensed({ passport: passportSimulationResult("notRecognized") }));
+    assert.equal(retake.identity.identityReady, false);
+    assert.equal(retake.flow.step, "LICENSE_VERIFICATION");
+
+    const expired = applyRentalSimulation(realContext, {
+      ...idle,
+      active: true,
+      license: licenseSimulationResult("expired").license,
+      flowStep: licenseSimulationResult("expired").flowStep,
+      passport: passportSimulationResult("ready"),
+    });
+    assert.equal(expired.identity.identityReady, false);
+    assert.equal(canContinueFromIdentity(expired.identity.identityReady, expired.flow.step), false);
+  });
+
+  it("no overlay leaves the real Backend identity untouched (real mode unavailable state)", () => {
+    const unavailable = {
+      ...realContext,
+      identity: { ...realContext.identity, passport: { status: "PROVIDER_UNAVAILABLE" as const, fields: null } },
+    };
+    const next = applyRentalSimulation(unavailable, { ...idle, active: false });
+    assert.equal(next.identity, unavailable.identity);
+    assert.equal(next.identity.passport.status, "PROVIDER_UNAVAILABLE");
+  });
+
+  it("official contract review receives the simulated identity through the normalized shape", () => {
+    const ctx = applyRentalSimulation(realContext, licensed({ passport: passportSimulationResult("ready") }));
+    const empty = {
+      hirer: { name: null, nationality: null, passportNumber: null, address: null, telephone: null, driverLicenseNumber: null, driverLicenseExpiryDate: null },
+      identity: { identityReady: false },
+      contract: { status: "AWAITING" },
+      permissions: { canEdit: false, canMarkDamageOut: false, editableFields: ["hirerName"], signableSlots: [] },
+    } as unknown as OfficialContractView;
+    const view = withNormalizedIdentity(empty, ctx);
+    assert.equal(view.hirer.name, "DEMO CUSTOMER");
+    assert.equal(view.hirer.passportNumber, "P1234567");
+    assert.equal(view.hirer.nationality, "United Arab Emirates");
+    assert.equal(view.hirer.driverLicenseNumber, DEMO_LICENSE_VALID.licenseNumber);
+    assert.equal(view.identity.identityReady, true);
+
+    const reviewed = withNormalizedIdentity(
+      { ...empty, hirer: { ...empty.hirer, name: "REVIEWED NAME" } },
+      ctx,
+    );
+    assert.equal(reviewed.hirer.name, "REVIEWED NAME", "Backend-resolved values are never replaced");
+  });
+
+  it("is isolated: no API import, no Backend call, button hidden when disabled", () => {
+    for (const file of ["simulation.store.ts", "simulation.utils.ts", "simulation.fixtures.ts"]) {
+      const source = readFileSync(path.join(import.meta.dirname, file), "utf8");
+      assert.equal(/\/api\/|apiRequest|fetch\(/.test(source), false, file);
+    }
+    assert.equal(isDemoSimulationEnabled(undefined), false);
+    assert.equal(isDemoSimulationEnabled("false"), false);
+    const screen = readFileSync(
+      path.join(import.meta.dirname, "../public-rental/components/public-rental-screen/public-rental-screen.tsx"),
+      "utf8",
+    );
+    assert.ok(screen.includes('<SimulationButton surface="passport" />'));
   });
 });
 
@@ -300,12 +419,14 @@ describe("reset and persistence", () => {
       ...idle,
       active: true,
       ...licenseSimulationResult("valid"),
+      passport: passportSimulationResult("ready"),
       tarsPreset: "synced",
     };
     const simulated = applyRentalSimulation(realContext, overlay);
     assert.equal(simulated.flow.step, "CONTRACT");
     const restored = applyRentalSimulation(realContext, idle);
     assert.equal(restored.flow.step, "LICENSE_VERIFICATION");
+    assert.equal(restored.identity.identityReady, false);
     assert.equal(restored.licenseVerification.status, "PROVIDER_UNAVAILABLE");
   });
 
@@ -332,7 +453,7 @@ describe("no backend mutation from simulation", () => {
     assert.equal(shouldSkipRentalMutation(false), false);
   });
 
-  it("public rental screen intercepts OCR, form, accept, and payment", () => {
+  it("public rental screen intercepts OCR, contract review saves, and payment", () => {
     const source = readFileSync(
       path.join(
         import.meta.dirname,
@@ -341,10 +462,13 @@ describe("no backend mutation from simulation", () => {
       "utf8",
     );
     assert.ok(source.includes("shouldSkipRentalMutation"));
-    assert.ok(source.includes("simulateFormSubmit"));
-    assert.ok(source.includes("simulateAccept"));
+    assert.ok(source.includes("simulatePassport"));
+    assert.ok(source.includes("persistEdits={!shouldSkipRentalMutation(simulation.active)}"));
     assert.ok(source.includes("simulatePayment"));
     assert.ok(source.includes("uploadLicense"));
+    // Official Contract Review replaced the legacy customer form + accept on this screen.
+    assert.equal(source.includes("submitForm"), false);
+    assert.equal(source.includes("rental.accept"), false);
   });
 
   it("TARS components add no POST, no Retry, and no execute control", () => {

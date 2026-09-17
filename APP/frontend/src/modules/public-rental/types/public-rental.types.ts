@@ -12,6 +12,58 @@ export type DrivingLicenseVerificationStatus =
   | "REVIEW_REQUIRED"
   | "PROVIDER_UNAVAILABLE";
 
+/** Provider-neutral identity states from the backend. No OCR vendor appears here. */
+export type IdentityLicenseStatus =
+  | "LICENSE_REQUIRED"
+  | "LICENSE_PROCESSING"
+  | "LICENSE_VALID"
+  | "LICENSE_INVALID";
+
+export type PublicPassportStatus =
+  | "REQUIRED"
+  | "PROCESSING"
+  | "READY"
+  | "NOT_RECOGNIZED"
+  | "FAILED"
+  | "PROVIDER_UNAVAILABLE";
+
+export interface PublicPassportFields {
+  fullName: string | null;
+  passportNumber: string | null;
+  nationality: string | null;
+  dateOfBirth: string | null;
+  sex: string | null;
+  passportIssueDate: string | null;
+  passportExpiryDate: string | null;
+  issuingCountry: string | null;
+}
+
+export interface PublicIdentityStatus {
+  licenseStatus: IdentityLicenseStatus;
+  passport: {
+    status: PublicPassportStatus;
+    fields: PublicPassportFields | null;
+  };
+  identityReady: boolean;
+}
+
+/** Normalized contract identity draft (future Official Contract Review input). */
+export interface PublicIdentityDraft extends PublicPassportFields {
+  driverLicenseNumber: string | null;
+  driverLicenseExpiryDate: string | null;
+  licenseStatus: IdentityLicenseStatus;
+  passportStatus:
+    | "PASSPORT_REQUIRED"
+    | "PASSPORT_PROCESSING"
+    | "PASSPORT_READY"
+    | "PASSPORT_FAILED";
+  identityReady: boolean;
+  updatedAt: string | null;
+}
+
+/** Local request lifecycle for a document capture (memory only). */
+export type DocumentCapturePhase = "idle" | "uploading" | "processing";
+
 export type ContractStatus =
   | "AWAITING"
   | "FORM"
@@ -74,6 +126,7 @@ export interface PublicRentalContext {
     expiryDate: string | null;
     confidence: number | null;
   };
+  identity: PublicIdentityStatus;
   payment: {
     status: ContractPaymentStatus | null;
     method: ContractPaymentMethod | null;

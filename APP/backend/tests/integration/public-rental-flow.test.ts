@@ -2,7 +2,8 @@ import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
+import { setDocumentOcrProviderForTests } from "src/modules/document-ocr/document-ocr-provider.factory";
+import { createFakeDocumentOcrProvider } from "../helpers/fake-document-ocr-provider";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import { createFakePaymentProvider } from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
@@ -45,23 +46,15 @@ if (!RUN) {
 
     const auth = () => ({ authorization: `Bearer ${token}` });
 
+    const ocr = createFakeDocumentOcrProvider();
+
     function fakeOcr(input: {
       licenseNumber?: string | null;
       expiryDate?: string | null;
       confidence?: number;
     }) {
-      setDrivingLicenseOcrProviderForTests({
-        name: "test",
-        async analyzeDrivingLicense() {
-          return {
-            ok: true,
-            licenseNumber: input.licenseNumber !== undefined ? input.licenseNumber : "DL-OK",
-            expiryDate: input.expiryDate !== undefined ? input.expiryDate : "2031-06-01",
-            confidence: input.confidence ?? 0.99,
-            provider: "test",
-          };
-        },
-      });
+      ocr.setLicense(input);
+      setDocumentOcrProviderForTests(ocr.provider);
     }
 
     function fakePayments() {
@@ -113,6 +106,16 @@ if (!RUN) {
         rentalDays: 4,
         vehicleName,
       };
+    }
+
+    async function uploadPassport(rentalToken: string, mime = "image/png", data = PNG) {
+      const { headers, payload } = multipart("passport.png", mime, data);
+      return app.inject({
+        method: "POST",
+        url: `/contracts/rental/${rentalToken}/passport`,
+        headers,
+        payload,
+      });
     }
 
     async function uploadLicense(rentalToken: string, mime = "image/png", data = PNG) {
@@ -178,7 +181,7 @@ if (!RUN) {
     });
 
     after(async () => {
-      setDrivingLicenseOcrProviderForTests(undefined);
+      setDocumentOcrProviderForTests(undefined);
       setPaymentProviderForTests(undefined);
       if (app) await app.close();
     });
@@ -209,7 +212,13 @@ if (!RUN) {
       const uploaded = await uploadLicense(ctx.token);
       assert.equal(uploaded.statusCode, 200, uploaded.body);
       assert.equal(uploaded.json().data.licenseVerification.status, "VALID");
-      assert.equal(uploaded.json().data.flow.step, "CONTRACT");
+      // License alone does not unlock the contract: passport must be READY too.
+      assert.equal(uploaded.json().data.flow.step, "LICENSE_VERIFICATION");
+      assert.equal(uploaded.json().data.identity.identityReady, false);
+      const passport = await uploadPassport(ctx.token);
+      assert.equal(passport.statusCode, 200, passport.body);
+      assert.equal(passport.json().data.identity.passport.status, "READY");
+      assert.equal(passport.json().data.flow.step, "CONTRACT");
 
       const again = await app.inject({ method: "GET", url: `/contracts/rental/${ctx.token}` });
       assert.equal(again.statusCode, 200);
@@ -300,6 +309,7 @@ if (!RUN) {
       setPaymentProviderForTests(payments.provider);
       const ctx = await offerAndToken();
       await uploadLicense(ctx.token);
+      await uploadPassport(ctx.token);
       await app.inject({
         method: "POST",
         url: `/contracts/rental/${ctx.token}/form`,
@@ -403,6 +413,7 @@ if (!RUN) {
       setPaymentProviderForTests(payments.provider);
       const ctx = await offerAndToken();
       await uploadLicense(ctx.token);
+      await uploadPassport(ctx.token);
       await app.inject({
         method: "POST",
         url: `/contracts/rental/${ctx.token}/form`,

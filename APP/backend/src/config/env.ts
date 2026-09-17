@@ -1,5 +1,9 @@
 import { z } from "zod";
 import "dotenv/config";
+import {
+  DOCUMENT_OCR_PROVIDER_IDS,
+  LEGACY_UNCONFIGURED_PROVIDER_VALUES,
+} from "src/modules/document-ocr/document-ocr.constants";
 
 /**
  * Environment validation. Startup FAILS FAST when a required variable is
@@ -81,9 +85,15 @@ const EnvSchema = z
     OFFICE_DISPLAY_NAME: z.string().trim().min(1).default("Diamond Rent Car"),
     // Asia/Dubai (UTC+4, no DST). License expiry uses this offset, not the client clock.
     BUSINESS_TIMEZONE_OFFSET_MINUTES: z.coerce.number().int().default(240),
-    DOCUMENT_OCR_PROVIDER: z.enum(["none", "azure"]).default("none"),
-    AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: z.string().optional().default(""),
-    AZURE_DOCUMENT_INTELLIGENCE_KEY: z.string().optional().default(""),
+    // Provider-neutral OCR selection. No vendor is chosen yet; there is no fake/test value.
+    DOCUMENT_OCR_PROVIDER: z.preprocess(
+      (v) =>
+        v === undefined ||
+        (LEGACY_UNCONFIGURED_PROVIDER_VALUES as readonly unknown[]).includes(v)
+          ? "UNCONFIGURED"
+          : v,
+      z.enum(DOCUMENT_OCR_PROVIDER_IDS),
+    ),
     DOCUMENT_OCR_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
     PAYMENT_PROVIDER: z.enum(["none", "stripe"]).default("none"),
     STRIPE_SECRET_KEY: z.string().optional().default(""),

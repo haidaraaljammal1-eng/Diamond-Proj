@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import { ApiRequestError } from "./errors";
+import { shouldRedirectToLogin } from "./session-redirect";
 import type { ApiErrorResponse, ApiResponse } from "./types";
 
 async function getAccessToken(): Promise<string | undefined> {
@@ -7,15 +8,6 @@ async function getAccessToken(): Promise<string | undefined> {
   const { getSession } = await import("next-auth/react");
   return (await getSession())?.accessToken;
 }
-
-/**
- * Codes the Backend uses for a session that cannot be recovered by refreshing.
- * `next-auth`'s own `useSession()` only learns about a dead session on its next
- * focus/interval refetch, so a page can sit on a stale "authenticated" session
- * showing a generic load error instead of being sent to `/login`. Redirecting
- * here, the moment the API itself reports one of these codes, closes that gap.
- */
-const DEAD_SESSION_CODES = new Set(["TOKEN_INVALID", "TOKEN_EXPIRED", "UNAUTHORIZED"]);
 
 let loggingOut = false;
 
@@ -34,8 +26,11 @@ async function requestWithToken(
   options: ApiRequestOptions,
   accessToken?: string,
 ): Promise<Response> {
+  // `publicRequest` is a client flag, not a fetch option.
+  const init: ApiRequestOptions = { ...options };
+  delete init.publicRequest;
   return fetch(`${env.apiUrl}${path}`, {
-    ...options,
+    ...init,
     credentials: options.credentials ?? "include",
     headers: {
       Accept: "application/json",
@@ -51,6 +46,12 @@ async function requestWithToken(
 
 export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
+  /**
+   * Public customer endpoint scoped by an opaque link token, not a staff
+   * session: no session token is attached, no refresh is attempted, and auth
+   * error codes never redirect to the staff `/login` page.
+   */
+  publicRequest?: boolean;
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -80,9 +81,10 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<ApiResponse<T>> {
-  const accessToken = await getAccessToken();
+  const publicRequest = options.publicRequest === true;
+  const accessToken = publicRequest ? undefined : await getAccessToken();
   let response = await requestWithToken(path, options, accessToken);
-  if (response.status === 401 && typeof window !== "undefined") {
+  if (!publicRequest && response.status === 401 && typeof window !== "undefined") {
     const refreshedToken = await getAccessToken();
     if (refreshedToken && refreshedToken !== accessToken) {
       response = await requestWithToken(path, options, refreshedToken);
@@ -100,7 +102,7 @@ export async function apiRequest<T>(
           },
           response.status,
         );
-    if (DEAD_SESSION_CODES.has(apiError.code)) redirectToLogin();
+    if (shouldRedirectToLogin(apiError.code, { publicRequest })) redirectToLogin();
     throw apiError;
   }
 

@@ -142,23 +142,23 @@ test("OCR policy: unreadable, low confidence, expired, valid", () => {
 
 test("public rental flow is derived, never stored as Contract.status", () => {
   assert.equal(
-    derivePublicRentalFlowStep({ status: "AWAITING", licenseStatus: null, paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "AWAITING", identityReady: false, paymentStatus: null }),
     "LICENSE_VERIFICATION",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "AWAITING", licenseStatus: "VALID", paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "AWAITING", identityReady: true, paymentStatus: null }),
     "CONTRACT",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "FORM", licenseStatus: "VALID", paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "FORM", identityReady: true, paymentStatus: null }),
     "CONTRACT",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "SIGNED", licenseStatus: "VALID", paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "SIGNED", identityReady: true, paymentStatus: null }),
     "PAYMENT",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "PAID", licenseStatus: "VALID", paymentStatus: "CONFIRMED" }),
+    derivePublicRentalFlowStep({ status: "PAID", identityReady: true, paymentStatus: "CONFIRMED" }),
     "READY_FOR_HANDOVER",
   );
 });

@@ -10,8 +10,8 @@ Staff JWT is never used on public customer routes. The opaque Rental token (and,
 
 | Later UI | Server-derived `flow.step` | Contract status (typical) |
 | -------- | -------------------------- | ------------------------- |
-| License photo | `LICENSE_VERIFICATION` | `AWAITING`, no VALID license |
-| Official contract | `CONTRACT` | `AWAITING` + VALID license, or `FORM` |
+| License photo, then passport photo | `LICENSE_VERIFICATION` | `AWAITING`, identity not ready |
+| Official contract | `CONTRACT` | `AWAITING` + `identity.identityReady` (VALID license **and** READY passport), or `FORM` |
 | Secure payment | `PAYMENT` | `SIGNED` (or active PENDING/PROCESSING payment) |
 | After paid | `READY_FOR_HANDOVER` | `PAID` and later operational statuses |
 
@@ -26,6 +26,7 @@ The customer never submits `contractId`, `vehicleId`, `agreedAmount`, `rentalDay
 - `vehicle`: display name, type label, plate, year, color, VIN
 - `rental`: days, agreed amount, currency, agreed start/end, `actualPickupAt` / `actualReturnAt` (null until Car-Out / Car-In)
 - `licenseVerification`: status, masked number, expiry date, confidence
+- `identity`: `licenseStatus`, `passport.status`, normalized `passport.fields` (only when READY), `identityReady`
 - `payment`: current attempt status if any, `providerAvailable`
 - `flow.step`: derived, never stored as `Contract.status`
 
@@ -33,7 +34,7 @@ Not exposed: internal staff users, permissions, `tokenHash`, provider secrets, l
 
 ## 3. Server-derived flow step
 
-`derivePublicRentalFlowStep` combines Contract status + latest license verification + latest payment. It is not an independent status column.
+`derivePublicRentalFlowStep` combines Contract status + the derived identity gate (`identityReady`) + latest payment. It is not an independent status column. `FORM` contracts stay on `CONTRACT`.
 
 ## 4. Driving-license upload
 
@@ -43,17 +44,16 @@ Customer may not exist yet, so the file is **not** forced into `CustomerDocument
 
 ## 5–7. OCR provider (no fake OCR)
 
-`DrivingLicenseVerificationService` path:
+License and passport OCR share one provider-agnostic boundary. See `DOCU/05-pages/official-contract-identity-ocr.md`.
 
-`uploadDrivingLicense` → `DrivingLicenseOcrProvider` → `AzureDocumentIntelligenceProvider` (future)
+`uploadDrivingLicense` → `analyzeDrivingLicenseDocument` (adapter) → `analyzeDocument("DRIVER_LICENSE")` → `DocumentOcrProvider`
 
 Runtime:
 
-- `DOCUMENT_OCR_PROVIDER=none|azure`
-- Azure endpoint/key optional; app boots without them
-- Unconfigured provider returns `NOT_CONFIGURED`
-- Azure adapter is a boundary only: it does **not** call Azure or invent fields
-- Tests inject a deterministic provider via `setDrivingLicenseOcrProviderForTests`
+- `DOCUMENT_OCR_PROVIDER=UNCONFIGURED` (only value; legacy `none`/`azure` are read as `UNCONFIGURED`)
+- No OCR vendor is selected; no vendor credentials are configured
+- Unconfigured provider fails closed → license `PROVIDER_UNAVAILABLE`, passport `PROVIDER_UNAVAILABLE`
+- Tests inject a deterministic provider via `setDocumentOcrProviderForTests` (refused in production)
 
 No filename-as-license, no auto-VALID, no invented numbers or dates.
 
@@ -82,7 +82,7 @@ Server-owned: `contractNumber` (`DE-{year}-{nnnnnn}`), vehicle facts, `rentalDay
 
 When the Customer is created/updated, verified license values are copied onto Customer and the same Attachment is linked as `CustomerDocument` (no second file bytes). `actualPickupAt` / `actualReturnAt` stay null until Car-Out / Car-In. Placeholder copy such as «يُعبّأ عند استلام السيارة» is frontend i18n, never stored.
 
-`AWAITING → FORM` only after a valid Rental link, VALID license, and required personal fields. Service performs the transition.
+`AWAITING → FORM` only after a valid Rental link, VALID license, READY passport (`CONTRACT_IDENTITY_NOT_READY` otherwise), and required personal fields. Service performs the transition.
 
 `FORM → SIGNED` via `ContractAcceptance` only when license is still VALID. Legal snapshot freezes customer, verified license, vehicle, commercial terms, `contractNumber`, `termsVersion`. Later master-data edits do not rewrite it.
 
@@ -123,6 +123,10 @@ Prefix `/contracts`. `public: true` (no staff JWT).
 | GET | `/contracts/rental/:token` |
 | POST | `/contracts/rental/:token/driving-license` |
 | GET | `/contracts/rental/:token/driving-license` |
+| POST | `/contracts/rental/:token/passport` |
+| GET | `/contracts/rental/:token/identity` |
+| GET | `/contracts/rental/:token/official-contract` |
+| PATCH | `/contracts/rental/:token/official-contract` |
 | POST | `/contracts/rental/:token/form` |
 | POST | `/contracts/rental/:token/accept` |
 | GET | `/contracts/rental/:token/payment` |
@@ -137,6 +141,9 @@ Prefix `/contracts`. `public: true` (no staff JWT).
 | `DRIVING_LICENSE_OCR_NOT_CONFIGURED` | 409 |
 | `DRIVING_LICENSE_UNREADABLE` / `REVIEW_REQUIRED` | 422 |
 | `DRIVING_LICENSE_EXPIRED` | 409 |
+| `PASSPORT_LICENSE_REQUIRED` | 409 |
+| `CONTRACT_IDENTITY_NOT_READY` | 409 |
+| `OFFICIAL_CONTRACT_REVIEW_LOCKED` | 409 |
 | `PUBLIC_RENTAL_FORM_INCOMPLETE` | 422 |
 | `PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE` | 409 |
 | `PAYMENT_PROVIDER_NOT_CONFIGURED` | 409 |
@@ -150,7 +157,7 @@ Prefix `/contracts`. `public: true` (no staff JWT).
 
 ## Outbox
 
-`contract.license_uploaded`, `contract.license_verified`, `contract.form_completed`, `contract.signed`, `payment.started`, `payment.pending`, `payment.confirmed`, `payment.failed`, plus existing `contract.paid`.
+`contract.license_uploaded`, `contract.license_verified`, `contract.passport_uploaded`, `contract.passport_processed` (ids/status only), `contract.form_completed`, `contract.signed`, `payment.started`, `payment.pending`, `payment.confirmed`, `payment.failed`, plus existing `contract.paid`.
 
 ## Tests
 
@@ -186,4 +193,9 @@ Frontend-only presentation overlay for customer demos when Azure OCR or Stripe i
 - Real Contract / Vehicle / office / duration / agreed amount / currency remain the display authority.
 - Simulated license results, customer autofill, acceptance, and payment states never POST OCR, form, accept, or payment endpoints.
 - Visible champagne badge: Simulation Mode / وضع المحاكاة, plus Reset Simulation / إعادة ضبط المحاكاة.
-- Simulated VALID license can Continue locally to the official contract; EXPIRED and UNREADABLE stay on the license step. Simulated card payment can show PROCESSING → PENDING → CONFIRMED → READY_FOR_HANDOVER, or FAILED / PENDING, with demo reference `DEMO-PAY-00001` (never a Stripe PaymentIntent). Refresh restores Backend-derived state.
+- **Driver License and Passport can both be simulated** so the full identity flow can be built and visually tested before a real OCR provider is selected:
+  - A simulated VALID license verifies the license and unlocks the passport step. EXPIRED and UNREADABLE stay blocked.
+  - In simulation, the passport photo (or Simulate → Passport ready / Not recognized) produces a normalized passport result: `DEMO CUSTOMER`, `P1234567`, `United Arab Emirates`. Retake replaces it.
+  - The overlay derives `identity` and `identityReady` with the Backend rule (VALID license AND READY passport). Continue opens the contract step only then; there is no simulation bypass.
+  - Official Contract Review gets the simulated identity through the same normalized shape (`withNormalizedIdentity`). The Backend contract service has no simulation code.
+  - Nothing is uploaded or persisted, and no OCR provider is reported as configured. Real mode keeps `DOCUMENT_OCR_PROVIDER=UNCONFIGURED` → `PROVIDER_UNAVAILABLE`. Simulated card payment can show PROCESSING → PENDING → CONFIRMED → READY_FOR_HANDOVER, or FAILED / PENDING, with demo reference `DEMO-PAY-00001` (never a Stripe PaymentIntent). Refresh restores Backend-derived state.

@@ -1,14 +1,21 @@
 import type { PublicRentalContext } from "@/modules/public-rental/types/public-rental.types";
 import type { ContractTarsStateDto } from "@/modules/contracts/types/tars.types";
 import {
+  deriveIdentityReady,
+  identityLicenseStatus,
+} from "../public-rental/utils/passport-view.ts";
+import {
   DEMO_LICENSE_EXPIRED,
   DEMO_LICENSE_VALID,
+  DEMO_PASSPORT_READY,
   DEMO_PAYMENT_REFERENCE,
   DEMO_TARS_PRESETS,
 } from "./simulation.fixtures.ts";
 import type {
   SimulatedLicenseScenario,
   SimulatedLicenseState,
+  SimulatedPassportScenario,
+  SimulatedPassportState,
   SimulatedPaymentScenario,
   SimulatedPaymentState,
   SimulatedTarsPreset,
@@ -28,7 +35,9 @@ export function licenseSimulationResult(scenario: SimulatedLicenseScenario): {
         licenseNumber: DEMO_LICENSE_VALID.licenseNumber,
         expiryDate: DEMO_LICENSE_VALID.expiryDate,
       },
-      flowStep: "CONTRACT",
+      // Not CONTRACT: like the Backend, the contract step needs the passport too.
+      // The overlay derives the step from the normalized identity.
+      flowStep: null,
     };
   }
   if (scenario === "expired") {
@@ -53,6 +62,14 @@ export function licenseSimulationResult(scenario: SimulatedLicenseScenario): {
     },
     flowStep: "LICENSE_VERIFICATION",
   };
+}
+
+/** Simulated passport OCR result in the normalized identity shape. */
+export function passportSimulationResult(scenario: SimulatedPassportScenario): SimulatedPassportState {
+  if (scenario === "ready") {
+    return { processing: false, scenario, status: "READY", fields: { ...DEMO_PASSPORT_READY } };
+  }
+  return { processing: false, scenario, status: "NOT_RECOGNIZED", fields: null };
 }
 
 export function paymentSimulationPhase(
@@ -153,9 +170,32 @@ export function applyRentalSimulation(
 
   const paymentActive = snapshot.payment.status != null || snapshot.payment.payPending;
 
+  // Normalized identity: simulated documents produce the same shape and the
+  // same readiness rule as real Backend data. No "simulation → continue" bypass.
+  const identityOverlay = licenseStatus != null || snapshot.passport.status != null;
+  const effectiveLicenseStatus = identityLicenseStatus(licenseStatus ?? real.licenseVerification.status);
+  const passport =
+    snapshot.passport.status != null
+      ? { status: snapshot.passport.status, fields: snapshot.passport.fields }
+      : real.identity.passport;
+  const identity = identityOverlay
+    ? {
+        licenseStatus: effectiveLicenseStatus,
+        passport,
+        identityReady: deriveIdentityReady(effectiveLicenseStatus, passport.status),
+      }
+    : real.identity;
+  const derivedStep =
+    identityOverlay && real.flow.step === "LICENSE_VERIFICATION"
+      ? identity.identityReady
+        ? "CONTRACT"
+        : "LICENSE_VERIFICATION"
+      : real.flow.step;
+
   return {
     ...real,
-    flow: { step: snapshot.flowStep ?? real.flow.step },
+    flow: { step: snapshot.flowStep ?? derivedStep },
+    identity,
     contract: {
       ...real.contract,
       status: snapshot.contractStatus ?? real.contract.status,
@@ -206,5 +246,10 @@ export function shouldHoldLicenseStage(
   if (viewStage === "contract" || viewStage === "payment" || viewStage === "handover") {
     return false;
   }
-  return snapshot.license.verifying || snapshot.license.status != null;
+  return (
+    snapshot.license.verifying ||
+    snapshot.license.status != null ||
+    snapshot.passport.processing ||
+    snapshot.passport.status != null
+  );
 }

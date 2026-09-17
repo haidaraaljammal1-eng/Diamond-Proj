@@ -85,3 +85,45 @@ body::after {
     animation: none;
   }
 }
+
+/*
+ * Official rental agreement printing. When the contract review page is open,
+ * only the A4 sheet prints: app chrome, progress, buttons, backgrounds and the
+ * screen shadow/zoom are dropped.
+ */
+@page diamond-contract {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  body:has([data-official-contract-print]) {
+    background: #fff !important;
+  }
+
+  body:has([data-official-contract-print])::before,
+  body:has([data-official-contract-print])::after {
+    display: none !important;
+  }
+
+  body:has([data-official-contract-print]) * {
+    visibility: hidden;
+  }
+
+  [data-official-contract-print],
+  [data-official-contract-print] * {
+    visibility: visible;
+  }
+
+  [data-official-contract-print] {
+    position: absolute;
+    inset: 0 auto auto 0;
+    zoom: 1 !important;
+    box-shadow: none !important;
+  }
+
+  [data-official-contract-viewport] {
+    overflow: visible !important;
+    background: none !important;
+  }
+}

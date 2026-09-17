@@ -68,15 +68,17 @@ export interface UseContractResult {
   ) => Promise<boolean>;
   submitCarOut: (
     id: string,
-    payload: Omit<CarOutPayload, "photos"> & {
+    payload: Omit<CarOutPayload, "photos" | "hirerSignatureAttachmentId"> & {
       photos: { angle: InspectionAngle; file: File }[];
+      hirerSignature?: Blob | null;
     },
     idempotencyKey: string,
   ) => Promise<boolean>;
   submitCarIn: (
     id: string,
-    payload: Omit<CarInPayload, "photos"> & {
+    payload: Omit<CarInPayload, "photos" | "hirerSignatureAttachmentId"> & {
       photos: { angle: InspectionAngle; file: File }[];
+      hirerSignature?: Blob | null;
     },
     idempotencyKey: string,
   ) => Promise<boolean>;

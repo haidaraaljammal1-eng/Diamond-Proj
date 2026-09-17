@@ -5,6 +5,7 @@ import {
   FUEL_LEVELS,
   INSPECTION_ANGLES,
 } from "src/modules/contracts/contracts.constants";
+import { DAMAGE_MARK_TYPES, DAMAGE_ZONES } from "src/modules/contracts/official-contract-interactive";
 
 export const ContractStatusSchema = z.enum([
   "AWAITING",
@@ -33,6 +34,26 @@ export const DrivingLicenseVerificationStatusSchema = z.enum([
   "EXPIRED",
   "UNREADABLE",
   "REVIEW_REQUIRED",
+  "PROVIDER_UNAVAILABLE",
+]);
+export const IdentityLicenseStatusSchema = z.enum([
+  "LICENSE_REQUIRED",
+  "LICENSE_PROCESSING",
+  "LICENSE_VALID",
+  "LICENSE_INVALID",
+]);
+export const IdentityPassportStatusSchema = z.enum([
+  "PASSPORT_REQUIRED",
+  "PASSPORT_PROCESSING",
+  "PASSPORT_READY",
+  "PASSPORT_FAILED",
+]);
+export const PublicPassportStatusSchema = z.enum([
+  "REQUIRED",
+  "PROCESSING",
+  "READY",
+  "NOT_RECOGNIZED",
+  "FAILED",
   "PROVIDER_UNAVAILABLE",
 ]);
 export const PublicRentalFlowStepSchema = z.enum([
@@ -90,12 +111,27 @@ export const InspectionPhotoInputSchema = z.object({
   angle: InspectionAngleSchema,
 });
 
+export const DamageMarkTypeSchema = z.enum(DAMAGE_MARK_TYPES);
+export const DamageMarkSchema = z
+  .object({
+    zone: z.string().refine((zone) => DAMAGE_ZONES.includes(zone), "Unknown damage zone"),
+    type: DamageMarkTypeSchema,
+  })
+  .strict();
+
+/** Vehicle condition marked on the paper diagrams + the hirer's custody signature (PNG attachment). */
+const CustodyPaperInputSchema = {
+  damage: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).optional(),
+  hirerSignatureAttachmentId: z.string().uuid().optional(),
+};
+
 export const CarOutSchema = z.object({
   occurredAt: z.coerce.date().optional(),
   mileageOut: z.number().int().nonnegative(),
   fuelOut: FuelLevelSchema,
   notes: z.string().trim().max(2000).optional(),
   photos: z.array(InspectionPhotoInputSchema).length(8),
+  ...CustodyPaperInputSchema,
 });
 
 export const CarInSchema = z.object({
@@ -104,6 +140,7 @@ export const CarInSchema = z.object({
   fuelIn: FuelLevelSchema,
   notes: z.string().trim().max(2000).optional(),
   photos: z.array(InspectionPhotoInputSchema).length(8),
+  ...CustodyPaperInputSchema,
 });
 
 export const ReconciliationLineInputSchema = z.object({
@@ -420,6 +457,45 @@ export const PublicLicenseVerificationSchema = z.object({
   confidence: z.number().nullable(),
 });
 
+/** Normalized passport fields only — never a raw OCR payload. */
+export const PublicPassportFieldsSchema = z.object({
+  fullName: z.string().nullable(),
+  passportNumber: z.string().nullable(),
+  nationality: z.string().nullable(),
+  dateOfBirth: z.string().nullable(),
+  sex: z.string().nullable(),
+  passportIssueDate: z.string().nullable(),
+  passportExpiryDate: z.string().nullable(),
+  issuingCountry: z.string().nullable(),
+});
+
+export const PublicIdentityStatusSchema = z.object({
+  licenseStatus: IdentityLicenseStatusSchema,
+  passport: z.object({
+    status: PublicPassportStatusSchema,
+    fields: PublicPassportFieldsSchema.nullable(),
+  }),
+  identityReady: z.boolean(),
+});
+
+/** ContractIdentityDraft public projection (provenance stays server-side). */
+export const PublicIdentityDraftSchema = z.object({
+  fullName: z.string().nullable(),
+  nationality: z.string().nullable(),
+  passportNumber: z.string().nullable(),
+  dateOfBirth: z.string().nullable(),
+  sex: z.string().nullable(),
+  passportIssueDate: z.string().nullable(),
+  passportExpiryDate: z.string().nullable(),
+  issuingCountry: z.string().nullable(),
+  driverLicenseNumber: z.string().nullable(),
+  driverLicenseExpiryDate: z.string().nullable(),
+  licenseStatus: IdentityLicenseStatusSchema,
+  passportStatus: IdentityPassportStatusSchema,
+  identityReady: z.boolean(),
+  updatedAt: z.date().nullable(),
+});
+
 export const PublicRentalContextSchema = z.object({
   office: z.object({ displayName: z.string() }),
   flow: z.object({ step: PublicRentalFlowStepSchema }),
@@ -459,6 +535,7 @@ export const PublicRentalContextSchema = z.object({
     })
     .nullable(),
   licenseVerification: PublicLicenseVerificationSchema,
+  identity: PublicIdentityStatusSchema,
   payment: z.object({
     status: ContractPaymentStatusSchema.nullable(),
     method: ContractPaymentMethodSchema.nullable(),
@@ -530,6 +607,183 @@ export const AttachmentRefSchema = z.object({
   mimeType: z.string(),
   size: z.number().int(),
 });
+
+// ── Official contract (one authoritative DTO; sections follow the paper agreement) ──
+
+const SignatureStatusSchema = z.enum(["NOT_SIGNED", "SIGNED"]);
+const CustodyEventStatusSchema = z.enum(["NOT_AVAILABLE", "RECORDED"]);
+export const OfficialSignatureSlotSchema = z.enum([
+  "HIRER",
+  "ADDITIONAL_DRIVER",
+  "SPONSOR",
+  "VEHICLE_OUT_HIRER",
+  "VEHICLE_IN_HIRER",
+]);
+
+const OfficialCustodySchema = z.object({
+  status: CustodyEventStatusSchema,
+  occurredAt: z.date().nullable(),
+  mileage: z.number().int().nullable(),
+  fuel: z.string().nullable(),
+  /** Inspection angles photographed at the event (condition evidence). No file references. */
+  inspectionAngles: z.array(InspectionAngleSchema),
+  /** Structured damage marks on the paper diagrams. */
+  damage: z.array(z.object({ zone: z.string(), type: DamageMarkTypeSchema })),
+  signatureStatus: SignatureStatusSchema,
+});
+
+const OfficialSignatureSchema = z.object({
+  status: SignatureStatusSchema,
+  /** When the signature image was captured (or the legacy acceptance time). */
+  signedAt: z.date().nullable(),
+  /** A stored image can be streamed from the token-scoped signature route. */
+  hasImage: z.boolean(),
+  required: z.boolean(),
+});
+
+export const OfficialContractViewSchema = z.object({
+  header: z.object({ officeDisplayName: z.string() }),
+  contract: z.object({
+    agreementNumber: z.string(),
+    status: ContractStatusSchema,
+    templateVersion: z.string(),
+    termsVersion: z.string(),
+  }),
+  vehicle: z.object({
+    plateCode: z.string().nullable(),
+    plateNumber: z.string().nullable(),
+    vehicleType: z.string().nullable(),
+    yearMade: z.number().int().nullable(),
+    color: z.string().nullable(),
+    notes: z.string().nullable(),
+  }),
+  hirer: z.object({
+    name: z.string().nullable(),
+    nationality: z.string().nullable(),
+    passportNumber: z.string().nullable(),
+    address: z.string().nullable(),
+    telephone: z.string().nullable(),
+    driverLicenseNumber: z.string().nullable(),
+    driverLicenseExpiryDate: z.string().nullable(),
+  }),
+  additionalDriver: z.object({
+    name: z.string().nullable(),
+    nationality: z.string().nullable(),
+    driverLicenseNumber: z.string().nullable(),
+  }),
+  sponsor: z.object({
+    name: z.string().nullable(),
+    idNumber: z.string().nullable(),
+  }),
+  rental: z.object({
+    plannedStartAt: z.date().nullable(),
+    plannedEndAt: z.date().nullable(),
+    numberOfDays: z.number().int(),
+    /** True when the planned end equals start + days under the contract period formula. */
+    periodConsistent: z.boolean().nullable(),
+    // Price policy: no rental price, rate amount or rate basis on the official contract.
+    // Pricing stays internal (Contract, payment, Finance, staff APIs).
+    includedKmPerDay: z.number().int().nullable(),
+    extraKmRate: z.number().nullable(),
+  }),
+  /** Contract-only card reference: last 4 digits. The full number is never stored. */
+  card: z.object({ last4: z.string().nullable() }),
+  vehicleOut: OfficialCustodySchema,
+  vehicleIn: OfficialCustodySchema,
+  signatures: z.object({
+    hirer: OfficialSignatureSchema,
+    additionalDriver: OfficialSignatureSchema,
+    sponsor: OfficialSignatureSchema,
+    vehicleOutHirer: OfficialSignatureSchema,
+    vehicleInHirer: OfficialSignatureSchema,
+  }),
+  identity: z.object({ identityReady: z.boolean() }),
+  permissions: z.object({
+    canEdit: z.boolean(),
+    editableFields: z.array(z.string()),
+    /** Customer may mark Vehicle OUT damage on the diagrams. */
+    canMarkDamageOut: z.boolean(),
+    /** Signature slots the customer may capture now. */
+    signableSlots: z.array(OfficialSignatureSlotSchema),
+    /** All sign preconditions except the action itself are satisfied. */
+    canSign: z.boolean(),
+    missingRequirements: z.array(z.string()),
+  }),
+  /** Semantic paper order for the A4 renderer (field paths, no styling). */
+  layout: z.object({
+    sections: z.array(z.string()),
+    infoGrid: z.array(z.array(z.array(z.string()))),
+  }),
+});
+
+const ReviewText = (max: number) => z.string().trim().min(1).max(max).nullable();
+
+/**
+ * Customer review overrides. Strict: any system-locked key (vehicle, rate,
+ * days, dates, agreement number, staff terms, Car-Out/Car-In, deposit, full
+ * card data) is rejected. `null` clears an override.
+ */
+export const OfficialContractReviewPatchSchema = z
+  .object({
+    hirerName: ReviewText(200),
+    nationality: ReviewText(80),
+    passportNumber: ReviewText(50),
+    address: ReviewText(400),
+    telephone: z
+      .string()
+      .trim()
+      .regex(/^\+?[\d\s()-]{6,30}$/, "Invalid telephone")
+      .nullable(),
+    additionalDriverName: ReviewText(200),
+    additionalDriverNationality: ReviewText(80),
+    additionalDriverLicenseNumber: ReviewText(50),
+    sponsorName: ReviewText(200),
+    sponsorIdNumber: ReviewText(50),
+    /** Exactly the last 4 digits. A full card number is rejected. */
+    cardNumberLast4: z.string().regex(/^\d{4}$/, "Last 4 digits only").nullable(),
+    damageOut: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).nullable(),
+  })
+  .partial()
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field is required" });
+
+/** Staff-only official-contract terms that have no other Diamond source. */
+export const OfficialContractStaffTermsSchema = z
+  .object({
+    plateCode: z.string().trim().min(1).max(20).nullable(),
+    contractNotes: z.string().trim().min(1).max(500).nullable(),
+    includedKmPerDay: z.number().int().min(0).max(10_000).nullable(),
+    extraKmRate: z
+      .number()
+      .min(0)
+      .max(100_000)
+      .refine((n) => Math.round(n * 100) === n * 100, "At most 2 decimals")
+      .nullable(),
+    damageIn: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).nullable(),
+  })
+  .partial()
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field is required" });
+
+export const OfficialContractSignSchema = z
+  .object({ termsVersion: z.string().trim().min(1).max(80).optional() })
+  .strict();
+
+export const OFFICIAL_SIGNATURE_SLOT_PATHS = {
+  hirer: "HIRER",
+  "additional-driver": "ADDITIONAL_DRIVER",
+  sponsor: "SPONSOR",
+  "vehicle-out-hirer": "VEHICLE_OUT_HIRER",
+  "vehicle-in-hirer": "VEHICLE_IN_HIRER",
+} as const;
+
+export const OfficialSignatureSlotParam = ContractTokenParam.extend({
+  slot: z.enum(["hirer", "additional-driver", "sponsor", "vehicle-out-hirer", "vehicle-in-hirer"]),
+});
+
+export type OfficialContractView = z.infer<typeof OfficialContractViewSchema>;
+export type OfficialContractReviewPatch = z.infer<typeof OfficialContractReviewPatchSchema>;
+export type OfficialContractStaffTerms = z.infer<typeof OfficialContractStaffTermsSchema>;
 
 export type CreateOfferInput = z.infer<typeof CreateOfferSchema>;
 export type ContractDetail = z.infer<typeof ContractDetailSchema>;

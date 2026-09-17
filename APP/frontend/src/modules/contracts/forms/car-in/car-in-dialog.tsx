@@ -7,7 +7,9 @@ import { Button } from "@/shared/components/ui/button";
 import { FormBuilder } from "@/shared/components/forms/form-builder";
 import type { FormField } from "@/shared/components/forms/form-builder";
 import { INSPECTION_ANGLES } from "../../constants/inspection";
-import type { InspectionAngle } from "../../types/contract.types";
+import type { DamageMark } from "@/modules/public-rental/types/official-contract.types";
+import type { FuelLevel, InspectionAngle } from "../../types/contract.types";
+import { VehicleConditionSheet } from "../../components/vehicle-condition-sheet/vehicle-condition-sheet";
 import { useContract } from "../../hooks/use-contract";
 import { ContractTarsInlineStatus } from "../../components/contract-tars/contract-tars-inline-status";
 import { carInFormSchema, type CarInFormValues } from "./car-in.schema";
@@ -50,27 +52,13 @@ function CarInForm({
   const { submitCarIn, carInPending, carInError } = useContract();
   const keyRef = useRef(createIdempotencyKey());
   const [photos, setPhotos] = useState<Partial<Record<InspectionAngle, File>>>({});
+  const [damage, setDamage] = useState<DamageMark[]>([]);
+  const [fuel, setFuel] = useState<FuelLevel>("F");
+  const [signature, setSignature] = useState<Blob | null>(null);
 
   const fields = useMemo<FormField<CarInFormValues>[]>(
     () => [
-      { name: "mileageIn", type: "text", placeholder: t("carIn.mileage"), colSpan: 1 },
-      {
-        name: "fuelIn",
-        type: "select",
-        placeholder: t("carIn.fuel"),
-        options: [
-          { value: "F", label: "F" },
-          { value: "7/8", label: "7/8" },
-          { value: "3/4", label: "3/4" },
-          { value: "5/8", label: "5/8" },
-          { value: "1/2", label: "1/2" },
-          { value: "3/8", label: "3/8" },
-          { value: "1/4", label: "1/4" },
-          { value: "1/8", label: "1/8" },
-          { value: "E", label: "E" },
-        ],
-        colSpan: 1,
-      },
+      { name: "mileageIn", type: "text", placeholder: t("carIn.mileage"), colSpan: 2 },
       { name: "notes", type: "text", placeholder: t("carIn.notes"), colSpan: 2 },
     ],
     [t],
@@ -114,12 +102,21 @@ function CarInForm({
         })}
       </div>
 
+      <VehicleConditionSheet
+        side="IN"
+        damage={damage}
+        fuel={fuel}
+        onDamage={setDamage}
+        onFuel={setFuel}
+        onSignature={setSignature}
+      />
+
       {contractId ? (
         <FormBuilder
           key={contractId}
           fields={fields}
           schema={carInFormSchema}
-          defaultValues={{ mileageIn: 0, fuelIn: "F", notes: "" }}
+          defaultValues={{ mileageIn: 0, notes: "" }}
           submitLabel={t("carIn.submit")}
           submittingLabel={t("common.saving")}
           submitSize="md"
@@ -139,9 +136,11 @@ function CarInForm({
               contractId,
               {
                 mileageIn: parsed.mileageIn,
-                fuelIn: parsed.fuelIn,
+                fuelIn: fuel,
                 notes: parsed.notes || undefined,
                 photos: packed,
+                damage,
+                hirerSignature: signature,
               },
               keyRef.current,
             );

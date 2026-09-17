@@ -10,8 +10,10 @@ import {
   startPublicRentalPayment,
   submitPublicRentalForm,
   uploadPublicRentalLicense,
+  uploadPublicRentalPassport,
 } from "../api/public-rental.api";
 import type {
+  DocumentCapturePhase,
   PublicPaymentStatus,
   PublicRentalContext,
   PublicRentalFormPayload,
@@ -29,6 +31,9 @@ interface PublicRentalState {
   status: PublicRentalLoadStatus;
   error: ApiRequestError | null;
   uploadPending: boolean;
+  /** Passport capture request lifecycle; backend status stays in `context.identity`. */
+  passportPhase: DocumentCapturePhase;
+  passportError: ApiRequestError | null;
   formPending: boolean;
   acceptPending: boolean;
   payPending: boolean;
@@ -40,6 +45,7 @@ interface PublicRentalState {
   statusToken: string | null;
   load: (token: string) => Promise<void>;
   uploadLicense: (file: File) => Promise<boolean>;
+  uploadPassport: (file: File) => Promise<boolean>;
   submitForm: (payload: PublicRentalFormPayload) => Promise<boolean>;
   accept: () => Promise<boolean>;
   startPayment: () => Promise<boolean>;
@@ -53,6 +59,8 @@ const empty = {
   status: "idle" as PublicRentalLoadStatus,
   error: null as ApiRequestError | null,
   uploadPending: false,
+  passportPhase: "idle" as DocumentCapturePhase,
+  passportError: null as ApiRequestError | null,
   formPending: false,
   acceptPending: false,
   payPending: false,
@@ -61,6 +69,8 @@ const empty = {
   linkExpiredDuringPayment: false,
   statusToken: null as string | null,
 };
+
+let passportAttempt = 0;
 
 export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
   ...empty,
@@ -108,6 +118,26 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
       return true;
     } catch (error) {
       set({ uploadPending: false, error: normalizeApiError(error) });
+      return false;
+    }
+  },
+
+  async uploadPassport(file: File) {
+    const token = get().token;
+    if (!token) return false;
+    // Latest capture wins: a slower earlier response must not overwrite a retake.
+    const attempt = ++passportAttempt;
+    set({ passportPhase: "uploading", passportError: null, error: null });
+    try {
+      const context = await uploadPublicRentalPassport(token, file, () => {
+        if (attempt === passportAttempt) set({ passportPhase: "processing" });
+      });
+      if (attempt !== passportAttempt) return false;
+      set({ context, passportPhase: "idle", status: "ready" });
+      return true;
+    } catch (error) {
+      if (attempt !== passportAttempt) return false;
+      set({ passportPhase: "idle", passportError: normalizeApiError(error) });
       return false;
     }
   },
@@ -180,6 +210,7 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
   },
 
   reset() {
+    passportAttempt += 1;
     set({ ...empty });
   },
 }));

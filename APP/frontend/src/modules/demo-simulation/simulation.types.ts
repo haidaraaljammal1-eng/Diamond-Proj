@@ -1,8 +1,10 @@
 import type { SimulatedGpsOverlay } from "@/modules/gps/utils/gps-simulation";
 import type { SimulatedRoadLiabilitiesOverlay } from "@/modules/road-liabilities/utils/road-liability-simulation";
 import type { FinanceSimulationOverlay } from "@/modules/finance/utils/finance-simulation";
+import type { PublicPassportFields } from "@/modules/public-rental/types/public-rental.types";
 
 export type SimulatedLicenseScenario = "valid" | "expired" | "unreadable";
+export type SimulatedPassportScenario = "ready" | "notRecognized";
 export type SimulatedPaymentScenario = "success" | "failed" | "pending";
 export type SimulatedTarsPreset =
   | "notStarted"
@@ -10,7 +12,7 @@ export type SimulatedTarsPreset =
   | "synced"
   | "partialFailure";
 
-export type SimulationSurface = "license" | "contract" | "payment" | "tars" | "gps" | "violations" | "finance";
+export type SimulationSurface = "license" | "passport" | "contract" | "payment" | "tars" | "gps" | "violations" | "finance";
 
 export interface SimulatedLicenseState {
   verifying: boolean;
@@ -18,6 +20,14 @@ export interface SimulatedLicenseState {
   status: "VALID" | "EXPIRED" | "UNREADABLE" | null;
   licenseNumber: string | null;
   expiryDate: string | null;
+}
+
+/** Normalized passport result shape, identical to the Backend identity projection. */
+export interface SimulatedPassportState {
+  processing: boolean;
+  scenario: SimulatedPassportScenario;
+  status: "READY" | "NOT_RECOGNIZED" | null;
+  fields: PublicPassportFields | null;
 }
 
 export interface SimulatedCustomerState {
@@ -43,6 +53,7 @@ export interface SimulationSnapshot {
   flowStep: "LICENSE_VERIFICATION" | "CONTRACT" | "PAYMENT" | "READY_FOR_HANDOVER" | null;
   contractStatus: "AWAITING" | "FORM" | "SIGNED" | "PAID" | null;
   license: SimulatedLicenseState;
+  passport: SimulatedPassportState;
   customer: SimulatedCustomerState | null;
   formPending: boolean;
   acceptPending: boolean;
@@ -55,6 +66,7 @@ export interface SimulationSnapshot {
 
 export const DEMO_SIMULATION_DELAYS = {
   licenseMs: 1100,
+  passportMs: 1100,
   formMs: 500,
   acceptMs: 700,
   paymentProcessingMs: 1400,

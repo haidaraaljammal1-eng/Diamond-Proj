@@ -1,3 +1,7 @@
+/**
+ * Driving-license policy input. Produced by `driving-license-ocr.adapter.ts`
+ * from the provider-neutral Document OCR result; never by a vendor directly.
+ */
 export interface DrivingLicenseOcrFieldConfidences {
   licenseNumber?: number;
   expiryDate?: number;
@@ -28,9 +32,4 @@ export type DrivingLicenseOcrResult = DrivingLicenseOcrSuccess | DrivingLicenseO
 export interface DrivingLicenseOcrInput {
   bytes: Buffer;
   mimeType: string;
-}
-
-export interface DrivingLicenseOcrProvider {
-  readonly name: string;
-  analyzeDrivingLicense(input: DrivingLicenseOcrInput): Promise<DrivingLicenseOcrResult>;
 }

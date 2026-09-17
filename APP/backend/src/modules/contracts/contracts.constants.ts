@@ -17,6 +17,8 @@ export const VEHICLE_RENTAL_LOCK_NS = "vehicle_rental";
 export const CONTRACT_NUMBER_LOCK_NS = "contract_number";
 export const CONTRACT_PAYMENT_LOCK_NS = "contract_payment";
 export const CONTRACT_LICENSE_LOCK_NS = "contract_license";
+export const CONTRACT_PASSPORT_LOCK_NS = "contract_passport";
+export const CONTRACT_OFFICIAL_REVIEW_LOCK_NS = "contract_official_review";
 export const CONTRACT_RECONCILE_LOCK_NS = "contract_reconcile";
 export const ROAD_LIABILITY_CHARGE_LOCK_NS = "road_liability_charge";
 
@@ -29,6 +31,8 @@ export const PUBLIC_RENTAL_FLOW_STEPS = [
 export type PublicRentalFlowStep = (typeof PUBLIC_RENTAL_FLOW_STEPS)[number];
 
 export const DRIVING_LICENSE_UPLOAD_MIME = ["image/jpeg", "image/png"] as const;
+/** Passport information page: raster images only (no SVG, no PDF). */
+export const PASSPORT_UPLOAD_MIME = ["image/jpeg", "image/png"] as const;
 
 /** Overall / per-field OCR confidence must be >= this to be eligible as VALID. */
 export const DRIVING_LICENSE_MIN_CONFIDENCE = 0.8;

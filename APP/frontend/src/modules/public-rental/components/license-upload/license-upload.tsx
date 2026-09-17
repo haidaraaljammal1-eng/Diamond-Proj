@@ -7,10 +7,21 @@ import { Icon } from "@/shared/components/ui/icon/icon";
 import { LICENSE_ACCEPT } from "../../utils/license-file";
 import styles from "./license-upload.module.css";
 
+export interface DocumentCaptureLabels {
+  upload: string;
+  replace: string;
+  formats: string;
+  previewAlt: string;
+}
+
 interface LicenseUploadProps {
   previewUrl: string | null;
   pending: boolean;
   disabled?: boolean;
+  /** Defaults to the driving-license copy; the passport step passes its own. */
+  labels?: DocumentCaptureLabels;
+  icon?: string;
+  testId?: string;
   onFile: (file: File) => void;
 }
 
@@ -18,9 +29,18 @@ export function LicenseUpload({
   previewUrl,
   pending,
   disabled = false,
+  labels,
+  icon = "mdi:card-account-details-outline",
+  testId,
   onFile,
 }: LicenseUploadProps) {
   const t = useTranslations("PublicRental.license");
+  const copy = labels ?? {
+    upload: t("upload"),
+    replace: t("replace"),
+    formats: t("formats"),
+    previewAlt: t("previewAlt"),
+  };
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -30,13 +50,13 @@ export function LicenseUpload({
   };
 
   return (
-    <div className={styles.drop}>
-      <Icon name="mdi:card-account-details-outline" size={28} />
+    <div className={styles.drop} data-testid={testId}>
+      <Icon name={icon} size={28} />
       {previewUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
-        <img src={previewUrl} alt={t("previewAlt")} className={styles.preview} />
+        <img src={previewUrl} alt={copy.previewAlt} className={styles.preview} />
       ) : null}
-      <p className={styles.hint}>{t("formats")}</p>
+      <p className={styles.hint}>{copy.formats}</p>
       <div className={styles.actions}>
         <Button
           type="button"
@@ -46,7 +66,7 @@ export function LicenseUpload({
           disabled={disabled || pending}
           onClick={() => inputRef.current?.click()}
         >
-          {previewUrl ? t("replace") : t("upload")}
+          {previewUrl ? copy.replace : copy.upload}
         </Button>
       </div>
       <input
@@ -57,7 +77,7 @@ export function LicenseUpload({
         capture="environment"
         disabled={disabled || pending}
         onChange={handleChange}
-        aria-label={t("upload")}
+        aria-label={copy.upload}
       />
     </div>
   );

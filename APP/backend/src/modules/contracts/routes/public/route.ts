@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
 import { createContractsService } from "src/modules/contracts/contracts.service";
 import {
   CarInSchema,
@@ -8,6 +9,12 @@ import {
   PublicAcceptSchema,
   PublicContractViewSchema,
   PublicFormSchema,
+  PublicIdentityDraftSchema,
+  OfficialContractReviewPatchSchema,
+  OfficialContractSignSchema,
+  OfficialContractViewSchema,
+  OfficialSignatureSlotParam,
+  OFFICIAL_SIGNATURE_SLOT_PATHS,
   PublicPaymentAttemptSchema,
   PublicPaymentContextSchema,
   PublicPaymentStatusSchema,
@@ -69,6 +76,195 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.getPublicRental(request.params.token) }),
+  );
+
+  app.post(
+    "/rental/:token/passport",
+    {
+      schema: {
+        summary: "Upload the passport information page for the rental token",
+        description:
+          "Requires a VALID driving license. Returns normalized identity state only; the OCR provider is server-side.",
+        operationId: "uploadPublicRentalPassport",
+        tags: ["Contracts"],
+        public: true,
+        consumes: ["multipart/form-data"],
+        params: ContractTokenParam,
+        response: { 200: dataResponse(PublicRentalContextSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const file = await request.file();
+      if (!file) throw AppError.validation("Validation failed");
+      return { data: await contracts.uploadPassport(request.params.token, file) };
+    },
+  );
+
+  app.get(
+    "/rental/:token/identity",
+    {
+      schema: {
+        summary: "Normalized contract identity draft for the rental token",
+        operationId: "getPublicRentalIdentityDraft",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(PublicIdentityDraftSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({ data: await contracts.getPublicIdentityDraft(request.params.token) }),
+  );
+
+  app.get(
+    "/rental/:token/official-contract",
+    {
+      schema: {
+        summary: "Official rental contract assembled from authoritative Diamond sources",
+        operationId: "getPublicOfficialContract",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(OfficialContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({ data: await contracts.getPublicOfficialContract(request.params.token) }),
+  );
+
+  app.patch(
+    "/rental/:token/official-contract",
+    {
+      schema: {
+        summary: "Save customer review corrections for editable personal contract fields",
+        description:
+          "Strict whitelist. System-locked fields (vehicle, rate, days, dates, agreement number, Car-Out/Car-In) are rejected.",
+        operationId: "reviewPublicOfficialContract",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        body: OfficialContractReviewPatchSchema,
+        response: { 200: dataResponse(OfficialContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const result = await contracts.updatePublicOfficialContractReview(
+        request.params.token,
+        request.body,
+      );
+      // Field names only — reviewed values (PII) are never written to the audit log.
+      request.setAudit({
+        action: "contract.official_review_updated",
+        entityType: "contract",
+        entityId: result.contractId,
+        metadata: { fields: result.changedFields },
+      });
+      return { data: result.view };
+    },
+  );
+
+  app.put(
+    "/rental/:token/official-contract/signatures/:slot",
+    {
+      schema: {
+        summary: "Capture (or replace) an official contract signature image",
+        description: "PNG only. Hirer, additional driver, sponsor and Vehicle OUT hirer slots before signing.",
+        operationId: "savePublicOfficialContractSignature",
+        tags: ["Contracts"],
+        public: true,
+        consumes: ["multipart/form-data"],
+        params: OfficialSignatureSlotParam,
+        response: { 200: dataResponse(OfficialContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const file = await request.file();
+      if (!file) throw AppError.validation("Validation failed");
+      const slot = OFFICIAL_SIGNATURE_SLOT_PATHS[request.params.slot];
+      const result = await contracts.savePublicOfficialSignature(request.params.token, slot, file);
+      // Slot name only — never the image.
+      request.setAudit({
+        action: "contract.official_signature_captured",
+        entityType: "contract",
+        entityId: result.contractId,
+        metadata: { slot },
+      });
+      return { data: result.view };
+    },
+  );
+
+  app.delete(
+    "/rental/:token/official-contract/signatures/:slot",
+    {
+      schema: {
+        summary: "Clear an official contract signature before signing",
+        operationId: "clearPublicOfficialContractSignature",
+        tags: ["Contracts"],
+        public: true,
+        params: OfficialSignatureSlotParam,
+        response: { 200: dataResponse(OfficialContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const slot = OFFICIAL_SIGNATURE_SLOT_PATHS[request.params.slot];
+      const result = await contracts.clearPublicOfficialSignature(request.params.token, slot);
+      request.setAudit({
+        action: "contract.official_signature_cleared",
+        entityType: "contract",
+        entityId: result.contractId,
+        metadata: { slot },
+      });
+      return { data: result.view };
+    },
+  );
+
+  app.get(
+    "/rental/:token/official-contract/signatures/:slot",
+    {
+      schema: {
+        summary: "Stream a captured official contract signature image",
+        operationId: "streamPublicOfficialContractSignature",
+        tags: ["Contracts"],
+        public: true,
+        params: OfficialSignatureSlotParam,
+        response: { 200: z.any(), ...commonErrorResponses },
+      },
+    },
+    async (request, reply) => {
+      const slot = OFFICIAL_SIGNATURE_SLOT_PATHS[request.params.slot];
+      const { mimeType, stream } = await contracts.openPublicOfficialSignature(request.params.token, slot);
+      return reply
+        .header("content-type", mimeType)
+        .header("cache-control", "private, no-store")
+        .send(stream);
+    },
+  );
+
+  app.post(
+    "/rental/:token/official-contract/sign",
+    {
+      schema: {
+        summary: "Sign the official contract (AWAITING/FORM → SIGNED)",
+        description:
+          "Requires identity, hirer name/passport/license and the required signatures (hirer; additional driver and sponsor when filled). Freezes the official contract snapshot.",
+        operationId: "signPublicOfficialContract",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        body: OfficialContractSignSchema,
+        response: { 200: dataResponse(OfficialContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const result = await contracts.signPublicOfficialContract(request.params.token, request.body, {
+        ip: request.ip,
+        userAgent: request.headers["user-agent"],
+      });
+      request.setAudit({
+        action: "contract.official_contract_signed",
+        entityType: "contract",
+        entityId: result.contractId,
+      });
+      return { data: result.view };
+    },
   );
 
   app.post(

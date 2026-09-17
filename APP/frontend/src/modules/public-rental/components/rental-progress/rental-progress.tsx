@@ -18,7 +18,8 @@ export function RentalProgress({ allowed, current, onSelect }: RentalProgressPro
   const labels = {
     license: t("license"),
     contract: t("contract"),
-    payment: t("payment"),
+    // Step 3 of the customer journey (signature, then payment).
+    payment: t("signature"),
   } as const;
 
   return (

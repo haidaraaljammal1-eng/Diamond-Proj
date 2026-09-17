@@ -1,3 +1,5 @@
+import type { DamageMark } from "@/modules/public-rental/types/official-contract.types";
+
 export type ContractStatus =
   | "AWAITING"
   | "FORM"
@@ -236,7 +238,13 @@ export interface InspectionPhotoInput {
   angle: InspectionAngle;
 }
 
-export interface CarOutPayload {
+/** Official-contract paper side of a custody event (damage marks + hirer signature PNG). */
+export interface CustodyPaperInput {
+  damage?: DamageMark[];
+  hirerSignatureAttachmentId?: string;
+}
+
+export interface CarOutPayload extends CustodyPaperInput {
   occurredAt?: string;
   mileageOut: number;
   fuelOut: FuelLevel;
@@ -244,7 +252,7 @@ export interface CarOutPayload {
   photos: InspectionPhotoInput[];
 }
 
-export interface CarInPayload {
+export interface CarInPayload extends CustodyPaperInput {
   occurredAt?: string;
   mileageIn: number;
   fuelIn: FuelLevel;

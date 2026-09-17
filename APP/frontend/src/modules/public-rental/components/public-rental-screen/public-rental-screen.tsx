@@ -6,16 +6,16 @@ import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
 import { usePublicRental } from "../../hooks/use-public-rental";
 import type { PublicRentalUiStage } from "../../types/public-rental.types";
-import { toPublicRentalFormPayload } from "../../utils/to-form-payload";
 import { canEnterStage, isLinkGoneReason, uiStageFromFlowStep } from "../../utils/flow-step";
 import { isAcceptedLicenseFile } from "../../utils/license-file";
 import {
   publicRentalErrorReason,
   resolvePublicRentalErrorMessage,
 } from "../../utils/resolve-public-rental-error";
-import { ContractStep } from "../contract-step/contract-step";
+import { ContractReviewStep } from "../contract-review-step/contract-review-step";
 import { HandoverStep } from "../handover-step/handover-step";
 import { LicenseStep } from "../license-step/license-step";
+import { PassportStep } from "../passport-step/passport-step";
 import { PaymentStep } from "../payment-step/payment-step";
 import { RentalHeader } from "../rental-header/rental-header";
 import { RentalLinkError } from "../rental-link-error/rental-link-error";
@@ -51,6 +51,8 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   const [viewStage, setViewStage] = useState<PublicRentalUiStage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileHint, setFileHint] = useState<string | null>(null);
+  const [passportPreviewUrl, setPassportPreviewUrl] = useState<string | null>(null);
+  const [passportHint, setPassportHint] = useState<string | null>(null);
 
   if (boundToken !== token) {
     setBoundToken(token);
@@ -58,6 +60,9 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     setFileHint(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
+    setPassportHint(null);
+    if (passportPreviewUrl) URL.revokeObjectURL(passportPreviewUrl);
+    setPassportPreviewUrl(null);
   }
 
   useEffect(() => {
@@ -69,6 +74,12 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (passportPreviewUrl) URL.revokeObjectURL(passportPreviewUrl);
+    };
+  }, [passportPreviewUrl]);
 
   const reason = publicRentalErrorReason(rental.error);
   const linkGone = isLinkGoneReason(reason);
@@ -133,6 +144,28 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     }
   };
 
+  // Passport preview is an in-memory object URL only; never persisted.
+  const handlePassportFile = (file: File) => {
+    setPassportHint(null);
+    if (!isAcceptedLicenseFile(file)) {
+      setPassportHint(t("passport.invalidFile"));
+      return;
+    }
+    if (passportPreviewUrl) URL.revokeObjectURL(passportPreviewUrl);
+    setPassportPreviewUrl(URL.createObjectURL(file));
+    setViewStage("license");
+    if (shouldSkipRentalMutation(simulation.active)) {
+      // Demo mode: the photo produces a simulated normalized passport result; nothing is uploaded.
+      void simulation.simulatePassport("ready");
+      return;
+    }
+    void rental.uploadPassport(file);
+  };
+  const passportError = resolvePublicRentalErrorMessage(
+    errorTranslator(t),
+    rental.passportError,
+  );
+
   return (
     <div className={styles.root}>
       <div className={styles.shell}>
@@ -145,12 +178,14 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
           />
         ) : null}
 
-        <div className={styles.layout}>
+        <div className={styles.layout} data-full-width={current === "contract" || undefined}>
           <div className={styles.main}>
             {simulation.enabled ? (
               <div className={styles.simRow}>
                 {current === "license" ? <SimulationButton surface="license" /> : null}
-                {current === "contract" ? <SimulationButton surface="contract" /> : null}
+                {current === "license" && context.licenseVerification.status === "VALID" ? (
+                  <SimulationButton surface="passport" />
+                ) : null}
                 {current === "payment" ? <SimulationButton surface="payment" /> : null}
               </div>
             ) : null}
@@ -165,31 +200,39 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 }
                 fileHint={fileHint ?? (current === "license" ? inlineError : null)}
                 onFile={handleFile}
+              />
+            ) : null}
+
+            {current === "license" ? (
+              <PassportStep
+                context={context}
+                phase={simulation.snapshot.passport.processing ? "processing" : rental.passportPhase}
+                previewUrl={passportPreviewUrl}
+                readOnly={
+                  context.contract.status !== "AWAITING" &&
+                  context.contract.status !== "FORM"
+                }
+                fileHint={passportHint ?? passportError}
+                onFile={handlePassportFile}
                 onContinue={() => setViewStage("contract")}
               />
             ) : null}
 
             {current === "contract" ? (
-              <ContractStep
+              <ContractReviewStep
+                token={token}
                 context={context}
-                formPending={rental.formPending || simulation.snapshot.formPending}
-                acceptPending={rental.acceptPending || simulation.snapshot.acceptPending}
-                formError={inlineError}
-                onSubmitForm={async (values) => {
+                allowed={allowed}
+                persistEdits={!shouldSkipRentalMutation(simulation.active)}
+                onNextStage={setViewStage}
+                onSigned={async () => {
                   if (shouldSkipRentalMutation(simulation.active)) {
-                    await simulation.simulateFormSubmit(values);
+                    // Demo: local signing moves the overlay to payment; nothing reaches the Backend.
+                    if (await simulation.simulateAccept()) setViewStage("payment");
                     return;
                   }
-                  await rental.submitForm(toPublicRentalFormPayload(values));
-                }}
-                onAccept={async () => {
-                  if (shouldSkipRentalMutation(simulation.active)) {
-                    const ok = await simulation.simulateAccept();
-                    if (ok) setViewStage("payment");
-                    return;
-                  }
-                  const ok = await rental.accept();
-                  if (ok) setViewStage("payment");
+                  await rental.load(token);
+                  setViewStage("payment");
                 }}
               />
             ) : null}
@@ -221,9 +264,11 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
 
             {current === "handover" ? <HandoverStep context={context} /> : null}
           </div>
-          <aside className={styles.aside}>
-            <RentalSummary context={context} />
-          </aside>
+          {current === "contract" ? null : (
+            <aside className={styles.aside}>
+              <RentalSummary context={context} />
+            </aside>
+          )}
         </div>
       </div>
     </div>

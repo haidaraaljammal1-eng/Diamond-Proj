@@ -1,15 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
 import { Icon } from "@/shared/components/ui/icon/icon";
 import type { PublicRentalContext } from "../../types/public-rental.types";
 import { formatLicenseExpiry } from "../../utils/format-license-date";
-import {
-  canContinueFromLicense,
-  licensePanelFromStatus,
-} from "../../utils/license-view";
+import { licensePanelFromStatus } from "../../utils/license-view";
 import { LicenseUpload } from "../license-upload/license-upload";
 import styles from "./license-step.module.css";
 
@@ -20,7 +16,6 @@ interface LicenseStepProps {
   readOnly: boolean;
   fileHint: string | null;
   onFile: (file: File) => void;
-  onContinue: () => void;
 }
 
 export function LicenseStep({
@@ -30,16 +25,11 @@ export function LicenseStep({
   readOnly,
   fileHint,
   onFile,
-  onContinue,
 }: LicenseStepProps) {
   const t = useTranslations("PublicRental.license");
   const panel = licensePanelFromStatus(
     context.licenseVerification.status,
     pending,
-  );
-  const canContinue = canContinueFromLicense(
-    context.licenseVerification.status,
-    context.flow.step,
   );
   const licenseNumber =
     context.licenseVerification.licenseNumber ??
@@ -75,11 +65,6 @@ export function LicenseStep({
               <dd dir="ltr">{expiry ?? "—"}</dd>
             </div>
           </dl>
-          {canContinue && !readOnly ? (
-            <Button type="button" className={styles.continue} onClick={onContinue}>
-              {t("continue")}
-            </Button>
-          ) : null}
         </div>
       ) : null}
 

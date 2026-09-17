@@ -1,0 +1,373 @@
+import type { ContractStatus, OfficialContractSignatureSlot, Prisma } from "@prisma/client";
+import { buildContractIdentityDraft } from "src/modules/contracts/contract-identity-draft";
+import { derivedEndAt } from "src/modules/contracts/contracts-period";
+import type { OfficialContractView } from "src/modules/contracts/contracts.schema";
+import { formatStoredExpiry } from "src/modules/contracts/driving-license-policy";
+import { fleetVehicleTypeLabel } from "src/modules/vehicles/vehicles.mapper";
+import {
+  PUBLIC_SIGNABLE_SLOTS,
+  readDamageMarks,
+  requiredSignatureSlots,
+} from "src/modules/contracts/official-contract-interactive";
+
+/**
+ * PRICE POLICY: the rental price (agreed amount, rate amount, rate basis) is
+ * intentionally excluded from the official/public contract. Pricing remains
+ * internal to Diamond (Contract, payment, Stripe, Finance, staff APIs).
+ *
+ * Official Contract — the one authoritative representation of the Diamond
+ * rental agreement. Pure: composes already-loaded Diamond data, never calls an
+ * OCR provider, never writes. Before signature every value is read live from
+ * its source; the future legal snapshot serializes this exact view.
+ */
+
+export const OFFICIAL_CONTRACT_TEMPLATE_VERSION = "DIAMOND_CONTRACT_V1";
+
+/**
+ * Server-side field policy for the public review link. The link is a check of
+ * the agreement: the customer only fills the payment-card boxes. Vehicle
+ * condition (damage marks, fuel, custody signatures) is captured by staff at
+ * Car-Out / Car-In. Everything not listed here is system-locked.
+ */
+export const OFFICIAL_CONTRACT_EDITABLE_FIELDS = ["cardNumberLast4"] as const;
+export type OfficialContractEditableField = (typeof OFFICIAL_CONTRACT_EDITABLE_FIELDS)[number];
+
+export const OFFICIAL_CONTRACT_SYSTEM_LOCKED_FIELDS = [
+  "agreementNumber",
+  "plateCode",
+  "plateNumber",
+  "vehicleType",
+  "yearMade",
+  "color",
+  "notes",
+  "driverLicenseNumber",
+  "driverLicenseExpiryDate",
+  "plannedStartAt",
+  "plannedEndAt",
+  "numberOfDays",
+  "includedKmPerDay",
+  "extraKmRate",
+  "vehicleOut",
+  "vehicleIn",
+  "signatures",
+] as const;
+
+/** Customer review is possible before signature only. */
+export const OFFICIAL_CONTRACT_REVIEWABLE_STATUSES: readonly ContractStatus[] = ["AWAITING", "FORM"];
+
+export type OfficialFieldSource =
+  | "CONTRACT"
+  | "VEHICLE"
+  | "RENTAL_AGREEMENT"
+  | "PASSPORT_OCR"
+  | "DRIVER_LICENSE_OCR"
+  | "CUSTOMER_REVIEW"
+  | "CUSTOMER_RECORD"
+  | "CAR_OUT"
+  | "CAR_IN"
+  | "CONTRACT_ACCEPTANCE"
+  | "OFFICIAL_CONTRACT_TERMS"
+  | "OFFICIAL_SIGNATURE"
+  | "NONE";
+
+export const OFFICIAL_CONTRACT_INCLUDE = {
+  vehicle: { include: { model: { select: { name: true } } } },
+  customer: true,
+  acceptance: { select: { acceptedAt: true } },
+  licenseVerifications: { orderBy: { createdAt: "desc" as const }, take: 1 },
+  passportExtractions: {
+    where: { document: { supersededAt: null } },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
+  officialReviewDraft: true,
+  officialSignatures: { select: { slot: true, capturedAt: true } },
+  carOut: { select: { occurredAt: true, mileageOut: true, fuelOut: true, photos: { select: { angle: true } } } },
+  carIn: { select: { occurredAt: true, mileageIn: true, fuelIn: true, photos: { select: { angle: true } } } },
+} satisfies Prisma.ContractInclude;
+
+export type OfficialContractRow = Prisma.ContractGetPayload<{ include: typeof OFFICIAL_CONTRACT_INCLUDE }>;
+
+/** Paper order: header, agreement no, title, info grid, rates/km, OUT, IN, terms, signatures. */
+export const OFFICIAL_CONTRACT_SECTIONS = [
+  "header",
+  "agreement",
+  "title",
+  "infoGrid",
+  "rentalTerms",
+  "vehicleOut",
+  "vehicleIn",
+  "legalTerms",
+  "signatures",
+] as const;
+
+/**
+ * Info grid rows as on the paper agreement (vehicle columns, then hirer column).
+ * A cell lists one or more field paths; `a|b` means "a, else b" (actual custody
+ * time, else planned) and `@time` / `@date` selects which part of a timestamp
+ * the cell shows. Deposit is intentionally absent (Diamond V1: no deposit).
+ */
+export const OFFICIAL_CONTRACT_INFO_GRID: string[][][] = [
+  [["vehicle.plateCode"], ["vehicle.vehicleType"], ["hirer.name"]],
+  [["vehicle.yearMade"], ["vehicle.plateNumber"], ["hirer.nationality"]],
+  [["vehicle.notes"], ["vehicle.color"], ["hirer.passportNumber"]],
+  [["vehicleOut.occurredAt|rental.plannedStartAt@time"], ["vehicleOut.occurredAt|rental.plannedStartAt@date"], ["hirer.address", "hirer.telephone"]],
+  [["vehicleIn.occurredAt|rental.plannedEndAt@time"], ["vehicleIn.occurredAt|rental.plannedEndAt@date"], ["hirer.driverLicenseExpiryDate", "hirer.driverLicenseNumber"]],
+  [["additionalDriver.driverLicenseNumber"], ["additionalDriver.name"], ["additionalDriver.nationality", "sponsor.name"]],
+  [[], ["rental.numberOfDays"], ["sponsor.idNumber"]],
+];
+
+interface Resolved<T> {
+  value: T | null;
+  source: OfficialFieldSource;
+}
+
+function pick<T>(...candidates: Array<[T | null | undefined, OfficialFieldSource]>): Resolved<T> {
+  for (const [value, source] of candidates) {
+    if (value !== null && value !== undefined && value !== "") return { value, source };
+  }
+  return { value: null, source: "NONE" };
+}
+
+export interface OfficialContractBuild {
+  view: OfficialContractView;
+  /** Internal provenance per field path. Not part of the public response. */
+  provenance: Record<string, OfficialFieldSource>;
+}
+
+export function buildOfficialContractView(
+  row: OfficialContractRow,
+  options: { officeDisplayName: string; now?: Date },
+): OfficialContractBuild {
+  const now = options.now ?? new Date();
+  const license = row.licenseVerifications[0] ?? null;
+  const passport = row.passportExtractions[0] ?? null;
+  const identity = buildContractIdentityDraft({ license, passport, now });
+  const review = row.officialReviewDraft;
+  const customer = row.customer;
+  const provenance: Record<string, OfficialFieldSource> = {};
+  const track = <T>(path: string, resolved: Resolved<T>): T | null => {
+    provenance[path] = resolved.source;
+    return resolved.value;
+  };
+  const fixed = <T>(path: string, value: T | null | undefined, source: OfficialFieldSource): T | null =>
+    track(path, pick<T>([value, source]));
+
+  const hirer = {
+    name: track("hirer.name", pick<string>(
+      [review?.hirerName, "CUSTOMER_REVIEW"],
+      [identity.fullName.value, "PASSPORT_OCR"],
+      [customer?.name, "CUSTOMER_RECORD"],
+    )),
+    nationality: track("hirer.nationality", pick<string>(
+      [review?.nationality, "CUSTOMER_REVIEW"],
+      [identity.nationality.value, "PASSPORT_OCR"],
+      [customer?.nationality, "CUSTOMER_RECORD"],
+    )),
+    passportNumber: track("hirer.passportNumber", pick<string>(
+      [review?.passportNumber, "CUSTOMER_REVIEW"],
+      [identity.passportNumber.value, "PASSPORT_OCR"],
+      [customer?.passportNumber ?? customer?.identityNumber, "CUSTOMER_RECORD"],
+    )),
+    address: track("hirer.address", pick<string>(
+      [review?.address, "CUSTOMER_REVIEW"],
+      [customer?.address, "CUSTOMER_RECORD"],
+    )),
+    telephone: track("hirer.telephone", pick<string>(
+      [review?.telephone, "CUSTOMER_REVIEW"],
+      [customer?.mobile, "CUSTOMER_RECORD"],
+    )),
+    // License fields are OCR-derived only (no customer correction without an explicit business decision).
+    driverLicenseNumber: track("hirer.driverLicenseNumber", pick<string>(
+      [identity.driverLicenseNumber.value, "DRIVER_LICENSE_OCR"],
+      [customer?.drivingLicenseNumber, "CUSTOMER_RECORD"],
+    )),
+    driverLicenseExpiryDate: track("hirer.driverLicenseExpiryDate", pick<string>(
+      [identity.driverLicenseExpiryDate.value, "DRIVER_LICENSE_OCR"],
+      [formatStoredExpiry(customer?.drivingLicenseExpiry ?? null), "CUSTOMER_RECORD"],
+    )),
+  };
+
+  const custody = (
+    prefix: "vehicleOut" | "vehicleIn",
+    event: { occurredAt: Date; mileage: number; fuel: string; photos: { angle: OfficialContractView["vehicleOut"]["inspectionAngles"][number] }[] } | null,
+    source: OfficialFieldSource,
+    damage: unknown,
+    signature: OfficialContractView["signatures"]["hirer"],
+  ) => ({
+    status: event ? ("RECORDED" as const) : ("NOT_AVAILABLE" as const),
+    occurredAt: fixed(`${prefix}.occurredAt`, event?.occurredAt, source),
+    mileage: fixed(`${prefix}.mileage`, event?.mileage, source),
+    fuel: fixed(`${prefix}.fuel`, event?.fuel, source),
+    inspectionAngles: event ? event.photos.map((p) => p.angle) : [],
+    damage: readDamageMarks(damage),
+    signatureStatus: signature.status,
+  });
+
+  const reviewable = OFFICIAL_CONTRACT_REVIEWABLE_STATUSES.includes(row.status);
+  const canEdit = reviewable && (row.status === "FORM" || identity.identityReady);
+
+  const additionalDriver = {
+    name: fixed("additionalDriver.name", review?.additionalDriverName, "CUSTOMER_REVIEW"),
+    nationality: fixed("additionalDriver.nationality", review?.additionalDriverNationality, "CUSTOMER_REVIEW"),
+    driverLicenseNumber: fixed(
+      "additionalDriver.driverLicenseNumber",
+      review?.additionalDriverLicenseNumber,
+      "CUSTOMER_REVIEW",
+    ),
+  };
+  const sponsor = {
+    name: fixed("sponsor.name", review?.sponsorName, "CUSTOMER_REVIEW"),
+    idNumber: fixed("sponsor.idNumber", review?.sponsorIdNumber, "CUSTOMER_REVIEW"),
+  };
+
+  const required = new Set(requiredSignatureSlots({ additionalDriver, sponsor }));
+  const captured = new Map(row.officialSignatures.map((s) => [s.slot, s.capturedAt]));
+  const signature = (slot: OfficialContractSignatureSlot) => {
+    const capturedAt = captured.get(slot) ?? null;
+    // A legacy acceptance (pre-interactive signing) still counts as the hirer's signature.
+    const legacy = slot === "HIRER" && !capturedAt && row.acceptance ? row.acceptance.acceptedAt : null;
+    return {
+      status: capturedAt || legacy ? ("SIGNED" as const) : ("NOT_SIGNED" as const),
+      signedAt: capturedAt ?? legacy,
+      hasImage: capturedAt !== null,
+      required: reviewable && required.has(slot),
+    };
+  };
+  const signatures = {
+    hirer: signature("HIRER"),
+    additionalDriver: signature("ADDITIONAL_DRIVER"),
+    sponsor: signature("SPONSOR"),
+    vehicleOutHirer: signature("VEHICLE_OUT_HIRER"),
+    vehicleInHirer: signature("VEHICLE_IN_HIRER"),
+  };
+
+  const missingRequirements: string[] = [];
+  if (reviewable) {
+    if (row.status === "AWAITING" && !identity.identityReady) missingRequirements.push("IDENTITY");
+    if (!hirer.name) missingRequirements.push("HIRER_NAME");
+    if (!hirer.passportNumber) missingRequirements.push("PASSPORT_NUMBER");
+    if (!hirer.driverLicenseNumber) missingRequirements.push("DRIVER_LICENSE_NUMBER");
+    for (const slot of required) {
+      if (!captured.has(slot)) missingRequirements.push(`SIGNATURE_${slot}`);
+    }
+  }
+
+  const live: OfficialContractView = {
+    header: { officeDisplayName: options.officeDisplayName },
+    contract: {
+      agreementNumber: row.contractNumber,
+      status: row.status,
+      templateVersion: OFFICIAL_CONTRACT_TEMPLATE_VERSION,
+      termsVersion: row.termsVersion,
+    },
+    vehicle: {
+      // No Vehicle plate-code column exists: staff-set official-contract term, never parsed from plate text.
+      plateCode: fixed("vehicle.plateCode", review?.plateCode, "OFFICIAL_CONTRACT_TERMS"),
+      plateNumber: fixed("vehicle.plateNumber", row.vehicle.plateNumber, "VEHICLE"),
+      vehicleType: fixed(
+        "vehicle.vehicleType",
+        fleetVehicleTypeLabel(row.vehicle.vehicleName, row.vehicle.model?.name ?? null),
+        "VEHICLE",
+      ),
+      yearMade: fixed("vehicle.yearMade", row.vehicle.modelYear, "VEHICLE"),
+      color: fixed("vehicle.color", row.vehicle.color, "VEHICLE"),
+      // Contract-visible notes only (staff-set). Internal/operational notes are never exposed.
+      notes: fixed("vehicle.notes", review?.contractNotes, "OFFICIAL_CONTRACT_TERMS"),
+    },
+    hirer,
+    additionalDriver,
+    sponsor,
+    rental: {
+      plannedStartAt: fixed("rental.plannedStartAt", row.startAt, "RENTAL_AGREEMENT"),
+      plannedEndAt: fixed("rental.plannedEndAt", row.endAt, "RENTAL_AGREEMENT"),
+      numberOfDays: row.rentalDays,
+      periodConsistent:
+        row.startAt && row.endAt
+          ? derivedEndAt(row.startAt, row.rentalDays).getTime() === row.endAt.getTime()
+          : null,
+      // No rental-agreement source exists: staff-set official-contract terms, never defaulted.
+      includedKmPerDay: fixed("rental.includedKmPerDay", review?.includedKmPerDay, "OFFICIAL_CONTRACT_TERMS"),
+      extraKmRate: fixed(
+        "rental.extraKmRate",
+        review?.extraKmRate != null ? Number(review.extraKmRate) : null,
+        "OFFICIAL_CONTRACT_TERMS",
+      ),
+    },
+    card: { last4: fixed("card.last4", review?.cardNumberLast4, "CUSTOMER_REVIEW") },
+    vehicleOut: custody(
+      "vehicleOut",
+      row.carOut
+        ? { occurredAt: row.carOut.occurredAt, mileage: row.carOut.mileageOut, fuel: row.carOut.fuelOut, photos: row.carOut.photos }
+        : null,
+      "CAR_OUT",
+      review?.damageOut,
+      signatures.vehicleOutHirer,
+    ),
+    vehicleIn: custody(
+      "vehicleIn",
+      row.carIn
+        ? { occurredAt: row.carIn.occurredAt, mileage: row.carIn.mileageIn, fuel: row.carIn.fuelIn, photos: row.carIn.photos }
+        : null,
+      "CAR_IN",
+      review?.damageIn,
+      signatures.vehicleInHirer,
+    ),
+    signatures,
+    identity: { identityReady: identity.identityReady },
+    permissions: {
+      // Field policy is listed whenever the agreement is still reviewable; `canEdit`
+      // carries the identity gate. The server enforces both on every write.
+      canEdit,
+      editableFields: reviewable ? [...OFFICIAL_CONTRACT_EDITABLE_FIELDS] : [],
+      // Vehicle OUT damage is marked by staff at Car-Out, never on the review link.
+      canMarkDamageOut: false,
+      signableSlots: reviewable ? [...PUBLIC_SIGNABLE_SLOTS] : [],
+      canSign: canEdit && missingRequirements.length === 0,
+      missingRequirements,
+    },
+    layout: {
+      sections: [...OFFICIAL_CONTRACT_SECTIONS],
+      infoGrid: OFFICIAL_CONTRACT_INFO_GRID,
+    },
+  };
+  provenance["contract.agreementNumber"] = "CONTRACT";
+  provenance["rental.numberOfDays"] = "RENTAL_AGREEMENT";
+  provenance["signatures.hirer"] = captured.has("HIRER")
+    ? "OFFICIAL_SIGNATURE"
+    : row.acceptance
+      ? "CONTRACT_ACCEPTANCE"
+      : "NONE";
+
+  return { view: applyFrozenOfficialContract(live, row.snapshot), provenance };
+}
+
+/**
+ * After signing, the agreement's legal content is served from the frozen
+ * snapshot. Custody events (OUT / IN damage marked by staff at Car-Out /
+ * Car-In) and signature state stay live.
+ */
+export function applyFrozenOfficialContract(
+  live: OfficialContractView,
+  snapshot: unknown,
+): OfficialContractView {
+  const frozen =
+    snapshot && typeof snapshot === "object" && "officialContract" in snapshot
+      ? ((snapshot as { officialContract?: OfficialContractView }).officialContract ?? null)
+      : null;
+  if (!frozen || OFFICIAL_CONTRACT_REVIEWABLE_STATUSES.includes(live.contract.status)) return live;
+  const date = (value: unknown) => (value ? new Date(value as string) : null);
+  return {
+    ...live,
+    vehicle: frozen.vehicle,
+    hirer: frozen.hirer,
+    additionalDriver: frozen.additionalDriver,
+    sponsor: frozen.sponsor,
+    rental: {
+      ...frozen.rental,
+      plannedStartAt: date(frozen.rental.plannedStartAt),
+      plannedEndAt: date(frozen.rental.plannedEndAt),
+    },
+    card: frozen.card,
+  };
+}

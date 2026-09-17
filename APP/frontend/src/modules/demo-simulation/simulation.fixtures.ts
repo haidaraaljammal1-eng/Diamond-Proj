@@ -15,6 +15,18 @@ export const DEMO_LICENSE_EXPIRED = {
   expiryDate: "2020-01-12",
 } as const;
 
+/** Synthetic passport identity (not a real person). */
+export const DEMO_PASSPORT_READY = {
+  fullName: "DEMO CUSTOMER",
+  passportNumber: "P1234567",
+  nationality: "United Arab Emirates",
+  dateOfBirth: "1990-01-01",
+  sex: null,
+  passportIssueDate: null,
+  passportExpiryDate: "2031-12-31",
+  issuingCountry: null,
+} as const;
+
 export const DEMO_CUSTOMER: SimulatedCustomerState = {
   name: "Demo Customer",
   mobile: "050 123 4567",

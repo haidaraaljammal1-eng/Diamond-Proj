@@ -1,5 +1,6 @@
 import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
+import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
@@ -22,7 +23,6 @@ import {
   TEST_STRIPE_WEBHOOK_SIGNATURE,
 } from "../helpers/fake-payment-provider";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
-import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -47,7 +47,6 @@ if (!RUN) {
     let seq = 0;
     let payments = installPaymentProvider(run);
 
-    const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 
     async function seedLiability(contractId: string) {
       seq += 1;
@@ -85,33 +84,7 @@ if (!RUN) {
     }
 
     async function seedValidLicense(rentalToken: string) {
-      setDrivingLicenseOcrProviderForTests({
-        name: "test",
-        async analyzeDrivingLicense() {
-          return {
-            ok: true,
-            licenseNumber: "DL-SEC",
-            expiryDate: "2030-01-01",
-            confidence: 0.99,
-            provider: "test",
-          };
-        },
-      });
-      const boundary = "----seclicense";
-      const payload = Buffer.concat([
-        Buffer.from(
-          `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="dl.png"\r\nContent-Type: image/png\r\n\r\n`,
-        ),
-        PNG,
-        Buffer.from(`\r\n--${boundary}--\r\n`),
-      ]);
-      const up = await app.inject({
-        method: "POST",
-        url: `/contracts/rental/${rentalToken}/driving-license`,
-        headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
-        payload,
-      });
-      assert.equal(up.statusCode, 200, up.body);
+      await seedReadyIdentity(app, rentalToken, { licenseNumber: "DL-SEC", expiryDate: "2030-01-01" });
     }
 
     async function dummyPhotos() {
@@ -217,7 +190,7 @@ if (!RUN) {
     });
 
     after(async () => {
-      setDrivingLicenseOcrProviderForTests(undefined);
+      await injectDocumentOcr(undefined);
       setPaymentProviderForTests(undefined);
       await app.close();
     });

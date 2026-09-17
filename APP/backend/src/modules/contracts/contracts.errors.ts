@@ -80,6 +80,44 @@ export const contractError = {
       "DRIVING_LICENSE_EXPIRED",
       expiryDate ? { expiryDate } : {},
     ),
+  passportLicenseRequired: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A valid driving license is required before the passport",
+      "PASSPORT_LICENSE_REQUIRED",
+    ),
+  officialContractReviewLocked: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "The official contract can no longer be edited",
+      "OFFICIAL_CONTRACT_REVIEW_LOCKED",
+    ),
+  officialContractFieldLocked: (fields: string[]) =>
+    err(
+      ErrorCode.FORBIDDEN,
+      "These official contract fields cannot be edited from the review link",
+      "OFFICIAL_CONTRACT_FIELD_LOCKED",
+      { fields },
+    ),
+  officialSignatureSlotUnavailable: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This signature cannot be captured at this stage",
+      "OFFICIAL_SIGNATURE_SLOT_UNAVAILABLE",
+    ),
+  officialContractIncomplete: (missing: string[]) =>
+    err(
+      ErrorCode.CONFLICT,
+      "The official contract is not ready to be signed",
+      "OFFICIAL_CONTRACT_INCOMPLETE",
+      { missing },
+    ),
+  identityNotReady: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Driving license and passport must be completed first",
+      "CONTRACT_IDENTITY_NOT_READY",
+    ),
   publicFormIncomplete: () =>
     err(
       ErrorCode.VALIDATION_ERROR,

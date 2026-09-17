@@ -23,6 +23,7 @@ model Attachment {
   contractCarInPhotos  ContractCarInPhoto[]  @relation("ContractCarInPhotoAttachment")
   contractSignatures   ContractAcceptance[]  @relation("ContractSignatureAttachment")
   contractDocuments    ContractDocument[]    @relation("ContractDocumentAttachment")
+  officialContractSignatures OfficialContractSignature[] @relation("OfficialContractSignatureAttachment")
   manualExpenses       ManualExpense[]
 
   @@index([uploadedById])

@@ -1,9 +1,9 @@
 import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
+import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
-import { setDrivingLicenseOcrProviderForTests } from "src/modules/contracts/ocr/ocr-provider.factory";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import {
   confirmRentalPaymentViaStatusToken,
@@ -91,41 +91,9 @@ if (!RUN) {
     token = res.json().data.accessToken;
   }
 
-  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
-
-  function licenseMultipart() {
-    const boundary = "----ctlicense";
-    const payload = Buffer.concat([
-      Buffer.from(
-        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="dl.png"\r\nContent-Type: image/png\r\n\r\n`,
-      ),
-      PNG,
-      Buffer.from(`\r\n--${boundary}--\r\n`),
-    ]);
-    return { payload, headers: { "content-type": `multipart/form-data; boundary=${boundary}` } };
-  }
 
   async function seedValidLicense(rentalToken: string) {
-    setDrivingLicenseOcrProviderForTests({
-      name: "test",
-      async analyzeDrivingLicense() {
-        return {
-          ok: true,
-          licenseNumber: "DL-1",
-          expiryDate: "2030-01-01",
-          confidence: 0.99,
-          provider: "test",
-        };
-      },
-    });
-    const { headers, payload } = licenseMultipart();
-    const up = await app.inject({
-      method: "POST",
-      url: `/contracts/rental/${rentalToken}/driving-license`,
-      headers,
-      payload,
-    });
-    assert.equal(up.statusCode, 200, up.body);
+    await seedReadyIdentity(app, rentalToken, { licenseNumber: "DL-1", expiryDate: "2030-01-01" });
   }
 
   let photoSeq = 0;
@@ -184,7 +152,7 @@ if (!RUN) {
   });
 
   after(async () => {
-    setDrivingLicenseOcrProviderForTests(undefined);
+    await injectDocumentOcr(undefined);
     await app.close();
   });
 
@@ -366,9 +334,16 @@ if (!RUN) {
       method: "POST",
       url: `/contracts/${contractId}/car-out`,
       headers: auth(),
-      payload: { mileageOut: 1000, fuelOut: "F", photos: outPhotos },
+      payload: {
+        mileageOut: 1000,
+        fuelOut: "F",
+        photos: outPhotos,
+        damage: [{ zone: "TOP.HOOD", type: "SCRATCH" }],
+      },
     });
     assert.equal(carOut.statusCode, 200, carOut.body);
+    const outDraft = await prisma.officialContractReviewDraft.findUniqueOrThrow({ where: { contractId } });
+    assert.deepEqual(outDraft.damageOut, [{ zone: "TOP.HOOD", type: "SCRATCH" }]);
     assert.equal(carOut.json().data.status, "ACTIVE");
     assert.equal(carOut.json().data.vehicle.operationalStatus, "RENTED");
 
@@ -460,9 +435,18 @@ if (!RUN) {
       method: "POST",
       url: `/contracts/${contractId}/car-in`,
       headers: auth(),
-      payload: { mileageIn: 1400, fuelIn: "1/2", notes: "office return", photos: inPhotos },
+      payload: {
+        mileageIn: 1400,
+        fuelIn: "1/2",
+        notes: "office return",
+        photos: inPhotos,
+        damage: [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }],
+      },
     });
     assert.equal(staffCarIn.statusCode, 200, staffCarIn.body);
+    const inDraft = await prisma.officialContractReviewDraft.findUniqueOrThrow({ where: { contractId } });
+    assert.deepEqual(inDraft.damageIn, [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }]);
+    assert.deepEqual(inDraft.damageOut, [{ zone: "TOP.HOOD", type: "SCRATCH" }]);
     assert.equal(staffCarIn.json().data.status, "REVIEW");
     assert.equal(staffCarIn.json().data.carIn.mileageIn, 1400);
     assert.equal(staffCarIn.json().data.carIn.photos.length, 8);

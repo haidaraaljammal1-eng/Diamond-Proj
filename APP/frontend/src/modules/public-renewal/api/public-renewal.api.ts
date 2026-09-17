@@ -8,6 +8,7 @@ const CONTRACTS_PATH = "/contracts";
 export async function getPublicRenewal(token: string): Promise<PublicRenewalView> {
   const response = await apiRequest<PublicRenewalView>(
     `${CONTRACTS_PATH}/renew/${token}`,
+    { publicRequest: true },
   );
   return response.data;
 }
@@ -16,7 +17,7 @@ export async function getPublicRenewal(token: string): Promise<PublicRenewalView
 export async function confirmPublicRenewal(token: string): Promise<PublicRenewalView> {
   const response = await apiRequest<PublicRenewalView>(
     `${CONTRACTS_PATH}/renew/${token}/confirm`,
-    { method: "POST", body: {} },
+    { method: "POST", body: {}, publicRequest: true },
   );
   return response.data;
 }
@@ -25,7 +26,7 @@ export async function confirmPublicRenewal(token: string): Promise<PublicRenewal
 export async function startPublicRenewalPayment(token: string): Promise<PaymentCheckoutDto> {
   const response = await apiRequest<PaymentCheckoutDto>(
     `${CONTRACTS_PATH}/renew/${token}/payment`,
-    { method: "POST", body: {} },
+    { method: "POST", body: {}, publicRequest: true },
   );
   return response.data;
 }

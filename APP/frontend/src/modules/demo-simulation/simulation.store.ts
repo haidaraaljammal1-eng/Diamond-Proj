@@ -5,6 +5,7 @@ import { DEMO_CUSTOMER } from "./simulation.fixtures";
 import {
   DEMO_SIMULATION_DELAYS,
   type SimulatedLicenseScenario,
+  type SimulatedPassportScenario,
   type SimulatedPaymentScenario,
   type SimulatedTarsPreset,
   type SimulationSnapshot,
@@ -18,10 +19,15 @@ import {
 import type { FinanceSimulationOverlay } from "@/modules/finance/utils/finance-simulation";
 import type { ConfirmRoadLiabilityChargePayload } from "@/modules/road-liabilities/types/road-liability-charge-review.types";
 import type { PublicRentalFormValues } from "@/modules/public-rental/schemas/public-rental-form.schema";
-import { licenseSimulationResult, paymentSimulationPhase } from "./simulation.utils";
+import {
+  licenseSimulationResult,
+  passportSimulationResult,
+  paymentSimulationPhase,
+} from "./simulation.utils";
 
 interface DemoSimulationState extends SimulationSnapshot {
   simulateLicense: (scenario: SimulatedLicenseScenario) => Promise<void>;
+  simulatePassport: (scenario: SimulatedPassportScenario) => Promise<void>;
   fillDemoCustomer: () => void;
   simulateFormSubmit: (values: PublicRentalFormValues) => Promise<boolean>;
   simulateAccept: () => Promise<boolean>;
@@ -54,6 +60,13 @@ const idleLicense = {
   expiryDate: null,
 };
 
+const idlePassport = {
+  processing: false,
+  scenario: "ready" as SimulatedPassportScenario,
+  status: null,
+  fields: null,
+};
+
 const idlePayment = {
   scenario: "success" as SimulatedPaymentScenario,
   status: null,
@@ -67,6 +80,7 @@ const empty: SimulationSnapshot = {
   flowStep: null,
   contractStatus: null,
   license: idleLicense,
+  passport: idlePassport,
   customer: null,
   formPending: false,
   acceptPending: false,
@@ -88,6 +102,7 @@ function isOccupied(state: SimulationSnapshot): boolean {
     state.tarsPreset != null ||
     state.flowStep != null ||
     state.license.status != null ||
+    state.passport.status != null ||
     state.gpsOverlay != null ||
     state.roadLiabilitiesOverlay != null ||
     state.financeOverlay != null
@@ -118,6 +133,19 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
       license: result.license,
       flowStep: result.flowStep,
     });
+  },
+
+  /** Retake = run again: the latest simulated capture replaces the previous one. */
+  async simulatePassport(scenario) {
+    const generation = get().generation + 1;
+    set({
+      active: true,
+      generation,
+      passport: { processing: true, scenario, status: null, fields: null },
+    });
+    await wait(DEMO_SIMULATION_DELAYS.passportMs);
+    if (get().generation !== generation) return;
+    set({ passport: passportSimulationResult(scenario) });
   },
 
   fillDemoCustomer() {
@@ -277,6 +305,7 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
       flowStep: null,
       contractStatus: null,
       license: idleLicense,
+      passport: idlePassport,
       customer: null,
       formPending: false,
       acceptPending: false,
@@ -287,6 +316,7 @@ export const useDemoSimulationStore = create<DemoSimulationState>((set, get) => 
         flowStep: null,
         contractStatus: null,
         license: idleLicense,
+        passport: idlePassport,
         customer: null,
         formPending: false,
         acceptPending: false,

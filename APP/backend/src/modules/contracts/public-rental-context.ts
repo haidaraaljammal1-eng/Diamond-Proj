@@ -5,6 +5,10 @@ import {
 } from "src/modules/contracts/contracts.constants";
 import { derivePublicRentalFlowStep } from "src/modules/contracts/public-rental-flow";
 import {
+  buildContractIdentityDraft,
+  publicPassportStatus,
+} from "src/modules/contracts/contract-identity-draft";
+import {
   formatStoredExpiry,
   maskLicenseNumber,
 } from "src/modules/contracts/driving-license-policy";
@@ -20,12 +24,23 @@ export const PUBLIC_RENTAL_INCLUDE = {
   carOut: { select: { occurredAt: true } },
   carIn: { select: { occurredAt: true } },
   licenseVerifications: { orderBy: { createdAt: "desc" as const }, take: 1 },
+  // Active attempt only: a superseded (retaken) passport is never authoritative.
+  passportExtractions: {
+    where: { document: { supersededAt: null } },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
 } satisfies Prisma.ContractInclude;
 
 export type PublicRentalRow = Prisma.ContractGetPayload<{ include: typeof PUBLIC_RENTAL_INCLUDE }>;
 
-export function toPublicRentalContext(row: PublicRentalRow): z.infer<typeof PublicRentalContextSchema> {
+export function toPublicRentalContext(
+  row: PublicRentalRow,
+  now: Date = new Date(),
+): z.infer<typeof PublicRentalContextSchema> {
   const verification = row.licenseVerifications[0] ?? null;
+  const passport = row.passportExtractions[0] ?? null;
+  const identity = buildContractIdentityDraft({ license: verification, passport, now });
   const payment = row.payments[0] ?? null;
   const displayName = vehicleDisplayName({
     vehicleName: row.vehicle.vehicleName,
@@ -35,7 +50,7 @@ export function toPublicRentalContext(row: PublicRentalRow): z.infer<typeof Publ
   });
   const step = derivePublicRentalFlowStep({
     status: row.status,
-    licenseStatus: verification?.status ?? null,
+    identityReady: identity.identityReady,
     paymentStatus: payment?.status ?? null,
   });
   const verifiedNumber =
@@ -88,6 +103,26 @@ export function toPublicRentalContext(row: PublicRentalRow): z.infer<typeof Publ
       licenseNumberMasked: maskLicenseNumber(verification?.licenseNumber ?? null),
       expiryDate: formatStoredExpiry(verification?.expiryDate ?? null),
       confidence: verification?.confidence ?? null,
+    },
+    identity: {
+      licenseStatus: identity.licenseStatus,
+      passport: {
+        status: publicPassportStatus(passport, now),
+        fields:
+          identity.passportStatus === "PASSPORT_READY"
+            ? {
+                fullName: identity.fullName.value,
+                passportNumber: identity.passportNumber.value,
+                nationality: identity.nationality.value,
+                dateOfBirth: identity.dateOfBirth.value,
+                sex: identity.sex.value,
+                passportIssueDate: identity.passportIssueDate.value,
+                passportExpiryDate: identity.passportExpiryDate.value,
+                issuingCountry: identity.issuingCountry.value,
+              }
+            : null,
+      },
+      identityReady: identity.identityReady,
     },
     payment: {
       status: payment?.status ?? null,

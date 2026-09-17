@@ -75,6 +75,16 @@ export function SimulationButton({
           </Button>
         </div>
       ) : null}
+      {surface === "passport" ? (
+        <div className={styles.actions}>
+          <Button type="button" variant="secondary" size="sm" data-testid="simulate-passport-ready" onClick={() => run(() => simulation.simulatePassport("ready"))}>
+            {t("passport.ready")}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" data-testid="simulate-passport-notRecognized" onClick={() => run(() => simulation.simulatePassport("notRecognized"))}>
+            {t("passport.notRecognized")}
+          </Button>
+        </div>
+      ) : null}
       {surface === "contract" ? (
         <div className={styles.actions}>
           <Button type="button" variant="secondary" size="sm" data-testid="simulate-contract-fill" onClick={() => run(() => simulation.fillDemoCustomer())}>

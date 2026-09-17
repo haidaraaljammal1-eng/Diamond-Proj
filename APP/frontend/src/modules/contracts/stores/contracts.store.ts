@@ -91,15 +91,17 @@ interface ContractsState {
   ) => Promise<boolean>;
   submitCarOut: (
     id: string,
-    payload: Omit<CarOutPayload, "photos"> & {
+    payload: Omit<CarOutPayload, "photos" | "hirerSignatureAttachmentId"> & {
       photos: { angle: InspectionAngle; file: File }[];
+      hirerSignature?: Blob | null;
     },
     idempotencyKey: string,
   ) => Promise<boolean>;
   submitCarIn: (
     id: string,
-    payload: Omit<CarInPayload, "photos"> & {
+    payload: Omit<CarInPayload, "photos" | "hirerSignatureAttachmentId"> & {
       photos: { angle: InspectionAngle; file: File }[];
+      hirerSignature?: Blob | null;
     },
     idempotencyKey: string,
   ) => Promise<boolean>;
@@ -123,6 +125,13 @@ interface ContractsState {
 }
 
 const IDLE_SLOT: MutationSlot = { pending: false, error: null };
+
+/** Uploads the drawn custody signature (PNG) and returns its attachment id. */
+async function uploadHirerSignature(image: Blob | null | undefined): Promise<string | undefined> {
+  if (!image) return undefined;
+  const file = new File([image], "hirer-signature.png", { type: "image/png" });
+  return (await uploadContractAttachment(file)).id;
+}
 
 let listInFlight: Promise<void> | null = null;
 let detailInFlight: Promise<void> | null = null;
@@ -331,6 +340,8 @@ export const useContractsStore = create<ContractsState>((set, get) => {
             fuelOut: payload.fuelOut,
             notes: payload.notes,
             photos,
+            damage: payload.damage,
+            hirerSignatureAttachmentId: await uploadHirerSignature(payload.hirerSignature),
           },
           idempotencyKey,
         );
@@ -358,6 +369,8 @@ export const useContractsStore = create<ContractsState>((set, get) => {
             fuelIn: payload.fuelIn,
             notes: payload.notes,
             photos,
+            damage: payload.damage,
+            hirerSignatureAttachmentId: await uploadHirerSignature(payload.hirerSignature),
           },
           idempotencyKey,
         );

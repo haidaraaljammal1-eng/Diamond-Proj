@@ -7,6 +7,7 @@ const CONTRACTS_PATH = "/contracts";
 export async function getPublicReturn(token: string): Promise<PublicReturnView> {
   const response = await apiRequest<PublicReturnView>(
     `${CONTRACTS_PATH}/return/${token}`,
+    { publicRequest: true },
   );
   return response.data;
 }

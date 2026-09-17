@@ -52,6 +52,25 @@ enum ContractPaymentPurpose {
 
 enum ContractDocumentType {
   DRIVING_LICENSE
+  PASSPORT
+}
+
+/// Signature boxes on the official contract paper.
+enum OfficialContractSignatureSlot {
+  HIRER
+  ADDITIONAL_DRIVER
+  SPONSOR
+  VEHICLE_OUT_HIRER
+  VEHICLE_IN_HIRER
+}
+
+/// Provider-neutral passport OCR state. Vendor-specific states are never stored.
+enum PassportExtractionStatus {
+  PROCESSING
+  READY
+  NOT_RECOGNIZED
+  FAILED
+  PROVIDER_UNAVAILABLE
 }
 
 enum DrivingLicenseVerificationStatus {
@@ -138,6 +157,9 @@ model Contract {
   payments             ContractPayment[]
   documents            ContractDocument[]
   licenseVerifications DrivingLicenseVerification[]
+  passportExtractions  PassportExtraction[]
+  officialReviewDraft  OfficialContractReviewDraft?
+  officialSignatures   OfficialContractSignature[]
   carOut               ContractCarOut?
   carIn                ContractCarIn?
   reconciliation       ContractReconciliation?
@@ -217,9 +239,9 @@ model ContractPayment {
   createdByUserId      Int?
   createdBy            User?                  @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
-  reconciliationSettlement ContractReconciliation?     @relation("ReconciliationSettlement")
-  postCloseSettlement      ContractPostCloseReceivable?  @relation("PostCloseSettlement")
-  renewalSettlement        ContractRenewal?            @relation("RenewalSettlement")
+  reconciliationSettlement ContractReconciliation?      @relation("ReconciliationSettlement")
+  postCloseSettlement      ContractPostCloseReceivable? @relation("PostCloseSettlement")
+  renewalSettlement        ContractRenewal?             @relation("RenewalSettlement")
   ledgerEntries            FinancialLedgerEntry[]
 
   @@index([contractId, status])
@@ -253,7 +275,8 @@ model ContractDocument {
   supersededAt DateTime?
   createdAt    DateTime             @default(now())
 
-  verifications DrivingLicenseVerification[]
+  verifications       DrivingLicenseVerification[]
+  passportExtractions PassportExtraction[]
 
   @@index([contractId, type, supersededAt])
   @@map("contract_documents")
@@ -279,6 +302,91 @@ model DrivingLicenseVerification {
 
   @@index([contractId, createdAt])
   @@map("driving_license_verifications")
+}
+
+/// Normalized passport OCR result for one PASSPORT ContractDocument attempt.
+/// Only normalized fields are stored — no raw provider payload, no image bytes.
+/// The attempt whose document is not superseded is authoritative.
+model PassportExtraction {
+  id                 String                   @id @default(uuid())
+  contractId         String
+  contract           Contract                 @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  documentId         String                   @unique
+  document           ContractDocument         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  attachmentId       String
+  status             PassportExtractionStatus @default(PROCESSING)
+  fullName           String?
+  firstName          String?
+  middleName         String?
+  lastName           String?
+  nationality        String?
+  passportNumber     String?
+  /// Calendar dates stored at UTC noon.
+  passportIssueDate  DateTime?
+  passportExpiryDate DateTime?
+  dateOfBirth        DateTime?
+  sex                String?
+  issuingCountry     String?
+  confidence         Float?
+  provider           String?
+  providerVersion    String?
+  completedAt        DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  @@index([contractId, createdAt])
+  @@map("passport_extractions")
+}
+
+/// Customer review overrides for the official contract's personal fields only.
+/// A non-null column overrides the normalized OCR/record value; OCR rows are never mutated.
+/// Never holds vehicle, pricing, days, Car-Out/Car-In, deposit or payment-card data.
+model OfficialContractReviewDraft {
+  id                            String    @id @default(uuid())
+  contractId                    String    @unique
+  contract                      Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  hirerName                     String?
+  nationality                   String?
+  passportNumber                String?
+  address                       String?
+  telephone                     String?
+  additionalDriverName          String?
+  additionalDriverNationality   String?
+  additionalDriverLicenseNumber String?
+  sponsorName                   String?
+  sponsorIdNumber               String?
+  /// Last 4 digits only. The full card number is never sent to or stored by Diamond.
+  cardNumberLast4               String?
+  /// Structured damage marks: [{ zone, type }]. OUT is customer-marked before signing; IN is staff (return).
+  damageOut                     Json?
+  damageIn                      Json?
+  /// Staff-set official-contract terms (no other Diamond source exists). Read-only to the customer.
+  plateCode                     String?
+  contractNotes                 String?
+  includedKmPerDay              Int?
+  extraKmRate                   Decimal?  @db.Decimal(10, 2)
+  reviewedAt                    DateTime?
+  revision                      Int       @default(0)
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+
+  @@map("official_contract_review_drafts")
+}
+
+/// One captured signature image per official-contract slot (latest capture wins).
+model OfficialContractSignature {
+  id           String                        @id @default(uuid())
+  contractId   String
+  contract     Contract                      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  slot         OfficialContractSignatureSlot
+  attachmentId String
+  attachment   Attachment                    @relation("OfficialContractSignatureAttachment", fields: [attachmentId], references: [id], onDelete: Restrict)
+  capturedAt   DateTime
+  createdAt    DateTime                      @default(now())
+  updatedAt    DateTime                      @updatedAt
+
+  @@unique([contractId, slot])
+  @@map("official_contract_signatures")
 }
 
 model ContractCarOut {
@@ -346,22 +454,22 @@ model ContractCarInPhoto {
 }
 
 model ContractReconciliation {
-  id               String    @id @default(uuid())
-  contractId       String    @unique
-  contract         Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  id               String           @id @default(uuid())
+  contractId       String           @unique
+  contract         Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
   chargesTotal     Int
   /// Legacy columns — Diamond V1 reconciliation uses finalAmount = chargesTotal only.
-  depositAmount    Int       @default(0)
-  deductions       Int       @default(0)
+  depositAmount    Int              @default(0)
+  deductions       Int              @default(0)
   finalAmount      Int
   approvedAt       DateTime?
   approvedByUserId Int?
-  approvedBy       User?     @relation("ContractReconciliationApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedBy       User?            @relation("ContractReconciliationApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
   settledAt        DateTime?
-  settledPaymentId String?   @unique
+  settledPaymentId String?          @unique
   settledPayment   ContractPayment? @relation("ReconciliationSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   lines ContractReconciliationLine[]
 
@@ -397,21 +505,21 @@ model ContractReconciliationLine {
 }
 
 model ContractRenewal {
-  id               String    @id @default(uuid())
+  id               String           @id @default(uuid())
   contractId       String
-  contract         Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract         Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
   additionalDays   Int
   additionalAmount Int
   previousEndAt    DateTime
   newEndAt         DateTime
-  createdAt        DateTime  @default(now())
+  createdAt        DateTime         @default(now())
   /// Customer accepted the offer. Contract extension applies only after payment (or zero amount).
   approvedAt       DateTime?
   appliedAt        DateTime?
-  settledPaymentId String?   @unique
+  settledPaymentId String?          @unique
   settledPayment   ContractPayment? @relation("RenewalSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdByUserId  Int?
-  createdBy        User?     @relation("ContractRenewalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdBy        User?            @relation("ContractRenewalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([contractId, createdAt])
   @@map("contract_renewals")

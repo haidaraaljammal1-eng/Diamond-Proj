@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma, ContractStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { ContractStatus, OfficialContractSignatureSlot } from "@prisma/client";
 import { createReadStream } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { AppError } from "src/lib/errors/app-error";
@@ -17,12 +18,15 @@ import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import {
   CONTRACT_CURRENCY,
   CONTRACT_LICENSE_LOCK_NS,
+  CONTRACT_PASSPORT_LOCK_NS,
+  CONTRACT_OFFICIAL_REVIEW_LOCK_NS,
   CONTRACT_PAYMENT_LOCK_NS,
   CONTRACT_RECONCILE_LOCK_NS,
   CONTRACT_TERMS_VERSION,
   DRIVING_LICENSE_UPLOAD_MIME,
   INSPECTION_ANGLES,
   OFFICE_DISPLAY_NAME_DEFAULT,
+  PASSPORT_UPLOAD_MIME,
   PAYMENT_STATUS_TOKEN_TTL_SECONDS,
   VEHICLE_RENTAL_LOCK_NS,
 } from "src/modules/contracts/contracts.constants";
@@ -49,7 +53,29 @@ import {
   toPublicRentalContext,
 } from "src/modules/contracts/public-rental-context";
 import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
-import { createDrivingLicenseOcrProvider } from "src/modules/contracts/ocr/ocr-provider.factory";
+import { analyzeDrivingLicenseDocument } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
+import { evaluatePassportOcr } from "src/modules/contracts/passport-extraction-policy";
+import {
+  buildContractIdentityDraft,
+  toPublicIdentityDraft,
+} from "src/modules/contracts/contract-identity-draft";
+import { analyzeDocument } from "src/modules/document-ocr/document-ocr.service";
+import { derivedEndAt } from "src/modules/contracts/contracts-period";
+import {
+  buildOfficialContractView,
+  OFFICIAL_CONTRACT_EDITABLE_FIELDS,
+  OFFICIAL_CONTRACT_INCLUDE,
+  OFFICIAL_CONTRACT_REVIEWABLE_STATUSES,
+} from "src/modules/contracts/official-contract";
+import type {
+  OfficialContractReviewPatch,
+  OfficialContractStaffTerms,
+} from "src/modules/contracts/contracts.schema";
+import {
+  PUBLIC_SIGNABLE_SLOTS,
+  readDamageMarks,
+  SIGNATURE_UPLOAD_MIME,
+} from "src/modules/contracts/official-contract-interactive";
 import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
 import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
 import { createFilesService } from "src/modules/files/files.service";
@@ -90,10 +116,6 @@ function assertEightAngles(photos: { angle: string }[]): void {
   }
 }
 
-function derivedEndAt(startAt: Date | null | undefined, days: number, fallback = new Date()): Date {
-  const start = startAt ?? fallback;
-  return new Date(start.getTime() + days * 86_400_000);
-}
 
 type RenewalHistoryRow = {
   additionalDays: number;
@@ -172,6 +194,22 @@ export function createContractsService(fastify: FastifyInstance) {
       where: { contractId },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  /** Active passport attempt: its document has not been superseded by a retake. */
+  async function activePassport(tx: Parameters<Parameters<typeof withTransaction>[1]>[0], contractId: string) {
+    return tx.passportExtraction.findFirst({
+      where: { contractId, document: { supersededAt: null } },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async function identityDraftFor(tx: Parameters<Parameters<typeof withTransaction>[1]>[0], contractId: string) {
+    const [license, passport] = await Promise.all([
+      latestLicense(tx, contractId),
+      activePassport(tx, contractId),
+    ]);
+    return buildContractIdentityDraft({ license, passport });
   }
 
   async function loadDetail(id: string) {
@@ -371,6 +409,48 @@ export function createContractsService(fastify: FastifyInstance) {
     throw contractError.manualPaymentDisabled();
   }
 
+  /**
+   * Stores the paper side of a custody event: structured damage marks on the
+   * official contract diagrams and the hirer's custody signature (PNG).
+   */
+  async function persistCustodyPaper(
+    tx: Tx,
+    contractId: string,
+    side: "OUT" | "IN",
+    input: { damage?: z.infer<typeof CarOutSchema>["damage"]; hirerSignatureAttachmentId?: string },
+  ) {
+    if (input.damage !== undefined) {
+      const marks = readDamageMarks(input.damage);
+      const value = marks.length ? (marks as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
+      const column = side === "OUT" ? "damageOut" : "damageIn";
+      await tx.officialContractReviewDraft.upsert({
+        where: { contractId },
+        create: { contractId, [column]: value },
+        update: { [column]: value, revision: { increment: 1 } },
+      });
+    }
+    if (input.hirerSignatureAttachmentId) {
+      const attachment = await tx.attachment.findUnique({
+        where: { id: input.hirerSignatureAttachmentId },
+        select: { id: true, mimeType: true },
+      });
+      if (!attachment || !(SIGNATURE_UPLOAD_MIME as readonly string[]).includes(attachment.mimeType)) {
+        throw AppError.validation("Hirer signature must be a PNG attachment");
+      }
+      const slot = side === "OUT" ? "VEHICLE_OUT_HIRER" : "VEHICLE_IN_HIRER";
+      const capturedAt = new Date();
+      await tx.officialContractSignature.upsert({
+        where: { contractId_slot: { contractId, slot } },
+        create: { contractId, slot, attachmentId: attachment.id, capturedAt },
+        update: { attachmentId: attachment.id, capturedAt },
+      });
+      await emit(tx, "contract.official_signature_captured", contractId, {
+        slot,
+        dedupe: `${slot}:${capturedAt.getTime()}`,
+      });
+    }
+  }
+
   async function carOut(
     contractId: string,
     input: z.infer<typeof CarOutSchema>,
@@ -420,6 +500,7 @@ export function createContractsService(fastify: FastifyInstance) {
             sortOrder: i,
           })),
         });
+        await persistCustodyPaper(tx, contractId, "OUT", input);
         await tx.contract.update({
           where: { id: contractId },
           data: { status: "ACTIVE", activatedAt: now, revision: { increment: 1 } },
@@ -449,6 +530,8 @@ export function createContractsService(fastify: FastifyInstance) {
           notes: input.notes ?? null,
           occurredAt: input.occurredAt?.toISOString() ?? null,
           photos: input.photos,
+          damage: input.damage ?? null,
+          hirerSignatureAttachmentId: input.hirerSignatureAttachmentId ?? null,
         }),
       },
       run,
@@ -476,6 +559,9 @@ export function createContractsService(fastify: FastifyInstance) {
       assertLicenseProgress(verification?.status, verification?.expiryDate);
       if (!verification?.licenseNumber || !verification.expiryDate) {
         throw contractError.drivingLicenseRequired();
+      }
+      if (!(await identityDraftFor(tx, contract.id)).identityReady) {
+        throw contractError.identityNotReady();
       }
 
       const customerData = {
@@ -631,6 +717,7 @@ export function createContractsService(fastify: FastifyInstance) {
         sortOrder: i,
       })),
     });
+    await persistCustodyPaper(tx, contract.id, "IN", input);
     await tx.contract.update({
       where: { id: contract.id },
       data: { status: "REVIEW", revision: { increment: 1 } },
@@ -683,6 +770,8 @@ export function createContractsService(fastify: FastifyInstance) {
           notes: input.notes ?? null,
           occurredAt: input.occurredAt?.toISOString() ?? null,
           photos: input.photos,
+          damage: input.damage ?? null,
+          hirerSignatureAttachmentId: input.hirerSignatureAttachmentId ?? null,
         }),
       },
       run,
@@ -726,6 +815,8 @@ export function createContractsService(fastify: FastifyInstance) {
           notes: input.notes ?? null,
           occurredAt: input.occurredAt?.toISOString() ?? null,
           photos: input.photos,
+          damage: input.damage ?? null,
+          hirerSignatureAttachmentId: input.hirerSignatureAttachmentId ?? null,
         }),
       },
       run,
@@ -1161,7 +1252,7 @@ export function createContractsService(fastify: FastifyInstance) {
         },
       });
 
-      const ocr = await createDrivingLicenseOcrProvider().analyzeDrivingLicense({
+      const ocr = await analyzeDrivingLicenseDocument({
         bytes,
         mimeType: attachment.mimeType,
       });
@@ -1194,6 +1285,356 @@ export function createContractsService(fastify: FastifyInstance) {
         dedupe: verification.id,
       });
       return loadPublicRental(tx, contract.id);
+    });
+  }
+
+  /**
+   * Passport capture. Context comes only from the token. Requires the current
+   * driving license to be VALID. OCR runs outside any transaction; the result
+   * is written only if this attempt is still the active one, so a slow earlier
+   * attempt can never overwrite a newer retake. No Customer is created or
+   * updated and no legal snapshot is taken.
+   */
+  async function uploadPassport(token: string, file: MultipartFile) {
+    const assertPassportAllowed = async (db: Parameters<typeof latestLicense>[0], contractId: string) => {
+      const contract = await db.contract.findUnique({ where: { id: contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status !== "AWAITING" && contract.status !== "FORM") {
+        throw contractError.invalidTransition(contract.status, contract.status);
+      }
+      const license = await latestLicense(db, contract.id);
+      if (license?.status !== "VALID") throw contractError.passportLicenseRequired();
+      return contract;
+    };
+
+    const preview = await resolveContractLink(prisma, token, "RENTAL");
+    await assertPassportAllowed(prisma, preview.contractId);
+
+    const attachment = await files.save(file, null, { allowedMime: PASSPORT_UPLOAD_MIME });
+    const stored = await prisma.attachment.findUniqueOrThrow({ where: { id: attachment.id } });
+    const bytes = await readFile(resolveStoragePath(env.FILE_STORAGE_DIR, stored.storageKey));
+
+    const attempt = await withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL");
+      await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, link.contractId);
+      const contract = await assertPassportAllowed(tx, link.contractId);
+
+      await tx.contractDocument.updateMany({
+        where: { contractId: contract.id, type: "PASSPORT", supersededAt: null },
+        data: { supersededAt: new Date() },
+      });
+      const document = await tx.contractDocument.create({
+        data: { contractId: contract.id, type: "PASSPORT", attachmentId: attachment.id },
+      });
+      const extraction = await tx.passportExtraction.create({
+        data: {
+          contractId: contract.id,
+          documentId: document.id,
+          attachmentId: attachment.id,
+          status: "PROCESSING",
+        },
+      });
+      await emit(tx, "contract.passport_uploaded", contract.id, {
+        documentId: document.id,
+        dedupe: document.id,
+      });
+      return { contractId: contract.id, extractionId: extraction.id };
+    });
+
+    const evaluated = evaluatePassportOcr(
+      await analyzeDocument("PASSPORT", { bytes, mimeType: attachment.mimeType }),
+    );
+
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, attempt.contractId);
+      const current = await tx.passportExtraction.findUnique({
+        where: { id: attempt.extractionId },
+        include: { document: { select: { supersededAt: true } } },
+      });
+      const stillActive =
+        current && current.status === "PROCESSING" && current.document.supersededAt === null;
+      if (stillActive) {
+        const { status, ...fields } = evaluated;
+        await tx.passportExtraction.update({
+          where: { id: current.id },
+          data: { ...fields, status, completedAt: new Date() },
+        });
+        await emit(tx, "contract.passport_processed", attempt.contractId, {
+          extractionId: current.id,
+          status,
+          dedupe: current.id,
+        });
+      }
+      return loadPublicRental(tx, attempt.contractId);
+    });
+  }
+
+  async function loadOfficialContract(
+    tx: Parameters<Parameters<typeof withTransaction>[1]>[0],
+    contractId: string,
+  ) {
+    const row = await tx.contract.findUnique({
+      where: { id: contractId },
+      include: OFFICIAL_CONTRACT_INCLUDE,
+    });
+    if (!row) throw contractError.notFound();
+    return buildOfficialContractView(row, {
+      officeDisplayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT,
+    }).view;
+  }
+
+  /** Read-only composition from authoritative sources. No OCR call, no writes. */
+  async function getPublicOfficialContract(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
+      return loadOfficialContract(tx, link.contractId);
+    });
+  }
+
+  async function lockReviewableContract(
+    tx: Parameters<Parameters<typeof withTransaction>[1]>[0],
+    token: string,
+  ) {
+    const link = await resolveContractLink(tx, token, "RENTAL");
+    await acquireAdvisoryLock(tx, CONTRACT_OFFICIAL_REVIEW_LOCK_NS, link.contractId);
+    const contract = await tx.contract.findUnique({ where: { id: link.contractId } });
+    if (!contract) throw contractError.notFound();
+    if (!OFFICIAL_CONTRACT_REVIEWABLE_STATUSES.includes(contract.status)) {
+      throw contractError.officialContractReviewLocked();
+    }
+    if (contract.status === "AWAITING" && !(await identityDraftFor(tx, contract.id)).identityReady) {
+      throw contractError.identityNotReady();
+    }
+    return contract;
+  }
+
+  /**
+   * Saves the customer's review-link input: only the fields in
+   * OFFICIAL_CONTRACT_EDITABLE_FIELDS (card last 4). Anything else is rejected.
+   * Does not touch PassportExtraction, license verification, Customer, Vehicle,
+   * pricing, custody, or the contract status.
+   */
+  async function updatePublicOfficialContractReview(
+    token: string,
+    patch: OfficialContractReviewPatch,
+  ) {
+    const editable: readonly string[] = OFFICIAL_CONTRACT_EDITABLE_FIELDS;
+    const locked = Object.keys(patch).filter((key) => !editable.includes(key));
+    if (locked.length > 0) throw contractError.officialContractFieldLocked(locked);
+    return withTransaction(prisma, async (tx) => {
+      const contract = await lockReviewableContract(tx, token);
+
+      const data: Prisma.OfficialContractReviewDraftUncheckedUpdateInput = {};
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === undefined) continue;
+        if (key === "damageOut") {
+          data.damageOut =
+            value === null ? Prisma.DbNull : (readDamageMarks(value) as unknown as Prisma.InputJsonValue);
+        } else if (key === "telephone" && typeof value === "string") {
+          data.telephone = normalizePhone(value);
+        } else {
+          (data as Record<string, unknown>)[key] = value;
+        }
+      }
+      const changedFields = Object.keys(data);
+      const reviewedAt = new Date();
+      await tx.officialContractReviewDraft.upsert({
+        where: { contractId: contract.id },
+        create: {
+          ...(data as Prisma.OfficialContractReviewDraftUncheckedCreateInput),
+          contractId: contract.id,
+          reviewedAt,
+        },
+        update: { ...data, reviewedAt, revision: { increment: 1 } },
+      });
+      await emit(tx, "contract.official_review_updated", contract.id, {
+        fields: changedFields,
+        dedupe: `${reviewedAt.getTime()}`,
+      });
+      return {
+        contractId: contract.id,
+        changedFields,
+        view: await loadOfficialContract(tx, contract.id),
+      };
+    });
+  }
+
+  /** Captures (or replaces) one signature image. PNG only, via the Attachment store. */
+  async function savePublicOfficialSignature(
+    token: string,
+    slot: OfficialContractSignatureSlot,
+    file: MultipartFile,
+  ) {
+    if (!PUBLIC_SIGNABLE_SLOTS.includes(slot)) throw contractError.officialSignatureSlotUnavailable();
+    // Validate link + lifecycle before storing any bytes.
+    await withTransaction(prisma, (tx) => lockReviewableContract(tx, token));
+    const attachment = await files.save(file, null, { allowedMime: SIGNATURE_UPLOAD_MIME });
+    return withTransaction(prisma, async (tx) => {
+      const contract = await lockReviewableContract(tx, token);
+      const capturedAt = new Date();
+      await tx.officialContractSignature.upsert({
+        where: { contractId_slot: { contractId: contract.id, slot } },
+        create: { contractId: contract.id, slot, attachmentId: attachment.id, capturedAt },
+        update: { attachmentId: attachment.id, capturedAt },
+      });
+      await emit(tx, "contract.official_signature_captured", contract.id, {
+        slot,
+        dedupe: `${slot}:${capturedAt.getTime()}`,
+      });
+      return { contractId: contract.id, view: await loadOfficialContract(tx, contract.id) };
+    });
+  }
+
+  async function clearPublicOfficialSignature(token: string, slot: OfficialContractSignatureSlot) {
+    if (!PUBLIC_SIGNABLE_SLOTS.includes(slot)) throw contractError.officialSignatureSlotUnavailable();
+    return withTransaction(prisma, async (tx) => {
+      const contract = await lockReviewableContract(tx, token);
+      await tx.officialContractSignature.deleteMany({ where: { contractId: contract.id, slot } });
+      return { contractId: contract.id, view: await loadOfficialContract(tx, contract.id) };
+    });
+  }
+
+  /** Token-scoped signature image stream. No storage key or attachment id is exposed. */
+  async function openPublicOfficialSignature(token: string, slot: OfficialContractSignatureSlot) {
+    const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
+    const signature = await prisma.officialContractSignature.findUnique({
+      where: { contractId_slot: { contractId: link.contractId, slot } },
+      include: { attachment: true },
+    });
+    if (!signature) throw AppError.notFound("Signature not found");
+    return {
+      mimeType: signature.attachment.mimeType,
+      stream: createReadStream(resolveStoragePath(env.FILE_STORAGE_DIR, signature.attachment.storageKey)),
+    };
+  }
+
+  /**
+   * Signs the official contract: verifies identity, required fields and
+   * required signatures, then AWAITING/FORM → SIGNED with a ContractAcceptance
+   * and a frozen snapshot of the exact official contract view. The Customer
+   * master record is not created or changed.
+   */
+  async function signPublicOfficialContract(
+    token: string,
+    input: { termsVersion?: string },
+    meta: { ip?: string; userAgent?: string },
+  ) {
+    return withTransaction(prisma, async (tx) => {
+      const contract = await lockReviewableContract(tx, token);
+      const verification = await latestLicense(tx, contract.id);
+      if (contract.status === "AWAITING") {
+        assertLicenseProgress(verification?.status, verification?.expiryDate);
+      }
+      const row = await tx.contract.findUniqueOrThrow({
+        where: { id: contract.id },
+        include: { ...OFFICIAL_CONTRACT_INCLUDE, officialSignatures: { select: { slot: true, capturedAt: true, attachmentId: true } } },
+      });
+      const { view } = buildOfficialContractView(row, {
+        officeDisplayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT,
+      });
+      if (!view.permissions.canSign) {
+        throw contractError.officialContractIncomplete(view.permissions.missingRequirements);
+      }
+
+      if (contract.status === "AWAITING") {
+        assertTransition("AWAITING", "FORM");
+        await emit(tx, "contract.form_completed", contract.id);
+      }
+      assertTransition("FORM", "SIGNED");
+
+      const legalView = { ...view, contract: { ...view.contract, status: "SIGNED" as const } };
+      const snapshot = {
+        ...buildContractSnapshot({
+          contractNumber: row.contractNumber,
+          customer: {
+            name: view.hirer.name ?? "",
+            mobile: view.hirer.telephone,
+            email: null,
+            nationality: view.hirer.nationality,
+            identityNumber: null,
+            passportNumber: view.hirer.passportNumber,
+            drivingLicenseNumber: view.hirer.driverLicenseNumber,
+            drivingLicenseExpiry: verification?.expiryDate ?? null,
+            address: view.hirer.address,
+          },
+          vehicle: {
+            vehicleName: row.vehicle.vehicleName,
+            plateNumber: row.vehicle.plateNumber,
+            modelYear: row.vehicle.modelYear,
+            color: row.vehicle.color,
+            vin: row.vehicle.vin,
+            modelName: row.vehicle.model?.name ?? null,
+          },
+          commercial: {
+            agreedAmount: row.agreedAmount,
+            priceType: row.priceType,
+            rentalDays: row.rentalDays,
+            startAt: row.startAt,
+            endAt: row.endAt,
+            currency: row.currency,
+          },
+          termsVersion: input.termsVersion ?? row.termsVersion,
+        }),
+        officialContract: legalView,
+      };
+
+      const hirerSignature = row.officialSignatures.find((s) => s.slot === "HIRER");
+      await tx.contractAcceptance.create({
+        data: {
+          contractId: contract.id,
+          acceptedAt: new Date(),
+          ip: meta.ip ?? null,
+          userAgent: meta.userAgent ?? null,
+          termsVersion: input.termsVersion ?? row.termsVersion,
+          signatureAttachmentId: hirerSignature?.attachmentId ?? null,
+        },
+      });
+      await tx.contract.update({
+        where: { id: contract.id },
+        data: {
+          status: "SIGNED",
+          snapshot: snapshot as unknown as Prisma.InputJsonValue,
+          revision: { increment: 1 },
+        },
+      });
+      await emit(tx, "contract.signed", contract.id);
+      return { contractId: contract.id, view: await loadOfficialContract(tx, contract.id) };
+    });
+  }
+
+  /** Staff-only official-contract terms (plate code, notes, km terms, Vehicle IN damage). */
+  async function updateOfficialContractTerms(contractId: string, terms: OfficialContractStaffTerms) {
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_OFFICIAL_REVIEW_LOCK_NS, contractId);
+      const contract = await tx.contract.findUnique({ where: { id: contractId } });
+      if (!contract) throw contractError.notFound();
+      const damageInOnly = Object.keys(terms).every((key) => key === "damageIn");
+      if (!damageInOnly && !OFFICIAL_CONTRACT_REVIEWABLE_STATUSES.includes(contract.status)) {
+        throw contractError.officialContractReviewLocked();
+      }
+      const data: Prisma.OfficialContractReviewDraftUncheckedUpdateInput = {};
+      for (const [key, value] of Object.entries(terms)) {
+        if (value === undefined) continue;
+        if (key === "damageIn") {
+          data.damageIn =
+            value === null ? Prisma.DbNull : (readDamageMarks(value) as unknown as Prisma.InputJsonValue);
+        } else {
+          (data as Record<string, unknown>)[key] = value;
+        }
+      }
+      await tx.officialContractReviewDraft.upsert({
+        where: { contractId },
+        create: { ...(data as Prisma.OfficialContractReviewDraftUncheckedCreateInput), contractId },
+        update: { ...data, revision: { increment: 1 } },
+      });
+      return { fields: Object.keys(data), view: await loadOfficialContract(tx, contractId) };
+    });
+  }
+
+  async function getPublicIdentityDraft(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
+      return toPublicIdentityDraft(await identityDraftFor(tx, link.contractId));
     });
   }
 
@@ -1482,6 +1923,15 @@ export function createContractsService(fastify: FastifyInstance) {
     getPublic,
     getPublicRental,
     uploadDrivingLicense,
+    uploadPassport,
+    getPublicIdentityDraft,
+    getPublicOfficialContract,
+    updatePublicOfficialContractReview,
+    savePublicOfficialSignature,
+    clearPublicOfficialSignature,
+    openPublicOfficialSignature,
+    signPublicOfficialContract,
+    updateOfficialContractTerms,
     getPaymentContext,
     startCardPayment,
     startReconciliationPayment,

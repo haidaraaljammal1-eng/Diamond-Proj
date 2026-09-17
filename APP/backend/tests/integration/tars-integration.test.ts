@@ -1,5 +1,6 @@
 import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
+import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { AppError } from "src/lib/errors/app-error";
@@ -11,7 +12,6 @@ import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
 } from "../helpers/fake-payment-provider";
-import type { DrivingLicenseOcrProvider } from "src/modules/contracts/ocr/driving-license-ocr.types";
 import type {
   TarsIntegrationService,
 } from "src/modules/integrations/tars/tars.service";
@@ -146,47 +146,10 @@ if (!RUN) {
 
     const auth = () => ({ authorization: `Bearer ${token}` });
 
-    const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 
-    /**
-     * Loaded lazily: the OCR factory reads validated env at import time, and
-     * DATABASE_URL is only redirected to TEST_DATABASE_URL in this module body.
-     */
-    async function setOcrProvider(provider: DrivingLicenseOcrProvider | undefined) {
-      const { setDrivingLicenseOcrProviderForTests } = await import(
-        "src/modules/contracts/ocr/ocr-provider.factory"
-      );
-      setDrivingLicenseOcrProviderForTests(provider);
-    }
 
     async function seedValidLicense(rentalToken: string) {
-      await setOcrProvider({
-        name: "test",
-        async analyzeDrivingLicense() {
-          return {
-            ok: true,
-            licenseNumber: "DL-TARS-1",
-            expiryDate: "2030-01-01",
-            confidence: 0.99,
-            provider: "test",
-          };
-        },
-      });
-      const boundary = "----tarslicense";
-      const payload = Buffer.concat([
-        Buffer.from(
-          `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="dl.png"\r\nContent-Type: image/png\r\n\r\n`,
-        ),
-        PNG,
-        Buffer.from(`\r\n--${boundary}--\r\n`),
-      ]);
-      const res = await app.inject({
-        method: "POST",
-        url: `/contracts/rental/${rentalToken}/driving-license`,
-        headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
-        payload,
-      });
-      assert.equal(res.statusCode, 200, res.body);
+      await seedReadyIdentity(app, rentalToken, { licenseNumber: "DL-TARS-1", expiryDate: "2030-01-01" });
     }
 
     let photoSeq = 0;
@@ -367,7 +330,7 @@ if (!RUN) {
     });
 
     after(async () => {
-      await setOcrProvider(undefined);
+      await injectDocumentOcr(undefined);
       setTarsProviderForTests(undefined);
       setPaymentProviderForTests(undefined);
       if (app) await app.close();

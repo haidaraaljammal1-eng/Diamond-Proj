@@ -1,0 +1,120 @@
+.shell {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.intro {
+  display: grid;
+  gap: 6px;
+}
+
+.title {
+  margin: 0;
+  color: var(--diamond-champagne);
+  font-family: var(--diamond-font-display);
+  font-size: 20px;
+}
+
+.body {
+  margin: 0;
+  color: var(--diamond-muted);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+/*
+ * Document viewport: the A4 sheet keeps its structure and is scaled down
+ * (CSS zoom, set from the measured width) on narrow screens; horizontal
+ * scrolling remains available as a fallback.
+ */
+.viewport {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  padding: 24px 12px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #2f2f36;
+}
+
+.sheetFrame {
+  flex: none;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+}
+
+.skeleton {
+  display: grid;
+  flex: none;
+  align-content: start;
+  gap: 4mm;
+  width: 210mm;
+  height: 297mm;
+  padding: 7mm 8mm;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+}
+
+.skeleton span {
+  display: block;
+  background: linear-gradient(90deg, #ececec 25%, #f6f6f6 50%, #ececec 75%);
+  background-size: 200% 100%;
+  animation: sheen 1.4s ease-in-out infinite;
+}
+
+.skHeader { height: 21mm; }
+.skLine { width: 45mm; height: 6mm; }
+.skGrid { height: 64mm; }
+.skBand { height: 11mm; }
+.skCustody { height: 70mm; }
+.skTerms { height: 42mm; }
+.skSign { height: 22mm; }
+
+@keyframes sheen {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span {
+    animation: none;
+  }
+}
+
+.actions {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.error {
+  margin: 0;
+  color: #f2b8b5;
+  font-size: 13.5px;
+}
+
+.saved {
+  margin: 0;
+  color: #9fd9b5;
+  font-size: 13.5px;
+}
+
+@media (max-width: 430px) {
+  .viewport {
+    padding: 12px 4px;
+  }
+
+  .buttons {
+    width: 100%;
+  }
+
+  .buttons > button {
+    flex: 1 1 auto;
+  }
+}
