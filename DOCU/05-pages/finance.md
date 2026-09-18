@@ -8,7 +8,7 @@ Permission: `finance.read` (navigation + page access). Manual expense mutations 
 
 Administrative financial operations center backed by Finance Backend V1. Real mode presents backend-authoritative totals only — no frontend financial recalculation.
 
-A Development/demo **Finance Simulation** overlay can replace the page with a coherent frontend-only fixture. It never writes to Finance, Stripe, contracts, maintenance, manual expenses, receivables, or any database table.
+The historical Development/demo **Finance Simulation** overlay is currently disabled by the legacy general demo gate. Its retained fixture code is frontend-only and never writes to Finance, Stripe, contracts, maintenance, manual expenses, receivables, or any database table. The scoped rental cleanup does not activate Finance Simulation.
 
 ## Layout (top → bottom)
 
@@ -129,7 +129,7 @@ Simulated ledger expense View opens a demo-only detail. Add Expense and Void sta
 
 ## Demo Simulation
 
-Gated by `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` (existing project flag). Production stays off unless explicitly configured.
+Historical behavior described below; the current general gate keeps this control disabled even when `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true`. The flag currently activates only the scoped Dashboard, WhatsApp, and Road Liabilities browser demos in development.
 
 - Frontend-only in-memory overlay (`financeOverlay` on the shared Demo Simulation store)
 - One fixture dataset; Collected / Expenses / Net Movement / trend / expense breakdown are derived from the same movements

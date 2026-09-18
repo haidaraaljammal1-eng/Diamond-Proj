@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { isDemoSimulationEnabled } from "../../demo-simulation/simulation.enabled.ts";
+import { isUiDemoSimulationEnabled } from "../../demo-simulation/simulation.enabled.ts";
 import {
   areConsecutiveIsoDates,
   isoDateIsWeekend,
@@ -69,13 +69,13 @@ const realOverview = (partial: Partial<DashboardOverviewDto> = {}): DashboardOve
 });
 
 describe("dashboard simulation overlay", () => {
-  it("activates only when the shared demo simulation flag is true", () => {
-    assert.equal(isDemoSimulationEnabled("true"), true);
-    assert.equal(isDemoSimulationEnabled("false"), false);
-    assert.equal(isDemoSimulationEnabled(undefined), false);
+  it("activates only the browser-only Dashboard demo in development", () => {
+    assert.equal(isUiDemoSimulationEnabled("dashboard", "true", "development"), true);
+    assert.equal(isUiDemoSimulationEnabled("dashboard", "false", "development"), false);
+    assert.equal(isUiDemoSimulationEnabled("dashboard", "true", "production"), false);
     const store = read("./dashboard-simulation.store.ts");
-    assert.match(store, /isDemoSimulationEnabled\(\)/);
-    assert.match(store, /if \(!isDemoSimulationEnabled\(\)\) return;/);
+    assert.match(store, /isUiDemoSimulationEnabled\("dashboard"\)/);
+    assert.match(store, /if \(!isUiDemoSimulationEnabled\("dashboard"\)\) return;/);
   });
 
   it("keeps the real API and store independent of simulation", () => {

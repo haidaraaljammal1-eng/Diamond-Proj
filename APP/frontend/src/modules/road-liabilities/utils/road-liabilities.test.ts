@@ -376,7 +376,7 @@ describe("empty real state", () => {
 });
 
 describe("Demo Simulation overlay", () => {
-  it("is hidden unless the existing simulation architecture is enabled", () => {
+  it("uses the Road Liabilities browser demo control without enabling rental simulation", () => {
     const screen = readFileSync(
       path.join(import.meta.dirname, "../components/road-liabilities-screen/road-liabilities-screen.tsx"),
       "utf8",
@@ -387,7 +387,9 @@ describe("Demo Simulation overlay", () => {
       path.join(import.meta.dirname, "../../demo-simulation/components/simulation-button/simulation-button.tsx"),
       "utf8",
     );
-    assert.ok(button.includes('if (!simulation.enabled) return null'));
+    assert.ok(button.includes('surface !== "violations" || !simulation.enabled'));
+    assert.ok(button.includes('road-liabilities-simulation-run'));
+    assert.ok(button.includes('clearRoadLiabilitiesOverlay'));
   });
 
   it("covers GPS pending, GPS then Salik, RTA, unmatched, ambiguous, and settled", () => {

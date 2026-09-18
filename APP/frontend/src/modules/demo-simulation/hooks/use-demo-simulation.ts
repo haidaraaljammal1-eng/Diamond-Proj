@@ -1,13 +1,15 @@
 "use client";
 
 import { useDemoSimulationStore } from "../simulation.store";
-import { isDemoSimulationEnabled } from "../simulation.enabled";
+import { isDemoSimulationEnabled, isUiDemoSimulationEnabled } from "../simulation.enabled";
 import type { SimulationSnapshot } from "../simulation.types";
 
-/** Compatibility hook: legacy presentation simulations are retired. */
-export function useDemoSimulation() {
+/** The legacy hook stays inert except for the explicit Road Liabilities demo. */
+export function useDemoSimulation(surface?: "violations") {
   const store = useDemoSimulationStore();
-  const enabled = isDemoSimulationEnabled();
+  const enabled = surface === "violations"
+    ? isUiDemoSimulationEnabled("roadLiabilities")
+    : isDemoSimulationEnabled();
   const snapshot: SimulationSnapshot = {
     active: store.active,
     generation: store.generation,
@@ -19,7 +21,7 @@ export function useDemoSimulation() {
   return {
     enabled,
     snapshot,
-    active: enabled && store.active,
+    active: enabled && (surface === "violations" ? store.roadLiabilitiesOverlay !== null : store.active),
     simulateTars: store.simulateTars,
     simulateGps: store.simulateGps,
     tickGpsPath: store.tickGpsPath,

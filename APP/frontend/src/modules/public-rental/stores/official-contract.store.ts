@@ -7,6 +7,7 @@ import {
   clearPublicOfficialSignature,
   getPublicOfficialContract,
   reviewPublicOfficialContract,
+  submitPublicOfficialContractReview,
   savePublicOfficialSignature,
   signPublicOfficialContract,
 } from "../api/public-rental.api";
@@ -135,7 +136,7 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
         return false;
       }
       const signatureEntries = Object.entries(pendingSignatures) as Array<[OfficialSignatureSlot, Blob | "CLEAR"]>;
-      if (Object.keys(patch).length === 0 && signatureEntries.length === 0) {
+      if (view.contract.status !== "AWAITING" && Object.keys(patch).length === 0 && signatureEntries.length === 0) {
         set({ edits: {}, damageOut: undefined, saveStatus: "idle", saveError: null, invalidFields: [] });
         return true;
       }
@@ -145,6 +146,10 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
         if (Object.keys(patch).length > 0) {
           reconciled = await reviewPublicOfficialContract(token, patch);
           set({ view: reconciled, edits: {}, damageOut: undefined });
+        }
+        if (reconciled.contract.status === "AWAITING") {
+          reconciled = await submitPublicOfficialContractReview(token);
+          set({ view: reconciled });
         }
         for (const [slot, image] of signatureEntries) {
           const path = SIGNATURE_SLOT_PATHS[slot];

@@ -1,8 +1,8 @@
 ﻿# Current implementation status
 
-Updated 2026-09-18.
+Updated 2026-09-19.
 
-Diamond does not have a general workflow simulation anymore. The only DEV provider substitutions are Driver License OCR, Passport OCR, and successful payment. They require a real Rental Link and a real Contract. Contract Review, legal signatures, lifecycle, PAID reservation, and Car-Out use the normal persisted workflow.
+Diamond has two separate development simulation categories. Rental provider substitutions are Driver License OCR, Passport OCR, and successful payment; they require a real Rental Link and update the real Contract. Browser-only UI demos are Dashboard, WhatsApp, and Road Liabilities; they use local fixtures and never write Contracts, Vehicles, Payments, or any backend data. The former general rental journey simulation remains disabled. Contract Review, legal signatures, lifecycle, PAID reservation, and Car-Out use the normal persisted workflow.
 
 ## Development provider mode
 
@@ -12,12 +12,22 @@ DEV payment mode skips the external Stripe Card Setup requirement before signing
 
 When DEV payment mode is off, the original Stripe Card Setup and Checkout/webhook flow applies. Stripe Test Mode still needs configured credentials and a webhook.
 
+## Review and signing
+
+The customer reviews the real Official Contract and confirms it through `POST /contracts/rental/:token/official-contract/review/submit`. This persists `AWAITING -> FORM` even when no personal field changes. Manual signing requires persisted `FORM` and writes `FORM -> SIGNED`, ContractAcceptance, signature Attachments, and the frozen legal snapshot. Existing FORM Contracts continue to sign normally.
+
+## Browser-only UI demos
+
+`NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` enables only the scoped Dashboard, WhatsApp, and Road Liabilities controls in development. Their fixtures stay in browser memory; their real APIs and stores remain the source of truth outside demo mode. This flag is independent of `NEXT_PUBLIC_DIAMOND_SIMULATION` and cannot authorize rental provider routes.
+
+Legacy Finance and GPS fixture code remains in the frontend, but the general demo gate keeps those controls disabled. Their documentation describes retained historical overlays, not currently active local actions.
+
 ## PAID and handover
 
-A PAID Contract reserves its assigned Vehicle: operational status stays `AVAILABLE`, while `isReserved=true` and `isBookable=false`. Staff opens Car-Out from that same Contract. Mileage, fuel, damage, eight exterior photos, and a real OUT signature are required. Completion atomically changes `PAID -> ACTIVE` and Vehicle `AVAILABLE -> RENTED`; the evidence becomes immutable.
+A PAID Contract reserves its assigned Vehicle: operational status stays `AVAILABLE`, while `isReserved=true` and `isBookable=false`. Staff opens Car-Out from that same Contract. Completion requires mileage, fuel, a real OUT signature, and eight photos: six exterior views (FRONT, REAR, FRONT_RIGHT, REAR_RIGHT, FRONT_LEFT, REAR_LEFT), one ODOMETER, and one DASHBOARD_FUEL. Damage is recorded in the OUT draft. Completion atomically changes `PAID -> ACTIVE` and Vehicle `AVAILABLE -> RENTED`; the evidence becomes immutable.
 
 ## Local verification
 
 Start both applications with the DEV flags, log in normally, generate a real Rental Link from an AVAILABLE Vehicle, then use the three provider actions around manual review and signature. Verify the same PAID Contract in staff Contracts and complete Car-Out with real evidence on disposable data. Disable DEV payment simulation to restore normal Stripe Card Setup. No session reset can roll back persisted Contract or payment state.
 
-This session verified focused tests, builds, the development database, server boot, health, login-page rendering, invalid-token rejection, and removal of the card-simulation route. An authenticated staff session and disposable Rental Link were not available, so the full browser journey through PAID and Car-Out remains to be run manually.
+On 2026-09-19, a browser session using the configured local system-admin account and a new disposable vehicle/Contract verified DEV OCR actions, persisted FORM, manual SIGNED, and DEV payment to PAID. The same agreement appeared on Contracts; the Vehicle remained AVAILABLE, reserved, and non-bookable with `canCarOut=true`. This did not use a manager-role account or complete Car-Out. No lifecycle state was inferred from a browser redirect alone.

@@ -264,7 +264,7 @@ describe("official contract — editing", () => {
     assert.deepEqual(invalidReviewFields({ address: null, telephone: "+971 50 000 0000" }), []);
   });
 
-  it("store keeps edits on failure and uses only the single GET + review PATCH", () => {
+  it("store keeps edits on failure and submits review before signing", () => {
     const store = read("../stores/official-contract.store.ts");
     assert.ok(store.includes('set({ saveStatus: "error", saveError: normalizeApiError(error) })'));
     assert.ok(store.includes("set({ view: reconciled, edits: {}, damageOut: undefined })"));
@@ -275,10 +275,13 @@ describe("official contract — editing", () => {
       "reviewPublicOfficialContract",
       "savePublicOfficialSignature",
       "signPublicOfficialContract",
+      "submitPublicOfficialContractReview",
     ]);
     const api = read("../api/public-rental.api.ts");
     assert.ok(api.includes("/official-contract`,\n    { publicRequest: true }") || api.includes("/official-contract`,\r\n    { publicRequest: true }"));
     assert.ok(api.includes('method: "PATCH", body: patch, publicRequest: true'));
+    assert.ok(api.includes('method: "POST", publicRequest: true'));
+    assert.ok(store.includes("await submitPublicOfficialContractReview(token)"));
     assert.equal(/fetch\(|apiRequest/.test(read("../components/official-contract-a4/official-contract-a4.tsx")), false);
   });
 });

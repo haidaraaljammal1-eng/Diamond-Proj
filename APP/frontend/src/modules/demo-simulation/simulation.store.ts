@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { isDemoSimulationEnabled } from "./simulation.enabled";
+import { isDemoSimulationEnabled, isUiDemoSimulationEnabled } from "./simulation.enabled";
 import type { SimulatedTarsPreset, SimulationSnapshot } from "./simulation.types";
 import type { SimulatedGpsOverlay } from "@/modules/gps/utils/gps-simulation";
 import { advanceGpsSimulationPath } from "@/modules/gps/utils/gps-simulation";
@@ -33,7 +33,7 @@ const empty: SimulationSnapshot = {
   financeOverlay: null,
 };
 
-/** Inert compatibility state for unrelated legacy presentation consumers. */
+/** Browser-only presentation state. Only Road Liabilities is currently enabled here. */
 export const useDemoSimulationStore = create<LegacyPresentationState>((set, get) => ({
   ...empty,
   simulateTars(preset) { if (isDemoSimulationEnabled()) set({ active: true, tarsPreset: preset }); },
@@ -44,9 +44,9 @@ export const useDemoSimulationStore = create<LegacyPresentationState>((set, get)
     if (current) set({ gpsOverlay: advanceGpsSimulationPath(current) });
   },
   clearGpsOverlay() { set({ gpsOverlay: null, active: false }); },
-  simulateRoadLiabilities(overlay) { if (isDemoSimulationEnabled()) set({ active: true, roadLiabilitiesOverlay: overlay }); },
+  simulateRoadLiabilities(overlay) { if (isUiDemoSimulationEnabled("roadLiabilities")) set({ active: true, roadLiabilitiesOverlay: overlay }); },
   attachSimulatedRoadLiabilityCharge(id, payload) {
-    if (!isDemoSimulationEnabled()) return;
+    if (!isUiDemoSimulationEnabled("roadLiabilities")) return;
     const current = get().roadLiabilitiesOverlay;
     if (current) set({ roadLiabilitiesOverlay: applySimulatedChargeReview(current, id, payload) });
   },

@@ -130,7 +130,9 @@ SIGNED → customer Stripe Checkout on the public rental page (`POST /contracts/
 
 ## Car-Out
 
-PAID fleet card and contract drawer. Eight inspection slots + mileage + fuel. Photos upload to `POST /files` (not Vehicle gallery), then `POST /contracts/:id/car-out`. PAID → ACTIVE; Vehicle → RENTED. Then refetch contracts + vehicles.
+The contract-scoped Car-Out dialog opens from a PAID Contract. Its wide Shared Dialog fills most of the viewport, with one content scrollbar and a fixed action footer. It shows a short preview of the frozen signed A4 contract from `Contract.snapshot.officialContract`, confirmed payment, and contract/vehicle identity. **Open full-size A4 contract** opens `/[locale]/contracts/[id]/car-out/contract` in a protected page, rendered at its original A4 size. The legal copy stays read-only; Vehicle OUT edits remain in the same Car-Out draft. Staff signature images are read through `contracts.read`. Step 1 edits only Vehicle OUT mileage, fuel, damage, notes and the separate hirer handover signature. Save Draft persists through the existing PATCH/signature routes without changing PAID or the Vehicle's AVAILABLE + reserved state. Next saves Step 1 before opening Step 2; save/validation errors appear next to the fixed actions. Reopening reloads the latest draft, signature and photos.
+
+Step 2 is vehicle photography. Required slots: FRONT, REAR, FRONT_RIGHT, REAR_RIGHT, FRONT_LEFT, REAR_LEFT, ODOMETER, DASHBOARD_FUEL. LEFT, RIGHT and OTHER remain optional. Each slot supports camera capture, file upload/replace and delete; progress comes from the Backend projection. Complete Handover is available only after saved mileage, fuel, OUT signature and all eight required photos. `POST /contracts/:id/car-out/complete` alone changes PAID → ACTIVE and Vehicle AVAILABLE → RENTED atomically, then refetches Contracts and Vehicles. The signed legal snapshot and A4 design do not change.
 
 ## Return link / public return
 

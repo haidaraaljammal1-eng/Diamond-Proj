@@ -165,6 +165,25 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
     },
   );
 
+  app.post(
+    "/rental/:token/official-contract/review/submit",
+    {
+      schema: {
+        summary: "Persist completion of the real official-contract review",
+        operationId: "submitPublicOfficialContractReview",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(OfficialContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const result = await contracts.submitPublicOfficialContractReview(request.params.token);
+      request.setAudit({ action: "contract.official_review_submitted", entityType: "contract", entityId: result.contractId });
+      return { data: result.view };
+    },
+  );
+
   app.put(
     "/rental/:token/official-contract/signatures/:slot",
     {

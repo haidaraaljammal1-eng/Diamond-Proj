@@ -840,6 +840,33 @@
       }
     },
     "carOut": {
+      "loadFailed": "Could not load the handover. Close and try again.",
+      "stepsLabel": "Car-Out steps",
+      "stepOne": "1 · Handover details",
+      "stepTwo": "2 · Photograph the vehicle",
+      "signedContractTitle": "Final signed contract",
+      "openFullA4": "Open full-size A4 contract",
+      "fullA4Hint": "Signed contract at its original A4 size · read-only",
+      "backToContracts": "Back to contracts",
+      "signedContractHint": "The signed agreement is read-only. Payment has been confirmed; only Vehicle OUT details can be changed here.",
+      "signedContractMissing": "The signed contract copy is unavailable. Handover cannot continue.",
+      "readOnly": "Read-only",
+      "fuelDamageHint": "Set Fuel OUT and mark Damage OUT on the vehicle diagram. The hirer signs in the same panel.",
+      "photosHint": "Capture each required view. Existing photos stay available when you reopen this draft.",
+      "stepOneRequired": "Enter Mileage OUT, select Fuel OUT, and capture the hirer's handover signature before continuing.",
+      "invalidMileage": "Mileage OUT must be a whole number of 0 or greater.",
+      "nextToPhotos": "Next: photograph vehicle",
+      "backToData": "Back to handover details",
+      "upload": "Upload",
+      "replacePhoto": "Replace photo",
+      "reserved": "Reserved",
+      "vehicleStatus": { "AVAILABLE": "Available", "RENTED": "Rented", "SERVICE": "In service" },
+      "plateCode": "Plate code",
+      "color": "Color",
+      "year": "Year made",
+      "vehicleStatusLabel": "Vehicle status",
+      "paymentStatusLabel": "Payment",
+      "paymentConfirmed": "Confirmed",
       "title": "Car-Out — handover",
       "description": "Record outgoing mileage, fuel and the eight inspection photos.",
       "loading": "Loading handover data…",
@@ -1008,6 +1035,7 @@
     },
     "review": {
       "title": "Official Contract Review",
+      "confirmReview": "Confirm Review",
       "instructionsInteractive": "Review your official rental agreement, correct permitted details, and sign using the signature pads.",
       "devCardSetupNotice": "Development payment simulation is enabled — card setup is not required.",
       "linkedCard": "{brand} •••• {last4}",
@@ -1537,7 +1565,11 @@
     }
   },
   "DemoSimulation": {
-    "devBadge": "DEV / SIM"
+    "devBadge": "DEV / SIM",
+    "uiDemoRun": "Show UI demo",
+    "uiDemoBadge": "UI DEMO — browser only",
+    "uiDemoReset": "Reset demo",
+    "uiDemoDisable": "Show live data"
   },
   "Gps": {
     "crumbs": "Operations · Tracking",

@@ -23,6 +23,15 @@ import { buildContractsQuery } from "../utils/contract-filters";
 
 const CONTRACTS_PATH = "/contracts";
 
+export async function getSignedContractSignature(id: string, slot: "hirer" | "additional-driver" | "sponsor", accessToken: string): Promise<Blob> {
+  const response = await fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/official-contract/signatures/${slot}/stream`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`Signature stream failed: ${response.status}`);
+  return response.blob();
+}
+
 export interface AttachmentDto {
   id: string;
   originalName: string;
@@ -159,11 +168,16 @@ async function uploadCarOutMultipart(
   const formData = new FormData();
   formData.append("file", file);
   const accessToken = await getAccessToken();
-  const response = await fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/car-out/${path}${query}`, {
+  const send = (token?: string) => fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/car-out/${path}${query}`, {
     method: "POST", credentials: "include",
-    headers: { Accept: "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+    headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: formData,
   });
+  let response = await send(accessToken);
+  if (response.status === 401) {
+    const refreshedToken = await getAccessToken();
+    if (refreshedToken && refreshedToken !== accessToken) response = await send(refreshedToken);
+  }
   const payload = await readJson(response);
   if (!response.ok) {
     if (isApiErrorResponse(payload)) throw new ApiRequestError(payload.error, response.status);

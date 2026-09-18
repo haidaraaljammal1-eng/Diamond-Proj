@@ -91,7 +91,7 @@ Live / Reconnecting in the WhatsApp header is transport state only. It is not Ac
 
 ## Simulation
 
-Optional frontend-only overlay when `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` **and** Simulation Mode is explicitly active. Local synthetic rows (`sim-wa-*`) never call the backend or Meta. Covers open/closed windows, approved templates, inbound/outbound media, FAILED/UNKNOWN, customer match/link, and connection states. Simulated realtime is in-memory and does not open `GET /whatsapp/realtime`. Removable without API, SSE, or domain changes. Real mode never falls back to simulation.
+Optional frontend-only overlay when `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` in development **and** WhatsApp Simulation Mode is explicitly active. This scoped browser demo is independent of the rental provider flag. Local synthetic rows (`sim-wa-*`) never call the backend or Meta. Covers open/closed windows, approved templates, inbound/outbound media, FAILED/UNKNOWN, customer match/link, and connection states. Simulated realtime is in-memory and does not open `GET /whatsapp/realtime`. Removable without API, SSE, or domain changes. Real mode never falls back to simulation.
 
 ## Not in this page
 

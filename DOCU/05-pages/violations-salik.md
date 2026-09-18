@@ -216,4 +216,4 @@ Customer Charge Review happens in the Liability Drawer, not the table row and no
 
 Contracts never wait for hypothetical future RTA/Salik. A GPS Salik crossing is a derived informational Contract flag (`roadLiabilitySignals`), not a Contract status and not a hold on Close.
 
-Demo Simulation reuses the existing overlay store (`roadLiabilitiesOverlay`); simulated ids never hit `GET /road-liabilities/sim-…` or confirm APIs. Reset restores live summary/list and original simulation fixtures. Production with simulation disabled shows no demo chrome.
+The intentional Road Liabilities browser demo is scoped by `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED` in development. It reuses the existing overlay store (`roadLiabilitiesOverlay`); simulated ids never hit `GET /road-liabilities/sim-…` or confirm APIs. Run/Reset/Disable affect local fixtures only. Production shows no demo control. The rental provider flag does not activate this overlay.

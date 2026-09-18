@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { isDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
+import { isUiDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import type {
   WhatsAppConversationDetailDto,
   WhatsAppConversationListItemDto,
@@ -17,6 +17,8 @@ import {
 } from "./whatsapp-simulation.fixture";
 import { blankWhatsAppMessageFields } from "../utils/whatsapp-view-model";
 import type { WhatsAppTemplateDto } from "../types/whatsapp.types";
+
+const isWhatsAppDemoEnabled = () => isUiDemoSimulationEnabled("whatsapp");
 
 interface WhatsAppSimulationState {
   active: boolean;
@@ -68,7 +70,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   templates: WHATSAPP_SIMULATION_TEMPLATES,
 
   activate() {
-    if (!isDemoSimulationEnabled()) return;
+    if (!isWhatsAppDemoEnabled()) return;
     set({
       active: true,
       inbox: buildWhatsAppSimulationInbox(),
@@ -80,7 +82,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   reset() {
-    if (!isDemoSimulationEnabled() || !get().active) return;
+    if (!isWhatsAppDemoEnabled() || !get().active) return;
     set({
       inbox: buildWhatsAppSimulationInbox(),
       selectedConversationId: null,
@@ -156,7 +158,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   sendText(conversationId, text) {
-    if (!isDemoSimulationEnabled() || !get().active) return false;
+    if (!isWhatsAppDemoEnabled() || !get().active) return false;
     const inbox = get().inbox;
     if (!inbox) return false;
     const detail = inbox.details[conversationId];
@@ -206,7 +208,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   sendTemplate(conversationId, input) {
-    if (!isDemoSimulationEnabled() || !get().active) return false;
+    if (!isWhatsAppDemoEnabled() || !get().active) return false;
     const inbox = get().inbox;
     const detail = inbox?.details[conversationId];
     if (!inbox || !detail?.messagingEligibility.canSendTemplate) return false;
@@ -244,7 +246,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   sendMedia(conversationId, input) {
-    if (!isDemoSimulationEnabled() || !get().active) return false;
+    if (!isWhatsAppDemoEnabled() || !get().active) return false;
     const inbox = get().inbox;
     const detail = inbox?.details[conversationId];
     if (!inbox || !detail?.messagingEligibility.canSendMedia) return false;
@@ -284,7 +286,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   setConnectionState(state) {
-    if (!isDemoSimulationEnabled() || !get().active) return;
+    if (!isWhatsAppDemoEnabled() || !get().active) return;
     const inbox = get().inbox;
     if (!inbox) return;
     const connection = {
@@ -309,7 +311,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   linkCustomer(_customerId: number) {
-    if (!isDemoSimulationEnabled() || !get().active) return;
+    if (!isWhatsAppDemoEnabled() || !get().active) return;
     const inbox = get().inbox;
     const id = get().selectedConversationId;
     if (!inbox || !id || !inbox.details[id]) return;
@@ -333,7 +335,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   unlinkCustomer() {
-    if (!isDemoSimulationEnabled() || !get().active) return;
+    if (!isWhatsAppDemoEnabled() || !get().active) return;
     const inbox = get().inbox;
     const id = get().selectedConversationId;
     if (!inbox || !id || !inbox.details[id]) return;
@@ -356,7 +358,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   simulateInbound() {
-    if (!isDemoSimulationEnabled() || !get().active) return;
+    if (!isWhatsAppDemoEnabled() || !get().active) return;
     const inbox = get().inbox;
     if (!inbox) return;
     const now = new Date().toISOString();
@@ -460,7 +462,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
   },
 
   simulateProviderStatus(status) {
-    if (!isDemoSimulationEnabled() || !get().active) return;
+    if (!isWhatsAppDemoEnabled() || !get().active) return;
     const inbox = get().inbox;
     const selectedId = get().selectedConversationId;
     if (!inbox || !selectedId) return;

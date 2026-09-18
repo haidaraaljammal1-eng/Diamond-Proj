@@ -128,7 +128,7 @@ function assertCarOutAngles(photos: { angle: string }[]): void {
   const present = new Set(photos.map((photo) => photo.angle));
   if (photos.length < CAR_OUT_REQUIRED_ANGLES.length || present.size !== photos.length ||
     CAR_OUT_REQUIRED_ANGLES.some((angle) => !present.has(angle))) {
-    throw AppError.validation("Car-Out requires all eight exterior photo angles");
+    throw AppError.validation("Car-Out requires all eight photo angles");
   }
 }
 
@@ -1786,6 +1786,22 @@ export function createContractsService(fastify: FastifyInstance) {
     return contract;
   }
 
+  /** Records completion of the real customer review before any legal signing. */
+  async function submitPublicOfficialContractReview(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const contract = await lockReviewableContract(tx, token);
+      if (contract.status === "AWAITING") {
+        assertTransition("AWAITING", "FORM");
+        await tx.contract.update({
+          where: { id: contract.id },
+          data: { status: "FORM", revision: { increment: 1 } },
+        });
+        await emit(tx, "contract.form_completed", contract.id);
+      }
+      return { contractId: contract.id, view: await loadOfficialContract(tx, contract.id) };
+    });
+  }
+
   /**
    * Saves the customer's review-link input: only the fields in
    * OFFICIAL_CONTRACT_EDITABLE_FIELDS (card last 4). Anything else is rejected.
@@ -1878,8 +1894,12 @@ export function createContractsService(fastify: FastifyInstance) {
   /** Token-scoped signature image stream. No storage key or attachment id is exposed. */
   async function openPublicOfficialSignature(token: string, slot: OfficialContractSignatureSlot) {
     const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
+    return openStaffOfficialSignature(link.contractId, slot);
+  }
+
+  async function openStaffOfficialSignature(contractId: string, slot: OfficialContractSignatureSlot) {
     const signature = await prisma.officialContractSignature.findUnique({
-      where: { contractId_slot: { contractId: link.contractId, slot } },
+      where: { contractId_slot: { contractId, slot } },
       include: { attachment: true },
     });
     if (!signature) throw AppError.notFound("Signature not found");
@@ -1902,10 +1922,8 @@ export function createContractsService(fastify: FastifyInstance) {
   ) {
     return withTransaction(prisma, async (tx) => {
       const contract = await lockReviewableContract(tx, token);
+      if (contract.status !== "FORM") throw contractError.invalidTransition(contract.status, "SIGNED");
       const verification = await latestLicense(tx, contract.id);
-      if (contract.status === "AWAITING") {
-        assertLicenseProgress(verification?.status, verification?.expiryDate);
-      }
       const row = await tx.contract.findUniqueOrThrow({
         where: { id: contract.id },
         include: { ...OFFICIAL_CONTRACT_INCLUDE, officialSignatures: { select: { slot: true, capturedAt: true, attachmentId: true } } },
@@ -1918,11 +1936,7 @@ export function createContractsService(fastify: FastifyInstance) {
         throw contractError.officialContractIncomplete(view.permissions.missingRequirements);
       }
 
-      if (contract.status === "AWAITING") {
-        assertTransition("AWAITING", "FORM");
-        await emit(tx, "contract.form_completed", contract.id);
-      }
-      assertTransition("FORM", "SIGNED");
+      assertTransition(contract.status, "SIGNED");
 
       const legalView = { ...view, contract: { ...view.contract, status: "SIGNED" as const } };
       const snapshot = {
@@ -2359,6 +2373,7 @@ export function createContractsService(fastify: FastifyInstance) {
     deleteCarOutPhoto,
     openCarOutSignatureStream,
     submitPublicForm,
+    submitPublicOfficialContractReview,
     acceptPublic,
     carIn,
     carInStaff,
@@ -2380,6 +2395,7 @@ export function createContractsService(fastify: FastifyInstance) {
     savePublicOfficialSignature,
     clearPublicOfficialSignature,
     openPublicOfficialSignature,
+    openStaffOfficialSignature,
     signPublicOfficialContract,
     updateOfficialContractTerms,
     getPaymentContext,

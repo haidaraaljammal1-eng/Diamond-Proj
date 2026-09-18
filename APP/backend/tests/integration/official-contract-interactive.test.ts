@@ -50,6 +50,7 @@ if (!RUN) {
     const patch = (token: string, payload: Record<string, unknown>) =>
       app.inject({ method: "PATCH", url: url(token), payload });
     const sign = (token: string) => app.inject({ method: "POST", url: url(token, "/sign"), payload: {} });
+    const submitReview = (token: string) => app.inject({ method: "POST", url: url(token, "/review/submit") });
     function putSignature(token: string, slot: string, file = imageMultipart("sig.png", "image/png", TEST_PNG)) {
       return app.inject({ method: "PUT", url: url(token, `/signatures/${slot}`), headers: file.headers, payload: file.payload });
     }
@@ -252,6 +253,7 @@ if (!RUN) {
       const blocked = await sign(early.token);
       assert.equal(blocked.statusCode, 409);
       assert.equal(blocked.json().error.context.reason, "CONTRACT_IDENTITY_NOT_READY");
+      assert.equal((await submitReview(early.token)).statusCode, 409);
 
       const ctx = await offer();
       await seedReadyIdentity(app, ctx.token);
@@ -259,6 +261,18 @@ if (!RUN) {
       const customersBefore = await prisma.customer.count();
 
       let res = await sign(ctx.token);
+      assert.equal(res.statusCode, 409, res.body);
+      assert.equal(res.json().error.context.reason, "CONTRACT_INVALID_TRANSITION");
+      assert.equal((await prisma.contract.findUniqueOrThrow({ where: { id: ctx.contractId } })).status, "AWAITING");
+
+      const reviewed = await submitReview(ctx.token);
+      assert.equal(reviewed.statusCode, 200, reviewed.body);
+      assert.equal(reviewed.json().data.contract.status, "FORM");
+      assert.equal((await prisma.contract.findUniqueOrThrow({ where: { id: ctx.contractId } })).status, "FORM");
+      assert.equal((await submitReview(ctx.token)).json().data.contract.status, "FORM");
+      assert.equal((await submitReview("invalid-rental-token")).statusCode, 401);
+
+      res = await sign(ctx.token);
       assert.equal(res.statusCode, 409, res.body);
       assert.equal(res.json().error.context.reason, "OFFICIAL_CONTRACT_INCOMPLETE");
       assert.deepEqual(res.json().error.context.missing, ["SIGNATURE_HIRER"]);
@@ -330,5 +344,69 @@ if (!RUN) {
       assert.equal(audit.includes("TEST PERSON"), false);
       assert.equal(audit.includes("base64"), false);
     });
+
+    if (process.env.DIAMOND_SIMULATION_ENABLED === "true") {
+      test("DEV provider substitutions persist OCR, FORM, signature, payment, and PAID reservation on one real contract", async () => {
+        const ctx = await offer();
+        const customersBefore = await prisma.customer.count();
+        const invalid = await app.inject({ method: "POST", url: "/contracts/rental/invalid-rental-token/simulation/license" });
+        assert.equal(invalid.statusCode, 401);
+        const earlyPassport = await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/simulation/passport` });
+        assert.equal(earlyPassport.statusCode, 409);
+
+        const license = await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/simulation/license` });
+        assert.equal(license.statusCode, 200, license.body);
+        assert.equal(license.json().data.identity.licenseStatus, "LICENSE_VALID");
+        const passport = await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/simulation/passport` });
+        assert.equal(passport.statusCode, 200, passport.body);
+        assert.equal(passport.json().data.identity.passport.status, "READY");
+        assert.equal(passport.json().data.identity.identityReady, true);
+        assert.equal(await prisma.customer.count(), customersBefore);
+        assert.equal((await get(ctx.token)).json().data.hirer.name, passport.json().data.identity.passport.fields.fullName);
+
+        const prematurePayment = await app.inject({
+          method: "POST", url: `/contracts/rental/${ctx.token}/simulation/payment`, headers: { "idempotency-key": `early-${run}` },
+        });
+        assert.equal(prematurePayment.statusCode, 409);
+        assert.equal((await submitReview(ctx.token)).json().data.contract.status, "FORM");
+        await putSignature(ctx.token, "hirer");
+        const signed = await sign(ctx.token);
+        assert.equal(signed.statusCode, 200, signed.body);
+        assert.equal((await prisma.contract.findUniqueOrThrow({ where: { id: ctx.contractId } })).status, "SIGNED");
+
+        const paymentUrl = `/contracts/rental/${ctx.token}/simulation/payment`;
+        const key = `settle-${run}`;
+        const paid = await app.inject({ method: "POST", url: paymentUrl, headers: { "idempotency-key": key } });
+        assert.equal(paid.statusCode, 200, paid.body);
+        assert.equal(paid.json().data.contract.status, "PAID");
+        const duplicate = await app.inject({ method: "POST", url: paymentUrl, headers: { "idempotency-key": key } });
+        assert.equal(duplicate.statusCode, 200, duplicate.body);
+        const payment = await prisma.contractPayment.findFirstOrThrow({ where: { contractId: ctx.contractId, purpose: "RENTAL" } });
+        assert.equal(await prisma.contractPayment.count({ where: { contractId: ctx.contractId, purpose: "RENTAL" } }), 1);
+        assert.equal(payment.provider, "dev_simulation");
+        assert.equal(payment.status, "CONFIRMED");
+        assert.equal(Number(payment.amount), 2100);
+        assert.equal(payment.currency, "AED");
+        assert.equal(payment.providerReference, null);
+        assert.equal(payment.checkoutUrl, null);
+        assert.equal((await prisma.contract.findUniqueOrThrow({ where: { id: ctx.contractId } })).status, "PAID");
+
+        const fleet = await app.inject({ method: "GET", url: `/vehicles/${ctx.vehicleId}`, headers: auth() });
+        assert.equal(fleet.statusCode, 200, fleet.body);
+        assert.equal(fleet.json().data.operationalStatus, "available");
+        assert.equal(fleet.json().data.reservation.isReserved, true);
+        assert.equal(fleet.json().data.reservation.contractId, ctx.contractId);
+        assert.equal(fleet.json().data.isBookable, false);
+        const detail = await app.inject({ method: "GET", url: `/contracts/${ctx.contractId}`, headers: auth() });
+        assert.equal(detail.json().data.actions.canCarOut, true);
+        const list = await app.inject({ method: "GET", url: `/contracts?search=${encodeURIComponent(detail.json().data.contractNumber)}`, headers: auth() });
+        assert.equal(list.json().data[0].status, "PAID");
+        const conflictingOffer = await app.inject({
+          method: "POST", url: "/contracts/offers", headers: auth(),
+          payload: { vehicleId: ctx.vehicleId, priceType: "DAILY", rentalDays: 1, agreedAmount: 300 },
+        });
+        assert.equal(conflictingOffer.statusCode, 409);
+      });
+    }
   });
 }

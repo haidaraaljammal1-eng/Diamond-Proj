@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { isDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
+import { isUiDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import { buildDashboardSimulationFixture } from "./dashboard-simulation.fixture";
 import type { DashboardOverviewDto } from "../types/dashboard.types";
 
@@ -18,12 +18,12 @@ export const useDashboardSimulationStore = create<DashboardSimulationState>((set
   overview: null,
 
   activate() {
-    if (!isDemoSimulationEnabled()) return;
+    if (!isUiDemoSimulationEnabled("dashboard")) return;
     set({ active: true, overview: buildDashboardSimulationFixture() });
   },
 
   reset() {
-    if (!isDemoSimulationEnabled() || !get().active) return;
+    if (!isUiDemoSimulationEnabled("dashboard") || !get().active) return;
     set({ overview: buildDashboardSimulationFixture() });
   },
 

@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { ApiRequestError } from "../../../infrastructure/api/errors.ts";
-import { isDemoSimulationEnabled } from "../../demo-simulation/simulation.enabled.ts";
+import { isUiDemoSimulationEnabled } from "../../demo-simulation/simulation.enabled.ts";
 import {
   WHATSAPP_LINK_CUSTOMER_PERMISSION,
   WHATSAPP_MANAGE_CONNECTION_PERMISSION,
@@ -246,8 +246,9 @@ describe("error resolver", () => {
 
 describe("simulation isolation", () => {
   it("is frontend-only, gated, and never mixed with real data", () => {
-    assert.equal(isDemoSimulationEnabled("true"), true);
-    assert.equal(isDemoSimulationEnabled(undefined), false);
+    assert.equal(isUiDemoSimulationEnabled("whatsapp", "true", "development"), true);
+    assert.equal(isUiDemoSimulationEnabled("whatsapp", "false", "development"), false);
+    assert.equal(isUiDemoSimulationEnabled("whatsapp", "true", "production"), false);
     const fixture = buildWhatsAppSimulationInbox();
     assert.ok(fixture.conversations.length >= 5);
     assert.ok(fixture.conversations.length <= 8);
@@ -343,7 +344,7 @@ describe("prohibited WhatsApp UI", () => {
     const realStore = readFileSync(join(moduleDir, "stores/whatsapp.store.ts"), "utf8");
     const realtimeClient = readFileSync(join(moduleDir, "realtime/whatsapp.realtime-client.ts"), "utf8");
     const simRealtime = readFileSync(join(moduleDir, "simulation/whatsapp-simulation.realtime.ts"), "utf8");
-    assert.match(store, /isDemoSimulationEnabled\(\)/);
+    assert.match(store, /isWhatsAppDemoEnabled\(\)/);
     assert.match(hook, /simulationActive/);
     assert.match(hook, /selectSim\(id\)/);
     assert.match(hook, /if \(simulationActive\) \{\s*return sendSim/);

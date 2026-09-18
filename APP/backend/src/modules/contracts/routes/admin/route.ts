@@ -18,6 +18,7 @@ import {
   CreateOfferSchema,
   OfficialContractStaffTermsSchema,
   OfficialContractViewSchema,
+  OFFICIAL_SIGNATURE_SLOT_PATHS,
   ListContractsQuerySchema,
   PaymentCheckoutSchema,
   ReconcileSchema,
@@ -33,6 +34,7 @@ import { AppError } from "src/lib/errors/app-error";
 
 const InspectionPhotoParam = ContractIdParam.extend({ photoId: z.string().uuid() });
 const PostCloseReceivableParam = ContractIdParam.extend({ receivableId: z.string().uuid() });
+const OfficialSignatureStaffParam = ContractIdParam.extend({ slot: z.enum(["hirer", "additional-driver", "sponsor"]) });
 
 export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -230,6 +232,26 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
         entityId: request.params.id,
       });
       return { data };
+    },
+  );
+
+  app.get(
+    "/:id/official-contract/signatures/:slot/stream",
+    {
+      schema: {
+        summary: "Stream a signed official contract signature to staff",
+        operationId: "streamStaffOfficialContractSignature",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_READ],
+        params: OfficialSignatureStaffParam,
+        response: { 200: z.any(), ...commonErrorResponses },
+      },
+    },
+    async (request, reply) => {
+      requireAuth(request);
+      const slot = OFFICIAL_SIGNATURE_SLOT_PATHS[request.params.slot];
+      const { mimeType, stream } = await contracts.openStaffOfficialSignature(request.params.id, slot);
+      return reply.header("content-type", mimeType).header("cache-control", "private, no-store").send(stream);
     },
   );
 

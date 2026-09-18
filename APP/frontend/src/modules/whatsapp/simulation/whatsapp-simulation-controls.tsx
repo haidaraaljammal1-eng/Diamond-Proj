@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
-import { isDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
+import { isUiDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import { useWhatsAppSimulationStore } from "./whatsapp-simulation.store";
 import {
   emitSimulatedWhatsAppInbound,
@@ -12,7 +12,7 @@ import styles from "./whatsapp-simulation-controls.module.css";
 
 export function WhatsAppSimulationControls() {
   const t = useTranslations("WhatsApp");
-  const enabled = isDemoSimulationEnabled();
+  const enabled = isUiDemoSimulationEnabled("whatsapp");
   const active = useWhatsAppSimulationStore((state) => state.active);
   const activate = useWhatsAppSimulationStore((state) => state.activate);
   const reset = useWhatsAppSimulationStore((state) => state.reset);

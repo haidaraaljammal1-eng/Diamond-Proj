@@ -338,7 +338,7 @@ if (!RUN) {
     assert.equal(deleted.json().data.photoEvidence.completed, 7);
     const retaken = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-out/photos?angle=FRONT`, ...multipart(png) });
     assert.equal(retaken.statusCode, 200, retaken.body);
-    const optionalPhoto = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-out/photos?angle=ODOMETER`, ...multipart(png) });
+    const optionalPhoto = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-out/photos?angle=LEFT`, ...multipart(png) });
     assert.equal(optionalPhoto.statusCode, 200, optionalPhoto.body);
     assert.equal(optionalPhoto.json().data.photoEvidence.completed, 8);
 

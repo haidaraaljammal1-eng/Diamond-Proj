@@ -82,9 +82,9 @@ Server-owned: `contractNumber` (`DE-{year}-{nnnnnn}`), vehicle facts, `rentalDay
 
 When the Customer is created/updated, verified license values are copied onto Customer and the same Attachment is linked as `CustomerDocument` (no second file bytes). `actualPickupAt` / `actualReturnAt` stay null until Car-Out / Car-In. Placeholder copy such as «يُعبّأ عند استلام السيارة» is frontend i18n, never stored.
 
-`AWAITING → FORM` only after a valid Rental link, VALID license, READY passport (`CONTRACT_IDENTITY_NOT_READY` otherwise), and required personal fields. Service performs the transition.
+`AWAITING → FORM` is persisted when the customer confirms the real Official Contract review through `POST /contracts/rental/:token/official-contract/review/submit`. The service requires a valid Rental link, VALID license, READY passport (`CONTRACT_IDENTITY_NOT_READY` otherwise), and required personal fields. Review corrections, if any, are saved first. The review can be confirmed with no corrections; re-submitting an existing FORM Contract is idempotent.
 
-`FORM → SIGNED` via `ContractAcceptance` only when license is still VALID. Legal snapshot freezes customer, verified license, vehicle, commercial terms, `contractNumber`, `termsVersion`. Later master-data edits do not rewrite it.
+`FORM → SIGNED` via a real manual signature and `ContractAcceptance` only when the persisted status is FORM and the license is still VALID. Legal snapshot freezes customer, verified license, vehicle, commercial terms, `contractNumber`, `termsVersion`. Later master-data edits do not rewrite it.
 
 ## 14–16. Rental token lifecycle
 
@@ -182,7 +182,7 @@ Module: `APP/frontend/src/modules/public-rental/` (`api` / `hooks` / `stores` / 
 
 **License and passport:** Real uploads use the configured OCR provider. In DEV provider mode, the two labelled OCR success actions run against the same real Rental Link and persist normalized results through the same Contract identity flow. Customer master data is not created or updated.
 
-**Official Contract:** The existing A4 view uses persisted OCR identity and the assigned Vehicle. Review and legal signatures are manual and saved through the normal backend. DEV payment provider mode skips only external Stripe Card Setup before signing; it creates no card metadata. Production still requires linked Stripe card setup.
+**Official Contract:** The existing A4 view uses persisted OCR identity and the assigned Vehicle. Confirm Review persists FORM before manual signing persists SIGNED. DEV payment provider mode skips only external Stripe Card Setup before signing; it creates no card metadata. Production still requires linked Stripe card setup.
 
 **Payment:** The page displays the server-owned amount, currency, Contract and Vehicle. Real mode uses Stripe Checkout and backend verification. DEV provider mode offers only successful payment substitution; the shared backend settlement writes the real PAID Contract. Browser redirects or local UI state never prove payment.
 
@@ -197,6 +197,8 @@ Frontend unit tests live under `src/modules/public-rental/**/*.test.ts`.
 ## Development provider substitution
 
 Diamond does not have a general workflow simulation anymore. The only visible DEV actions are successful Driver License OCR, successful Passport OCR, and successful Payment. They require a real Rental Link and Contract. Backend routes are registered only with `NODE_ENV !== production` and `DIAMOND_SIMULATION_ENABLED=true`; frontend controls additionally require `NEXT_PUBLIC_DIAMOND_SIMULATION=true`. The frontend flag is never authorization.
+
+This rental provider flag is separate from `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`, which controls browser-only Dashboard, WhatsApp, and Road Liabilities fixtures. Those UI demos never create backend or rental success.
 
 DEV OCR uses the normal OCR normalization and persisted Contract identity flow. DEV payment derives the real obligation server-side, records `provider=dev_simulation`, and invokes the same locked settlement transition used by verified Stripe payment. It is idempotent and creates no Stripe ids or fake card. Review, signatures, PAID reservation, and Car-Out are real. No SIM panel, reset, session journey, or Car-Out helper remains.
 

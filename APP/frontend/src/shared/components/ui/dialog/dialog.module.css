@@ -49,6 +49,17 @@
   );
 }
 
+.xl { width: min(960px, 100%); }
+.twoXl { width: min(1320px, 100%); max-height: min(94dvh, 1080px); }
+.wide {
+  display: flex;
+  flex-direction: column;
+  width: min(1640px, 100%);
+  height: calc(100dvh - 40px);
+  max-height: none;
+  overflow: hidden;
+}
+
 /* The Demo floats the close button to the inline-end of the modal: left in
    Arabic (the Demo default), right in English. `float` is physical, so the LTR
    counterpart is written explicitly. */
@@ -127,6 +138,11 @@
   .scrim,
   .dialog {
     animation: none;
+  }
+
+  .wide {
+    height: calc(100dvh - 16px);
+    padding: 16px;
   }
 }
 

@@ -20,6 +20,7 @@ export interface DialogProps {
    * tighter padding, caller owns the hero/header inside children.
    */
   presentation?: "default" | "flush";
+  size?: "default" | "xl" | "2xl" | "wide";
   children: ReactNode;
 }
 
@@ -37,6 +38,7 @@ export function Dialog({
   description,
   closeLabel,
   presentation = "default",
+  size = "default",
   children,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -45,6 +47,8 @@ export function Dialog({
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('[data-testid="shared-dialog"]');
+      if (dialogs[dialogs.length - 1] !== dialogRef.current?.parentElement) return;
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -111,6 +115,9 @@ export function Dialog({
         className={[
           styles.dialog,
           presentation === "flush" ? styles.flush : "",
+          size === "xl" ? styles.xl : "",
+          size === "2xl" ? styles.twoXl : "",
+          size === "wide" ? styles.wide : "",
         ]
           .filter(Boolean)
           .join(" ")}

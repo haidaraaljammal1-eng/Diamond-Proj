@@ -20,7 +20,7 @@ export function RoadLiabilitiesScreen() {
   const t = useTranslations("RoadLiabilities");
   const locale = useLocale();
   const router = useRouter();
-  const simulation = useDemoSimulation();
+  const simulation = useDemoSimulation("violations");
   const page = useRoadLiabilities();
   const [contractId, setContractId] = useState<string | null>(null);
 

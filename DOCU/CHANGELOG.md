@@ -1,6 +1,14 @@
 # Changelog
 
+## 2026-09-19
+
+- Separated real development rental provider substitutions (License OCR, Passport OCR, successful Payment) from browser-only Dashboard, WhatsApp, and Road Liabilities demos. Restored scoped UI demo controls without re-enabling the old rental journey, set local frontend provider and auth URL flags for port 3100, and persisted Official Contract review as FORM before manual signing to SIGNED. Corrected Car-Out photo documentation to six exterior, odometer, and dashboard/fuel images. See `DOCU/CURRENT-IMPLEMENTATION-STATUS.md` and `DOCU/05-pages/public-rental-flow.md`.
+
 ## 2026-09-18
+
+- Made the contract-scoped Car-Out dialog nearly viewport-wide, removed nested scrolling in its signed-contract preview, and added a protected full-size A4 signed-contract page. Improved visibility of Step 1 save errors and multipart upload retry after token refresh. The legal document remains read-only and Car-Out remains the same draft workflow. See `DOCU/05-pages/contracts.md`.
+
+- Expanded the existing contract-scoped Car-Out dialog to a 2XL two-step handover. It displays the frozen signed A4 contract read-only, saves Vehicle OUT details and signature before the separate photo step, and restores saved drafts and evidence on reopen. The eight required photos now include six vehicle views plus odometer and fuel; completion still alone activates the Contract and rents the Vehicle. See `DOCU/05-pages/contracts.md` and `DOCU/05-pages/contracts-backend.md`.
 
 - Replaced the general rental Simulation journey with three development-only external-provider substitutes: Driver License OCR, Passport OCR, and successful Payment on a real Rental Link. Review, signatures, reservation, Contracts, and Car-Out stay real. DEV payment skips Stripe Card Setup without persisting a fake card and settles through the shared payment service. Production registers no DEV routes. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/05-pages/payments-backend.md`.
 - Reproduced and fixed the login blank-page incident by restarting the frontend server after its `.next` build; stale asset requests had been returning HTTP 500. See `DOCU/05-pages/login.md`.
@@ -53,7 +61,7 @@
 
 ## 2026-09-09
 
-- Historical frontend-only Demo Simulation was introduced, then retired by the 2026-09-18 provider-only flow.
+- The historical general rental Simulation journey was retired by the 2026-09-18 provider-only flow. Scoped browser-only Dashboard, WhatsApp, and Road Liabilities demos remain available in development; historical Finance/GPS controls are disabled.
 - Contract renewal flow completion: staff Generate Renewal Link stores a pending
   `ContractRenewal` offer; public `/[locale]/renew/[token]` confirms server-owned
   days/amount on the same ACTIVE Contract; Vehicle stays RENTED. Used tokens can

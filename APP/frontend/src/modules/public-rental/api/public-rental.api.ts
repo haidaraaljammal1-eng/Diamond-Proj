@@ -212,6 +212,15 @@ export async function reviewPublicOfficialContract(
   return response.data;
 }
 
+/** Persists FORM after the customer has reviewed the real official contract. */
+export async function submitPublicOfficialContractReview(token: string): Promise<OfficialContractView> {
+  const response = await apiRequest<OfficialContractView>(
+    `${CONTRACTS_PATH}/rental/${token}/official-contract/review/submit`,
+    { method: "POST", publicRequest: true },
+  );
+  return response.data;
+}
+
 /** Captures (or replaces) one official-contract signature as a PNG. */
 export async function savePublicOfficialSignature(
   token: string,

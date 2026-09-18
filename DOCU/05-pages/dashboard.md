@@ -112,7 +112,7 @@ active-slice / legend focus — not a second data source.
 
 ## Dashboard Simulation (removable, frontend-only)
 
-Optional presentation overlay behind `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`.
+Optional presentation overlay behind `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED` in development, scoped to Dashboard and independent of the rental provider flag.
 When the flag is off, the Simulation control is hidden and the page is the
 real Dashboard only.
 

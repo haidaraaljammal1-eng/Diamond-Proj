@@ -19,7 +19,7 @@ import styles from "./vehicle-condition-sheet.module.css";
 export interface VehicleConditionSheetProps {
   side: "OUT" | "IN";
   damage: DamageMark[];
-  fuel: FuelLevel;
+  fuel: FuelLevel | null;
   onDamage: (marks: DamageMark[]) => void;
   onFuel: (level: FuelLevel) => void;
   onSignature: (image: Blob | null) => void;
@@ -63,7 +63,7 @@ export function VehicleConditionSheet({ side, damage, fuel, onDamage, onFuel, on
   const copy = side === "OUT" ? CONTRACT_CUSTODY.out : CONTRACT_CUSTODY.in;
   const toggle = (zone: string) => onDamage(toggleDamageMark(damage, zone, tool));
   const steps = FUEL_LEVELS.length - 1;
-  const fill = (steps - FUEL_LEVELS.indexOf(fuel)) / steps;
+  const fill = fuel === null ? null : (steps - FUEL_LEVELS.indexOf(fuel)) / steps;
 
   return (
     <div ref={frameRef} className={styles.frame} dir="ltr" data-testid={`vehicle-condition-${side.toLowerCase()}`}>
@@ -86,7 +86,7 @@ export function VehicleConditionSheet({ side, damage, fuel, onDamage, onFuel, on
           </div>
         </div>
         {editable ? <DamageToolbar active={tool} onSelect={setTool} onClearAll={() => onDamage([])} /> : null}
-        <FuelBar label={copy.fuel} fill={fill} text={FUEL_TEXT[fuel] ?? fuel} onSelect={editable ? onFuel : undefined} />
+        <FuelBar label={copy.fuel} fill={fill} text={fuel === null ? "" : (FUEL_TEXT[fuel] ?? fuel)} onSelect={editable ? onFuel : undefined} />
         <div className={paper.vsig}>
           <span className={paper.en}>{CONTRACT_CUSTODY.signatureEn}</span>
           <SignaturePad

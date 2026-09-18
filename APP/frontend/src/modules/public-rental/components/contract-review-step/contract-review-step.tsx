@@ -201,10 +201,10 @@ export function ContractReviewStep({
                   variant="secondary"
                   size="md"
                   loading={saving && !signing}
-                  disabled={!contract.dirty || saving || signing}
+                  disabled={(view?.contract.status !== "AWAITING" && !contract.dirty) || saving || signing}
                   onClick={() => void handleSave()}
                 >
-                  {saving && !signing ? t("saving") : t("save")}
+                  {saving && !signing ? t("saving") : view?.contract.status === "AWAITING" ? t("confirmReview") : t("save")}
                 </Button>
               ) : null}
               <Button

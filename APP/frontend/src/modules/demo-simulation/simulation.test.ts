@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
-import { isDemoSimulationEnabled, isProviderSimulationEnabled } from "./simulation.enabled.ts";
+import { isDemoSimulationEnabled, isProviderSimulationEnabled, isUiDemoSimulationEnabled } from "./simulation.enabled.ts";
 
 const read = (relative: string) => readFileSync(path.join(import.meta.dirname, relative), "utf8");
 
@@ -15,6 +15,9 @@ describe("external provider simulation only", () => {
 
   it("retires broad journey overlays and mutation interception", () => {
     assert.equal(isDemoSimulationEnabled("true", "development"), false);
+    assert.equal(isUiDemoSimulationEnabled("roadLiabilities", "true", "development"), true);
+    assert.equal(isUiDemoSimulationEnabled("roadLiabilities", "true", "production"), false);
+    assert.equal(isUiDemoSimulationEnabled("finance" as "dashboard", "true", "development"), false);
     assert.equal(read("../public-rental/stores/public-rental.store.ts").includes("shouldSkipRentalMutation"), false);
   });
 

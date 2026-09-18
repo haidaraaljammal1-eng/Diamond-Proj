@@ -16,7 +16,7 @@ Row-level `trackingStatus=online` still means fresh + unknown motion. Summary KP
 
 Fleet GPS actions route to `/gps?vehicleId=`. Missing coordinates still select the vehicle and show “No GPS data available for this vehicle.”
 
-Simulation (`NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true`) overlays 5–8 real vehicles with in-memory Dubai points and one moving path. Reset Simulation restores backend map points and statuses. No GPS writes.
+The historical GPS presentation simulation remains disabled by the general demo gate. Its retained fixture code overlays 5–8 real vehicles with in-memory Dubai points and one moving path, with no GPS writes. `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` currently activates only scoped Dashboard, WhatsApp, and Road Liabilities demos, not GPS.
 
 ## Endpoints
 
