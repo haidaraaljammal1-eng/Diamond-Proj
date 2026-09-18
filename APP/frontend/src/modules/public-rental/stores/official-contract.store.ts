@@ -52,9 +52,9 @@ interface OfficialContractState {
   setDamageOut: (marks: DamageMark[]) => void;
   setSignature: (slot: OfficialSignatureSlot, image: Blob | null) => void;
   /** Saves pending changes. Resolves true when nothing is pending afterwards. */
-  save: (options?: { persist?: boolean }) => Promise<boolean>;
-  /** Saves, then signs. With `persist: false` (demo) nothing reaches the Backend. */
-  sign: (options?: { persist?: boolean }) => Promise<boolean>;
+  save: () => Promise<boolean>;
+  /** Saves, then signs through the real Backend flow. */
+  sign: () => Promise<boolean>;
   reset: () => void;
 }
 
@@ -125,7 +125,7 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
       }));
     },
 
-    async save(options = {}) {
+    async save() {
       const { token, view, edits, pendingSignatures } = get();
       if (!token || !view) return false;
       const patch = buildReviewPatch(view, edits);
@@ -137,11 +137,6 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
       const signatureEntries = Object.entries(pendingSignatures) as Array<[OfficialSignatureSlot, Blob | "CLEAR"]>;
       if (Object.keys(patch).length === 0 && signatureEntries.length === 0) {
         set({ edits: {}, damageOut: undefined, saveStatus: "idle", saveError: null, invalidFields: [] });
-        return true;
-      }
-      // Demo simulation keeps everything in the browser.
-      if (options.persist === false) {
-        set({ saveStatus: "saved", saveError: null, invalidFields: [] });
         return true;
       }
       set({ saveStatus: "saving", saveError: null, invalidFields: [] });
@@ -171,7 +166,7 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
       }
     },
 
-    async sign(options = {}) {
+    async sign() {
       const state = get();
       if (!state.token || !state.view) return false;
       const missing = requiredSignatureSlots(state.view, state.edits).filter((slot) => {
@@ -185,14 +180,10 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
         return false;
       }
       set({ signStatus: "signing", signError: null, missingSignatures: [] });
-      const saved = await get().save(options);
+      const saved = await get().save();
       if (!saved) {
         set({ signStatus: "idle" });
         return false;
-      }
-      if (options.persist === false) {
-        set({ signStatus: "signed" });
-        return true;
       }
       try {
         const view = await signPublicOfficialContract(state.token, state.view.contract.termsVersion);

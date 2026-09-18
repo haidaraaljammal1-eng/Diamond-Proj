@@ -5,6 +5,19 @@ import { UnconfiguredPaymentProvider } from "src/modules/contracts/payment/uncon
 
 let override: PaymentProvider | undefined;
 
+/** Only the unavailable external payment provider is substituted in development. */
+export function devPaymentSimulationEnabled(
+  config: { nodeEnv: string; enabled: boolean } = { nodeEnv: env.NODE_ENV, enabled: env.DIAMOND_SIMULATION_ENABLED },
+): boolean {
+  return config.nodeEnv !== "production" && config.enabled;
+}
+
+export function requiresCardSetupBeforeSigning(
+  config?: { nodeEnv: string; enabled: boolean },
+): boolean {
+  return !devPaymentSimulationEnabled(config);
+}
+
 export function setPaymentProviderForTests(provider: PaymentProvider | undefined): void {
   override = provider;
 }

@@ -12,10 +12,10 @@ import type {
   WebhookVerifyResult,
 } from "src/modules/contracts/payment/payment-provider.types";
 
-function mapSessionStatus(status: Stripe.Checkout.Session.Status | null): ProviderPaymentStatus {
-  switch (status) {
+export function mapSessionStatus(session: Stripe.Checkout.Session): ProviderPaymentStatus {
+  switch (session.status) {
     case "complete":
-      return "CONFIRMED";
+      return session.payment_status === "paid" ? "CONFIRMED" : "PROCESSING";
     case "expired":
       return "EXPIRED";
     case "open":
@@ -25,7 +25,7 @@ function mapSessionStatus(status: Stripe.Checkout.Session.Status | null): Provid
   }
 }
 
-function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status | null): ProviderPaymentStatus {
+export function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status | null): ProviderPaymentStatus {
   switch (status) {
     case "succeeded":
       return "CONFIRMED";
@@ -35,8 +35,9 @@ function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status | null): Pro
       return "CANCELLED";
     case "requires_payment_method":
     case "requires_confirmation":
+      return "PROCESSING";
     case "requires_action":
-      return "FAILED";
+      return "PROCESSING";
     default:
       return "UNKNOWN";
   }
@@ -65,6 +66,7 @@ export class StripePaymentProvider implements PaymentProvider {
     const unitAmount = aedToStripeMinorUnits(input.amount);
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
+      payment_method_types: ["card"],
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       client_reference_id: input.paymentId,
@@ -155,7 +157,7 @@ export class StripePaymentProvider implements PaymentProvider {
     const card = paymentMethod?.type === "card" ? paymentMethod.card : null;
     if (session.status !== "complete" || setupIntent?.status !== "succeeded" || !paymentMethod || !card) {
       return {
-        status: mapSessionStatus(session.status),
+        status: mapSessionStatus(session),
         providerStatus: setupIntent?.status ?? session.status ?? undefined,
         providerReference,
         contractId: session.metadata?.contractId,
@@ -187,9 +189,11 @@ export class StripePaymentProvider implements PaymentProvider {
       typeof session.payment_intent === "object" && session.payment_intent
         ? session.payment_intent
         : null;
-    const status = paymentIntent
-      ? mapPaymentIntentStatus(paymentIntent.status)
-      : mapSessionStatus(session.status);
+    const status = session.status === "expired"
+      ? "EXPIRED"
+      : paymentIntent
+        ? mapPaymentIntentStatus(paymentIntent.status)
+        : mapSessionStatus(session);
     return {
       status,
       providerStatus: paymentIntent?.status ?? session.status ?? undefined,
@@ -234,6 +238,7 @@ export class StripePaymentProvider implements PaymentProvider {
       }
       const paymentId = session.metadata?.paymentId;
       if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
+      if (session.payment_status !== "paid") return { ok: false, reason: "IGNORED" };
       return {
         ok: true,
         event: {
@@ -262,27 +267,6 @@ export class StripePaymentProvider implements PaymentProvider {
           providerReference: session.id,
           paymentId,
           status: "EXPIRED",
-        },
-      };
-    }
-
-    if (event.type === "payment_intent.payment_failed") {
-      const intent = event.data.object as Stripe.PaymentIntent;
-      const paymentId = intent.metadata?.paymentId;
-      if (!paymentId) return { ok: false, reason: "IGNORED" };
-      const providerReference =
-        typeof intent.metadata?.checkoutSessionId === "string"
-          ? intent.metadata.checkoutSessionId
-          : intent.id;
-      return {
-        ok: true,
-        event: {
-          stripeEventId: event.id,
-          kind: "PAYMENT",
-          eventType: event.type,
-          providerReference,
-          paymentId,
-          status: "FAILED",
         },
       };
     }

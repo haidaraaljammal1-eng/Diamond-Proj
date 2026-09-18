@@ -73,6 +73,19 @@ function row(overrides: Partial<Record<keyof OfficialContractRow, unknown>> = {}
 
 const build = (r: OfficialContractRow) => buildOfficialContractView(r, { officeDisplayName: "Diamond Rent Car", now });
 
+test("card setup is required only when the payment provider capability requests it", () => {
+  const unsigned = row();
+  const realMode = buildOfficialContractView(unsigned, { officeDisplayName: "Diamond Rent Car", now, requiresCardSetupBeforeSigning: true });
+  const devMode = buildOfficialContractView(unsigned, { officeDisplayName: "Diamond Rent Car", now, requiresCardSetupBeforeSigning: false });
+  assert.ok(realMode.view.permissions.missingRequirements.includes("CARD_SETUP"));
+  assert.ok(!devMode.view.permissions.missingRequirements.includes("CARD_SETUP"));
+  assert.ok(devMode.view.permissions.missingRequirements.includes("SIGNATURE_HIRER"));
+  assert.equal(devMode.view.permissions.canSign, false);
+  const fakeDevCard = row({ cardPaymentMethod: { provider: "dev_simulation", cardBrand: "Visa", cardLast4: "4242" } });
+  const stillRequired = buildOfficialContractView(fakeDevCard, { officeDisplayName: "Diamond Rent Car", now, requiresCardSetupBeforeSigning: true });
+  assert.ok(stillRequired.view.permissions.missingRequirements.includes("CARD_SETUP"));
+});
+
 test("source mapping: agreement, vehicle, passport hirer, license", () => {
   const { view, provenance } = build(row());
   assert.equal(view.contract.agreementNumber, "DE-2026-000391");

@@ -5,6 +5,9 @@ import type { ApiErrorResponse, ApiResponse } from "@/infrastructure/api/types";
 import type {
   CarInPayload,
   CarOutPayload,
+  CarOutDraftPatch,
+  ContractCarOutHandoverDto,
+  CarOutAngle,
   ConfirmContractPaymentPayload,
   ContractDetailDto,
   ContractLinkIssuedDto,
@@ -132,6 +135,63 @@ export async function submitCarOut(
       headers: withIdempotency(idempotencyKey),
     },
   );
+  return response.data;
+}
+
+export async function getCarOut(id: string): Promise<ContractCarOutHandoverDto> {
+  const response = await apiRequest<ContractCarOutHandoverDto>(`${CONTRACTS_PATH}/${id}/car-out`);
+  return response.data;
+}
+
+export async function saveCarOutDraft(id: string, payload: CarOutDraftPatch): Promise<ContractCarOutHandoverDto> {
+  const response = await apiRequest<ContractCarOutHandoverDto>(`${CONTRACTS_PATH}/${id}/car-out`, {
+    method: "PATCH", body: payload,
+  });
+  return response.data;
+}
+
+async function uploadCarOutMultipart(
+  id: string,
+  path: string,
+  file: File,
+  query = "",
+): Promise<ContractCarOutHandoverDto> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const accessToken = await getAccessToken();
+  const response = await fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/car-out/${path}${query}`, {
+    method: "POST", credentials: "include",
+    headers: { Accept: "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+    body: formData,
+  });
+  const payload = await readJson(response);
+  if (!response.ok) {
+    if (isApiErrorResponse(payload)) throw new ApiRequestError(payload.error, response.status);
+    throw new ApiRequestError({ code: `HTTP_${response.status}`, message: response.statusText || "Request failed" }, response.status);
+  }
+  if (typeof payload !== "object" || payload === null || !("data" in payload)) {
+    throw new ApiRequestError({ code: "INVALID_RESPONSE", message: "Invalid API response" }, response.status);
+  }
+  return (payload as ApiResponse<ContractCarOutHandoverDto>).data;
+}
+
+export function uploadCarOutPhoto(id: string, angle: CarOutAngle, file: File): Promise<ContractCarOutHandoverDto> {
+  return uploadCarOutMultipart(id, "photos", file, `?angle=${encodeURIComponent(angle)}`);
+}
+
+export function uploadCarOutSignature(id: string, file: File): Promise<ContractCarOutHandoverDto> {
+  return uploadCarOutMultipart(id, "signature", file);
+}
+
+export async function deleteCarOutPhoto(id: string, photoId: string): Promise<ContractCarOutHandoverDto> {
+  const response = await apiRequest<ContractCarOutHandoverDto>(`${CONTRACTS_PATH}/${id}/car-out/photos/${photoId}`, { method: "DELETE" });
+  return response.data;
+}
+
+export async function completeCarOut(id: string, idempotencyKey: string): Promise<ContractDetailDto> {
+  const response = await apiRequest<ContractDetailDto>(`${CONTRACTS_PATH}/${id}/car-out/complete`, {
+    method: "POST", headers: withIdempotency(idempotencyKey),
+  });
   return response.data;
 }
 

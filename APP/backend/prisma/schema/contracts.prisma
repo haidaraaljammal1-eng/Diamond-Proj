@@ -107,6 +107,15 @@ enum ContractInspectionAngle {
   REAR_PLATE
   INTERIOR_ODOMETER
   TIRES
+  LEFT
+  RIGHT
+  FRONT_LEFT
+  FRONT_RIGHT
+  REAR_LEFT
+  REAR_RIGHT
+  ODOMETER
+  DASHBOARD_FUEL
+  OTHER
 }
 
 /// Year-scoped monotonic allocator for DE-{year}-{nnnnnn}. Locked in-process
@@ -162,6 +171,7 @@ model Contract {
   officialReviewDraft  OfficialContractReviewDraft?
   officialSignatures   OfficialContractSignature[]
   carOut               ContractCarOut?
+  carOutDraft          ContractCarOutDraft?
   carIn                ContractCarIn?
   reconciliation       ContractReconciliation?
   renewals             ContractRenewal[]
@@ -185,7 +195,8 @@ model ContractCardPaymentMethod {
   contract              Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   provider              String   @default("stripe")
   stripeCustomerId      String?
-  stripePaymentMethodId String   @unique
+  /// Null for the explicit DEV_SIMULATION source; real Stripe ids are never faked.
+  stripePaymentMethodId String?  @unique
   cardBrand             String
   cardLast4             String
   createdAt             DateTime @default(now())
@@ -415,11 +426,47 @@ model ContractCarOut {
   mileageOut        Int
   fuelOut           String
   notes             String?
+  vehicleId         Int?
+  damageOut         Json?
+  hirerSignatureAttachmentId String?
+  hirerSignatureAttachment Attachment? @relation("CarOutHirerSignature", fields: [hirerSignatureAttachmentId], references: [id], onDelete: Restrict)
   createdAt         DateTime @default(now())
 
   photos ContractCarOutPhoto[]
 
   @@map("contract_car_outs")
+}
+
+/// Staff-only operational preparation. It does not activate the rental.
+model ContractCarOutDraft {
+  id                         String @id @default(uuid())
+  contractId                 String @unique
+  contract                   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  mileageOut                 Int?
+  fuelOut                    String?
+  damageOut                  Json?
+  notes                      String?
+  hirerSignatureAttachmentId String?
+  hirerSignatureAttachment   Attachment? @relation("CarOutDraftHirerSignature", fields: [hirerSignatureAttachmentId], references: [id], onDelete: Restrict)
+  photos                     ContractCarOutDraftPhoto[]
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@map("contract_car_out_drafts")
+}
+
+model ContractCarOutDraftPhoto {
+  id           String @id @default(uuid())
+  carOutDraftId String
+  carOutDraft  ContractCarOutDraft @relation(fields: [carOutDraftId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment @relation("CarOutDraftPhotoAttachment", fields: [attachmentId], references: [id], onDelete: Restrict)
+  angle        ContractInspectionAngle
+  createdAt    DateTime @default(now())
+
+  @@unique([carOutDraftId, angle])
+  @@unique([carOutDraftId, attachmentId])
+  @@map("contract_car_out_draft_photos")
 }
 
 model ContractCarOutPhoto {

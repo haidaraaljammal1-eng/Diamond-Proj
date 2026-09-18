@@ -16,6 +16,8 @@ import {
 import {
   operationalStatusFromDto,
   operationalStatusToDto,
+  deriveVehicleReservation,
+  isVehicleBookable,
   fleetVehicleTypeLabel,
   normalizeFleetTypeKey,
   resolvePrimaryImage,
@@ -131,6 +133,8 @@ function toVehicleCard(
     model: row.model,
     primaryImage: resolvePrimaryImage(row.id, row.photos),
     currentRental,
+    reservation: deriveVehicleReservation(currentRental),
+    isBookable: isVehicleBookable(row.operationalStatus, row.isActive, currentRental),
   };
 }
 

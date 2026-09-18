@@ -8,6 +8,9 @@ import {
   completePublicRentalCardLink,
   getPublicPaymentStatus,
   getPublicRental,
+  simulatePublicRentalLicense,
+  simulatePublicRentalPassport,
+  simulatePublicRentalPayment,
   startPublicRentalCardLink,
   startPublicRentalPayment,
   submitPublicRentalForm,
@@ -44,6 +47,7 @@ interface PublicRentalState {
   /** Free Stripe-hosted card linking request lifecycle (never charges). */
   cardLinkPending: boolean;
   cardLinkError: ApiRequestError | null;
+  simulationPending: boolean;
   /** True when the rental link expired but a payment attempt can still be queried. */
   linkExpiredDuringPayment: boolean;
   /** Returned once for a real card attempt. Memory only — never persisted. */
@@ -57,6 +61,9 @@ interface PublicRentalState {
   /** Free Stripe-hosted card linking (no charge): redirects to Stripe setup. */
   linkCard: () => Promise<boolean>;
   completeCardLink: (setupSessionId: string) => Promise<boolean>;
+  simulateLicense: () => Promise<boolean>;
+  simulatePassport: () => Promise<boolean>;
+  simulatePayment: () => Promise<boolean>;
   refreshPaymentStatus: () => Promise<void>;
   reset: () => void;
 }
@@ -76,6 +83,7 @@ const empty = {
   paymentStatus: null as PublicPaymentStatus | null,
   cardLinkPending: false,
   cardLinkError: null as ApiRequestError | null,
+  simulationPending: false,
   linkExpiredDuringPayment: false,
   statusToken: null as string | null,
 };
@@ -149,6 +157,51 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
     } catch (error) {
       if (attempt !== passportAttempt) return false;
       set({ passportPhase: "idle", passportError: normalizeApiError(error) });
+      return false;
+    }
+  },
+
+  async simulateLicense() {
+    const token = get().token;
+    if (!token || get().simulationPending) return false;
+    set({ simulationPending: true, error: null });
+    try {
+      await simulatePublicRentalLicense(token);
+      const context = await getPublicRental(token);
+      set({ context, simulationPending: false, status: "ready", error: null });
+      return true;
+    } catch (error) {
+      set({ simulationPending: false, error: normalizeApiError(error) });
+      return false;
+    }
+  },
+
+  async simulatePassport() {
+    const token = get().token;
+    if (!token || get().simulationPending) return false;
+    set({ simulationPending: true, passportError: null, error: null });
+    try {
+      await simulatePublicRentalPassport(token);
+      const context = await getPublicRental(token);
+      set({ context, simulationPending: false, passportPhase: "idle", status: "ready", error: null });
+      return true;
+    } catch (error) {
+      set({ simulationPending: false, passportError: normalizeApiError(error) });
+      return false;
+    }
+  },
+
+  async simulatePayment() {
+    const token = get().token;
+    if (!token || get().simulationPending) return false;
+    set({ simulationPending: true, error: null });
+    try {
+      await simulatePublicRentalPayment(token, crypto.randomUUID());
+      const context = await getPublicRental(token);
+      set({ context, simulationPending: false, status: "ready", error: null });
+      return true;
+    } catch (error) {
+      set({ simulationPending: false, error: normalizeApiError(error) });
       return false;
     }
   },
@@ -249,7 +302,11 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
 
   async refreshPaymentStatus() {
     const statusToken = get().statusToken;
-    if (!statusToken) return;
+    if (!statusToken) {
+      const token = get().token;
+      if (token) await get().load(token);
+      return;
+    }
     set({ statusPending: true });
     try {
       const paymentStatus = await getPublicPaymentStatus(statusToken);

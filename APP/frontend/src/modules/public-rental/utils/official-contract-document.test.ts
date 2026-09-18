@@ -18,13 +18,6 @@ import {
   CONTRACT_SIGNATURES,
   CONTRACT_TERMS,
 } from "./official-contract-template.ts";
-import { uiStageFromFlowStep } from "./flow-step.ts";
-import {
-  applyRentalSimulation,
-  licenseSimulationResult,
-  passportSimulationResult,
-} from "../../demo-simulation/simulation.utils.ts";
-import type { SimulationSnapshot } from "../../demo-simulation/simulation.types.ts";
 
 const here = import.meta.dirname;
 const read = (rel: string) => readFileSync(path.join(here, rel), "utf8");
@@ -290,65 +283,6 @@ describe("official contract — editing", () => {
   });
 });
 
-describe("official contract — simulation identity", () => {
-  const idle: SimulationSnapshot = {
-    active: true,
-    generation: 1,
-    flowStep: null,
-    contractStatus: null,
-    license: licenseSimulationResult("valid").license,
-    passport: passportSimulationResult("ready"),
-    customer: null,
-    formPending: false,
-    acceptPending: false,
-    payment: { scenario: "success", status: null, payPending: false, reference: null },
-    tarsPreset: null,
-    gpsOverlay: null,
-    roadLiabilitiesOverlay: null,
-    financeOverlay: null,
-  };
-  const realContext = {
-    flow: { step: "LICENSE_VERIFICATION" },
-    licenseVerification: { status: "PROVIDER_UNAVAILABLE", licenseNumber: null, licenseNumberMasked: null, expiryDate: null, confidence: null },
-    identity: { licenseStatus: "LICENSE_INVALID", passport: { status: "PROVIDER_UNAVAILABLE", fields: null }, identityReady: false },
-    customer: null,
-    contract: { contractNumber: "DE-2026-000391", status: "AWAITING", termsVersion: "v1" },
-    payment: { status: null, method: null, amount: 1, currency: "AED", providerAvailable: false },
-    rental: { agreedAmount: 1, currency: "AED" },
-  } as unknown as PublicRentalContext;
-
-  it("full simulated journey reaches Contract Review and fills the agreement through normalized identity", () => {
-    const ctx = applyRentalSimulation(realContext, idle);
-    assert.equal(uiStageFromFlowStep(ctx.flow.step), "contract");
-    const backendView = view({
-      hirer: { name: null, nationality: null, passportNumber: null, address: null, telephone: null, driverLicenseNumber: null, driverLicenseExpiryDate: null },
-      identity: { identityReady: false },
-    });
-    const f = fields(buildOfficialContractDocument(withNormalizedIdentity(backendView, ctx), { mode: "REVIEW" }));
-    assert.equal(f["hirer.name"]!.value, "DEMO CUSTOMER");
-    assert.equal(f["hirer.passportNumber"]!.value, "P1234567");
-    assert.equal(f["hirer.nationality"]!.value, "United Arab Emirates");
-    assert.equal(f["hirer.driverLicenseNumber"]!.value, "DXB-DEMO-482731");
-    assert.equal(f["hirer.driverLicenseExpiryDate"]!.value, "15/06/2028");
-  });
-
-  it("Backend-resolved values are not overwritten by simulated identity", () => {
-    const ctx = applyRentalSimulation(realContext, idle);
-    const f = fields(buildOfficialContractDocument(withNormalizedIdentity(view(), ctx), { mode: "REVIEW" }));
-    assert.equal(f["hirer.name"]!.value, "TEST PERSON");
-  });
-
-  it("renderer and review step have no simulation branch; simulated edits are not persisted", () => {
-    const a4 = read("../components/official-contract-a4/official-contract-a4.tsx");
-    assert.equal(/demo-simulation|useDemoSimulation|isDemoSimulation|snapshot|DEMO_/.test(a4), false);
-    const step = read("../components/contract-review-step/contract-review-step.tsx");
-    assert.equal(/useDemoSimulation|DEMO_/.test(step), false);
-    const screen = read("../components/public-rental-screen/public-rental-screen.tsx");
-    assert.ok(screen.includes("persistEdits={!shouldSkipRentalMutation(simulation.active)}"));
-    assert.ok(read("../stores/official-contract.store.ts").includes("if (options.persist === false)"));
-  });
-});
-
 describe("official contract — content and i18n", () => {
   it("vehicle OUT/IN with demo diagrams, legal terms, bilingual acknowledgement, three signature boxes", () => {
     const a4 = read("../components/official-contract-a4/official-contract-a4.tsx");
@@ -495,7 +429,7 @@ describe("official contract — interactive completion", () => {
     for (const token of ["onPointerDown", "toBlob", '"image/png"', "setPointerCapture"]) assert.ok(pad.includes(token), token);
   });
 
-  it("simulation: normalized identity also opens the Backend-listed interactive fields locally", () => {
+  it("normalized OCR identity never overrides Backend edit permission", () => {
     const locked = view({
       contract: { ...view().contract, status: "AWAITING" },
       identity: { identityReady: false },
@@ -503,20 +437,21 @@ describe("official contract — interactive completion", () => {
     });
     const ctx = {
       identity: { licenseStatus: "LICENSE_VALID", passport: { status: "READY", fields: null }, identityReady: true },
-      licenseVerification: { status: "VALID", licenseNumber: "DXB-DEMO-482731", licenseNumberMasked: null, expiryDate: "2028-06-15", confidence: 0.99 },
+      licenseVerification: { status: "VALID", licenseNumber: "DXB-DEV-482731", licenseNumberMasked: null, expiryDate: "2099-12-31", confidence: 0.99 },
     } as unknown as PublicRentalContext;
     const opened = withNormalizedIdentity(locked, ctx);
-    assert.equal(opened.permissions.canEdit, true);
+    assert.equal(opened.permissions.canEdit, false);
     assert.equal(opened.permissions.vehicleOut.canEditDamage, false);
     const doc = buildOfficialContractDocument(opened, { mode: "REVIEW" });
-    assert.equal(doc.signatures.hirer.editable, true);
+    assert.equal(doc.signatures.hirer.editable, false);
     const signed = withNormalizedIdentity(
       view({ contract: { ...view().contract, status: "SIGNED" }, permissions: { ...view().permissions, canEdit: false, editableFields: [], signableSlots: [] } }),
       ctx,
     );
     assert.equal(signed.permissions.canEdit, false, "signed agreements never reopen");
     const screen = read("../components/public-rental-screen/public-rental-screen.tsx");
-    assert.ok(screen.includes("simulation.simulateAccept()"));
+    assert.ok(screen.includes("rental.simulatePayment"));
+    assert.equal(screen.includes("simulateRequiredSignatures"), false);
     assert.equal(/simulat/i.test(read("../components/official-contract-a4/official-contract-a4.tsx")), false);
   });
 

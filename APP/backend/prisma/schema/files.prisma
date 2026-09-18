@@ -20,6 +20,9 @@ model Attachment {
   vehiclePhotos        VehiclePhoto[]
   customerDocuments    CustomerDocument[]
   contractCarOutPhotos ContractCarOutPhoto[]
+  contractCarOutDraftPhotos ContractCarOutDraftPhoto[] @relation("CarOutDraftPhotoAttachment")
+  carOutHirerSignatures ContractCarOut[] @relation("CarOutHirerSignature")
+  carOutDraftHirerSignatures ContractCarOutDraft[] @relation("CarOutDraftHirerSignature")
   contractCarInPhotos  ContractCarInPhoto[]  @relation("ContractCarInPhotoAttachment")
   contractSignatures   ContractAcceptance[]  @relation("ContractSignatureAttachment")
   contractDocuments    ContractDocument[]    @relation("ContractDocumentAttachment")

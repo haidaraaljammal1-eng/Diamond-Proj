@@ -17,10 +17,11 @@ function stopOpen(event: MouseEvent | KeyboardEvent) {
   event.stopPropagation();
 }
 
-function rowActionKey(status: ContractListItemDto["status"]): string | null {
+function rowActionKey(contract: ContractListItemDto): string | null {
+  const { status } = contract;
   if (status === "AWAITING" || status === "FORM") return "actions.rentalLink";
   if (status === "SIGNED") return null;
-  if (status === "PAID") return "actions.carOut";
+  if (status === "PAID" && contract.actions.canCarOut) return "actions.carOut";
   if (status === "ACTIVE") return "actions.returnLink";
   if (status === "REVIEW") return "actions.reconcile";
   return null;
@@ -50,7 +51,7 @@ export function ContractsTable({
         </thead>
         <tbody>
           {contracts.map((contract) => {
-            const actionKey = rowActionKey(contract.status);
+            const actionKey = rowActionKey(contract);
             return (
               <tr
                 key={contract.id}

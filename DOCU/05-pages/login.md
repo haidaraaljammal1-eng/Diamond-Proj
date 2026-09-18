@@ -162,3 +162,7 @@ No Playwright visual baseline is checked in yet because the original Demo/refere
 ## Backend Compatibility
 
 Preserves existing Backend authentication, authorization, roles, and permissions unchanged. Frontend acts as HTTP client to Backend auth endpoints only.
+
+## 2026-09-18 runtime incident
+
+The reported blank `/ar/login` page was reproduced with the production server process still running against an older `.next` asset manifest after a rebuild. Its CSS and JavaScript chunk requests returned HTTP 500, so the document had no rendered body; this was not an authentication or React login error. Restarting `next start` after the final build restored the Arabic and English pages. A remaining favicon request may return 404 but does not affect page rendering.

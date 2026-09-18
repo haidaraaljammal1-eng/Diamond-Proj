@@ -51,17 +51,29 @@ export type VehicleImage = z.infer<typeof VehicleImageSchema>;
 export const VehicleCurrentRentalSchema = z
   .object({
     contractId: z.string(),
+    contractNumber: z.string(),
     customerName: z.string(),
     endAt: z.date(),
     status: z.enum(["paid", "active", "retout"]),
+    awaitingHandover: z.boolean(),
   })
   .nullable();
+
+export const VehicleReservationSchema = z.object({
+  isReserved: z.boolean(),
+  contractId: z.string().nullable(),
+  contractNumber: z.string().nullable(),
+  status: z.literal("PAID").nullable(),
+  awaitingHandover: z.boolean(),
+});
 
 export const VehicleCardSchema = VehiclePublicSchema.extend({
   displayName: z.string(),
   model: ModelRefSchema.nullable(),
   primaryImage: VehicleImageSchema.nullable(),
   currentRental: VehicleCurrentRentalSchema,
+  reservation: VehicleReservationSchema,
+  isBookable: z.boolean(),
 });
 export type VehicleCard = z.infer<typeof VehicleCardSchema>;
 

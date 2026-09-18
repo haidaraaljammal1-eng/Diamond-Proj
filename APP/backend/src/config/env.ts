@@ -27,6 +27,8 @@ const envBool = (def: boolean) =>
 const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    // Development-only provider substitution. Routes are not registered in production.
+    DIAMOND_SIMULATION_ENABLED: z.string().optional().transform((value) => value === "true"),
     PORT: z.coerce.number().int().positive().default(3000),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])

@@ -1,0 +1,2 @@
+.action { display: inline-flex; align-items: center; gap: 7px; width: fit-content; max-width: 100%; white-space: normal; }
+.badge { flex: none; border: 1px solid currentColor; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 800; line-height: 1.3; letter-spacing: .04em; }

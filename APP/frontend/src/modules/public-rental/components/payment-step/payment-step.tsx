@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
+import { SimulationAction } from "@/modules/demo-simulation";
 import type {
   ContractPaymentStatus,
   PublicRentalContext,
@@ -19,6 +20,8 @@ import styles from "./payment-step.module.css";
 
 interface PaymentStepProps {
   context: PublicRentalContext;
+  simulationEnabled: boolean;
+  onSimulatePayment: () => void;
   paymentStatus: ContractPaymentStatus | null;
   payPending: boolean;
   statusPending: boolean;
@@ -35,6 +38,8 @@ interface PaymentStepProps {
 
 export function PaymentStep({
   context,
+  simulationEnabled,
+  onSimulatePayment,
   paymentStatus,
   payPending,
   statusPending,
@@ -48,20 +53,21 @@ export function PaymentStep({
 }: PaymentStepProps) {
   const t = useTranslations("PublicRental.payment");
   const status = paymentStatus ?? context.payment.status;
-  const panel = paymentPanelFromStatus(context.payment.providerAvailable, status);
+  const panel = paymentPanelFromStatus(context.payment.providerAvailable || simulationEnabled, status);
   const amount = formatRentalAmount(
     context.rental.agreedAmount,
     context.rental.currency,
   );
   const duration = formatRentalDays(context.rental.rentalDays, t("days"));
+  const cardLinked = context.payment.cardReady;
   const canPay = canStartCardPayment({
     providerAvailable: context.payment.providerAvailable,
+    cardLinked,
     paymentStatus: status,
     payPending,
   });
   const isDev = process.env.NODE_ENV === "development";
   const inFlight = panel === "processing" || panel === "pending" || payPending;
-  const cardLinked = Boolean(context.payment.cardLast4);
   const cardMask = maskCardLast4(context.payment.cardLast4);
   const cardBrand = context.payment.cardBrand
     ? context.payment.cardBrand.charAt(0).toUpperCase() + context.payment.cardBrand.slice(1)
@@ -96,9 +102,11 @@ export function PaymentStep({
       </div>
       <p className={styles.meta}>
         {context.vehicle.displayName}
+        {context.vehicle.vehicleType ? ` · ${context.vehicle.vehicleType}` : ""}
         {context.vehicle.plateNumber ? ` · ${context.vehicle.plateNumber}` : ""}
         {" · "}
         <span dir="ltr">{rentalPeriod}</span>
+        {context.rental.startAt && context.rental.endAt ? ` · ${duration}` : ""}
       </p>
       <p className={styles.meta}>
         {t("contract")}{" "}
@@ -110,6 +118,11 @@ export function PaymentStep({
       {panel === "processing" || payPending ? (
         <div className={styles.status} role="status" data-testid="payment-processing">
           <p className={styles.unavailable}>{t("processing")}</p>
+          {!payPending ? (
+            <Button type="button" variant="secondary" size="md" loading={statusPending} onClick={onRefreshStatus}>
+              {t("checkStatus")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -146,7 +159,7 @@ export function PaymentStep({
         </div>
       ) : null}
 
-      <h3 className={styles.methodsTitle}>{t("methods")}</h3>
+      {!simulationEnabled ? <><h3 className={styles.methodsTitle}>{t("methods")}</h3>
       <div className={styles.methods}>
         <div
           className={styles.method}
@@ -159,10 +172,10 @@ export function PaymentStep({
             <span>{t("cardHint")}</span>
           </div>
         </div>
-      </div>
+      </div></> : <p className={styles.dev}>{t("devCardSetupNotice")}</p>}
 
       {/* Stripe-hosted card linking: prepares a saved payment method, never charges. */}
-      {cardLinked ? (
+      {!simulationEnabled && cardLinked ? (
         <div className={styles.method} data-testid="payment-card-linked">
           <span className={styles.mark}>C</span>
           <div className={styles.copy}>
@@ -172,7 +185,7 @@ export function PaymentStep({
             <span>{t("cardSavedHint")}</span>
           </div>
         </div>
-      ) : canLink ? (
+      ) : !simulationEnabled && canLink ? (
         <div className={styles.linkBlock} data-testid="payment-card-link">
           <p className={styles.unavailable}>{t("linkCardHint")}</p>
           <Button
@@ -188,25 +201,25 @@ export function PaymentStep({
           </Button>
         </div>
       ) : null}
-      {cardLinkError ? (
+      {!simulationEnabled && cardLinkError ? (
         <p className={styles.unavailable} role="alert" data-testid="payment-card-link-error">
           {t("linkCardFailed")}
         </p>
       ) : null}
 
-      {panel === "unavailable" || !context.payment.providerAvailable ? (
+      {!simulationEnabled && (panel === "unavailable" || !context.payment.providerAvailable) ? (
         <p className={styles.unavailable} data-testid="payment-unavailable">
           {t("unavailable")}
         </p>
       ) : null}
 
-      {isDev && !context.payment.providerAvailable ? (
+      {isDev && !simulationEnabled && !context.payment.providerAvailable ? (
         <p className={styles.dev}>{t("devNote")}</p>
       ) : null}
 
-      <p className={styles.meta}>{t("secureStripe")}</p>
+      {!simulationEnabled ? <p className={styles.meta}>{t("secureStripe")}</p> : null}
 
-      <Button
+      {!simulationEnabled ? <Button
         type="button"
         className={styles.pay}
         disabled={!canPay || linkExpiredDuringPayment}
@@ -214,7 +227,8 @@ export function PaymentStep({
         onClick={onPay}
       >
         {canRetryPayment(status) ? t("retry") : t("completePayment")}
-      </Button>
+      </Button> : null}
+      {simulationEnabled ? <SimulationAction label={t("simulateSuccess")} testId="simulate-payment-success" disabled={context.contract.status !== "SIGNED" || inFlight || status === "CONFIRMED" || linkExpiredDuringPayment} onClick={onSimulatePayment} /> : null}
     </Card>
   );
 }

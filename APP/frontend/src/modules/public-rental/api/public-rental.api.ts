@@ -102,6 +102,14 @@ export async function uploadPublicRentalLicense(
   return (payload as ApiResponse<PublicRentalContext>).data;
 }
 
+export async function simulatePublicRentalLicense(token: string): Promise<PublicRentalContext> {
+  const response = await apiRequest<PublicRentalContext>(
+    `${CONTRACTS_PATH}/rental/${token}/simulation/license`,
+    { method: "POST", publicRequest: true },
+  );
+  return response.data;
+}
+
 function parseUploadResponse(status: number, statusText: string, text: string): PublicRentalContext {
   let payload: unknown;
   try {
@@ -153,6 +161,22 @@ export function uploadPublicRentalPassport(
       reject(new ApiRequestError({ code: "NETWORK_ERROR", message: "Network error" }, 0));
     xhr.send(formData);
   });
+}
+
+export async function simulatePublicRentalPassport(token: string): Promise<PublicRentalContext> {
+  const response = await apiRequest<PublicRentalContext>(
+    `${CONTRACTS_PATH}/rental/${token}/simulation/passport`,
+    { method: "POST", publicRequest: true },
+  );
+  return response.data;
+}
+
+export async function simulatePublicRentalPayment(token: string, idempotencyKey: string): Promise<PublicRentalContext> {
+  const response = await apiRequest<PublicRentalContext>(
+    `${CONTRACTS_PATH}/rental/${token}/simulation/payment`,
+    { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, publicRequest: true },
+  );
+  return response.data;
 }
 
 export async function getPublicRentalIdentity(

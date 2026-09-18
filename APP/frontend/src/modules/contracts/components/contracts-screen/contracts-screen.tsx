@@ -120,7 +120,7 @@ export function ContractsScreen() {
         return;
       }
       if (contract.status === "PAID") {
-        setCarOutId(contract.id);
+        if (contract.actions.canCarOut) setCarOutId(contract.id);
         return;
       }
       if (contract.status === "ACTIVE") {

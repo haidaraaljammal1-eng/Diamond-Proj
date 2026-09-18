@@ -1,11 +1,14 @@
-/** Dedicated presentation switch. Never inferred from NODE_ENV alone. */
-export function isDemoSimulationEnabled(
-  flag: string | undefined = process.env.NEXT_PUBLIC_DEMO_SIMULATION_ENABLED,
+/** The only visible DEV controls substitute unavailable external providers. */
+export function isProviderSimulationEnabled(
+  flag: string | undefined = process.env.NEXT_PUBLIC_DIAMOND_SIMULATION,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
 ): boolean {
-  return flag === "true";
+  return nodeEnv !== "production" && flag === "true";
 }
 
-/** Simulation mutations stay on the client. Real rental/payment APIs must not run. */
-export function shouldSkipRentalMutation(simulationActive: boolean): boolean {
-  return simulationActive;
+/** Retired general workflow simulation stays disabled for legacy consumers. */
+export function isDemoSimulationEnabled(_flag?: string, _nodeEnv?: string): boolean {
+  void _flag;
+  void _nodeEnv;
+  return false;
 }

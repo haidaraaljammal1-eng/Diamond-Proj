@@ -24,10 +24,12 @@ export function paymentPanelFromStatus(
 
 export function canStartCardPayment(options: {
   providerAvailable: boolean;
+  cardLinked: boolean;
   paymentStatus: ContractPaymentStatus | null | undefined;
   payPending: boolean;
 }): boolean {
   if (!options.providerAvailable) return false;
+  if (!options.cardLinked) return false;
   if (options.payPending) return false;
   if (
     options.paymentStatus === "PROCESSING" ||

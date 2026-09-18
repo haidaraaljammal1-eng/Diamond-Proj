@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-18
+
+- Replaced the general rental Simulation journey with three development-only external-provider substitutes: Driver License OCR, Passport OCR, and successful Payment on a real Rental Link. Review, signatures, reservation, Contracts, and Car-Out stay real. DEV payment skips Stripe Card Setup without persisting a fake card and settles through the shared payment service. Production registers no DEV routes. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/05-pages/payments-backend.md`.
+- Reproduced and fixed the login blank-page incident by restarting the frontend server after its `.next` build; stale asset requests had been returning HTTP 500. See `DOCU/05-pages/login.md`.
+
 ## 2026-09-14
 
 - WhatsApp operational provider migrated from Meta Cloud API to UltraMsg (env-provided instance id) without rebuilding Inbox. Additive Prisma fields, capability-driven UI, QR connection management, isolated UltraMsg webhook (callback-key compensating control, not HMAC), ACK mapping, no 24h/template gating, no provider queue-while-offline sends. Meta implementation retained inactive. Live webhook/send gated on public URL + explicit env. Token never documented. See `DOCU/05-pages/whatsapp-backend.md` and `DOCU/05-pages/whatsapp.md`.
@@ -48,7 +53,7 @@
 
 ## 2026-09-09
 
-- Demo Simulation Mode (frontend-only, `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`): labeled in-memory overlay for public rental OCR/payment progression and staff TARS status display. Shared local enablement lives in committed `APP/frontend/.env.development` (`npm run dev`); production stays off unless the host sets the flag. No Azure, Stripe, or TARS calls, no database writes, no persisted simulation. See `DOCU/05-pages/public-rental-flow.md` and `DOCU/04-api-contracts/tars-integration.md`.
+- Historical frontend-only Demo Simulation was introduced, then retired by the 2026-09-18 provider-only flow.
 - Contract renewal flow completion: staff Generate Renewal Link stores a pending
   `ContractRenewal` offer; public `/[locale]/renew/[token]` confirms server-owned
   days/amount on the same ACTIVE Contract; Vehicle stays RENTED. Used tokens can

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/shared/components/ui/card/card";
 import { Icon } from "@/shared/components/ui/icon/icon";
@@ -16,6 +17,7 @@ interface LicenseStepProps {
   readOnly: boolean;
   fileHint: string | null;
   onFile: (file: File) => void;
+  simulationAction?: ReactNode;
 }
 
 export function LicenseStep({
@@ -25,6 +27,7 @@ export function LicenseStep({
   readOnly,
   fileHint,
   onFile,
+  simulationAction,
 }: LicenseStepProps) {
   const t = useTranslations("PublicRental.license");
   const panel = licensePanelFromStatus(
@@ -118,6 +121,7 @@ export function LicenseStep({
           onFile={onFile}
         />
       )}
+      {!readOnly ? simulationAction : null}
     </Card>
   );
 }

@@ -8,6 +8,9 @@ import { useContractsStore } from "../stores/contracts.store";
 import type {
   CarInPayload,
   CarOutPayload,
+  CarOutDraftPatch,
+  ContractCarOutHandoverDto,
+  CarOutAngle,
   ConfirmContractPaymentPayload,
   ContractDetailDto,
   CreateContractOfferPayload,
@@ -42,6 +45,7 @@ export interface UseContractResult {
   paymentError: ApiRequestError | null;
   carOutPending: boolean;
   carOutError: ApiRequestError | null;
+  carOutHandover: ContractCarOutHandoverDto | null;
   carInPending: boolean;
   carInError: ApiRequestError | null;
   returnLinkPending: boolean;
@@ -74,6 +78,12 @@ export interface UseContractResult {
     },
     idempotencyKey: string,
   ) => Promise<boolean>;
+  loadCarOut: (id: string) => Promise<void>;
+  saveCarOutDraft: (id: string, payload: CarOutDraftPatch) => Promise<boolean>;
+  uploadCarOutPhoto: (id: string, angle: CarOutAngle, file: File) => Promise<boolean>;
+  uploadCarOutSignature: (id: string, file: File) => Promise<boolean>;
+  deleteCarOutPhoto: (id: string, photoId: string) => Promise<boolean>;
+  completeCarOut: (id: string, idempotencyKey: string) => Promise<boolean>;
   submitCarIn: (
     id: string,
     payload: Omit<CarInPayload, "photos" | "hirerSignatureAttachmentId"> & {
@@ -132,6 +142,7 @@ export function useContract(): UseContractResult {
     paymentError: store.payment.error,
     carOutPending: store.carOut.pending,
     carOutError: store.carOut.error,
+    carOutHandover: store.carOutHandover,
     carInPending: store.carIn.pending,
     carInError: store.carIn.error,
     returnLinkPending: store.returnLink.pending,
@@ -151,6 +162,12 @@ export function useContract(): UseContractResult {
     generateRentalLink: (id) => store.generateRentalLink(id, locale),
     confirmPayment: store.confirmPayment,
     submitCarOut: store.submitCarOut,
+    loadCarOut: store.loadCarOut,
+    saveCarOutDraft: store.saveCarOutDraft,
+    uploadCarOutPhoto: store.uploadCarOutPhoto,
+    uploadCarOutSignature: store.uploadCarOutSignature,
+    deleteCarOutPhoto: store.deleteCarOutPhoto,
+    completeCarOut: store.completeCarOut,
     submitCarIn: store.submitCarIn,
     generateReturnLink: (id) => store.generateReturnLink(id, locale),
     generateRenewalLink: (id, payload) => store.generateRenewalLink(id, locale, payload),

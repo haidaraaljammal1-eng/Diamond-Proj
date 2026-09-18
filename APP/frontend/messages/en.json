@@ -842,6 +842,33 @@
     "carOut": {
       "title": "Car-Out — handover",
       "description": "Record outgoing mileage, fuel and the eight inspection photos.",
+      "loading": "Loading handover data…",
+      "vehicleOut": "Vehicle OUT",
+      "photosTitle": "Vehicle Condition Photos",
+      "progress": "Completed: {completed}/{required}",
+      "missing": "Missing: {items}",
+      "required": "Required",
+      "optional": "Optional",
+      "notCaptured": "Not captured",
+      "capture": "Capture",
+      "retake": "Retake",
+      "delete": "Delete",
+      "saveDraft": "Save Draft",
+      "complete": "Complete Handover",
+      "confirmTitle": "Confirm vehicle handover",
+      "confirmDescription": "The rental will become active and the handover data and photos will be frozen.",
+      "confirm": "Confirm handover",
+      "saved": "Draft saved",
+      "completed": "Handover completed",
+      "awaitingHandover": "Reserved · Awaiting handover",
+      "signatureSaved": "Hirer OUT signature captured",
+      "signatureMissing": "No OUT signature",
+      "completedTitle": "Vehicle OUT — read-only",
+      "backToContracts": "Back to Contracts",
+      "actualHandover": "Actual handover",
+      "damage": "Damage OUT",
+      "noDamage": "No damage recorded",
+      "context": { "contract": "Contract", "hirer": "Hirer", "vehicle": "Vehicle", "plate": "Plate", "status": "Status", "reservation": "Reservation" },
       "mileage": "Outgoing odometer",
       "fuel": "Fuel",
       "notes": "Notes (optional)",
@@ -855,8 +882,28 @@
         "FRONT_PLATE": "Front plate",
         "REAR_PLATE": "Rear plate",
         "INTERIOR_ODOMETER": "Interior / odometer",
-        "TIRES": "Tires"
+        "TIRES": "Tires",
+        "LEFT": "Left",
+        "RIGHT": "Right",
+        "FRONT_LEFT": "Front left",
+        "FRONT_RIGHT": "Front right",
+        "REAR_LEFT": "Rear left",
+        "REAR_RIGHT": "Rear right",
+        "ODOMETER": "Odometer",
+        "DASHBOARD_FUEL": "Dashboard fuel",
+        "OTHER": "Other"
       }
+    },
+    "carOutAngles": {
+      "LEFT": "Left",
+      "RIGHT": "Right",
+      "FRONT_LEFT": "Front left",
+      "FRONT_RIGHT": "Front right",
+      "REAR_LEFT": "Rear left",
+      "REAR_RIGHT": "Rear right",
+      "ODOMETER": "Odometer",
+      "DASHBOARD_FUEL": "Dashboard fuel",
+      "OTHER": "Other"
     },
     "carIn": {
       "title": "Car-In — return inspection",
@@ -940,10 +987,13 @@
       "vehicle": "Vehicle",
       "amountPaid": "Amount paid",
       "card": "Card",
-      "readyForHandover": "Ready for Vehicle Handover / Car-Out"
+      "readyForHandover": "Ready for Vehicle Handover / Car-Out",
+      "checkingFailed": "We could not check the payment yet. Verification will retry automatically.",
+      "continueCheckout": "Continue in Stripe Checkout"
     }
   },
   "PublicRental": {
+    "simulation": { "validLicense": "Simulate Successful License OCR", "passportOcr": "Simulate Successful Passport OCR" },
     "brandAlt": "Diamond Elite Rent Car",
     "tagline": "Rent Car · Dubai",
     "fallbackOffice": "Diamond Rent Car",
@@ -958,7 +1008,11 @@
     },
     "review": {
       "title": "Official Contract Review",
-      "instructionsInteractive": "Review your official rental agreement. You can correct your personal details, mark existing vehicle damage on the diagrams, enter your card number and sign directly on the contract.",
+      "instructionsInteractive": "Review your official rental agreement, correct permitted details, and sign using the signature pads.",
+      "devCardSetupNotice": "Development payment simulation is enabled — card setup is not required.",
+      "linkedCard": "{brand} •••• {last4}",
+      "linkCard": "Link Card",
+      "cardSetupRequired": "Link a card through Stripe before signing.",
       "instructionsReadOnly": "Review your official rental agreement.",
       "instructionsSigned": "Your official rental agreement is signed.",
       "loading": "Loading your rental agreement…",
@@ -1103,7 +1157,9 @@
       "linkCardFailed": "We could not confirm the saved card. Please try linking it again.",
       "cardLinkedNotice": "Card linked successfully.",
       "cardLinkCancelledNotice": "Card linking was cancelled.",
-      "completePayment": "Complete Payment"
+      "completePayment": "Complete Payment",
+      "devCardSetupNotice": "Development payment simulation is enabled — card setup is not required.",
+      "simulateSuccess": "Simulate Successful Payment"
     },
     "handover": {
       "title": "Payment confirmed",
@@ -1147,6 +1203,7 @@
       "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE": "The contract cannot be accepted until the form and license are complete.",
       "PAYMENT_PROVIDER_NOT_CONFIGURED": "Online card payment is currently unavailable.",
       "PAYMENT_NOT_ALLOWED": "Payment is not available at this step.",
+      "PAYMENT_IDEMPOTENCY_REQUIRED": "Please try starting the payment again.",
       "PAYMENT_ALREADY_PROCESSING": "A payment is already being processed. Please wait.",
       "PAYMENT_ATTEMPT_NOT_FOUND": "The payment attempt could not be found.",
       "PAYMENT_STATUS_TOKEN_INVALID": "Payment status could not be verified.",
@@ -1480,44 +1537,7 @@
     }
   },
   "DemoSimulation": {
-    "simulate": "Simulate",
-    "badge": "DEMO SIMULATION",
-    "hint": "Demo environment — no external transactions are performed.",
-    "reset": "Reset Simulation",
-    "disable": "Disable Simulation",
-    "scenarios": "Presentation scenarios",
-    "license": {
-      "valid": "Valid",
-      "expired": "Expired",
-      "unreadable": "Unreadable"
-    },
-    "passport": {
-      "ready": "Passport ready",
-      "notRecognized": "Not recognized"
-    },
-    "contract": {
-      "fill": "Fill demo customer"
-    },
-    "payment": {
-      "run": "Simulate Payment",
-      "failed": "Failed Payment",
-      "pending": "Pending Payment"
-    },
-    "tars": {
-      "notStarted": "Not Started",
-      "syncing": "Syncing",
-      "synced": "Synced",
-      "partialFailure": "Partial Failure"
-    },
-    "gps": {
-      "run": "Simulate GPS"
-    },
-    "violations": {
-      "run": "Simulate Violations & Salik"
-    },
-    "finance": {
-      "run": "Demo Simulation"
-    }
+    "devBadge": "DEV / SIM"
   },
   "Gps": {
     "crumbs": "Operations · Tracking",

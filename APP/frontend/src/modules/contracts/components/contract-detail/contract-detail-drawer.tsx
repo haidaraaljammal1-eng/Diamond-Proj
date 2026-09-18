@@ -73,6 +73,8 @@ export function ContractDetailDrawer({
   const errorMessage = resolveContractsErrorMessage(t, detailError);
   const money = (value: number, currency: string) =>
     `${format.number(value)} ${currency}`;
+  const carOutAngleLabel = (angle: string) =>
+    t.has(`carOut.angle.${angle}`) ? t(`carOut.angle.${angle}`) : t(`carOutAngles.${angle}`);
 
   return (
     <Drawer
@@ -140,15 +142,20 @@ export function ContractDetailDrawer({
           {detail.carOut ? (
             <section className={styles.section}>
               <p className={styles.sectionTitle}>{t("detail.carOut")}</p>
+              {detail.carOutHandover.actualHandoverAt ? (
+                <Kv label={t("carOut.actualHandover")} value={format.dateTime(new Date(detail.carOutHandover.actualHandoverAt), { dateStyle: "medium", timeStyle: "short" })} />
+              ) : null}
               <Kv label={t("carOut.mileage")} value={format.number(detail.carOut.mileageOut)} />
               <Kv label={t("carOut.fuel")} value={detail.carOut.fuelOut} />
+              {detail.carOut.damageOut.length ? <Kv label={t("carOut.damage")} value={detail.carOut.damageOut.map((mark) => `${mark.zone} · ${mark.type}`).join(", ")} /> : null}
+              <Kv label={t("carOut.signatureSaved")} value={detail.carOut.hirerSignatureAttachmentId ? t("carOut.signatureSaved") : t("carOut.signatureMissing")} />
               {detail.carOut.photos.length > 0 ? (
                 <div className={styles.photos}>
                   {detail.carOut.photos.map((photo) => (
                     <ContractInspectionImage
                       key={photo.id}
                       path={photo.url}
-                      alt={photo.angle}
+                      alt={carOutAngleLabel(photo.angle)}
                       className={styles.photo}
                     />
                   ))}

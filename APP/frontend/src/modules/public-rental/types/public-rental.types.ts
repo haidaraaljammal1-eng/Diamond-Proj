@@ -133,9 +133,12 @@ export interface PublicRentalContext {
     amount: number | null;
     currency: string;
     providerAvailable: boolean;
+    devSimulationAvailable: boolean;
+    requiresCardSetupBeforeSigning: boolean;
     /** Safe Stripe-derived card reference after free card linking; never PAN/CVV. */
     cardLast4: string | null;
     cardBrand?: string | null;
+    cardReady: boolean;
   };
 }
 

@@ -22,10 +22,22 @@ describe("paymentPanelFromStatus", () => {
 });
 
 describe("canStartCardPayment", () => {
+  it("requires a linked card before starting a real payment", () => {
+    assert.equal(
+      canStartCardPayment({
+        providerAvailable: true,
+        cardLinked: false,
+        paymentStatus: null,
+        payPending: false,
+      }),
+      false,
+    );
+  });
   it("disables Pay when the provider is unavailable", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: false,
+        cardLinked: true,
         paymentStatus: null,
         payPending: false,
       }),
@@ -37,6 +49,7 @@ describe("canStartCardPayment", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: true,
+        cardLinked: true,
         paymentStatus: "PROCESSING",
         payPending: false,
       }),
@@ -45,6 +58,7 @@ describe("canStartCardPayment", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: true,
+        cardLinked: true,
         paymentStatus: "PENDING",
         payPending: false,
       }),
@@ -56,6 +70,7 @@ describe("canStartCardPayment", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: true,
+        cardLinked: true,
         paymentStatus: "FAILED",
         payPending: false,
       }),

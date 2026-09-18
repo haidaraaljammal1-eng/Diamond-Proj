@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
@@ -24,6 +25,7 @@ interface PassportStepProps {
   fileHint: string | null;
   onFile: (file: File) => void;
   onContinue: () => void;
+  simulationAction?: ReactNode;
 }
 
 /**
@@ -38,6 +40,7 @@ export function PassportStep({
   fileHint,
   onFile,
   onContinue,
+  simulationAction,
 }: PassportStepProps) {
   const t = useTranslations("PublicRental.passport");
   const kind = passportPanelFromState({
@@ -158,6 +161,7 @@ export function PassportStep({
             {t("continue")}
           </Button>
           {canContinue ? null : <p className={styles.hint}>{t("continueHint")}</p>}
+          {simulationAction}
         </div>
       )}
     </Card>

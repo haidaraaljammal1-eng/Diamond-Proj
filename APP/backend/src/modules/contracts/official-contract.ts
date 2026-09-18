@@ -139,7 +139,7 @@ export interface OfficialContractBuild {
 
 export function buildOfficialContractView(
   row: OfficialContractRow,
-  options: { officeDisplayName: string; now?: Date },
+  options: { officeDisplayName: string; now?: Date; requiresCardSetupBeforeSigning?: boolean },
 ): OfficialContractBuild {
   const now = options.now ?? new Date();
   const license = row.licenseVerifications[0] ?? null;
@@ -250,6 +250,10 @@ export function buildOfficialContractView(
     if (!hirer.name) missingRequirements.push("HIRER_NAME");
     if (!hirer.passportNumber) missingRequirements.push("PASSPORT_NUMBER");
     if (!hirer.driverLicenseNumber) missingRequirements.push("DRIVER_LICENSE_NUMBER");
+    if (options.requiresCardSetupBeforeSigning &&
+        !(row.cardPaymentMethod?.provider === "stripe" && row.cardPaymentMethod.stripeCustomerId && row.cardPaymentMethod.stripePaymentMethodId)) {
+      missingRequirements.push("CARD_SETUP");
+    }
     for (const slot of required) {
       if (!captured.has(slot)) missingRequirements.push(`SIGNATURE_${slot}`);
     }
@@ -296,7 +300,7 @@ export function buildOfficialContractView(
         "OFFICIAL_CONTRACT_TERMS",
       ),
     },
-    card: { last4: fixed("card.last4", row.cardPaymentMethod?.cardLast4 ?? review?.cardNumberLast4, "CUSTOMER_REVIEW") },
+    card: { last4: fixed("card.last4", row.cardPaymentMethod?.provider === "stripe" ? row.cardPaymentMethod.cardLast4 : null, "CUSTOMER_REVIEW") },
     vehicleOut: custody(
       "vehicleOut",
       row.carOut

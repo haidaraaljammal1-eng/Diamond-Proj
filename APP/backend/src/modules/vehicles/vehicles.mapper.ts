@@ -3,10 +3,31 @@ import type {
   VehicleCurrentRentalSchema,
   VehicleImage,
   VehicleOperationalStatusDto,
+  VehicleReservationSchema,
 } from "src/modules/vehicles/vehicles.schema";
 import type { z } from "zod";
 
 type CurrentRental = z.infer<typeof VehicleCurrentRentalSchema>;
+type Reservation = z.infer<typeof VehicleReservationSchema>;
+
+export function deriveVehicleReservation(currentRental: CurrentRental): Reservation {
+  const reserved = currentRental?.status === "paid" && currentRental.awaitingHandover;
+  return {
+    isReserved: reserved,
+    contractId: reserved ? currentRental!.contractId : null,
+    contractNumber: reserved ? currentRental!.contractNumber : null,
+    status: reserved ? "PAID" : null,
+    awaitingHandover: reserved,
+  };
+}
+
+export function isVehicleBookable(
+  status: VehicleOperationalStatus,
+  isActive: boolean,
+  currentRental: CurrentRental,
+): boolean {
+  return isActive && status === "AVAILABLE" && currentRental === null;
+}
 
 const STATUS_TO_DTO: Record<VehicleOperationalStatus, VehicleOperationalStatusDto> = {
   AVAILABLE: "available",
@@ -68,7 +89,7 @@ export function resolvePrimaryImage(
 }
 
 /**
- * Current rental is resolved from Contracts (PAID / ACTIVE / RETOUT / REVIEW).
+ * Current rental is resolved from Contracts (PAID / ACTIVE / RETOUT).
  * Do not denormalize renter fields onto Vehicle.
  */
 export function resolveCurrentRental(_vehicleId: number): CurrentRental {

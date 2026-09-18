@@ -1,13 +1,5 @@
-export { isDemoSimulationEnabled, shouldSkipRentalMutation } from "./simulation.enabled";
-export {
-  applyRentalSimulation,
-  applyTarsSimulation,
-  licenseSimulationResult,
-  passportSimulationResult,
-  paymentSimulationPhase,
-  shouldHoldLicenseStage,
-} from "./simulation.utils";
-export { DEMO_CUSTOMER, DEMO_LICENSE_VALID, DEMO_PASSPORT_READY, DEMO_PAYMENT_REFERENCE } from "./simulation.fixtures";
+export { isDemoSimulationEnabled } from "./simulation.enabled";
+export { applyTarsSimulation } from "./simulation.utils";
 export { SimulationButton } from "./components/simulation-button/simulation-button";
-export { SimulationChrome } from "./components/simulation-badge/simulation-badge";
+export { SimulationAction } from "./components/simulation-action/simulation-action";
 export { useDemoSimulation } from "./hooks/use-demo-simulation";

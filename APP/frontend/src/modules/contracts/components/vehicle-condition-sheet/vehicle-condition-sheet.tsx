@@ -23,6 +23,8 @@ export interface VehicleConditionSheetProps {
   onDamage: (marks: DamageMark[]) => void;
   onFuel: (level: FuelLevel) => void;
   onSignature: (image: Blob | null) => void;
+  signatureImageUrl?: string | null;
+  editable?: boolean;
 }
 
 const SIDE_VIEWS: Array<{ view: DiagramView; label: keyof typeof CONTRACT_CUSTODY.views; art: () => ReactNode }> = [
@@ -41,7 +43,7 @@ const FUEL_TEXT:Partial<Record<FuelLevel, string>> = { F: "Full", E: "Empty" };
  * damage marks on the vehicle diagrams, fuel gauge and the hirer's signature.
  * Same artwork and zones as the A4 agreement, so marks land on the contract as drawn.
  */
-export function VehicleConditionSheet({ side, damage, fuel, onDamage, onFuel, onSignature }: VehicleConditionSheetProps) {
+export function VehicleConditionSheet({ side, damage, fuel, onDamage, onFuel, onSignature, signatureImageUrl = null, editable = true }: VehicleConditionSheetProps) {
   const [tool, setTool] = useState<DamageMarkType>("SCRATCH");
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -71,27 +73,27 @@ export function VehicleConditionSheet({ side, damage, fuel, onDamage, onFuel, on
           <div className={paper.dv}>
             <span className={paper.dvl}>{CONTRACT_CUSTODY.views.top}</span>
             <TopView />
-            <DamageOverlay view="TOP" marks={damage} editable onToggle={toggle} />
+            <DamageOverlay view="TOP" marks={damage} editable={editable} onToggle={toggle} />
           </div>
           <div className={paper.dvrow}>
             {SIDE_VIEWS.map(({ view, label, art: Art }) => (
               <div key={view} className={paper.dv}>
                 <span className={paper.dvl}>{CONTRACT_CUSTODY.views[label]}</span>
                 <Art />
-                <DamageOverlay view={view} marks={damage} editable onToggle={toggle} />
+                <DamageOverlay view={view} marks={damage} editable={editable} onToggle={toggle} />
               </div>
             ))}
           </div>
         </div>
-        <DamageToolbar active={tool} onSelect={setTool} onClearAll={() => onDamage([])} />
-        <FuelBar label={copy.fuel} fill={fill} text={FUEL_TEXT[fuel] ?? fuel} onSelect={onFuel} />
+        {editable ? <DamageToolbar active={tool} onSelect={setTool} onClearAll={() => onDamage([])} /> : null}
+        <FuelBar label={copy.fuel} fill={fill} text={FUEL_TEXT[fuel] ?? fuel} onSelect={editable ? onFuel : undefined} />
         <div className={paper.vsig}>
           <span className={paper.en}>{CONTRACT_CUSTODY.signatureEn}</span>
           <SignaturePad
             slotLabel={`${copy.tag} — ${CONTRACT_CUSTODY.signatureEn}`}
-            imageUrl={null}
+            imageUrl={signatureImageUrl}
             drawn={false}
-            editable
+            editable={editable}
             required={false}
             compact
             onDraw={onSignature}

@@ -10,7 +10,7 @@ Diamond HTML Demo (`demo.html` → Fleet / Vehicles) drives the scope. This docu
 | Filters: all / available / rented / service            | `status` query param                                        |
 | Primary card image                                     | `primaryImage` (first `isPrimary`, else lowest `sortOrder`) |
 | Detail modal specs + gallery                           | `GET /vehicles/:id` → `VehicleDetail`                       |
-| Current renter + rental timer                          | `currentRental` from Contracts (`PAID` / `ACTIVE` / `RETOUT` / `REVIEW`) |
+| Current renter + rental timer                          | `currentRental` from Contracts (`PAID` / `ACTIVE` / `RETOUT`) |
 | Set Rental Price / Generate Link                       | **Contracts** — `POST /contracts/offers` + rental-link      |
 | GPS button                                             | **Out of scope** — GPS domain                               |
 | Service workshop details                               | **Out of scope** — Maintenance domain                       |
@@ -62,7 +62,9 @@ Used by `GET /vehicles/filter-options` and `vehicleType` list filtering.
 
 `isActive` remains master-data lifecycle (deactivate/reactivate). It is **not** the fleet operational status.
 
-Source of truth for operational status: `Vehicle.operationalStatus`, synchronized by Contracts. Car-Out sets `RENTED`; CLOSE sets `AVAILABLE`. Car-In must not set `AVAILABLE`. See `DOCU/05-pages/contracts-backend.md`.
+Source of truth for operational status: `Vehicle.operationalStatus`, synchronized by Contracts. Car-Out sets `RENTED`; Car-In releases custody to `AVAILABLE` when appropriate. Close does not change Vehicle status. See `DOCU/05-pages/contracts-backend.md`.
+
+`GET /vehicles` cards and `GET /vehicles/:id` detail derive `reservation` from a PAID Contract without completed Car-Out: `{ isReserved, contractId, contractNumber, status: "PAID", awaitingHandover }`. They also expose `isBookable`. A vehicle is bookable only when active, operationally `AVAILABLE`, and without a blocking current rental. PAID therefore remains `AVAILABLE` but is reserved and non-bookable; Car-Out later changes the Contract to ACTIVE and Vehicle to RENTED. No reservation value is persisted on Vehicle.
 
 ## Rented vehicle mutation guard
 
@@ -183,7 +185,7 @@ Implemented in `vehicles-sort.ts` → `buildVehicleListOrderBy`:
 
 **List (`VehicleCard`)** — card-ready, no N+1:
 
-- Scalar vehicle fields + `displayName`, nested `model` (nullable), `primaryImage`, `currentRental`
+- Scalar vehicle fields + `displayName`, nested `model` (nullable), `primaryImage`, `currentRental`, derived `reservation`, and `isBookable`
 - No full `gallery` on list
 
 **Detail (`VehicleDetail`)** — list fields + `gallery[]`

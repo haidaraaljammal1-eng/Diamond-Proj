@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import type { ContractDetail, ContractListItem } from "src/modules/contracts/contracts.schema";
+import { carOutReadiness } from "src/modules/contracts/car-out-evidence";
+import { readDamageMarks } from "src/modules/contracts/official-contract-interactive";
 import {
   EMPTY_ROAD_LIABILITY_SIGNALS,
   type ContractRoadLiabilitySignals,
@@ -18,9 +20,15 @@ const DETAIL_INCLUDE = {
     include: {
       photos: {
         orderBy: { sortOrder: "asc" as const },
-        include: { attachment: { select: { mimeType: true } } },
+        include: { attachment: { select: { mimeType: true, createdAt: true, uploadedById: true, checksum: true } } },
       },
     },
+  },
+  carOutDraft: {
+    include: { photos: {
+      orderBy: { createdAt: "asc" as const },
+      include: { attachment: { select: { mimeType: true, createdAt: true, uploadedById: true, checksum: true } } },
+    } },
   },
   carIn: {
     include: {
@@ -66,6 +74,8 @@ export function toListItem(row: {
   vehicle: ContractDetailRow["vehicle"];
   customer: { name: string } | null;
   hasSalikGpsSignal?: boolean;
+  canCarOut: boolean;
+  carOutStatus: ContractListItem["carOutStatus"];
 }): ContractListItem {
   return {
     id: row.id,
@@ -84,6 +94,8 @@ export function toListItem(row: {
     endAt: row.endAt,
     createdAt: row.createdAt,
     hasSalikGpsSignal: row.hasSalikGpsSignal ?? false,
+    actions: { canCarOut: row.canCarOut },
+    carOutStatus: row.carOutStatus,
   };
 }
 
@@ -93,11 +105,11 @@ function reconciliationSettled(row: ContractDetailRow): boolean {
   return Boolean(row.reconciliation.settledAt);
 }
 
-function actionsFor(row: ContractDetailRow): ContractDetail["actions"] {
+function actionsFor(row: ContractDetailRow, canCarOut: boolean): ContractDetail["actions"] {
   return {
     canGenerateRentalLink: row.status === "AWAITING" || row.status === "FORM" || row.status === "SIGNED",
     canConfirmPayment: false,
-    canCarOut: row.status === "PAID",
+    canCarOut,
     canGenerateReturnLink: row.status === "ACTIVE",
     canCarIn: row.status === "RETOUT" && !row.carIn,
     canReconcile: row.status === "REVIEW",
@@ -130,8 +142,30 @@ function toPostCloseSummary(row: ContractDetailRow): ContractDetail["postCloseRe
 export function toDetail(
   row: ContractDetailRow,
   signals: ContractRoadLiabilitySignals = EMPTY_ROAD_LIABILITY_SIGNALS,
+  canCarOut = false,
 ): ContractDetail {
   const payment = row.payments[0] ?? null;
+  const out = row.carOut ?? row.carOutDraft;
+  const outProgress = carOutReadiness({
+    mileageOut: out?.mileageOut ?? null,
+    fuelOut: out?.fuelOut ?? null,
+    hasSignature: Boolean(out?.hirerSignatureAttachmentId),
+    photos: out?.photos ?? [],
+  });
+  const outStatus = row.carOut ? "COMPLETED" : row.carOutDraft
+    ? outProgress.ready ? "READY" : "DRAFT" : "NOT_STARTED";
+  const outPhotos = out?.photos.map((p) => ({
+    id: p.id,
+    contractId: row.id,
+    vehicleId: row.carOut?.vehicleId ?? row.vehicleId,
+    stage: "OUT" as const,
+    attachmentId: p.attachmentId,
+    angle: p.angle,
+    url: `/contracts/${row.id}/car-out/photos/${p.id}/stream`,
+    uploadedAt: p.attachment.createdAt,
+    uploadedByUserId: p.attachment.uploadedById,
+    checksum: p.attachment.checksum,
+  })) ?? [];
   return {
     id: row.id,
     contractNumber: row.contractNumber,
@@ -176,6 +210,28 @@ export function toDetail(
           confirmedAt: payment.confirmedAt,
         }
       : null,
+    carOutHandover: {
+      status: outStatus,
+      mileageOut: out?.mileageOut ?? null,
+      fuelOut: out?.fuelOut ?? null,
+      damageOut: readDamageMarks(out?.damageOut),
+      notes: out?.notes ?? null,
+      photoEvidence: { ...outProgress, photos: outPhotos },
+      signature: {
+        present: Boolean(out?.hirerSignatureAttachmentId),
+        attachmentId: out?.hirerSignatureAttachmentId ?? null,
+        url: out?.hirerSignatureAttachmentId ? `/contracts/${row.id}/car-out/signature/stream` : null,
+      },
+      actualHandoverAt: row.carOut?.occurredAt ?? null,
+      actions: {
+        canEdit: canCarOut,
+        canUploadPhotos: canCarOut,
+        canDeletePhotos: canCarOut,
+        canSign: canCarOut,
+        canSaveDraft: canCarOut,
+        canComplete: canCarOut && outProgress.ready,
+      },
+    },
     carOut: row.carOut
       ? {
           id: row.carOut.id,
@@ -183,6 +239,9 @@ export function toDetail(
           mileageOut: row.carOut.mileageOut,
           fuelOut: row.carOut.fuelOut,
           notes: row.carOut.notes,
+          damageOut: readDamageMarks(row.carOut.damageOut),
+          vehicleId: row.carOut.vehicleId ?? row.vehicleId,
+          hirerSignatureAttachmentId: row.carOut.hirerSignatureAttachmentId,
           photos: row.carOut.photos.map((p) => ({
             id: p.id,
             attachmentId: p.attachmentId,
@@ -240,7 +299,7 @@ export function toDetail(
       awaitingPayment:
         r.approvedAt != null && r.appliedAt == null && r.additionalAmount > 0,
     })),
-    actions: actionsFor(row),
+    actions: actionsFor(row, canCarOut),
     roadLiabilitySignals: signals,
     postCloseReceivables: toPostCloseSummary(row),
   };

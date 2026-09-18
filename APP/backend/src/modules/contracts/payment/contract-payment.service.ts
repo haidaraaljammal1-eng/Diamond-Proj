@@ -21,7 +21,7 @@ import { completeRentalLinks } from "src/modules/contracts/contracts-links";
 import { contractError } from "src/modules/contracts/contracts.errors";
 import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental-guard";
 import { assertPositiveAedAmount, assertAedCurrency, aedToStripeMinorUnits } from "src/modules/contracts/payment/money";
-import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
+import { createPaymentProvider, devPaymentSimulationEnabled } from "src/modules/contracts/payment/payment-provider.factory";
 import type { ProviderPaymentStatus } from "src/modules/contracts/payment/payment-provider.types";
 import { recordStripePaymentLedger } from "src/modules/finance/finance-ledger.service";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
@@ -453,6 +453,63 @@ export function createContractPaymentService(prisma: PrismaClient) {
     return payment;
   }
 
+  /**
+   * Development-only provider signal. It deliberately creates a non-Stripe
+   * payment attempt, resolves the obligation from the database, and then uses
+   * the same settlement/domain transition as a verified Stripe confirmation.
+   */
+  async function simulateSuccessfulPayment(contractId: string): Promise<ContractPayment> {
+    if (!devPaymentSimulationEnabled()) throw contractError.paymentProviderNotConfigured();
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RENTAL:${contractId}`);
+      const contract = await tx.contract.findUnique({ where: { id: contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status === "PAID") {
+        const existing = await tx.contractPayment.findFirst({ where: { contractId, purpose: "RENTAL", status: "CONFIRMED" }, orderBy: { createdAt: "desc" } });
+        if (existing) return existing;
+        throw contractError.paymentAlreadySettled();
+      }
+      if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+      const active = await tx.contractPayment.findFirst({
+        where: { purpose: "RENTAL", targetId: contractId, status: { in: ["PENDING", "PROCESSING"] } },
+      });
+      if (active) throw contractError.paymentAlreadyProcessing();
+      const obligation = await loadObligation(tx, "RENTAL", contractId);
+      if (await isObligationSettled(tx, obligation.purpose, obligation.targetId)) {
+        const existing = await tx.contractPayment.findFirst({ where: { targetId: obligation.targetId, purpose: obligation.purpose, status: "CONFIRMED" }, orderBy: { createdAt: "desc" } });
+        if (existing) return existing;
+        throw contractError.paymentAlreadySettled();
+      }
+      const payment = await tx.contractPayment.create({
+        data: {
+          contractId: obligation.contractId,
+          purpose: obligation.purpose,
+          targetId: obligation.targetId,
+          amount: obligation.amount,
+          currency: obligation.currency,
+          method: "CARD",
+          status: "CONFIRMED",
+          provider: "dev_simulation",
+          providerStatus: "SIMULATED_CONFIRMED",
+          confirmedAt: new Date(),
+          processingStartedAt: new Date(),
+        },
+      });
+      await applyDomainSettlement(tx, payment);
+      await emitPayment(tx, "payment.confirmed", payment.contractId, {
+        paymentId: payment.id,
+        purpose: payment.purpose,
+        contractId: payment.contractId,
+        targetId: payment.targetId,
+        amount: payment.amount,
+        currency: payment.currency,
+        provider: "dev_simulation",
+        dedupe: payment.id,
+      });
+      return payment;
+    });
+  }
+
   async function startPayment(input: {
     purpose: ContractPaymentPurpose;
     targetId: string;
@@ -496,16 +553,37 @@ export function createContractPaymentService(prisma: PrismaClient) {
         },
         orderBy: { createdAt: "desc" },
       });
-      if (active && isCheckoutUsable(active)) {
+      // An expired Checkout URL is not proof that its payment failed. Resolve
+      // the existing attempt before considering another charge.
+      const current = active ? (await applyProviderPaymentStatus(tx, active.id)) ?? active : null;
+      if (current?.status === "CONFIRMED") {
         return {
           payment: {
-            id: active.id,
-            status: active.status,
-            amount: active.amount,
-            currency: active.currency,
-            purpose: active.purpose,
-            checkoutUrl: active.checkoutUrl,
-            checkoutExpiresAt: active.checkoutExpiresAt,
+            id: current.id,
+            status: current.status,
+            amount: current.amount,
+            currency: current.currency,
+            purpose: current.purpose,
+            checkoutUrl: null,
+            checkoutExpiresAt: null,
+          },
+          statusToken: null,
+          providerAvailable: true,
+        };
+      }
+      if (current && (current.status === "PENDING" || current.status === "PROCESSING") && !isCheckoutUsable(current)) {
+        throw contractError.paymentAlreadyProcessing();
+      }
+      if (current && isCheckoutUsable(current)) {
+        return {
+          payment: {
+            id: current.id,
+            status: current.status,
+            amount: current.amount,
+            currency: current.currency,
+            purpose: current.purpose,
+            checkoutUrl: current.checkoutUrl,
+            checkoutExpiresAt: current.checkoutExpiresAt,
           },
           statusToken: null,
           providerAvailable: true,
@@ -542,6 +620,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
         successUrl: paymentCallbackUrl(statusToken, "success"),
         cancelUrl: paymentCallbackUrl(statusToken, "cancel"),
         savedPaymentMethod: savedPaymentMethod
+          && savedPaymentMethod.stripePaymentMethodId
           ? {
               stripeCustomerId: savedPaymentMethod.stripeCustomerId,
               stripePaymentMethodId: savedPaymentMethod.stripePaymentMethodId,
@@ -811,6 +890,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
   return {
     startPayment,
     applyProviderPaymentStatus,
+    simulateSuccessfulPayment,
     processWebhookEvent,
     processCardSetupWebhook,
     processCardSetupReturn,

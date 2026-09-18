@@ -138,6 +138,8 @@ export const contractError = {
     ),
   paymentNotAllowed: () =>
     err(ErrorCode.CONFLICT, "Electronic payment is not allowed", "PAYMENT_NOT_ALLOWED"),
+  paymentIdempotencyRequired: () =>
+    err(ErrorCode.VALIDATION_ERROR, "Idempotency-Key is required", "PAYMENT_IDEMPOTENCY_REQUIRED"),
   paymentAlreadyProcessing: () =>
     err(
       ErrorCode.CONFLICT,

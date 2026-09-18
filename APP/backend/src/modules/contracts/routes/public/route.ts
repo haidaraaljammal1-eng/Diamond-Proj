@@ -26,6 +26,7 @@ import {
 } from "src/modules/contracts/contracts.schema";
 import { commonErrorResponses, dataResponse } from "src/lib/http/response";
 import { AppError } from "src/lib/errors/app-error";
+import { devPaymentSimulationEnabled } from "src/modules/contracts/payment/payment-provider.factory";
 
 export default async function contractsPublicRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -487,4 +488,24 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       data: await contracts.startRenewalPaymentPublic(request.params.token),
     }),
   );
+
+  // Development provider substitutions are deliberately not registered in production.
+  if (devPaymentSimulationEnabled()) {
+    const simulationResponse = { 200: dataResponse(PublicRentalContextSchema), ...commonErrorResponses };
+    app.post("/rental/:token/simulation/license", {
+      schema: { summary: "DEV: simulate successful driving-license OCR", operationId: "simulatePublicRentalLicense", tags: ["Contracts"], public: true, params: ContractTokenParam, response: simulationResponse },
+    }, async (request) => ({ data: await contracts.simulateDrivingLicense(request.params.token) }));
+    app.post("/rental/:token/simulation/passport", {
+      schema: { summary: "DEV: simulate successful passport OCR", operationId: "simulatePublicRentalPassport", tags: ["Contracts"], public: true, params: ContractTokenParam, response: simulationResponse },
+    }, async (request) => ({ data: await contracts.simulatePassport(request.params.token) }));
+    app.post("/rental/:token/simulation/payment", {
+      schema: {
+        summary: "DEV: settle the real rental obligation through the simulation provider",
+        operationId: "simulatePublicRentalPayment",
+        tags: ["Contracts"], public: true, params: ContractTokenParam,
+        headers: z.object({ "idempotency-key": z.string().trim().min(1).max(200) }),
+        response: simulationResponse,
+      },
+    }, async (request) => ({ data: await contracts.simulatePayment(request.params.token, request.headers["idempotency-key"]) }));
+  }
 }

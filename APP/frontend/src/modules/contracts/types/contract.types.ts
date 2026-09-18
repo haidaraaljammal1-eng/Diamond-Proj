@@ -43,6 +43,11 @@ export type InspectionAngle =
   | "INTERIOR_ODOMETER"
   | "TIRES";
 
+export type CarOutAngle =
+  | "FRONT" | "REAR" | "LEFT" | "RIGHT"
+  | "FRONT_LEFT" | "FRONT_RIGHT" | "REAR_LEFT" | "REAR_RIGHT"
+  | "ODOMETER" | "DASHBOARD_FUEL" | "OTHER";
+
 export type FuelLevel = "F" | "7/8" | "3/4" | "5/8" | "1/2" | "3/8" | "1/4" | "1/8" | "E";
 
 export type ContractSortKey =
@@ -70,6 +75,8 @@ export interface ContractListItemDto {
   endAt: string | null;
   createdAt: string;
   hasSalikGpsSignal: boolean;
+  actions: { canCarOut: boolean };
+  carOutStatus: "NOT_STARTED" | "DRAFT" | "READY" | "COMPLETED";
 }
 
 export interface ContractActionsDto {
@@ -109,7 +116,7 @@ export interface ContractPaymentDto {
 export interface ContractInspectionPhotoDto {
   id: string;
   attachmentId: string;
-  angle: InspectionAngle;
+  angle: InspectionAngle | CarOutAngle;
   url: string;
 }
 
@@ -119,7 +126,49 @@ export interface ContractCarOutDto {
   mileageOut: number;
   fuelOut: string;
   notes: string | null;
+  damageOut: DamageMark[];
+  vehicleId: number;
+  hirerSignatureAttachmentId: string | null;
   photos: ContractInspectionPhotoDto[];
+}
+
+export interface CarOutEvidencePhotoDto {
+  id: string;
+  contractId: string;
+  vehicleId: number;
+  stage: "OUT";
+  attachmentId: string;
+  angle: CarOutAngle | InspectionAngle;
+  url: string;
+  uploadedAt: string;
+  uploadedByUserId: number | null;
+  checksum: string | null;
+}
+
+export interface ContractCarOutHandoverDto {
+  status: "NOT_STARTED" | "DRAFT" | "READY" | "COMPLETED";
+  mileageOut: number | null;
+  fuelOut: string | null;
+  damageOut: DamageMark[];
+  notes: string | null;
+  photoEvidence: {
+    required: number;
+    completed: number;
+    missing: CarOutAngle[];
+    complete: boolean;
+    ready: boolean;
+    photos: CarOutEvidencePhotoDto[];
+  };
+  signature: { present: boolean; attachmentId: string | null; url: string | null };
+  actualHandoverAt: string | null;
+  actions: {
+    canEdit: boolean;
+    canUploadPhotos: boolean;
+    canDeletePhotos: boolean;
+    canSign: boolean;
+    canSaveDraft: boolean;
+    canComplete: boolean;
+  };
 }
 
 export interface ContractCarInDto {
@@ -208,6 +257,7 @@ export interface ContractDetailDto {
   vehicle: ContractVehicleRefDto;
   customer: ContractCustomerRefDto | null;
   payment: ContractPaymentDto | null;
+  carOutHandover: ContractCarOutHandoverDto;
   carOut: ContractCarOutDto | null;
   carIn: ContractCarInDto | null;
   reconciliation: ContractReconciliationDto | null;
@@ -236,6 +286,14 @@ export interface ConfirmContractPaymentPayload {
 export interface InspectionPhotoInput {
   attachmentId: string;
   angle: InspectionAngle;
+}
+
+export interface CarOutDraftPatch {
+  mileageOut?: number;
+  fuelOut?: FuelLevel;
+  damageOut?: DamageMark[];
+  notes?: string | null;
+  hirerSignatureAttachmentId?: string | null;
 }
 
 /** Official-contract paper side of a custody event (damage marks + hirer signature PNG). */

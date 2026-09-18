@@ -842,6 +842,33 @@
     "carOut": {
       "title": "تسليم السيارة — Car-Out",
       "description": "سجّل عداد الخروج والوقود وصور الزوايا الثماني.",
+      "loading": "جارٍ تحميل بيانات التسليم…",
+      "vehicleOut": "بيانات خروج السيارة",
+      "photosTitle": "توثيق حالة السيارة بالصور",
+      "progress": "المكتمل: {completed}/{required}",
+      "missing": "المفقود: {items}",
+      "required": "إلزامي",
+      "optional": "اختياري",
+      "notCaptured": "لم تُلتقط بعد",
+      "capture": "بدء التصوير",
+      "retake": "إعادة التصوير",
+      "delete": "حذف",
+      "saveDraft": "حفظ كمسودة",
+      "complete": "تأكيد تسليم السيارة",
+      "confirmTitle": "تأكيد تسليم السيارة",
+      "confirmDescription": "سيتم بدء العقد النشط وتثبيت بيانات وصور حالة السيارة عند التسليم.",
+      "confirm": "تأكيد التسليم",
+      "saved": "تم حفظ المسودة",
+      "completed": "تم إتمام التسليم",
+      "awaitingHandover": "محجوزة · بانتظار التسليم",
+      "signatureSaved": "تم حفظ توقيع المستأجر عند الاستلام",
+      "signatureMissing": "لا يوجد توقيع عند الاستلام",
+      "completedTitle": "بيانات خروج السيارة — للعرض فقط",
+      "backToContracts": "العودة إلى العقود",
+      "actualHandover": "وقت التسليم الفعلي",
+      "damage": "الأضرار عند الخروج",
+      "noDamage": "لا توجد أضرار مسجلة",
+      "context": { "contract": "العقد", "hirer": "المستأجر", "vehicle": "المركبة", "plate": "اللوحة", "status": "الحالة", "reservation": "الحجز" },
       "mileage": "عداد الخروج",
       "fuel": "الوقود",
       "notes": "ملاحظات (اختياري)",
@@ -855,8 +882,28 @@
         "FRONT_PLATE": "لوحة أمامية",
         "REAR_PLATE": "لوحة خلفية",
         "INTERIOR_ODOMETER": "داخلي / عدّاد",
-        "TIRES": "الإطارات"
+        "TIRES": "الإطارات",
+        "LEFT": "يسار",
+        "RIGHT": "يمين",
+        "FRONT_LEFT": "أمامي يسار",
+        "FRONT_RIGHT": "أمامي يمين",
+        "REAR_LEFT": "خلفي يسار",
+        "REAR_RIGHT": "خلفي يمين",
+        "ODOMETER": "عداد المسافة",
+        "DASHBOARD_FUEL": "عداد الوقود",
+        "OTHER": "أخرى"
       }
+    },
+    "carOutAngles": {
+      "LEFT": "اليسار",
+      "RIGHT": "اليمين",
+      "FRONT_LEFT": "أمامي يسار",
+      "FRONT_RIGHT": "أمامي يمين",
+      "REAR_LEFT": "خلفي يسار",
+      "REAR_RIGHT": "خلفي يمين",
+      "ODOMETER": "العداد",
+      "DASHBOARD_FUEL": "وقود لوحة القيادة",
+      "OTHER": "أخرى"
     },
     "carIn": {
       "title": "استلام المركبة",
@@ -940,10 +987,13 @@
       "vehicle": "المركبة",
       "amountPaid": "المبلغ المدفوع",
       "card": "البطاقة",
-      "readyForHandover": "جاهز لتسليم المركبة / Car-Out"
+      "readyForHandover": "جاهز لتسليم المركبة / Car-Out",
+      "checkingFailed": "تعذر التحقق من الدفع الآن. ستُعاد المحاولة تلقائيًا.",
+      "continueCheckout": "المتابعة في صفحة الدفع عبر Stripe"
     }
   },
   "PublicRental": {
+    "simulation": { "validLicense": "محاكاة نجاح التحقق من الرخصة", "passportOcr": "محاكاة نجاح قراءة جواز السفر" },
     "brandAlt": "Diamond Elite Rent Car",
     "tagline": "Rent Car · Dubai",
     "fallbackOffice": "Diamond Rent Car",
@@ -958,7 +1008,11 @@
     },
     "review": {
       "title": "مراجعة العقد الرسمي",
-      "instructionsInteractive": "راجع عقد الإيجار الرسمي. يمكنك تصحيح بياناتك الشخصية، وتعليم أضرار المركبة الحالية على الرسومات، وإدخال رقم بطاقتك، والتوقيع مباشرة على العقد.",
+      "instructionsInteractive": "راجع عقد الإيجار الرسمي، وصحح البيانات المسموح بها، ووقّع عبر حقول التوقيع.",
+      "devCardSetupNotice": "وضع اختبار الدفع مفعّل — لا يلزم ربط بطاقة في بيئة التطوير.",
+      "linkedCard": "{brand} •••• {last4}",
+      "linkCard": "ربط البطاقة",
+      "cardSetupRequired": "اربط بطاقة عبر Stripe قبل توقيع العقد.",
       "instructionsReadOnly": "راجع عقد الإيجار الرسمي.",
       "instructionsSigned": "تم توقيع عقد الإيجار الرسمي.",
       "loading": "جارٍ تحميل عقد الإيجار…",
@@ -1103,7 +1157,9 @@
       "linkCardFailed": "تعذّر تأكيد البطاقة المحفوظة. يرجى محاولة ربطها مرة أخرى.",
       "cardLinkedNotice": "تم ربط البطاقة بنجاح.",
       "cardLinkCancelledNotice": "تم إلغاء ربط البطاقة.",
-      "completePayment": "إتمام الدفع"
+      "completePayment": "إتمام الدفع",
+      "devCardSetupNotice": "وضع اختبار الدفع مفعّل — لا يلزم ربط بطاقة في بيئة التطوير.",
+      "simulateSuccess": "محاكاة الدفع الناجح"
     },
     "handover": {
       "title": "تم تأكيد الدفع بنجاح",
@@ -1147,6 +1203,7 @@
       "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE": "لا يمكن الموافقة على العقد قبل اكتمال البيانات والتحقق من الرخصة.",
       "PAYMENT_PROVIDER_NOT_CONFIGURED": "الدفع الإلكتروني غير متاح حاليًا.",
       "PAYMENT_NOT_ALLOWED": "الدفع غير متاح في هذه المرحلة.",
+      "PAYMENT_IDEMPOTENCY_REQUIRED": "يرجى محاولة بدء الدفع مرة أخرى.",
       "PAYMENT_ALREADY_PROCESSING": "توجد عملية دفع قيد المعالجة. يرجى الانتظار.",
       "PAYMENT_ATTEMPT_NOT_FOUND": "تعذر العثور على محاولة الدفع.",
       "PAYMENT_STATUS_TOKEN_INVALID": "تعذر التحقق من حالة الدفع.",
@@ -1480,44 +1537,7 @@
     }
   },
   "DemoSimulation": {
-    "simulate": "محاكاة",
-    "badge": "محاكاة تجريبية",
-    "hint": "عرض تجريبي — لا يتم تنفيذ عمليات خارجية فعلية.",
-    "reset": "إعادة ضبط المحاكاة",
-    "disable": "إيقاف المحاكاة",
-    "scenarios": "سيناريوهات العرض",
-    "license": {
-      "valid": "رخصة صالحة",
-      "expired": "رخصة منتهية",
-      "unreadable": "صورة غير واضحة"
-    },
-    "passport": {
-      "ready": "جواز جاهز",
-      "notRecognized": "جواز غير معروف"
-    },
-    "contract": {
-      "fill": "تعبئة بيانات العميل التجريبية"
-    },
-    "payment": {
-      "run": "محاكاة الدفع",
-      "failed": "دفع فاشل",
-      "pending": "دفع قيد الانتظار"
-    },
-    "tars": {
-      "notStarted": "لم يبدأ",
-      "syncing": "جارٍ المزامنة",
-      "synced": "تمت المزامنة",
-      "partialFailure": "فشل جزئي"
-    },
-    "gps": {
-      "run": "محاكاة GPS"
-    },
-    "violations": {
-      "run": "محاكاة المخالفات وسالك"
-    },
-    "finance": {
-      "run": "محاكاة تجريبية"
-    }
+    "devBadge": "DEV / SIM"
   },
   "Gps": {
     "crumbs": "العمليات · التتبع",

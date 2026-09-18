@@ -3,11 +3,9 @@ import type { PublicRentalContext } from "../types/public-rental.types";
 
 /**
  * Fills the official contract's identity fields from the normalized identity
- * already on the rental context (Backend OCR data, or a demo-simulation overlay
- * of the same shape). Values the Backend resolved — including customer review
- * corrections — are never replaced; only missing values are filled.
- *
- * Source-agnostic by design: there is no simulation branch here.
+ * already on the rental context (Backend OCR data). Values the Backend resolved,
+ * including customer review corrections, are never replaced. Permission and
+ * readiness flags remain exactly as the Backend returned them.
  */
 export function withNormalizedIdentity(
   view: OfficialContractView,
@@ -17,7 +15,6 @@ export function withNormalizedIdentity(
   const licenseValid = context.licenseVerification.status === "VALID";
   const fill = <T>(current: T | null, next: T | null | undefined): T | null =>
     current ?? next ?? null;
-  const reviewable = view.contract.status === "AWAITING" || view.contract.status === "FORM";
 
   return {
     ...view,
@@ -34,15 +31,6 @@ export function withNormalizedIdentity(
         view.hirer.driverLicenseExpiryDate,
         licenseValid ? context.licenseVerification.expiryDate : null,
       ),
-    },
-    identity: {
-      identityReady: view.identity.identityReady || context.identity.identityReady,
-    },
-    // Same gate as the Backend: a reviewable agreement becomes editable once
-    // identity is ready. The field policy itself still comes from the Backend.
-    permissions: {
-      ...view.permissions,
-      canEdit: view.permissions.canEdit || (reviewable && context.identity.identityReady),
     },
   };
 }

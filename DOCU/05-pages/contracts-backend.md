@@ -67,6 +67,8 @@ Never derived from row count.
 
 Blocking / currentRental statuses: **PAID, ACTIVE, RETOUT**. REVIEW is not blocking. CLOSED is never blocking. AWAITING / FORM / SIGNED do not permanently lock the vehicle — the first offer to reach PAID wins under the lock.
 
+Once a Contract is PAID, its assigned Vehicle remains operationally `AVAILABLE` but is reserved and non-bookable. New offers and RENTAL links for another Contract on that Vehicle are rejected under the `vehicle_rental` advisory lock. PAID reservation is derived from Contract status and an incomplete Car-Out; no Vehicle reservation column or `RESERVED` operational status exists.
+
 Critical mutations take `withTransaction` + `acquireAdvisoryLock(tx, "vehicle_rental", vehicleId)`, then re-read Vehicle and conflicting Contracts. Second blocking contract → `409` / `VEHICLE_ALREADY_RENTED`.
 
 Fleet `PUT` / deactivate still reject `operationalStatus = RENTED`, and also reject when a blocking Contract exists (`vehicleHasBlockingContract`).
@@ -87,6 +89,8 @@ Shape:
 ```
 
 At **PAID**: Vehicle `operationalStatus` stays `AVAILABLE` (Car-Out has not happened). `currentRental.status` is `"paid"` so the fleet page can see the reservation. Fleet edit/deactivate remain 409 because PAID is a blocking contract.
+
+Contract list items and details expose `actions.canCarOut`. It is true only for the owning PAID Contract with no completed Car-Out, an active assigned Vehicle still `AVAILABLE`, and no competing blocking Contract. Car-Out is entered from Contracts, never Fleet. The existing staff `POST /contracts/:id/car-out` route remains; the saved-draft workflow completes through `POST /contracts/:id/car-out/complete`. Both recheck eligibility after the vehicle advisory lock, then transition PAID → ACTIVE and Vehicle AVAILABLE → RENTED in one transaction. Payment itself never changes Vehicle status or runs Car-Out.
 
 Batch-loaded with `loadCurrentRentalsByVehicleIds` (one query, no N+1). If corrupt data has two blocking contracts, the oldest (`createdAt`, then `id`) is returned and the duplicate is logged — never a random pick.
 
@@ -112,7 +116,9 @@ Public token routes live under `routes/public/` with an empty public hook — **
 
 ## Car-Out / Car-In
 
-Eight Demo angles: FRONT, REAR, RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES. Junctions reference Attachment; they are **not** `VehiclePhoto`. Stream routes are authenticated (`contracts.read`).
+The PAID Car-Out draft stores mileage, the existing nine-level fuel code, structured OUT damage, a separate hirer OUT signature, and Contract-owned photo evidence. Saving it keeps the Contract PAID and Vehicle AVAILABLE, reserved and non-bookable. Required OUT exterior slots: FRONT, REAR, LEFT, RIGHT, FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT. ODOMETER, DASHBOARD_FUEL, OTHER are optional. Completion requires all eight exterior slots and the OUT signature; the legal contract HIRER signature does not satisfy this requirement. Attachment storage validates image MIME and bytes, enforces size, generates storage keys, and records SHA-256, uploader and upload time. The Contract detail `carOutHandover` shows progress and actions; the list exposes only `carOutStatus`.
+
+Completion copies the draft into the immutable operational `ContractCarOut` snapshot with server handover time, assigned Vehicle ID, mileage, fuel, damage, photo references and OUT signature. Existing `Vehicle` has no authoritative mileage column, so no new Vehicle mileage field was added. OUT draft and evidence mutations reject after ACTIVE. The signed legal `Contract.snapshot` is unchanged. Existing Car-In and its eight Demo inspection angles (FRONT, REAR, RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES) are unchanged; matching new OUT slots to future IN comparison is later work. Photo joins reference Attachment, never `VehiclePhoto`; streams require `contracts.read`. The additive migration is applied by `npm run dev:bootstrap` on a new local database.
 
 Staff Car-In: `POST /contracts/:id/car-in` (`contracts.return`) on RETOUT. Public token Car-In: `POST /contracts/return/:token/car-in` (used RETURN tokens are allowed so a second submit after REVIEW is idempotent). Both write `ContractCarIn` + eight photos, transition RETOUT → REVIEW, emit `contract.return_submitted`, and if the vehicle is RENTED set it AVAILABLE in the same transaction (advisory lock `vehicle_rental`). Car-In never closes the Contract. REVIEW means financial/operational review is still open, not that the customer still has the vehicle.
 
@@ -148,7 +154,8 @@ Staff only. Public token routes have no staff permissions.
 | ---------- | --------------- |
 | `contracts.read` | List, detail, inspection streams |
 | `contracts.manage` | Create offer, rental link, confirm payment |
-| `contracts.activate` + `contracts.car_out` | Car-Out (both required on the route) |
+| `contracts.car_out` | Save OUT draft, upload/replace/delete OUT evidence |
+| `contracts.activate` + `contracts.car_out` | Complete Car-Out (both required) |
 | `contracts.return` | Return link + staff Car-In |
 | `contracts.reconcile` | Reconciliation |
 | `contracts.close` | Close |
@@ -164,6 +171,13 @@ Staff only. Public token routes have no staff permissions.
 | POST | `/contracts/:id/rental-link` | manage |
 | POST | `/contracts/:id/payment/confirm` | manage |
 | POST | `/contracts/:id/car-out` | car_out + activate |
+| GET | `/contracts/:id/car-out` | read |
+| PATCH | `/contracts/:id/car-out` | car_out |
+| POST | `/contracts/:id/car-out/photos?angle=...` | car_out |
+| DELETE | `/contracts/:id/car-out/photos/:photoId` | car_out |
+| POST | `/contracts/:id/car-out/signature` | car_out |
+| GET | `/contracts/:id/car-out/signature/stream` | read |
+| POST | `/contracts/:id/car-out/complete` | car_out + activate |
 | POST | `/contracts/:id/return-link` | return |
 | POST | `/contracts/:id/car-in` | return |
 | POST | `/contracts/:id/reconcile` | reconcile |

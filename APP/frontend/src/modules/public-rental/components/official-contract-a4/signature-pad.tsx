@@ -8,6 +8,7 @@ interface SignaturePadProps {
   slotLabel: string;
   /** Saved signature image (token-scoped URL) when one exists and no local change is pending. */
   imageUrl: string | null;
+  preferImage?: boolean;
   /** A local drawing exists (pending save). */
   drawn: boolean;
   editable: boolean;
@@ -24,6 +25,7 @@ interface SignaturePadProps {
 export function SignaturePad({
   slotLabel,
   imageUrl,
+  preferImage = false,
   drawn,
   editable,
   required,
@@ -122,7 +124,7 @@ export function SignaturePad({
     onClear();
   };
 
-  const showImage = Boolean(imageUrl) && !hasInk;
+  const showImage = Boolean(imageUrl) && (!hasInk || preferImage);
 
   return (
     <div className={styles.padWrap}>

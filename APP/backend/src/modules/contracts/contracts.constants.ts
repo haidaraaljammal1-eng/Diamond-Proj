@@ -75,6 +75,13 @@ export const INSPECTION_ANGLES = [
   "TIRES",
 ] as const;
 
+export const CAR_OUT_REQUIRED_ANGLES = [
+  "FRONT", "REAR", "LEFT", "RIGHT", "FRONT_LEFT", "FRONT_RIGHT", "REAR_LEFT", "REAR_RIGHT",
+] as const;
+export const CAR_OUT_PHOTO_ANGLES = [
+  ...CAR_OUT_REQUIRED_ANGLES, "ODOMETER", "DASHBOARD_FUEL", "OTHER",
+] as const;
+
 export const FUEL_LEVELS = ["F", "7/8", "3/4", "5/8", "1/2", "3/8", "1/4", "1/8", "E"] as const;
 
 export const ALLOWED_TRANSITIONS: Record<ContractStatus, readonly ContractStatus[]> = {

@@ -10,30 +10,45 @@ function PaymentCallbackContent() {
   const t = useTranslations("Payments.callback");
   const searchParams = useSearchParams();
   const statusToken = searchParams.get("statusToken");
-  const outcome = searchParams.get("outcome");
   const [status, setStatus] = useState<PaymentStatusDto | null>(null);
   const [failedToken, setFailedToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!statusToken || outcome === "cancel") return;
-    void getPublicPaymentStatus(statusToken)
-      .then((result) => {
+    if (!statusToken) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const check = async () => {
+      try {
+        const result = await getPublicPaymentStatus(statusToken);
+        if (cancelled) return;
         setStatus(result);
-      })
-      .catch(() => setFailedToken(statusToken));
-  }, [outcome, statusToken]);
+        setFailedToken(null);
+        if (result.status === "PENDING" || result.status === "PROCESSING") {
+          timer = setTimeout(check, 3000);
+        }
+      } catch {
+        if (cancelled) return;
+        setFailedToken(statusToken);
+        timer = setTimeout(check, 5000);
+      }
+    };
+    void check();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [statusToken]);
 
-  const summary = status?.status === "CONFIRMED" ? status.summary : null;
+  const verified = status?.status === "CONFIRMED" &&
+    (status.purpose !== "RENTAL" || status.contractStatus === "PAID");
+  const summary = verified ? status?.summary : null;
   const message =
-    !statusToken || failedToken === statusToken
-      ? t("failed")
-      : outcome === "cancel" || status?.status === "CANCELLED"
-        ? t("cancelled")
-        : status?.status === "CONFIRMED"
-          ? t("success")
-          : status
-            ? t("failed")
-            : t("checking");
+    !statusToken ? t("failed")
+      : failedToken === statusToken ? t("checkingFailed")
+        : verified ? t("success")
+          : status?.status === "FAILED" ? t("failed")
+            : status?.status === "CANCELLED" ? t("cancelled")
+              : t("checking");
   const card =
     summary?.cardLast4
       ? `${summary.cardBrand ?? "Card"} \u2022\u2022\u2022\u2022 ${summary.cardLast4}`
@@ -43,6 +58,9 @@ function PaymentCallbackContent() {
     <main style={{ margin: "2rem auto", maxWidth: 480, padding: "0 1rem" }}>
       <h1>{t("title")}</h1>
       <p role="status">{summary ? `\u2713 ${message}` : message}</p>
+      {(status?.status === "PROCESSING" || status?.status === "PENDING") && status.checkoutUrl ? (
+        <p><a href={status.checkoutUrl}>{t("continueCheckout")}</a></p>
+      ) : null}
       {summary ? (
         <>
           <dl>

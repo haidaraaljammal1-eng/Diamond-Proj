@@ -7,6 +7,7 @@ import {
   setDocumentOcrProviderForTests,
 } from "src/modules/document-ocr/document-ocr-provider.factory";
 import { analyzeDocument } from "src/modules/document-ocr/document-ocr.service";
+import { createSimulationDocumentOcrProvider } from "src/modules/document-ocr/simulation-document-ocr.provider";
 import type { DocumentOcrProvider } from "src/modules/document-ocr/document-ocr.types";
 import { UnconfiguredDocumentOcrProvider } from "src/modules/document-ocr/unconfigured-document-ocr.provider";
 import { analyzeDrivingLicenseDocument } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
@@ -25,6 +26,21 @@ import {
 const FILE = { bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47]), mimeType: "image/png" };
 
 afterEach(() => setDocumentOcrProviderForTests(undefined));
+
+test("DEV OCR provider returns normalized identity through the same analyzer", async () => {
+  const provider = createSimulationDocumentOcrProvider();
+  const license = await analyzeDocument("DRIVER_LICENSE", FILE, provider);
+  const passport = await analyzeDocument("PASSPORT", FILE, provider);
+  assert.equal(license.ok, true);
+  assert.equal(passport.ok, true);
+  if (!license.ok || !passport.ok) return;
+  assert.equal(license.provider, "DEV_SIMULATION");
+  assert.equal(license.result.driverLicenseNumber, "DXB-DEV-482731");
+  assert.equal(license.result.driverLicenseExpiryDate, "2099-12-31");
+  assert.equal(passport.result.fullName, "DEMO CUSTOMER");
+  assert.equal(passport.result.passportNumber, "P1234567");
+  assert.equal(passport.result.nationality, "United Arab Emirates");
+});
 
 // ---------------------------------------------------------------- architecture
 

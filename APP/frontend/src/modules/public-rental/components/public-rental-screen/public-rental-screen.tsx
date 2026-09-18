@@ -22,13 +22,8 @@ import { RentalHeader } from "../rental-header/rental-header";
 import { RentalLinkError } from "../rental-link-error/rental-link-error";
 import { RentalProgress } from "../rental-progress/rental-progress";
 import { RentalSummary } from "../rental-summary/rental-summary";
-import {
-  SimulationButton,
-  applyRentalSimulation,
-  shouldHoldLicenseStage,
-  shouldSkipRentalMutation,
-  useDemoSimulation,
-} from "@/modules/demo-simulation";
+import { SimulationAction } from "@/modules/demo-simulation";
+import { isProviderSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import styles from "./public-rental-screen.module.css";
 
 interface PublicRentalScreenProps {
@@ -46,8 +41,7 @@ function errorTranslator(t: ReturnType<typeof useTranslations<"PublicRental">>) 
 export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   const t = useTranslations("PublicRental");
   const rental = usePublicRental(token);
-  const simulation = useDemoSimulation();
-  const clearRentalOverlay = simulation.clearRentalOverlay;
+  const providerSimulationEnabled = isProviderSimulationEnabled();
   const [boundToken, setBoundToken] = useState(token);
   const [viewStage, setViewStage] = useState<PublicRentalUiStage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -68,10 +62,6 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     if (passportPreviewUrl) URL.revokeObjectURL(passportPreviewUrl);
     setPassportPreviewUrl(null);
   }
-
-  useEffect(() => {
-    clearRentalOverlay();
-  }, [token, clearRentalOverlay]);
 
   // After a free Stripe-hosted card-linking redirect, validate the Stripe
   // Checkout Session server-side before showing linked card state.
@@ -148,16 +138,19 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     );
   }
 
-  const context = applyRentalSimulation(rental.context, simulation.snapshot);
+  const context = rental.context;
+  const rentalSimulation = providerSimulationEnabled && context.payment.devSimulationAvailable;
   const allowed = uiStageFromFlowStep(context.flow.step);
+  const requestedStage = viewStage;
   const current: PublicRentalUiStage =
     allowed === "handover"
       ? "handover"
-      : viewStage && canEnterStage(viewStage, allowed)
-        ? viewStage
-        : shouldHoldLicenseStage(simulation.snapshot, viewStage, allowed)
-          ? "license"
-          : allowed;
+      : requestedStage && canEnterStage(requestedStage, allowed)
+        ? requestedStage
+        : allowed;
+  const goToStage = (stage: PublicRentalUiStage) => {
+    setViewStage(stage);
+  };
   const inlineError = resolvePublicRentalErrorMessage(
     errorTranslator(t),
     rental.error,
@@ -171,10 +164,8 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(file));
-    setViewStage("license");
-    if (!shouldSkipRentalMutation(simulation.active)) {
-      void rental.uploadLicense(file);
-    }
+    goToStage("license");
+    void rental.uploadLicense(file);
   };
 
   // Passport preview is an in-memory object URL only; never persisted.
@@ -186,12 +177,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     }
     if (passportPreviewUrl) URL.revokeObjectURL(passportPreviewUrl);
     setPassportPreviewUrl(URL.createObjectURL(file));
-    setViewStage("license");
-    if (shouldSkipRentalMutation(simulation.active)) {
-      // Demo mode: the photo produces a simulated normalized passport result; nothing is uploaded.
-      void simulation.simulatePassport("ready");
-      return;
-    }
+    goToStage("license");
     void rental.uploadPassport(file);
   };
   const passportError = resolvePublicRentalErrorMessage(
@@ -207,25 +193,16 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
           <RentalProgress
             allowed={allowed}
             current={current === "handover" ? "payment" : current}
-            onSelect={setViewStage}
+            onSelect={goToStage}
           />
         ) : null}
 
         <div className={styles.layout} data-full-width={current === "contract" || undefined}>
           <div className={styles.main}>
-            {simulation.enabled ? (
-              <div className={styles.simRow}>
-                {current === "license" ? <SimulationButton surface="license" /> : null}
-                {current === "license" && context.licenseVerification.status === "VALID" ? (
-                  <SimulationButton surface="passport" />
-                ) : null}
-                {current === "payment" ? <SimulationButton surface="payment" /> : null}
-              </div>
-            ) : null}
             {current === "license" ? (
               <LicenseStep
                 context={context}
-                pending={rental.uploadPending || simulation.snapshot.license.verifying}
+                pending={rental.uploadPending || rental.simulationPending}
                 previewUrl={previewUrl}
                 readOnly={
                   context.contract.status !== "AWAITING" &&
@@ -233,13 +210,14 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 }
                 fileHint={fileHint ?? (current === "license" ? inlineError : null)}
                 onFile={handleFile}
+                simulationAction={rentalSimulation ? <SimulationAction label={t("simulation.validLicense")} testId="simulate-license-valid" disabled={rental.simulationPending} onClick={() => void rental.simulateLicense()} /> : null}
               />
             ) : null}
 
             {current === "license" ? (
               <PassportStep
                 context={context}
-                phase={simulation.snapshot.passport.processing ? "processing" : rental.passportPhase}
+                phase={rental.simulationPending ? "processing" : rental.passportPhase}
                 previewUrl={passportPreviewUrl}
                 readOnly={
                   context.contract.status !== "AWAITING" &&
@@ -247,7 +225,8 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 }
                 fileHint={passportHint ?? passportError}
                 onFile={handlePassportFile}
-                onContinue={() => setViewStage("contract")}
+                onContinue={() => goToStage("contract")}
+                simulationAction={rentalSimulation ? <SimulationAction label={t("simulation.passportOcr")} testId="simulate-passport-ready" disabled={rental.simulationPending || context.licenseVerification.status !== "VALID"} onClick={() => void rental.simulatePassport()} /> : null}
               />
             ) : null}
 
@@ -256,16 +235,13 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 token={token}
                 context={context}
                 allowed={allowed}
-                persistEdits={!shouldSkipRentalMutation(simulation.active)}
-                onNextStage={setViewStage}
+                devPaymentSimulation={rentalSimulation}
+                cardLinkPending={rental.cardLinkPending}
+                onLinkCard={() => void rental.linkCard()}
+                onNextStage={goToStage}
                 onSigned={async () => {
-                  if (shouldSkipRentalMutation(simulation.active)) {
-                    // Demo: local signing moves the overlay to payment; nothing reaches the Backend.
-                    if (await simulation.simulateAccept()) setViewStage("payment");
-                    return;
-                  }
                   await rental.load(token);
-                  setViewStage("payment");
+                  goToStage("payment");
                 }}
               />
             ) : null}
@@ -273,30 +249,25 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
             {current === "payment" ? (
               <PaymentStep
                 context={context}
+                simulationEnabled={rentalSimulation}
+                onSimulatePayment={() => void rental.simulatePayment()}
                 paymentStatus={
-                  simulation.snapshot.payment.status ??
                   rental.paymentStatus?.status ??
                   context.payment.status
                 }
-                payPending={rental.payPending || simulation.snapshot.payment.payPending}
+                payPending={rental.payPending || rental.simulationPending}
                 statusPending={rental.statusPending}
                 linkExpiredDuringPayment={rental.linkExpiredDuringPayment}
                 cardLinkPending={rental.cardLinkPending}
                 cardLinkError={Boolean(rental.cardLinkError)}
                 linkNotice={cardLinkNotice}
                 onPay={() => {
-                  if (shouldSkipRentalMutation(simulation.active)) {
-                    void simulation.simulatePayment();
-                    return;
-                  }
                   void rental.startPayment();
                 }}
                 onLinkCard={() => {
-                  if (shouldSkipRentalMutation(simulation.active)) return;
                   void rental.linkCard();
                 }}
                 onRefreshStatus={() => {
-                  if (shouldSkipRentalMutation(simulation.active)) return;
                   void rental.refreshPaymentStatus();
                 }}
               />

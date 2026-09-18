@@ -112,19 +112,22 @@ export function OfficialContractA4({
     );
   };
 
-  const signaturePad = (signature: SignatureModel, label: string, compact = false) => (
-    <SignaturePad
+  const signaturePad = (signature: SignatureModel, label: string, compact = false) => {
+    const imageUrl = signature.hasImage || pendingSignatures?.[signature.slot] === "DRAWN"
+      ? (signatureImageUrl?.(signature.slot) ?? null) : null;
+    return <SignaturePad
       key={`${signature.slot}-${signature.hasImage}`}
       slotLabel={label}
-      imageUrl={signature.hasImage ? (signatureImageUrl?.(signature.slot) ?? null) : null}
+      imageUrl={imageUrl}
+      preferImage={Boolean(imageUrl?.startsWith("blob:"))}
       drawn={pendingSignatures?.[signature.slot] === "DRAWN"}
       editable={signature.editable && Boolean(onSignature)}
       required={signature.required}
       compact={compact}
       onDraw={(image) => onSignature?.(signature.slot, image)}
       onClear={() => onSignature?.(signature.slot, null)}
-    />
-  );
+    />;
+  };
 
   const custody = (side: "out" | "in", block: CustodyModel) => {
     const copy = CONTRACT_CUSTODY[side];

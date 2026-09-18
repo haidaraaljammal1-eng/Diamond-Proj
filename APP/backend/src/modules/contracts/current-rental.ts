@@ -9,6 +9,7 @@ export type CurrentRentalDto = {
   startAt: Date | null;
   endAt: Date;
   status: "paid" | "active" | "retout";
+  awaitingHandover: boolean;
 };
 
 const STATUS_TO_DTO: Record<"PAID" | "ACTIVE" | "RETOUT", CurrentRentalDto["status"]> = {
@@ -43,6 +44,7 @@ function toCurrentRental(row: {
   rentalDays: number;
   snapshot: unknown;
   customer: { name: string } | null;
+  carOut: { id: string } | null;
 }): CurrentRentalDto | null {
   if (row.status !== "PAID" && row.status !== "ACTIVE" && row.status !== "RETOUT") {
     return null;
@@ -58,6 +60,7 @@ function toCurrentRental(row: {
     startAt: row.startAt,
     endAt,
     status: STATUS_TO_DTO[row.status],
+    awaitingHandover: row.status === "PAID" && row.carOut === null,
   };
 }
 
@@ -93,6 +96,7 @@ export async function loadCurrentRentalsByVehicleIds(
       rentalDays: true,
       snapshot: true,
       customer: { select: { name: true } },
+      carOut: { select: { id: true } },
     },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });

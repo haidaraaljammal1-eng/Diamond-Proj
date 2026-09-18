@@ -63,3 +63,7 @@ The customer UI maps statuses to safe copy. It never shows reason codes or provi
 4. Register it in `createDocumentOcrProvider()`.
 
 Nothing else changes: not the frontend, the public API, `PassportExtraction`, `ContractIdentityDraft`, Contract Review, or vehicle/rental code.
+
+## Development provider substitution
+
+Diamond does not have a general workflow simulation anymore. Only the successful Driver License and Passport OCR providers can be substituted for a valid real Rental Link, with `NODE_ENV !== production` and `DIAMOND_SIMULATION_ENABLED=true`. The DEV adapter returns the same normalized result shape and uses the normal Contract document/identity path. It never creates or updates Customer. Production keeps the configured real OCR provider and has no DEV mutation route.

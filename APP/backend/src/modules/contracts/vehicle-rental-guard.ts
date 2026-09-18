@@ -42,6 +42,36 @@ export async function assertVehicleFreeForRental(
   if (blocking) throw contractError.vehicleAlreadyRented();
 }
 
+/** New offers and rental links require a vehicle that is operationally available. */
+export async function assertVehicleBookableForRental(
+  tx: Tx,
+  vehicleId: number,
+  exceptContractId?: string,
+): Promise<void> {
+  await assertVehicleFreeForRental(tx, vehicleId, exceptContractId);
+  const vehicle = await tx.vehicle.findUnique({
+    where: { id: vehicleId },
+    select: { operationalStatus: true },
+  });
+  if (vehicle?.operationalStatus !== "AVAILABLE") throw contractError.vehicleNotAvailable();
+}
+
+export function canCarOutFromState(input: {
+  status: string;
+  vehicleId: number | null;
+  vehicleActive: boolean;
+  vehicleStatus: string | null;
+  hasCarOut: boolean;
+  hasConflictingContract: boolean;
+}): boolean {
+  return input.status === "PAID" &&
+    input.vehicleId !== null &&
+    input.vehicleActive &&
+    input.vehicleStatus === "AVAILABLE" &&
+    !input.hasCarOut &&
+    !input.hasConflictingContract;
+}
+
 export async function vehicleHasBlockingContract(
   db: Db,
   vehicleId: number,

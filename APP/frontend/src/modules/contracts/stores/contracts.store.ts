@@ -16,6 +16,12 @@ import {
   reconcileContract as reconcileRequest,
   renewContract as renewRequest,
   submitCarOut as submitCarOutRequest,
+  getCarOut as getCarOutRequest,
+  saveCarOutDraft as saveCarOutDraftRequest,
+  uploadCarOutPhoto as uploadCarOutPhotoRequest,
+  uploadCarOutSignature as uploadCarOutSignatureRequest,
+  deleteCarOutPhoto as deleteCarOutPhotoRequest,
+  completeCarOut as completeCarOutRequest,
   submitCarIn as submitCarInRequest,
   uploadContractAttachment,
 } from "../api/contracts.api";
@@ -24,6 +30,9 @@ import { CONTRACTS_PAGE_SIZE } from "../api/contracts.api.types";
 import type {
   CarInPayload,
   CarOutPayload,
+  CarOutDraftPatch,
+  ContractCarOutHandoverDto,
+  CarOutAngle,
   ConfirmContractPaymentPayload,
   ContractDetailDto,
   ContractFiltersState,
@@ -66,6 +75,7 @@ interface ContractsState {
   rentalLink: MutationSlot;
   payment: MutationSlot;
   carOut: MutationSlot;
+  carOutHandover: ContractCarOutHandoverDto | null;
   carIn: MutationSlot;
   returnLink: MutationSlot;
   renewSlot: MutationSlot;
@@ -97,6 +107,12 @@ interface ContractsState {
     },
     idempotencyKey: string,
   ) => Promise<boolean>;
+  loadCarOut: (id: string) => Promise<void>;
+  saveCarOutDraft: (id: string, payload: CarOutDraftPatch) => Promise<boolean>;
+  uploadCarOutPhoto: (id: string, angle: CarOutAngle, file: File) => Promise<boolean>;
+  uploadCarOutSignature: (id: string, file: File) => Promise<boolean>;
+  deleteCarOutPhoto: (id: string, photoId: string) => Promise<boolean>;
+  completeCarOut: (id: string, idempotencyKey: string) => Promise<boolean>;
   submitCarIn: (
     id: string,
     payload: Omit<CarInPayload, "photos" | "hirerSignatureAttachmentId"> & {
@@ -212,6 +228,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     rentalLink: IDLE_SLOT,
     payment: IDLE_SLOT,
     carOut: IDLE_SLOT,
+    carOutHandover: null,
     carIn: IDLE_SLOT,
     returnLink: IDLE_SLOT,
     renewSlot: IDLE_SLOT,
@@ -346,6 +363,75 @@ export const useContractsStore = create<ContractsState>((set, get) => {
           idempotencyKey,
         );
         set({ carOut: IDLE_SLOT, detail, detailStatus: "ready" });
+        await refreshAll();
+        return true;
+      } catch (error) {
+        set({ carOut: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async loadCarOut(id) {
+      set({ carOutHandover: null });
+      try {
+        const handover = await getCarOutRequest(id);
+        set({ carOutHandover: handover });
+      } catch (error) {
+        set({ carOut: { pending: false, error: normalizeApiError(error) } });
+      }
+    },
+    async saveCarOutDraft(id, payload) {
+      set({ carOut: { pending: true, error: null } });
+      try {
+        const handover = await saveCarOutDraftRequest(id, payload);
+        set({ carOut: IDLE_SLOT, carOutHandover: handover });
+        await get().fetchContract(id);
+        return true;
+      } catch (error) {
+        set({ carOut: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async uploadCarOutPhoto(id, angle, file) {
+      set({ carOut: { pending: true, error: null } });
+      try {
+        const handover = await uploadCarOutPhotoRequest(id, angle, file);
+        set({ carOut: IDLE_SLOT, carOutHandover: handover });
+        await get().fetchContract(id);
+        return true;
+      } catch (error) {
+        set({ carOut: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async uploadCarOutSignature(id, file) {
+      set({ carOut: { pending: true, error: null } });
+      try {
+        const handover = await uploadCarOutSignatureRequest(id, file);
+        set({ carOut: IDLE_SLOT, carOutHandover: handover });
+        await get().fetchContract(id);
+        return true;
+      } catch (error) {
+        set({ carOut: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async deleteCarOutPhoto(id, photoId) {
+      set({ carOut: { pending: true, error: null } });
+      try {
+        const handover = await deleteCarOutPhotoRequest(id, photoId);
+        set({ carOut: IDLE_SLOT, carOutHandover: handover });
+        await get().fetchContract(id);
+        return true;
+      } catch (error) {
+        set({ carOut: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async completeCarOut(id, idempotencyKey) {
+      set({ carOut: { pending: true, error: null } });
+      try {
+        const detail = await completeCarOutRequest(id, idempotencyKey);
+        set({ carOut: IDLE_SLOT, detail, detailStatus: "ready", carOutHandover: detail.carOutHandover });
         await refreshAll();
         return true;
       } catch (error) {

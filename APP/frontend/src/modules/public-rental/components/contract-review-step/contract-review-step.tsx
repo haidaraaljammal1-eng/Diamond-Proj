@@ -23,13 +23,14 @@ const SHEET_WIDTH_PX = (210 / 25.4) * 96;
 
 interface ContractReviewStepProps {
   token: string;
-  /** Rental context after any demo overlay; supplies normalized identity. */
+  /** Backend rental context; supplies normalized identity. */
   context: PublicRentalContext;
   allowed: PublicRentalUiStage;
-  /** Demo simulation keeps review edits, marks and signatures in the browser. */
-  persistEdits: boolean;
+  devPaymentSimulation: boolean;
+  cardLinkPending: boolean;
+  onLinkCard: () => void;
   onNextStage: (stage: PublicRentalUiStage) => void;
-  /** Called after the agreement is signed (Backend) or locally signed (demo). */
+  /** Called after the Backend persists the legal signatures and acceptance. */
   onSigned: () => Promise<void> | void;
 }
 
@@ -55,7 +56,9 @@ export function ContractReviewStep({
   token,
   context,
   allowed,
-  persistEdits,
+  devPaymentSimulation,
+  cardLinkPending,
+  onLinkCard,
   onNextStage,
   onSigned,
 }: ContractReviewStepProps) {
@@ -63,7 +66,6 @@ export function ContractReviewStep({
   const tRental = useTranslations("PublicRental");
   const contract = useOfficialContract(token, true);
   const { ref, scale } = useSheetScale();
-  const [notice, setNotice] = useState<string | null>(null);
 
   const errorTranslator = Object.assign((key: string) => tRental(key as never), {
     has: (key: string) => tRental.has(key as never),
@@ -84,7 +86,8 @@ export function ContractReviewStep({
     );
   }
 
-  const view = contract.view ? withNormalizedIdentity(contract.view, context) : null;
+  const normalizedView = contract.view ? withNormalizedIdentity(contract.view, context) : null;
+  const view = normalizedView;
   const saving = contract.saveStatus === "saving";
   const signing = contract.signStatus === "signing";
   const signed = view ? !["AWAITING", "FORM"].includes(view.contract.status) : false;
@@ -109,13 +112,11 @@ export function ContractReviewStep({
   })();
 
   const handleSave = async () => {
-    setNotice(null);
-    await contract.save({ persist: persistEdits });
+    await contract.save();
   };
 
   const handleSign = async () => {
-    setNotice(null);
-    const ok = await contract.sign({ persist: persistEdits });
+    const ok = await contract.sign();
     if (ok) await onSigned();
   };
 
@@ -174,13 +175,19 @@ export function ContractReviewStep({
       </div>
 
       <div className={styles.actions}>
+        {!signed && devPaymentSimulation ? <p className={styles.cardLink}>{t("devCardSetupNotice")}</p> : null}
+        {!signed && !devPaymentSimulation && context.payment.requiresCardSetupBeforeSigning ? <div className={styles.cardLink}>
+          {context.payment.cardReady && context.payment.cardBrand && context.payment.cardLast4 ? <span data-testid="review-card-linked">{t("linkedCard", { brand: context.payment.cardBrand, last4: context.payment.cardLast4 })}</span> : <>
+            <Button type="button" variant="secondary" size="sm" disabled={!context.payment.providerAvailable || cardLinkPending} loading={cardLinkPending} onClick={onLinkCard}>{t("linkCard")}</Button>
+            <span>{t("cardSetupRequired")}</span>
+          </>}
+        </div> : null}
         {errorMessage ? (
           <p className={styles.error} role="alert">{errorMessage}</p>
         ) : null}
         {contract.saveStatus === "saved" && !contract.dirty && !signed ? (
           <p className={styles.saved} role="status">{t("saved")}</p>
         ) : null}
-        {notice ? <p className={styles.body} role="status">{notice}</p> : null}
         <div className={styles.buttons}>
           {signed ? (
             <Button type="button" size="md" data-testid="contract-review-continue" onClick={handleContinue}>

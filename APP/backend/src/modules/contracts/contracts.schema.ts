@@ -4,6 +4,7 @@ import { UuidIdParam } from "src/lib/http/common-schemas";
 import {
   FUEL_LEVELS,
   INSPECTION_ANGLES,
+  CAR_OUT_PHOTO_ANGLES,
 } from "src/modules/contracts/contracts.constants";
 import { DAMAGE_MARK_TYPES, DAMAGE_ZONES } from "src/modules/contracts/official-contract-interactive";
 
@@ -110,6 +111,10 @@ export const InspectionPhotoInputSchema = z.object({
   attachmentId: z.string().uuid(),
   angle: InspectionAngleSchema,
 });
+export const CarOutPhotoInputSchema = z.object({
+  attachmentId: z.string().uuid(),
+  angle: z.enum(CAR_OUT_PHOTO_ANGLES),
+});
 
 export const DamageMarkTypeSchema = z.enum(DAMAGE_MARK_TYPES);
 export const DamageMarkSchema = z
@@ -130,9 +135,19 @@ export const CarOutSchema = z.object({
   mileageOut: z.number().int().nonnegative(),
   fuelOut: FuelLevelSchema,
   notes: z.string().trim().max(2000).optional(),
-  photos: z.array(InspectionPhotoInputSchema).length(8),
+  photos: z.array(CarOutPhotoInputSchema).min(8).max(CAR_OUT_PHOTO_ANGLES.length),
   ...CustodyPaperInputSchema,
 });
+
+export const CarOutDraftPatchSchema = z.object({
+  mileageOut: z.number().int().nonnegative().optional(),
+  fuelOut: FuelLevelSchema.optional(),
+  damageOut: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+  hirerSignatureAttachmentId: z.string().uuid().nullable().optional(),
+}).strict();
+export const CarOutPhotoQuerySchema = z.object({ angle: z.enum(CAR_OUT_PHOTO_ANGLES) });
+const CarOutEvidenceAngleSchema = z.enum([...INSPECTION_ANGLES, ...CAR_OUT_PHOTO_ANGLES]);
 
 export const CarInSchema = z.object({
   occurredAt: z.coerce.date().optional(),
@@ -290,13 +305,39 @@ export const ContractListItemSchema = z.object({
   endAt: z.date().nullable(),
   createdAt: z.date(),
   hasSalikGpsSignal: z.boolean(),
+  actions: z.object({ canCarOut: z.boolean() }),
+  carOutStatus: z.enum(["NOT_STARTED", "DRAFT", "READY", "COMPLETED"]),
 });
 
 const InspectionPhotoPublicSchema = z.object({
   id: z.string(),
   attachmentId: z.string(),
-  angle: InspectionAngleSchema,
+  angle: CarOutEvidenceAngleSchema,
   url: z.string(),
+});
+
+export const CarOutHandoverSchema = z.object({
+  status: z.enum(["NOT_STARTED", "DRAFT", "READY", "COMPLETED"]),
+  mileageOut: z.number().int().nonnegative().nullable(),
+  fuelOut: z.string().nullable(),
+  damageOut: z.array(DamageMarkSchema),
+  notes: z.string().nullable(),
+  photoEvidence: z.object({
+    required: z.number().int(), completed: z.number().int(),
+    missing: z.array(z.enum(CAR_OUT_PHOTO_ANGLES)), complete: z.boolean(), ready: z.boolean(),
+    photos: z.array(z.object({
+      id: z.string().uuid(), contractId: z.string().uuid(), vehicleId: z.number().int(),
+      stage: z.literal("OUT"), attachmentId: z.string().uuid(), angle: CarOutEvidenceAngleSchema,
+      url: z.string(), uploadedAt: z.date(), uploadedByUserId: z.number().int().nullable(),
+      checksum: z.string().nullable(),
+    })),
+  }),
+  signature: z.object({ present: z.boolean(), attachmentId: z.string().uuid().nullable(), url: z.string().nullable() }),
+  actualHandoverAt: z.date().nullable(),
+  actions: z.object({
+    canEdit: z.boolean(), canUploadPhotos: z.boolean(), canDeletePhotos: z.boolean(),
+    canSign: z.boolean(), canSaveDraft: z.boolean(), canComplete: z.boolean(),
+  }),
 });
 
 export const ContractDetailSchema = z.object({
@@ -343,6 +384,7 @@ export const ContractDetailSchema = z.object({
       confirmedAt: z.date().nullable(),
     })
     .nullable(),
+  carOutHandover: CarOutHandoverSchema,
   carOut: z
     .object({
       id: z.string(),
@@ -350,6 +392,9 @@ export const ContractDetailSchema = z.object({
       mileageOut: z.number().int(),
       fuelOut: z.string(),
       notes: z.string().nullable(),
+      damageOut: z.array(DamageMarkSchema),
+      vehicleId: z.number().int(),
+      hirerSignatureAttachmentId: z.string().uuid().nullable(),
       photos: z.array(InspectionPhotoPublicSchema),
     })
     .nullable(),
@@ -542,9 +587,12 @@ export const PublicRentalContextSchema = z.object({
     amount: z.number().int().nullable(),
     currency: z.string(),
     providerAvailable: z.boolean(),
+    devSimulationAvailable: z.boolean(),
+    requiresCardSetupBeforeSigning: z.boolean(),
     /** Safe Stripe-derived card reference after free card linking; never PAN/CVV. */
     cardLast4: z.string().nullable().optional(),
     cardBrand: z.string().nullable().optional(),
+    cardReady: z.boolean(),
   }),
 });
 
@@ -660,7 +708,7 @@ const OfficialCustodySchema = z.object({
   mileage: z.number().int().nullable(),
   fuel: z.string().nullable(),
   /** Inspection angles photographed at the event (condition evidence). No file references. */
-  inspectionAngles: z.array(InspectionAngleSchema),
+  inspectionAngles: z.array(CarOutEvidenceAngleSchema),
   /** Structured damage marks on the paper diagrams. */
   damage: z.array(z.object({ zone: z.string(), type: DamageMarkTypeSchema })),
   signatureStatus: SignatureStatusSchema,

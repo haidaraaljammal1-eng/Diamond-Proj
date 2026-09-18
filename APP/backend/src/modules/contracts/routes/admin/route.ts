@@ -5,6 +5,9 @@ import { createContractsService } from "src/modules/contracts/contracts.service"
 import {
   CarInSchema,
   CarOutSchema,
+  CarOutDraftPatchSchema,
+  CarOutPhotoQuerySchema,
+  CarOutHandoverSchema,
   ConfirmPaymentSchema,
   ConfirmRoadLiabilityChargeParam,
   ConfirmRoadLiabilityChargeSchema,
@@ -26,6 +29,7 @@ import { createTarsIntegrationService } from "src/modules/integrations/tars/tars
 import { commonErrorResponses, dataResponse, listResponse } from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { requireAuth } from "src/lib/context/auth-context";
+import { AppError } from "src/lib/errors/app-error";
 
 const InspectionPhotoParam = ContractIdParam.extend({ photoId: z.string().uuid() });
 const PostCloseReceivableParam = ContractIdParam.extend({ receivableId: z.string().uuid() });
@@ -225,6 +229,135 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
         entityType: "contract",
         entityId: request.params.id,
       });
+      return { data };
+    },
+  );
+
+  app.get(
+    "/:id/car-out",
+    {
+      schema: {
+        summary: "Read Contract Car-Out preparation and completed handover",
+        operationId: "getContractCarOut",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_READ],
+        params: ContractIdParam,
+        response: { 200: dataResponse(CarOutHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({ data: (await contracts.get(request.params.id)).carOutHandover }),
+  );
+
+  app.patch(
+    "/:id/car-out",
+    {
+      schema: {
+        summary: "Save PAID Contract Car-Out draft without handover",
+        operationId: "saveContractCarOutDraft",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_CAR_OUT],
+        params: ContractIdParam, body: CarOutDraftPatchSchema,
+        response: { 200: dataResponse(CarOutHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const data = await contracts.saveCarOutDraft(request.params.id, request.body);
+      request.setAudit({ action: "contracts.car_out_draft", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/car-out/photos",
+    {
+      schema: {
+        summary: "Upload or replace one PAID Contract OUT photo slot",
+        operationId: "uploadContractCarOutPhoto",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_CAR_OUT],
+        params: ContractIdParam, querystring: CarOutPhotoQuerySchema,
+        consumes: ["multipart/form-data"],
+        response: { 200: dataResponse(CarOutHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const file = await request.file();
+      if (!file) throw AppError.validation("OUT photo is required");
+      const data = await contracts.uploadCarOutPhoto(request.params.id, request.query.angle, file, requireAuth(request).id);
+      request.setAudit({ action: "contracts.car_out_photo", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.delete(
+    "/:id/car-out/photos/:photoId",
+    {
+      schema: {
+        summary: "Delete one draft OUT photo slot",
+        operationId: "deleteContractCarOutPhoto",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_CAR_OUT],
+        params: InspectionPhotoParam,
+        response: { 200: dataResponse(CarOutHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const data = await contracts.deleteCarOutPhoto(request.params.id, request.params.photoId);
+      request.setAudit({ action: "contracts.car_out_photo_delete", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/car-out/signature",
+    {
+      schema: {
+        summary: "Capture or replace the PAID Contract hirer OUT signature",
+        operationId: "uploadContractCarOutSignature",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_CAR_OUT],
+        params: ContractIdParam, consumes: ["multipart/form-data"],
+        response: { 200: dataResponse(CarOutHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const file = await request.file();
+      if (!file) throw AppError.validation("Hirer OUT signature is required");
+      const data = await contracts.uploadCarOutSignature(request.params.id, file, requireAuth(request).id);
+      request.setAudit({ action: "contracts.car_out_signature", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.get(
+    "/:id/car-out/signature/stream",
+    {
+      schema: {
+        summary: "Stream secured hirer OUT signature",
+        operationId: "streamContractCarOutSignature",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_READ],
+        params: ContractIdParam, response: { 200: z.any(), ...commonErrorResponses },
+      },
+    },
+    async (request, reply) => {
+      const { attachment, stream } = await contracts.openCarOutSignatureStream(request.params.id);
+      return reply.header("content-type", attachment.mimeType).send(stream);
+    },
+  );
+
+  app.post(
+    "/:id/car-out/complete",
+    {
+      schema: {
+        summary: "Complete saved Car-Out handover and activate rental",
+        operationId: "completeContractCarOut",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_CAR_OUT, PERMISSIONS.CONTRACTS_ACTIVATE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.carOut(request.params.id, undefined, requireAuth(request).id,
+        typeof key === "string" ? key : undefined);
+      request.setAudit({ action: "contracts.car_out", entityType: "contract", entityId: request.params.id });
       return { data };
     },
   );

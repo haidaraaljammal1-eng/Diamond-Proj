@@ -152,6 +152,7 @@ Prefix `/contracts`. `public: true` (no staff JWT).
 | `PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE` | 409 |
 | `PAYMENT_PROVIDER_NOT_CONFIGURED` | 409 |
 | `PAYMENT_NOT_ALLOWED` / `PAYMENT_ALREADY_PROCESSING` | 409 |
+| `PAYMENT_IDEMPOTENCY_REQUIRED` | 400 |
 | `PAYMENT_ATTEMPT_NOT_FOUND` | 404 |
 | `PAYMENT_STATUS_TOKEN_INVALID` / `EXPIRED` | 401 |
 | `CONTRACT_LINK_INVALID` / `USED` | 401 |
@@ -179,27 +180,26 @@ Module: `APP/frontend/src/modules/public-rental/` (`api` / `hooks` / `stores` / 
 
 `RentalSummary` appears on every stage with office, vehicle, duration, amount, and currency from the Backend. The customer cannot edit them. Amounts display as `AED 3,500`; duration as `7 أيام` / `7 Days` without frontend recalculation. Contract number, plate, VIN, license number, and amounts use LTR isolation.
 
-**License:** JPEG/PNG upload (one file). Loading copy: verifying. Panels: VALID (number + expiry, Continue only after server step is CONTRACT+), EXPIRED (red blocker, no Continue), UNREADABLE / REVIEW_REQUIRED (retry upload), PROVIDER_UNAVAILABLE (customer-safe unavailable; development note `OCR provider not configured`). No fake OCR.
+**License and passport:** Real uploads use the configured OCR provider. In DEV provider mode, the two labelled OCR success actions run against the same real Rental Link and persist normalized results through the same Contract identity flow. Customer master data is not created or updated.
 
-**Contract:** official white web sheet (not PDF). Auto-filled read-only: office, `contractNumber`, vehicle, duration, amount, verified license number/expiry. Customer FormBuilder fields only: name, mobile, email, nationality, identity and/or passport, address. Pickup/return are display placeholders (`actualPickupAt` / `actualReturnAt` stay null). After FORM: required Checkbox acceptance, then Accept (`FORM → SIGNED`). No signature pad (Backend has no public signature upload).
+**Official Contract:** The existing A4 view uses persisted OCR identity and the assigned Vehicle. Review and legal signatures are manual and saved through the normal backend. DEV payment provider mode skips only external Stripe Card Setup before signing; it creates no card metadata. Production still requires linked Stripe card setup.
 
-**Payment:** Demo-like summary and Card method. `providerAvailable=false` disables Card Pay; no fake Stripe, no fake success, contract stays SIGNED. Development may preview the Card UI with Pay still disabled. States: PROCESSING, PENDING (no retry), FAILED (retry new attempt), CONFIRMED, READY_FOR_HANDOVER (no customer Car-Out). If the rental link expires while PROCESSING/PENDING, show payment status recovery instead of wiping the attempt. `statusToken` is memory only.
+**Payment:** The page displays the server-owned amount, currency, Contract and Vehicle. Real mode uses Stripe Checkout and backend verification. DEV provider mode offers only successful payment substitution; the shared backend settlement writes the real PAID Contract. Browser redirects or local UI state never prove payment.
+
+Real Card Pay is enabled after Stripe-hosted setup has linked a saved card; the payment return page polls backend status until the attempt resolves and never treats a browser redirect or a temporary status-check failure as paid or declined. Stripe Checkout owns any customer authentication. Verified rental confirmation changes only `SIGNED → PAID`; Vehicle status and Car-Out remain unchanged.
+
+Reopening a valid rental link reconciles an active rental payment with Stripe before rendering its step. The Payment page can refresh that backend result even when the browser no longer has the short-lived in-memory status token. A temporary Stripe lookup failure leaves the attempt in flight.
 
 Link errors `CONTRACT_LINK_INVALID` / `EXPIRED` / `USED` show a branded page and hide the journey. Mobile-first (375 / 390 / 430), Arabic RTL, English LTR. Shared Button / FormBuilder / Checkbox / Card. Staff Open Link remains Development / QA preview.
 
 Frontend unit tests live under `src/modules/public-rental/**/*.test.ts`.
 
-## Demo Simulation Mode
+## Development provider substitution
 
-Frontend-only presentation overlay for customer demos when Azure OCR or Stripe is not configured. Gate: `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` (never `NODE_ENV` alone). Local `npm run dev` reads `APP/frontend/.env.development`, so teammates get Simulate without copying `.env.local`. Production builds stay off unless the host sets the flag. Module: `APP/frontend/src/modules/public-rental` stays the source UI; overlay lives in `APP/frontend/src/modules/demo-simulation/`.
+Diamond does not have a general workflow simulation anymore. The only visible DEV actions are successful Driver License OCR, successful Passport OCR, and successful Payment. They require a real Rental Link and Contract. Backend routes are registered only with `NODE_ENV !== production` and `DIAMOND_SIMULATION_ENABLED=true`; frontend controls additionally require `NEXT_PUBLIC_DIAMOND_SIMULATION=true`. The frontend flag is never authorization.
 
-- In-memory Zustand only. No `localStorage`, `sessionStorage`, cookies, persisted store, Backend write, or database mutation.
-- Real Contract / Vehicle / office / duration / agreed amount / currency remain the display authority.
-- Simulated license results, customer autofill, acceptance, and payment states never POST OCR, form, accept, or payment endpoints.
-- Visible champagne badge: Simulation Mode / وضع المحاكاة, plus Reset Simulation / إعادة ضبط المحاكاة.
-- **Driver License and Passport can both be simulated** so the full identity flow can be built and visually tested before a real OCR provider is selected:
-  - A simulated VALID license verifies the license and unlocks the passport step. EXPIRED and UNREADABLE stay blocked.
-  - In simulation, the passport photo (or Simulate → Passport ready / Not recognized) produces a normalized passport result: `DEMO CUSTOMER`, `P1234567`, `United Arab Emirates`. Retake replaces it.
-  - The overlay derives `identity` and `identityReady` with the Backend rule (VALID license AND READY passport). Continue opens the contract step only then; there is no simulation bypass.
-  - Official Contract Review gets the simulated identity through the same normalized shape (`withNormalizedIdentity`). The Backend contract service has no simulation code.
-  - Nothing is uploaded or persisted, and no OCR provider is reported as configured. Real mode keeps `DOCUMENT_OCR_PROVIDER=UNCONFIGURED` → `PROVIDER_UNAVAILABLE`. Simulated card payment can show PROCESSING → PENDING → CONFIRMED → READY_FOR_HANDOVER, or FAILED / PENDING, with demo reference `DEMO-PAY-00001` (never a Stripe PaymentIntent). Refresh restores Backend-derived state.
+DEV OCR uses the normal OCR normalization and persisted Contract identity flow. DEV payment derives the real obligation server-side, records `provider=dev_simulation`, and invokes the same locked settlement transition used by verified Stripe payment. It is idempotent and creates no Stripe ids or fake card. Review, signatures, PAID reservation, and Car-Out are real. No SIM panel, reset, session journey, or Car-Out helper remains.
+
+DEV payment mode omits the Stripe Card Setup requirement before signing because credentials are unavailable. Disabling it restores the normal Stripe setup and Checkout path without changing Contract or Vehicle logic. Stripe Test Mode still requires credentials/webhook verification.
+
+Development-only routes (absent in production): `POST /contracts/rental/:token/simulation/license`, `/passport`, and `/payment`; payment requires `Idempotency-Key`.

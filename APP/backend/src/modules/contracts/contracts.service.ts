@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
 import type { ContractStatus, OfficialContractSignatureSlot } from "@prisma/client";
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AppError } from "src/lib/errors/app-error";
 import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { writeOutboxEvent } from "src/lib/db/outbox";
@@ -11,6 +12,7 @@ import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
 import { paginate, parseSort } from "src/lib/http/pagination";
 import { normalizeEmail, normalizePhone } from "src/lib/security/normalize";
 import { resolveStoragePath } from "src/lib/files/storage-key";
+import { generateStorageKey } from "src/lib/files/storage-key";
 import { env } from "src/config/env";
 import { hashToken } from "src/lib/security/tokens";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
@@ -23,6 +25,7 @@ import {
   CONTRACT_TERMS_VERSION,
   DRIVING_LICENSE_UPLOAD_MIME,
   INSPECTION_ANGLES,
+  CAR_OUT_REQUIRED_ANGLES,
   OFFICE_DISPLAY_NAME_DEFAULT,
   PASSPORT_UPLOAD_MIME,
   VEHICLE_RENTAL_LOCK_NS,
@@ -37,7 +40,7 @@ import {
   resolveContractLink,
   revokeUnusedRenewalLinks,
 } from "src/modules/contracts/contracts-links";
-import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental-guard";
+import { assertVehicleBookableForRental, assertVehicleFreeForRental, canCarOutFromState, findBlockingContract } from "src/modules/contracts/vehicle-rental-guard";
 import { contractError } from "src/modules/contracts/contracts.errors";
 import {
   CONTRACT_DETAIL_INCLUDE,
@@ -56,6 +59,7 @@ import {
   toPublicIdentityDraft,
 } from "src/modules/contracts/contract-identity-draft";
 import { analyzeDocument } from "src/modules/document-ocr/document-ocr.service";
+import { createSimulationDocumentOcrProvider } from "src/modules/document-ocr/simulation-document-ocr.provider";
 import { derivedEndAt } from "src/modules/contracts/contracts-period";
 import {
   buildOfficialContractView,
@@ -72,13 +76,15 @@ import {
   readDamageMarks,
   SIGNATURE_UPLOAD_MIME,
 } from "src/modules/contracts/official-contract-interactive";
-import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
+import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
 import { createFilesService } from "src/modules/files/files.service";
 import type { MultipartFile } from "@fastify/multipart";
 import type {
   CarInSchema,
   CarOutSchema,
+  CarOutDraftPatchSchema,
+  CarOutPhotoQuerySchema,
   ConfirmPaymentSchema,
   ConfirmRoadLiabilityChargeSchema,
   CreateOfferInput,
@@ -99,8 +105,14 @@ import { createRoadLiabilityCustomerChargeService } from "src/modules/road-liabi
 import { loadSalikGpsSignals } from "src/modules/contracts/contract-road-liability-signals";
 import type { z } from "zod";
 import type { ListContractsQuerySchema } from "src/modules/contracts/contracts.schema";
+import { carOutReadiness } from "src/modules/contracts/car-out-evidence";
 
 const SORTABLE = ["createdAt", "contractNumber", "startAt", "endAt", "agreedAmount", "status"] as const;
+
+const SIMULATION_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
 
 function assertEightAngles(photos: { angle: string }[]): void {
   const set = new Set(photos.map((p) => p.angle));
@@ -109,6 +121,14 @@ function assertEightAngles(photos: { angle: string }[]): void {
   }
   for (const angle of INSPECTION_ANGLES) {
     if (!set.has(angle)) throw AppError.validation("Car inspection requires all 8 unique angles");
+  }
+}
+
+function assertCarOutAngles(photos: { angle: string }[]): void {
+  const present = new Set(photos.map((photo) => photo.angle));
+  if (photos.length < CAR_OUT_REQUIRED_ANGLES.length || present.size !== photos.length ||
+    CAR_OUT_REQUIRED_ANGLES.some((angle) => !present.has(angle))) {
+    throw AppError.validation("Car-Out requires all eight exterior photo angles");
   }
 }
 
@@ -153,9 +173,46 @@ export function createContractsService(fastify: FastifyInstance) {
   const customerCharges = createRoadLiabilityCustomerChargeService(fastify);
   const paymentService = createContractPaymentService(prisma);
 
+  function assertSimulationEnabled(): void {
+    if (!devPaymentSimulationEnabled()) {
+      throw AppError.forbidden("Development simulation is disabled");
+    }
+  }
+
+  async function createSimulationAttachment(
+    db: typeof prisma,
+    originalName: string,
+  ): Promise<string> {
+    const storageKey = generateStorageKey(originalName);
+    await mkdir(resolveStoragePath(env.FILE_STORAGE_DIR, ""), { recursive: true });
+    await writeFile(resolveStoragePath(env.FILE_STORAGE_DIR, storageKey), SIMULATION_PNG);
+    const attachment = await db.attachment.create({
+      data: {
+        originalName,
+        storageKey,
+        mimeType: "image/png",
+        size: SIMULATION_PNG.length,
+        checksum: createHash("sha256").update(SIMULATION_PNG).digest("hex"),
+        uploadedById: null,
+      },
+    });
+    return attachment.id;
+  }
+
   async function decorateDetail(row: Awaited<ReturnType<typeof loadDetail>>, db: typeof prisma | Tx = prisma) {
     const signals = await loadSalikGpsSignals(db, [row.id]);
-    return toDetail(row, signals.get(row.id));
+    const conflict = row.status === "PAID"
+      ? await findBlockingContract(db, row.vehicleId, row.id)
+      : null;
+    const canCarOut = canCarOutFromState({
+      status: row.status,
+      vehicleId: row.vehicleId,
+      vehicleActive: row.vehicle.isActive,
+      vehicleStatus: row.vehicle.operationalStatus,
+      hasCarOut: Boolean(row.carOut),
+      hasConflictingContract: Boolean(conflict),
+    });
+    return toDetail(row, signals.get(row.id), canCarOut);
   }
 
   function assertLicenseProgress(
@@ -249,6 +306,7 @@ export function createContractsService(fastify: FastifyInstance) {
     const endAt = input.endAt ?? derivedEndAt(startAt, input.rentalDays, startAt);
 
     return withTransaction(prisma, async (tx) => {
+      await assertVehicleBookableForRental(tx, input.vehicleId);
       const contractNumber = await allocateContractNumber(tx);
       const created = await tx.contract.create({
         data: {
@@ -314,6 +372,11 @@ export function createContractsService(fastify: FastifyInstance) {
           include: {
             vehicle: { include: { model: { select: { name: true } } } },
             customer: { select: { name: true } },
+            carOut: { select: { id: true } },
+            carOutDraft: { select: {
+              mileageOut: true, fuelOut: true, hirerSignatureAttachmentId: true,
+              photos: { select: { angle: true } },
+            } },
           },
           orderBy: { [field]: direction },
           skip,
@@ -323,10 +386,35 @@ export function createContractsService(fastify: FastifyInstance) {
           prisma,
           rows.map((row) => row.id),
         );
+        const blocking = await prisma.contract.findMany({
+          where: { vehicleId: { in: rows.map((row) => row.vehicleId) }, status: { in: ["PAID", "ACTIVE", "RETOUT"] } },
+          select: { id: true, vehicleId: true },
+        });
+        const blockingByVehicle = new Map<number, string[]>();
+        for (const item of blocking) {
+          const ids = blockingByVehicle.get(item.vehicleId) ?? [];
+          ids.push(item.id);
+          blockingByVehicle.set(item.vehicleId, ids);
+        }
         return rows.map((row) =>
           toListItem({
             ...row,
             hasSalikGpsSignal: signals.get(row.id)?.hasSalikGpsSignal ?? false,
+            carOutStatus: row.carOut ? "COMPLETED" : row.carOutDraft
+              ? carOutReadiness({
+                mileageOut: row.carOutDraft.mileageOut,
+                fuelOut: row.carOutDraft.fuelOut,
+                hasSignature: Boolean(row.carOutDraft.hirerSignatureAttachmentId),
+                photos: row.carOutDraft.photos,
+              }).ready ? "READY" : "DRAFT" : "NOT_STARTED",
+            canCarOut: canCarOutFromState({
+              status: row.status,
+              vehicleId: row.vehicleId,
+              vehicleActive: row.vehicle.isActive,
+              vehicleStatus: row.vehicle.operationalStatus,
+              hasCarOut: Boolean(row.carOut),
+              hasConflictingContract: (blockingByVehicle.get(row.vehicleId) ?? []).some((id) => id !== row.id),
+            }),
           }),
         );
       },
@@ -350,6 +438,13 @@ export function createContractsService(fastify: FastifyInstance) {
 
       if (type === "RENTAL" && !["AWAITING", "FORM", "SIGNED"].includes(contract.status)) {
         throw contractError.invalidTransition(contract.status, contract.status);
+      }
+      if (type === "RENTAL") {
+        await assertVehicleBookableForRental(tx, contract.vehicleId, contract.id);
+        const current = await tx.contract.findUnique({ where: { id: contractId }, select: { status: true } });
+        if (!current || !["AWAITING", "FORM", "SIGNED"].includes(current.status)) {
+          throw contractError.invalidTransition(current?.status ?? contract.status, contract.status);
+        }
       }
       if (type === "RETURN") {
         if (contract.status === "ACTIVE") {
@@ -447,13 +542,135 @@ export function createContractsService(fastify: FastifyInstance) {
     }
   }
 
+  async function assertCarOutDraftEligible(tx: Tx, contractId: string) {
+    const initial = await tx.contract.findUnique({ where: { id: contractId }, select: { vehicleId: true } });
+    if (!initial) throw contractError.notFound();
+    await assertVehicleFreeForRental(tx, initial.vehicleId, contractId);
+    const contract = await tx.contract.findUnique({
+      where: { id: contractId },
+      include: { vehicle: { select: { isActive: true, operationalStatus: true } }, carOut: { select: { id: true } } },
+    });
+    if (!contract) throw contractError.notFound();
+    if (!canCarOutFromState({
+      status: contract.status, vehicleId: contract.vehicleId,
+      vehicleActive: contract.vehicle.isActive, vehicleStatus: contract.vehicle.operationalStatus,
+      hasCarOut: Boolean(contract.carOut), hasConflictingContract: false,
+    })) throw contractError.invalidTransition(contract.status, "ACTIVE");
+    return contract;
+  }
+
+  async function validateOutAttachment(tx: Tx, attachmentId: string, signature = false) {
+    const attachment = await tx.attachment.findUnique({
+      where: { id: attachmentId }, select: { mimeType: true, size: true },
+    });
+    const allowed = signature ? attachment?.mimeType === "image/png"
+      : attachment?.mimeType === "image/png" || attachment?.mimeType === "image/jpeg";
+    if (!attachment || !allowed || attachment.size > env.MAX_UPLOAD_SIZE) {
+      throw AppError.validation(signature ? "OUT signature must be a valid PNG attachment" : "OUT photo must be a valid image attachment");
+    }
+  }
+
+  async function saveCarOutDraft(contractId: string, input: z.infer<typeof CarOutDraftPatchSchema>) {
+    await withTransaction(prisma, async (tx) => {
+      await assertCarOutDraftEligible(tx, contractId);
+      const signedMarks = await tx.officialContractReviewDraft.findUnique({
+        where: { contractId }, select: { damageOut: true },
+      });
+      if (input.hirerSignatureAttachmentId) {
+        await validateOutAttachment(tx, input.hirerSignatureAttachmentId, true);
+      }
+      const data = {
+        ...(input.mileageOut !== undefined ? { mileageOut: input.mileageOut } : {}),
+        ...(input.fuelOut !== undefined ? { fuelOut: input.fuelOut } : {}),
+        ...(input.damageOut !== undefined ? { damageOut: readDamageMarks(input.damageOut) as unknown as Prisma.InputJsonValue } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        ...(input.hirerSignatureAttachmentId !== undefined
+          ? { hirerSignatureAttachmentId: input.hirerSignatureAttachmentId } : {}),
+      };
+      await tx.contractCarOutDraft.upsert({
+        where: { contractId },
+        create: {
+          contractId,
+          damageOut: readDamageMarks(signedMarks?.damageOut) as unknown as Prisma.InputJsonValue,
+          ...data,
+        },
+        update: data,
+      });
+    });
+    return (await get(contractId)).carOutHandover;
+  }
+
+  async function uploadCarOutPhoto(contractId: string, angle: z.infer<typeof CarOutPhotoQuerySchema>["angle"], file: MultipartFile, actorUserId: number) {
+    await withTransaction(prisma, (tx) => assertCarOutDraftEligible(tx, contractId));
+    const attachment = await files.save(file, actorUserId, { allowedMime: ["image/png", "image/jpeg"] });
+    try {
+      await withTransaction(prisma, async (tx) => {
+        await assertCarOutDraftEligible(tx, contractId);
+        const draft = await tx.contractCarOutDraft.upsert({
+          where: { contractId }, create: { contractId }, update: {},
+        });
+        await tx.contractCarOutDraftPhoto.upsert({
+          where: { carOutDraftId_angle: { carOutDraftId: draft.id, angle } },
+          create: { carOutDraftId: draft.id, attachmentId: attachment.id, angle },
+          update: { attachmentId: attachment.id },
+        });
+      });
+    } catch (error) {
+      await files.remove(attachment.id).catch(() => undefined);
+      throw error;
+    }
+    return (await get(contractId)).carOutHandover;
+  }
+
+  async function uploadCarOutSignature(contractId: string, file: MultipartFile, actorUserId: number) {
+    await withTransaction(prisma, (tx) => assertCarOutDraftEligible(tx, contractId));
+    const attachment = await files.save(file, actorUserId, { allowedMime: SIGNATURE_UPLOAD_MIME });
+    try {
+      await withTransaction(prisma, async (tx) => {
+        await assertCarOutDraftEligible(tx, contractId);
+        await tx.contractCarOutDraft.upsert({
+          where: { contractId },
+          create: { contractId, hirerSignatureAttachmentId: attachment.id },
+          update: { hirerSignatureAttachmentId: attachment.id },
+        });
+      });
+    } catch (error) {
+      await files.remove(attachment.id).catch(() => undefined);
+      throw error;
+    }
+    return (await get(contractId)).carOutHandover;
+  }
+
+  async function openCarOutSignatureStream(contractId: string) {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      select: { carOut: { select: { hirerSignatureAttachmentId: true } },
+        carOutDraft: { select: { hirerSignatureAttachmentId: true } } },
+    });
+    if (!contract) throw contractError.notFound();
+    const id = contract.carOut?.hirerSignatureAttachmentId ?? contract.carOutDraft?.hirerSignatureAttachmentId;
+    if (!id) throw AppError.notFound("Car-Out signature not found");
+    return files.openDownload(id);
+  }
+
+  async function deleteCarOutPhoto(contractId: string, photoId: string) {
+    await withTransaction(prisma, async (tx) => {
+      await assertCarOutDraftEligible(tx, contractId);
+      const deleted = await tx.contractCarOutDraftPhoto.deleteMany({
+        where: { id: photoId, carOutDraft: { contractId } },
+      });
+      if (!deleted.count) throw AppError.notFound("Car-Out photo not found");
+    });
+    return (await get(contractId)).carOutHandover;
+  }
+
   async function carOut(
     contractId: string,
-    input: z.infer<typeof CarOutSchema>,
+    input: z.infer<typeof CarOutSchema> | undefined,
     actorUserId: number,
     idempotencyKey?: string,
   ) {
-    assertEightAngles(input.photos);
+    if (input) assertCarOutAngles(input.photos);
     const run = async () =>
       withTransaction(prisma, async (tx) => {
         const contract = await tx.contract.findUnique({
@@ -469,34 +686,72 @@ export function createContractsService(fastify: FastifyInstance) {
             }),
           );
         }
-        assertTransition(contract.status, "ACTIVE");
         await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
+        const locked = await tx.contract.findUnique({ where: { id: contractId }, include: { carOut: true } });
+        if (!locked) throw contractError.notFound();
+        if (locked.status === "ACTIVE" && locked.carOut) {
+          return decorateDetail(await tx.contract.findUniqueOrThrow({ where: { id: contractId }, include: CONTRACT_DETAIL_INCLUDE }), tx);
+        }
+        assertTransition(locked.status, "ACTIVE");
+        const vehicle = await tx.vehicle.findUnique({ where: { id: locked.vehicleId }, select: { isActive: true, operationalStatus: true } });
+        if (!canCarOutFromState({
+          status: locked.status,
+          vehicleId: locked.vehicleId,
+          vehicleActive: vehicle?.isActive ?? false,
+          vehicleStatus: vehicle?.operationalStatus ?? null,
+          hasCarOut: Boolean(locked.carOut),
+          hasConflictingContract: false,
+        })) throw contractError.vehicleNotAvailable();
 
         const confirmed = await tx.contractPayment.findFirst({
           where: { contractId, purpose: "RENTAL", status: "CONFIRMED" },
         });
         if (!confirmed) throw contractError.paymentRequired();
+        const draft = input ? null : await tx.contractCarOutDraft.findUnique({
+          where: { contractId }, include: { photos: true },
+        });
+        const mileageOut = input?.mileageOut ?? draft?.mileageOut ?? null;
+        const fuelOut = input?.fuelOut ?? draft?.fuelOut ?? null;
+        const signatureId = input?.hirerSignatureAttachmentId ?? draft?.hirerSignatureAttachmentId ?? null;
+        const photos = input?.photos ?? draft?.photos ?? [];
+        const signedMarks = await tx.officialContractReviewDraft.findUnique({
+          where: { contractId }, select: { damageOut: true },
+        });
+        const damageOut = readDamageMarks(input?.damage ?? draft?.damageOut ?? signedMarks?.damageOut);
+        if (mileageOut === null || !Number.isInteger(mileageOut) || mileageOut < 0) {
+          throw AppError.validation("Valid OUT mileage is required");
+        }
+        if (!fuelOut) throw AppError.validation("OUT fuel is required");
+        assertCarOutAngles(photos);
+        if (!signatureId) throw AppError.validation("Hirer OUT signature is required");
+        await validateOutAttachment(tx, signatureId, true);
+        for (const photo of photos) await validateOutAttachment(tx, photo.attachmentId);
 
-        const now = input.occurredAt ?? new Date();
+        const now = new Date();
         const carOutRow = await tx.contractCarOut.create({
           data: {
             contractId,
             performedByUserId: actorUserId,
             occurredAt: now,
-            mileageOut: input.mileageOut,
-            fuelOut: input.fuelOut,
-            notes: input.notes ?? null,
+            mileageOut,
+            fuelOut,
+            notes: input?.notes ?? draft?.notes ?? null,
+            vehicleId: locked.vehicleId,
+            damageOut: damageOut as unknown as Prisma.InputJsonValue,
+            hirerSignatureAttachmentId: signatureId,
           },
         });
         await tx.contractCarOutPhoto.createMany({
-          data: input.photos.map((p, i) => ({
+          data: photos.map((p, i) => ({
             carOutId: carOutRow.id,
             attachmentId: p.attachmentId,
             angle: p.angle,
             sortOrder: i,
           })),
         });
-        await persistCustodyPaper(tx, contractId, "OUT", input);
+        await persistCustodyPaper(tx, contractId, "OUT", {
+          damage: damageOut, hirerSignatureAttachmentId: signatureId,
+        });
         await tx.contract.update({
           where: { id: contractId },
           data: { status: "ACTIVE", activatedAt: now, revision: { increment: 1 } },
@@ -521,13 +776,7 @@ export function createContractsService(fastify: FastifyInstance) {
         scope: `contract:car-out:${contractId}`,
         key: idempotencyKey,
         fingerprint: fingerprintIdempotentPayload({
-          mileageOut: input.mileageOut,
-          fuelOut: input.fuelOut,
-          notes: input.notes ?? null,
-          occurredAt: input.occurredAt?.toISOString() ?? null,
-          photos: input.photos,
-          damage: input.damage ?? null,
-          hirerSignatureAttachmentId: input.hirerSignatureAttachmentId ?? null,
+          input: input ?? { mode: "saved-draft" },
         }),
       },
       run,
@@ -1284,6 +1533,76 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
+  /** DEV-only OCR substitution on a real rental link and persisted contract. */
+  async function simulateDrivingLicense(token: string) {
+    assertSimulationEnabled();
+    const preview = await resolveContractLink(prisma, token, "RENTAL");
+    const attachmentId = await createSimulationAttachment(prisma, "dev-driving-license.png");
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_LICENSE_LOCK_NS, preview.contractId);
+      const contract = await tx.contract.findUnique({ where: { id: preview.contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status !== "AWAITING" && contract.status !== "FORM") {
+        throw contractError.invalidTransition(contract.status, contract.status);
+      }
+      await tx.contractDocument.updateMany({
+        where: { contractId: contract.id, type: "DRIVING_LICENSE", supersededAt: null },
+        data: { supersededAt: new Date() },
+      });
+      const document = await tx.contractDocument.create({
+        data: { contractId: contract.id, type: "DRIVING_LICENSE", attachmentId },
+      });
+      const ocr = await analyzeDrivingLicenseDocumentWithProvider(
+        createSimulationDocumentOcrProvider(),
+      );
+      const evaluated = evaluateDrivingLicenseOcr(
+        ocr,
+        new Date(),
+        env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
+      );
+      await tx.drivingLicenseVerification.create({
+        data: {
+          contractId: contract.id,
+          documentId: document.id,
+          attachmentId,
+          status: evaluated.status,
+          licenseNumber: evaluated.licenseNumber,
+          expiryDate: evaluated.expiryDate,
+          confidence: evaluated.confidence,
+          provider: evaluated.provider,
+          providerVersion: evaluated.providerVersion,
+          verifiedAt: new Date(),
+        },
+      });
+      await emit(tx, "contract.license_simulated", contract.id, { documentId: document.id, dedupe: document.id });
+      return loadPublicRental(tx, contract.id);
+    });
+  }
+
+  async function analyzeDrivingLicenseDocumentWithProvider(provider: ReturnType<typeof createSimulationDocumentOcrProvider>) {
+    return analyzeDrivingLicenseDocumentWithBytes(provider);
+  }
+
+  async function analyzeDrivingLicenseDocumentWithBytes(provider: ReturnType<typeof createSimulationDocumentOcrProvider>) {
+    const outcome = await analyzeDocument("DRIVER_LICENSE", { bytes: SIMULATION_PNG, mimeType: "image/png" }, provider);
+    if (!outcome.ok) {
+      return { ok: false as const, reason: "UNREADABLE" as const, provider: outcome.provider, providerVersion: outcome.providerVersion ?? undefined };
+    }
+    return {
+      ok: true as const,
+      licenseNumber: outcome.result.driverLicenseNumber,
+      expiryDate: outcome.result.driverLicenseExpiryDate,
+      holderName: outcome.result.fullName,
+      confidence: outcome.result.confidence,
+      fieldConfidences: {
+        licenseNumber: outcome.result.fieldConfidence.driverLicenseNumber,
+        expiryDate: outcome.result.fieldConfidence.driverLicenseExpiryDate,
+      },
+      provider: outcome.provider,
+      providerVersion: outcome.providerVersion ?? undefined,
+    };
+  }
+
   /**
    * Passport capture. Context comes only from the token. Requires the current
    * driving license to be VALID. OCR runs outside any transaction; the result
@@ -1365,6 +1684,68 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
+  /** DEV-only passport OCR substitution on the same persisted contract. */
+  async function simulatePassport(token: string) {
+    assertSimulationEnabled();
+    const preview = await resolveContractLink(prisma, token, "RENTAL");
+    const attachmentId = await createSimulationAttachment(prisma, "dev-passport.png");
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, preview.contractId);
+      const contract = await tx.contract.findUnique({ where: { id: preview.contractId } });
+      if (!contract) throw contractError.notFound();
+      if (contract.status !== "AWAITING" && contract.status !== "FORM") {
+        throw contractError.invalidTransition(contract.status, contract.status);
+      }
+      const license = await latestLicense(tx, contract.id);
+      if (license?.status !== "VALID") throw contractError.passportLicenseRequired();
+      await tx.contractDocument.updateMany({
+        where: { contractId: contract.id, type: "PASSPORT", supersededAt: null },
+        data: { supersededAt: new Date() },
+      });
+      const document = await tx.contractDocument.create({
+        data: { contractId: contract.id, type: "PASSPORT", attachmentId },
+      });
+      const extraction = await tx.passportExtraction.create({
+        data: { contractId: contract.id, documentId: document.id, attachmentId, status: "PROCESSING" },
+      });
+      const evaluated = evaluatePassportOcr(
+        await analyzeDocument(
+          "PASSPORT",
+          { bytes: SIMULATION_PNG, mimeType: "image/png" },
+          createSimulationDocumentOcrProvider(),
+        ),
+      );
+      const { status, ...fields } = evaluated;
+      await tx.passportExtraction.update({
+        where: { id: extraction.id },
+        data: { ...fields, status, completedAt: new Date() },
+      });
+      await emit(tx, "contract.passport_simulated", contract.id, { extractionId: extraction.id, dedupe: extraction.id });
+      return loadPublicRental(tx, contract.id);
+    });
+  }
+
+  /** DEV-only provider signal; settlement uses the same domain settlement path as Stripe. */
+  async function simulatePayment(token: string, idempotencyKey: string) {
+    assertSimulationEnabled();
+    if (!idempotencyKey.trim()) throw contractError.paymentIdempotencyRequired();
+    const run = async () => {
+      const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
+      await paymentService.simulateSuccessfulPayment(link.contractId);
+      return withTransaction(prisma, (tx) => loadPublicRental(tx, link.contractId));
+    };
+    const outcome = await runIdempotent(prisma, {
+      scope: `contract:dev-payment:${hashToken(token)}`,
+      key: idempotencyKey,
+      fingerprint: fingerprintIdempotentPayload({ method: "DEV_SIMULATION" }),
+    }, run);
+    if (outcome.deduped) {
+      const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
+      return withTransaction(prisma, (tx) => loadPublicRental(tx, link.contractId));
+    }
+    return outcome.result!;
+  }
+
   async function loadOfficialContract(
     tx: Parameters<Parameters<typeof withTransaction>[1]>[0],
     contractId: string,
@@ -1376,6 +1757,7 @@ export function createContractsService(fastify: FastifyInstance) {
     if (!row) throw contractError.notFound();
     return buildOfficialContractView(row, {
       officeDisplayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT,
+      requiresCardSetupBeforeSigning: requiresCardSetupBeforeSigning(),
     }).view;
   }
 
@@ -1530,6 +1912,7 @@ export function createContractsService(fastify: FastifyInstance) {
       });
       const { view } = buildOfficialContractView(row, {
         officeDisplayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT,
+        requiresCardSetupBeforeSigning: requiresCardSetupBeforeSigning(),
       });
       if (!view.permissions.canSign) {
         throw contractError.officialContractIncomplete(view.permissions.missingRequirements);
@@ -1638,6 +2021,19 @@ export function createContractsService(fastify: FastifyInstance) {
   }
 
   async function getPublicRental(token: string) {
+    try {
+      await withTransaction(prisma, async (tx) => {
+        const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
+        const activePayment = await tx.contractPayment.findFirst({
+          where: { contractId: link.contractId, purpose: "RENTAL", status: { in: ["PENDING", "PROCESSING"] } },
+          orderBy: { createdAt: "desc" },
+        });
+        if (activePayment) await paymentService.applyProviderPaymentStatus(tx, activePayment.id);
+      });
+    } catch {
+      // A failed Stripe lookup must roll back its whole transaction. The page
+      // remains readable and keeps the attempt in flight for later recovery.
+    }
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
       return loadPublicRental(tx, link.contractId);
@@ -1673,6 +2069,7 @@ export function createContractsService(fastify: FastifyInstance) {
   }
 
   async function startCardPayment(token: string, idempotencyKey?: string) {
+    if (!idempotencyKey?.trim()) throw contractError.paymentIdempotencyRequired();
     const run = async () => {
       const link = await resolveContractLink(prisma, token, "RENTAL");
       const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
@@ -1687,6 +2084,12 @@ export function createContractsService(fastify: FastifyInstance) {
         targetId: contract.id,
         validate: async (tx, obligation) => {
           if (obligation.amount <= 0) throw contractError.paymentNotAllowed();
+          const card = await tx.contractCardPaymentMethod.findUnique({
+            where: { contractId: obligation.contractId },
+          });
+          if (!card?.stripeCustomerId || !card.stripePaymentMethodId || !/^\d{4}$/.test(card.cardLast4)) {
+            throw contractError.paymentNotAllowed();
+          }
         },
       });
       return {
@@ -1702,7 +2105,6 @@ export function createContractsService(fastify: FastifyInstance) {
       };
     };
 
-    if (!idempotencyKey) return run();
     const outcome = await runIdempotent(
       prisma,
       {
@@ -1738,7 +2140,7 @@ export function createContractsService(fastify: FastifyInstance) {
     const link = await resolveContractLink(prisma, token, "RENTAL");
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
-    if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+    if (!["AWAITING", "FORM", "SIGNED"].includes(contract.status)) throw contractError.paymentNotAllowed();
     const saved = await prisma.contractCardPaymentMethod.findUnique({
       where: { contractId: contract.id },
     });
@@ -1757,7 +2159,7 @@ export function createContractsService(fastify: FastifyInstance) {
     const link = await resolveContractLink(prisma, token, "RENTAL");
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
-    if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+    if (!["AWAITING", "FORM", "SIGNED"].includes(contract.status)) throw contractError.paymentNotAllowed();
     const result = await paymentService.processCardSetupReturn({
       contractId: contract.id,
       providerReference: setupSessionId,
@@ -1915,8 +2317,12 @@ export function createContractsService(fastify: FastifyInstance) {
     photoId: string,
   ) {
     if (side === "out") {
-      const photo = await prisma.contractCarOutPhoto.findFirst({
+      const completedPhoto = await prisma.contractCarOutPhoto.findFirst({
         where: { id: photoId, carOut: { contractId } },
+        include: { attachment: true },
+      });
+      const photo = completedPhoto ?? await prisma.contractCarOutDraftPhoto.findFirst({
+        where: { id: photoId, carOutDraft: { contractId } },
         include: { attachment: true },
       });
       if (!photo) throw AppError.notFound("Contract photo not found");
@@ -1947,6 +2353,11 @@ export function createContractsService(fastify: FastifyInstance) {
     generateLink,
     confirmPayment,
     carOut,
+    saveCarOutDraft,
+    uploadCarOutPhoto,
+    uploadCarOutSignature,
+    deleteCarOutPhoto,
+    openCarOutSignatureStream,
     submitPublicForm,
     acceptPublic,
     carIn,
@@ -1960,7 +2371,9 @@ export function createContractsService(fastify: FastifyInstance) {
     getPublic,
     getPublicRental,
     uploadDrivingLicense,
+    simulateDrivingLicense,
     uploadPassport,
+    simulatePassport,
     getPublicIdentityDraft,
     getPublicOfficialContract,
     updatePublicOfficialContractReview,
@@ -1973,6 +2386,7 @@ export function createContractsService(fastify: FastifyInstance) {
     startCardPayment,
     startCardLink,
     completeCardLink,
+    simulatePayment,
     startReconciliationPayment,
     startPostClosePayment,
     startRenewalPaymentPublic,

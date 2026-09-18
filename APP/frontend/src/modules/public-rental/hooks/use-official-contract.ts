@@ -35,5 +35,6 @@ export function useOfficialContract(token: string, enabled: boolean) {
     setSignature: store.setSignature,
     save: store.save,
     sign: store.sign,
+    reset: store.reset,
   };
 }

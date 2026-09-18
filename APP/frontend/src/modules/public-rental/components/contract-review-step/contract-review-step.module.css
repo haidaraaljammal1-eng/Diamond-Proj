@@ -118,3 +118,4 @@
     flex: 1 1 auto;
   }
 }
+.cardLink { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--diamond-muted); font-size: 12px; }

@@ -13,7 +13,7 @@ import {
   maskLicenseNumber,
 } from "src/modules/contracts/driving-license-policy";
 import { fleetVehicleTypeLabel, vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
-import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
+import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import type { PublicRentalContextSchema } from "src/modules/contracts/contracts.schema";
 import type { z } from "zod";
 
@@ -133,10 +133,17 @@ export function toPublicRentalContext(
       amount: payment?.amount ?? row.agreedAmount,
       currency: row.currency,
       providerAvailable: createPaymentProvider().configured,
+      devSimulationAvailable: devPaymentSimulationEnabled(),
+      requiresCardSetupBeforeSigning: requiresCardSetupBeforeSigning(),
       // Safe Stripe-derived card reference (never PAN/CVV). Shows the saved
       // card state after the free Stripe-hosted card-linking step.
-      cardLast4: row.cardPaymentMethod?.cardLast4 ?? null,
-      cardBrand: row.cardPaymentMethod?.cardBrand ?? null,
+      cardLast4: row.cardPaymentMethod?.provider === "stripe" ? row.cardPaymentMethod.cardLast4 : null,
+      cardBrand: row.cardPaymentMethod?.provider === "stripe" ? row.cardPaymentMethod.cardBrand : null,
+      cardReady: Boolean(
+        row.cardPaymentMethod?.provider === "stripe" &&
+        row.cardPaymentMethod.stripeCustomerId && row.cardPaymentMethod.stripePaymentMethodId &&
+        /^\d{4}$/.test(row.cardPaymentMethod.cardLast4),
+      ),
     },
   };
 }
