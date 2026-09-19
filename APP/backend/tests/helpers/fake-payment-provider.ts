@@ -247,6 +247,34 @@ export async function sendTestStripeWebhook(
   });
 }
 
+/**
+ * Links a card through the real public card-link flow (setup session, then the
+ * browser return validated server-side), backed by the fake provider. Rental
+ * payment requires a linked card, so helpers that pay must call this first.
+ */
+export async function linkCardViaFakeProvider(
+  app: FastifyInstance,
+  payments: ReturnType<typeof createFakePaymentProvider>,
+  rentalToken: string,
+  contractId: string,
+) {
+  const started = await app.inject({ method: "POST", url: `/contracts/rental/${rentalToken}/card-link` });
+  assert.equal(started.statusCode, 200, started.body);
+  const event = payments.buildCardSetupWebhookEvent({
+    contractId,
+    stripeCustomerId: `cus_test_${contractId}`,
+    stripePaymentMethodId: `pm_test_${contractId}`,
+    cardBrand: "visa",
+    cardLast4: "4242",
+  });
+  const returned = await app.inject({
+    method: "GET",
+    url: `/contracts/rental/${rentalToken}/card-link/return?setupSessionId=${event.providerReference}`,
+  });
+  assert.equal(returned.statusCode, 200, returned.body);
+  assert.equal(returned.json().data.status, "CONFIRMED");
+}
+
 export async function confirmRentalPaymentViaStatusToken(
   app: FastifyInstance,
   payments: ReturnType<typeof createFakePaymentProvider>,

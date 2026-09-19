@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
 import { usePublicReturn } from "../../hooks/use-public-return";
-import { isReturnReceivedStatus } from "../../utils/return-view";
+import { canConfirmReturn, isReturnConfirmedStatus, isReturnReceivedStatus } from "../../utils/return-view";
 import {
   isReturnLinkGoneReason,
   publicReturnErrorReason,
@@ -67,6 +67,9 @@ export function PublicReturnScreen({ token }: PublicReturnScreenProps) {
 
   const view = ret.view;
   const received = isReturnReceivedStatus(view.status);
+  const confirmable = canConfirmReturn(view.status);
+  const confirmed = isReturnConfirmedStatus(view.status);
+  const title = received ? t("receivedTitle") : confirmed ? t("confirmedTitle") : t("title");
   const money = `${format.number(view.agreedAmount)} ${view.currency}`;
   const returnAt = view.endAt
     ? format.dateTime(new Date(view.endAt), { dateStyle: "medium", timeStyle: "short" })
@@ -77,7 +80,7 @@ export function PublicReturnScreen({ token }: PublicReturnScreenProps) {
       <div className={styles.shell}>
         <ReturnHeader officeName={view.office.displayName} />
         <Card>
-          <h1 className={styles.title}>{received ? t("receivedTitle") : t("title")}</h1>
+          <h1 className={styles.title}>{title}</h1>
           <dl className={styles.facts}>
             <div>
               <dt>{t("office")}</dt>
@@ -108,9 +111,24 @@ export function PublicReturnScreen({ token }: PublicReturnScreenProps) {
               <dd>{money}</dd>
             </div>
           </dl>
-          <p className={styles.instructions}>
-            {received ? t("receivedBody") : t("instructions")}
-          </p>
+          {confirmable ? (
+            <div className={styles.confirm}>
+              <p className={styles.instructions}>{t("activeBody")}</p>
+              <p className={styles.hint}>{t("extendHint")}</p>
+              {ret.confirmError ? (
+                <p className={styles.error} role="alert">
+                  {resolvePublicReturnErrorMessage(errorTranslator(t), ret.confirmError)}
+                </p>
+              ) : null}
+              <Button type="button" size="lg" loading={ret.confirming} onClick={() => void ret.confirm()}>
+                {t("confirmReturn")}
+              </Button>
+            </div>
+          ) : (
+            <p className={styles.instructions}>
+              {received ? t("receivedBody") : t("instructions")}
+            </p>
+          )}
         </Card>
       </div>
     </div>

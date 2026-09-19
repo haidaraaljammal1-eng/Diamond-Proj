@@ -563,7 +563,7 @@ if (!RUN) {
     });
     assert.equal(blockedPaidDeactivate.statusCode, 409);
 
-    const outPhotos = await dummyPhotos();
+    const outPhotos = await dummyPhotos(CAR_OUT_REQUIRED_ANGLES);
     const carOut = await app.inject({
       method: "POST",
       url: `/contracts/${contractId}/car-out`,
@@ -573,6 +573,9 @@ if (!RUN) {
         fuelOut: "F",
         photos: outPhotos,
         damage: [{ zone: "TOP.HOOD", type: "SCRATCH" }],
+        hirerSignatureAttachmentId: (await prisma.attachment.create({
+          data: { originalName: "out-signature.png", storageKey: `ct-life-sig-${run}.png`, mimeType: "image/png", size: 8 },
+        })).id,
       },
     });
     assert.equal(carOut.statusCode, 200, carOut.body);
@@ -627,7 +630,23 @@ if (!RUN) {
       url: `/contracts/return/${returnToken}`,
     });
     assert.equal(publicReturn.statusCode, 200, publicReturn.body);
-    assert.equal(publicReturn.json().data.status, "RETOUT");
+    // Issuing and opening the link does not start the return.
+    assert.equal(publicReturn.json().data.status, "ACTIVE");
+    const stillActive = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+    assert.equal(stillActive.json().data.status, "ACTIVE");
+    assert.equal(stillActive.json().data.actions.canRenew, true);
+    assert.equal(stillActive.json().data.actions.canCarIn, false);
+    const earlyCarIn = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/car-in`,
+      headers: auth(),
+      payload: { mileageIn: 1400, fuelIn: "1/2", photos: await dummyPhotos() },
+    });
+    assert.equal(earlyCarIn.statusCode, 409, earlyCarIn.body);
+
+    const confirmReturn = await app.inject({ method: "POST", url: `/contracts/return/${returnToken}/confirm` });
+    assert.equal(confirmReturn.statusCode, 200, confirmReturn.body);
+    assert.equal(confirmReturn.json().data.status, "RETOUT");
     assert.equal(publicReturn.json().data.id, undefined);
     assert.equal(typeof publicReturn.json().data.office.displayName, "string");
     assert.ok(publicReturn.json().data.office.displayName.length > 0);
@@ -648,6 +667,15 @@ if (!RUN) {
     });
     assert.equal(retoutDetail.json().data.status, "RETOUT");
     assert.equal(retoutDetail.json().data.actions.canCarIn, true);
+    assert.equal(retoutDetail.json().data.actions.canRenew, false);
+    const retoutList = await app.inject({
+      method: "GET",
+      url: `/contracts?search=${retoutDetail.json().data.contractNumber}`,
+      headers: auth(),
+    });
+    const retoutRow = (retoutList.json().data as Array<{ id: string; actions: { canCarIn: boolean } }>)
+      .find((row) => row.id === contractId);
+    assert.equal(retoutRow?.actions.canCarIn, true);
     assert.equal(retoutDetail.json().data.vehicle.operationalStatus, "RENTED");
 
     const closeOnRetout = await app.inject({
@@ -917,12 +945,19 @@ if (!RUN) {
         createdByUserId: actor.id,
       },
     });
-    const photos = await dummyPhotos();
+    const photos = await dummyPhotos(CAR_OUT_REQUIRED_ANGLES);
     const out = await app.inject({
       method: "POST",
       url: `/contracts/${next.id}/car-out`,
       headers: auth(),
-      payload: { mileageOut: 50, fuelOut: "F", photos },
+      payload: {
+        mileageOut: 50,
+        fuelOut: "F",
+        photos,
+        hirerSignatureAttachmentId: (await prisma.attachment.create({
+          data: { originalName: "out-signature.png", storageKey: `ct-next-sig-${run}.png`, mimeType: "image/png", size: 8 },
+        })).id,
+      },
     });
     assert.equal(out.statusCode, 200, out.body);
     const rented = await app.inject({ method: "GET", url: `/vehicles/${vid}`, headers: auth() });

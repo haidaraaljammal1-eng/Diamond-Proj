@@ -305,7 +305,7 @@ export const ContractListItemSchema = z.object({
   endAt: z.date().nullable(),
   createdAt: z.date(),
   hasSalikGpsSignal: z.boolean(),
-  actions: z.object({ canCarOut: z.boolean() }),
+  actions: z.object({ canCarOut: z.boolean(), canCarIn: z.boolean() }),
   carOutStatus: z.enum(["NOT_STARTED", "DRAFT", "READY", "COMPLETED"]),
 });
 

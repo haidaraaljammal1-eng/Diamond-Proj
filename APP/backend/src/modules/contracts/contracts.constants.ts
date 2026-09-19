@@ -20,6 +20,8 @@ export const CONTRACT_LICENSE_LOCK_NS = "contract_license";
 export const CONTRACT_PASSPORT_LOCK_NS = "contract_passport";
 export const CONTRACT_OFFICIAL_REVIEW_LOCK_NS = "contract_official_review";
 export const CONTRACT_RECONCILE_LOCK_NS = "contract_reconcile";
+/** Serialises ACTIVE-phase decisions on one contract: return confirmation vs renewal. */
+export const CONTRACT_LIFECYCLE_LOCK_NS = "contract_lifecycle";
 export const ROAD_LIABILITY_CHARGE_LOCK_NS = "road_liability_charge";
 
 export const PUBLIC_RENTAL_FLOW_STEPS = [

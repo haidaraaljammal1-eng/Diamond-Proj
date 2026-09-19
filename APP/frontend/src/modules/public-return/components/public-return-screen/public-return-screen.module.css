@@ -53,6 +53,25 @@
   line-height: 1.7;
 }
 
+.confirm {
+  display: grid;
+  gap: 12px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--diamond-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.error {
+  margin: 0;
+  color: var(--diamond-danger);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .loading {
   display: grid;
   place-items: center;

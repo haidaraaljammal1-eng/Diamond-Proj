@@ -76,6 +76,7 @@ export function toListItem(row: {
   hasSalikGpsSignal?: boolean;
   canCarOut: boolean;
   carOutStatus: ContractListItem["carOutStatus"];
+  carIn?: { id: string } | null;
 }): ContractListItem {
   return {
     id: row.id,
@@ -94,7 +95,8 @@ export function toListItem(row: {
     endAt: row.endAt,
     createdAt: row.createdAt,
     hasSalikGpsSignal: row.hasSalikGpsSignal ?? false,
-    actions: { canCarOut: row.canCarOut },
+    // Same rule as the detail `actions.canCarIn`.
+    actions: { canCarOut: row.canCarOut, canCarIn: row.status === "RETOUT" && !row.carIn },
     carOutStatus: row.carOutStatus,
   };
 }

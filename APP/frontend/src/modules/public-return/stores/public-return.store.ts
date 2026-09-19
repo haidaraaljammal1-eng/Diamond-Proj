@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
-import { getPublicReturn } from "../api/public-return.api";
+import { confirmPublicReturn, getPublicReturn } from "../api/public-return.api";
 import type {
   PublicReturnLoadStatus,
   PublicReturnView,
@@ -15,7 +15,10 @@ interface PublicReturnState {
   view: PublicReturnView | null;
   status: PublicReturnLoadStatus;
   error: ApiRequestError | null;
+  confirming: boolean;
+  confirmError: ApiRequestError | null;
   load: (token: string) => Promise<void>;
+  confirm: () => Promise<void>;
   reset: () => void;
 }
 
@@ -24,9 +27,11 @@ const empty = {
   view: null as PublicReturnView | null,
   status: "idle" as PublicReturnLoadStatus,
   error: null as ApiRequestError | null,
+  confirming: false,
+  confirmError: null as ApiRequestError | null,
 };
 
-export const usePublicReturnStore = create<PublicReturnState>((set) => ({
+export const usePublicReturnStore = create<PublicReturnState>((set, get) => ({
   ...empty,
 
   async load(token: string) {
@@ -40,6 +45,19 @@ export const usePublicReturnStore = create<PublicReturnState>((set) => ({
         status: "error",
         error: normalizeApiError(error),
       });
+    }
+  },
+
+  async confirm() {
+    const { token, confirming } = get();
+    if (!token || confirming) return;
+    set({ confirming: true, confirmError: null });
+    try {
+      // The Backend view is authoritative; never flip status locally.
+      const view = await confirmPublicReturn(token);
+      set({ view, confirming: false });
+    } catch (error) {
+      set({ confirming: false, confirmError: normalizeApiError(error) });
     }
   },
 

@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { CAR_OUT_REQUIRED_ANGLES, INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
+  linkCardViaFakeProvider,
 } from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
 
@@ -95,7 +96,7 @@ if (!RUN) {
       await seedReadyIdentity(app, rentalToken, { licenseNumber: "DL-RN", expiryDate: "2030-01-01" });
     }
 
-    async function dummyPhotos() {
+    async function dummyPhotos(angles: readonly string[] = INSPECTION_ANGLES) {
       const ids: string[] = [];
       for (let i = 0; i < 8; i++) {
         seq += 1;
@@ -109,7 +110,15 @@ if (!RUN) {
         });
         ids.push(row.id);
       }
-      return INSPECTION_ANGLES.map((angle, i) => ({ attachmentId: ids[i]!, angle }));
+      return angles.map((angle, i) => ({ attachmentId: ids[i]!, angle }));
+    }
+
+    async function outSignature() {
+      seq += 1;
+      const row = await prisma.attachment.create({
+        data: { originalName: "out-signature.png", storageKey: `rn-${run}-${seq}-sig.png`, mimeType: "image/png", size: 8 },
+      });
+      return row.id;
     }
 
     async function createActiveContract() {
@@ -165,12 +174,13 @@ if (!RUN) {
       seq += 1;
       const payments = createFakePaymentProvider(`${run}-${seq}`);
       setPaymentProviderForTests(payments.provider);
+      await linkCardViaFakeProvider(app, payments, rentalToken, contractId);
       await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `rn-pay-${contractId}`);
       const carOut = await app.inject({
         method: "POST",
         url: `/contracts/${contractId}/car-out`,
         headers: auth(),
-        payload: { mileageOut: 1000, fuelOut: "F", photos: await dummyPhotos() },
+        payload: { mileageOut: 1000, fuelOut: "F", photos: await dummyPhotos(CAR_OUT_REQUIRED_ANGLES), hirerSignatureAttachmentId: await outSignature() },
       });
       assert.equal(carOut.statusCode, 200, carOut.body);
       assert.equal(carOut.json().data.status, "ACTIVE");
@@ -362,8 +372,40 @@ if (!RUN) {
       assert.equal(reloaded.json().data.renewal.confirmed, true);
     });
 
-    test("non-ACTIVE contract cannot confirm a previously issued renewal", async () => {
-      const { contractId } = await createActiveContract();
+    test("issuing a return link keeps the contract ACTIVE and renewable", async () => {
+      const { contractId, vehicleId } = await createActiveContract();
+      const returned = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/return-link`,
+        headers: auth(),
+      });
+      assert.equal(returned.statusCode, 200, returned.body);
+
+      const detail = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      assert.equal(detail.json().data.status, "ACTIVE");
+      assert.equal(detail.json().data.actions.canRenew, true);
+      assert.equal(detail.json().data.actions.canGenerateReturnLink, true);
+      assert.equal(detail.json().data.actions.canCarIn, false);
+      assert.equal(detail.json().data.vehicle.operationalStatus, "RENTED");
+      const vehicle = await app.inject({ method: "GET", url: `/vehicles/${vehicleId}`, headers: auth() });
+      assert.equal(vehicle.json().data.operationalStatus, "rented");
+
+      // Accidental link, then the hirer asks to extend: renewal still works.
+      const issued = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renewal-link`,
+        headers: auth(),
+        payload: { additionalDays: 2, additionalAmount: 300 },
+      });
+      assert.equal(issued.statusCode, 200, issued.body);
+      const renewToken = issued.json().data.link.token as string;
+      const confirm = await app.inject({ method: "POST", url: `/contracts/renew/${renewToken}/confirm`, payload: {} });
+      assert.equal(confirm.statusCode, 200, confirm.body);
+      assert.equal(confirm.json().data.status, "ACTIVE");
+    });
+
+    test("a confirmed return blocks a previously issued renewal", async () => {
+      const { contractId, vehicleId } = await createActiveContract();
       const issued = await app.inject({
         method: "POST",
         url: `/contracts/${contractId}/renewal-link`,
@@ -376,14 +418,133 @@ if (!RUN) {
         url: `/contracts/${contractId}/return-link`,
         headers: auth(),
       });
-      assert.equal(returned.statusCode, 200, returned.body);
-      const confirm = await app.inject({
+      const returnToken = returned.json().data.link.token as string;
+
+      const confirmReturn = await app.inject({ method: "POST", url: `/contracts/return/${returnToken}/confirm` });
+      assert.equal(confirmReturn.statusCode, 200, confirmReturn.body);
+      assert.equal(confirmReturn.json().data.status, "RETOUT");
+      const again = await app.inject({ method: "POST", url: `/contracts/return/${returnToken}/confirm` });
+      assert.equal(again.statusCode, 200, again.body);
+      assert.equal(again.json().data.status, "RETOUT");
+
+      const detail = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      assert.equal(detail.json().data.status, "RETOUT");
+      assert.equal(detail.json().data.actions.canRenew, false);
+      assert.equal(detail.json().data.actions.canCarIn, true);
+      assert.equal(detail.json().data.vehicle.operationalStatus, "RENTED");
+      const vehicle = await app.inject({ method: "GET", url: `/vehicles/${vehicleId}`, headers: auth() });
+      assert.equal(vehicle.json().data.operationalStatus, "rented");
+
+      const confirmRenewal = await app.inject({ method: "POST", url: `/contracts/renew/${renewToken}/confirm`, payload: {} });
+      assert.ok(confirmRenewal.statusCode >= 400 && confirmRenewal.statusCode < 500, confirmRenewal.body);
+      const staffRenew = await app.inject({
         method: "POST",
-        url: `/contracts/renew/${renewToken}/confirm`,
-        payload: {},
+        url: `/contracts/${contractId}/renew`,
+        headers: auth(),
+        payload: { additionalDays: 1, additionalAmount: 100 },
       });
-      assert.equal(confirm.statusCode, 409, confirm.body);
-      assert.equal(confirm.json().error.context.reason, "CONTRACT_INVALID_TRANSITION");
+      assert.equal(staffRenew.statusCode, 409, staffRenew.body);
+    });
+
+    test("return confirmation racing a renewal leaves one consistent state", async () => {
+      const { contractId } = await createActiveContract();
+      const returned = await app.inject({ method: "POST", url: `/contracts/${contractId}/return-link`, headers: auth() });
+      const returnToken = returned.json().data.link.token as string;
+      const [confirm, renew] = await Promise.all([
+        app.inject({ method: "POST", url: `/contracts/return/${returnToken}/confirm` }),
+        app.inject({
+          method: "POST",
+          url: `/contracts/${contractId}/renew`,
+          headers: auth(),
+          payload: { additionalDays: 1, additionalAmount: 100 },
+        }),
+      ]);
+      assert.equal(confirm.statusCode, 200, confirm.body);
+      const final = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      assert.equal(final.json().data.status, "RETOUT");
+      // Renewal either committed first (while ACTIVE) or was refused after RETOUT.
+      assert.ok(renew.statusCode === 200 || renew.statusCode === 409, renew.body);
+    });
+
+    async function startRenewalPayment(contractId: string, label: string) {
+      const payments = createFakePaymentProvider(`${run}-${label}`);
+      setPaymentProviderForTests(payments.provider);
+      const issued = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renewal-link`,
+        headers: auth(),
+        payload: { additionalDays: 4, additionalAmount: 700 },
+      });
+      assert.equal(issued.statusCode, 200, issued.body);
+      const renewToken = issued.json().data.link.token as string;
+      const confirm = await app.inject({ method: "POST", url: `/contracts/renew/${renewToken}/confirm`, payload: {} });
+      assert.equal(confirm.statusCode, 200, confirm.body);
+      const payStart = await app.inject({ method: "POST", url: `/contracts/renew/${renewToken}/payment` });
+      assert.equal(payStart.statusCode, 200, payStart.body);
+      return { payments, statusToken: payStart.json().data.statusToken as string };
+    }
+
+    async function confirmReturnViaLink(contractId: string) {
+      const link = await app.inject({ method: "POST", url: `/contracts/${contractId}/return-link`, headers: auth() });
+      assert.equal(link.statusCode, 200, link.body);
+      const returnToken = link.json().data.link.token as string;
+      const confirmed = await app.inject({ method: "POST", url: `/contracts/return/${returnToken}/confirm` });
+      assert.equal(confirmed.statusCode, 200, confirmed.body);
+      assert.equal(confirmed.json().data.status, "RETOUT");
+    }
+
+    test("an in-flight renewal payment never extends a contract whose return was confirmed", async () => {
+      const { contractId, vehicleId } = await createActiveContract();
+      const { payments, statusToken } = await startRenewalPayment(contractId, "race-return-first");
+
+      // The hirer confirms the return while the renewal payment is still pending.
+      await confirmReturnViaLink(contractId);
+
+      // The provider then reports the renewal payment as captured.
+      payments.confirm();
+      const payStatus = await app.inject({ method: "GET", url: `/contracts/payments/status/${statusToken}` });
+      assert.equal(payStatus.statusCode, 200, payStatus.body);
+      assert.equal(payStatus.json().data.status, "CONFIRMED", "captured money stays recorded");
+
+      const detail = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      assert.equal(detail.json().data.status, "RETOUT", "no rollback to ACTIVE");
+      assert.equal(detail.json().data.rentalDays, 3, "no extension applied");
+      assert.equal(detail.json().data.agreedAmount, 1500);
+      assert.equal(detail.json().data.actions.canRenew, false);
+      assert.equal(detail.json().data.vehicle.operationalStatus, "RENTED");
+
+      const renewals = await prisma.contractRenewal.findMany({ where: { contractId } });
+      assert.equal(renewals.length, 1, "no duplicate renewal record");
+      assert.equal(renewals[0]?.appliedAt, null);
+      assert.equal(await prisma.contractPayment.count({ where: { contractId, purpose: "RENEWAL" } }), 1, "no second attempt");
+      const notice = await prisma.domainOutboxEvent.count({ where: { aggregateId: contractId, eventType: "contract.renewal_not_applied" } });
+      assert.equal(notice, 1, "staff are told the captured renewal was not applied");
+
+      // Replaying the provider status does not apply it later either.
+      const replay = await app.inject({ method: "GET", url: `/contracts/payments/status/${statusToken}` });
+      assert.equal(replay.json().data.status, "CONFIRMED");
+      const after = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      assert.equal(after.json().data.rentalDays, 3);
+      assert.equal(after.json().data.status, "RETOUT");
+      const vehicle = await app.inject({ method: "GET", url: `/vehicles/${vehicleId}`, headers: auth() });
+      assert.equal(vehicle.json().data.operationalStatus, "rented");
+    });
+
+    test("a renewal applied first is kept when the return is confirmed afterwards", async () => {
+      const { contractId } = await createActiveContract();
+      const { payments, statusToken } = await startRenewalPayment(contractId, "race-renewal-first");
+      payments.confirm();
+      const payStatus = await app.inject({ method: "GET", url: `/contracts/payments/status/${statusToken}` });
+      assert.equal(payStatus.json().data.status, "CONFIRMED");
+      const renewed = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      assert.equal(renewed.json().data.status, "ACTIVE");
+      assert.equal(renewed.json().data.rentalDays, 7);
+
+      await confirmReturnViaLink(contractId);
+      const detail = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      assert.equal(detail.json().data.status, "RETOUT");
+      assert.equal(detail.json().data.rentalDays, 7);
+      assert.equal(detail.json().data.agreedAmount, 2200);
     });
   });
 }

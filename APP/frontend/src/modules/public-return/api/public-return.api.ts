@@ -11,3 +11,12 @@ export async function getPublicReturn(token: string): Promise<PublicReturnView> 
   );
   return response.data;
 }
+
+/** The hirer confirms the vehicle return: the Backend moves ACTIVE to RETOUT. */
+export async function confirmPublicReturn(token: string): Promise<PublicReturnView> {
+  const response = await apiRequest<PublicReturnView>(
+    `${CONTRACTS_PATH}/return/${token}/confirm`,
+    { method: "POST", publicRequest: true },
+  );
+  return response.data;
+}

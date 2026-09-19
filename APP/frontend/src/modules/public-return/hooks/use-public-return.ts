@@ -20,5 +20,8 @@ export function usePublicReturn(token: string) {
     status: store.status,
     error: store.error,
     load: store.load,
+    confirming: store.confirming,
+    confirmError: store.confirmError,
+    confirm: store.confirm,
   };
 }

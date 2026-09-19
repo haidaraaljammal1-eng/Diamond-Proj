@@ -1,8 +1,9 @@
 .wrap {
+  container: contracts-table / inline-size;
   overflow-x: auto;
   border: 1px solid var(--diamond-hair);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(251, 246, 235, 0.9));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--diamond-onyx) 55%, transparent), color-mix(in srgb, var(--diamond-onyx2) 90%, transparent));
 }
 
 .table {
@@ -21,7 +22,8 @@
 }
 
 .table td {
-  padding: 12px 14px;
+  padding: 10px 14px;
+  line-height: 1.35;
   font-size: 13px;
   color: var(--diamond-champagne);
   border-bottom: 1px solid var(--diamond-hair);
@@ -33,7 +35,7 @@
 }
 
 .table tbody tr:hover {
-  background: rgba(201, 161, 92, 0.06);
+  background: color-mix(in srgb, var(--diamond-gold) 6%, transparent);
 }
 
 .table tbody tr:focus-visible {
@@ -42,6 +44,7 @@
 }
 
 .number {
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
   color: var(--diamond-gold-hi);
@@ -53,13 +56,29 @@
   height: 7px;
   margin-inline-start: 8px;
   border-radius: 50%;
-  background: #c9a15c;
+  background: var(--diamond-gold);
   vertical-align: middle;
 }
 
+.primaryLine,
 .muted {
-  margin-top: 2px;
+  display: block;
+}
+
+.muted {
+  margin-block-start: 2px;
   font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+/* The plate follows the cell direction so it starts under the vehicle name; only its text is LTR-isolated. */
+.plate {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
+.empty {
   color: var(--diamond-dim);
 }
 
@@ -68,18 +87,89 @@
   font-variant-numeric: tabular-nums;
 }
 
+.amount {
+  white-space: nowrap;
+}
+
 .recordFocus {
-  background: rgba(201, 161, 92, 0.18) !important;
-  box-shadow: inset 0 0 0 2px rgba(201, 161, 92, 0.65), 0 0 0 4px rgba(201, 161, 92, 0.08);
+  background: color-mix(in srgb, var(--diamond-gold) 18%, transparent) !important;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--diamond-gold) 65%, transparent), 0 0 0 4px color-mix(in srgb, var(--diamond-gold) 8%, transparent);
   animation: record-focus-pulse 1.2s ease-in-out 2;
 }
 
 @keyframes record-focus-pulse {
   0%,
-  100% { box-shadow: inset 0 0 0 2px rgba(201, 161, 92, 0.45), 0 0 0 0 rgba(201, 161, 92, 0); }
-  50% { box-shadow: inset 0 0 0 2px rgba(201, 161, 92, 0.75), 0 0 0 6px rgba(201, 161, 92, 0.14); }
+  100% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--diamond-gold) 45%, transparent), 0 0 0 0 transparent; }
+  50% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--diamond-gold) 75%, transparent), 0 0 0 6px color-mix(in srgb, var(--diamond-gold) 14%, transparent); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .recordFocus { animation: none; }
+}
+
+/* Action column: sized to its content (never clipped), aligned to the inline-end edge. */
+.table .actionCol {
+  width: 1%;
+  white-space: nowrap;
+  text-align: end;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* One width for every next-step label, so the column reads as a straight line. */
+.actions .stepAction {
+  min-inline-size: 13.5em;
+  justify-content: flex-start;
+  white-space: nowrap;
+}
+
+.actions .viewAction,
+.viewSlot {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+}
+
+.actions .viewAction {
+  min-height: 40px;
+  padding: 0;
+}
+
+/* The variants' own focus ring is a faint wash on ivory; inside a dense table the focused action needs a solid mark. */
+.actions button:focus-visible {
+  outline: 2px solid var(--diamond-gold-hi);
+  outline-offset: 2px;
+}
+
+/* Narrow table (tablet, or a desktop with the drawer open): the next step keeps its
+   stronger variant but collapses to its glyph; the label stays as its accessible name. */
+@container contracts-table (max-width: 880px) {
+  .table th,
+  .table td {
+    padding-inline: 10px;
+  }
+
+  .actions .stepAction {
+    min-inline-size: 0;
+    inline-size: 40px;
+    block-size: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .stepLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
 }

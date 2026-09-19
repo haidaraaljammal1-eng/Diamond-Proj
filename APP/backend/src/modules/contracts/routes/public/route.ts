@@ -474,6 +474,23 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
   );
 
   app.post(
+    "/return/:token/confirm",
+    {
+      schema: {
+        summary: "Hirer confirms the vehicle return (ACTIVE -> RETOUT)",
+        operationId: "confirmPublicReturn",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(PublicContractViewSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({
+      data: await contracts.confirmReturnPublic(request.params.token),
+    }),
+  );
+
+  app.post(
     "/renew/:token/confirm",
     {
       schema: {

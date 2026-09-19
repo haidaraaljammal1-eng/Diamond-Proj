@@ -1,9 +1,12 @@
 "use client";
 
 import type { KeyboardEvent, MouseEvent } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/button";
+import { Icon } from "@/shared/components/ui/icon";
 import type { ContractListItemDto } from "../../types/contract.types";
+import { getContractRowAction } from "../../utils/contract-row-action";
 import { ContractStatusChip } from "../contract-status/contract-status";
 import styles from "./contracts-table.module.css";
 
@@ -17,15 +20,8 @@ function stopOpen(event: MouseEvent | KeyboardEvent) {
   event.stopPropagation();
 }
 
-function rowActionKey(contract: ContractListItemDto): string | null {
-  const { status } = contract;
-  if (status === "AWAITING" || status === "FORM") return "actions.rentalLink";
-  if (status === "SIGNED") return null;
-  if (status === "PAID" && contract.actions.canCarOut) return "actions.carOut";
-  if (status === "ACTIVE") return "actions.returnLink";
-  if (status === "REVIEW") return "actions.reconcile";
-  return null;
-}
+/** Statuses whose snapshot already holds the signed official contract. */
+const HAS_SIGNED_CONTRACT = new Set<ContractListItemDto["status"]>(["SIGNED", "PAID", "ACTIVE", "RETOUT", "REVIEW", "CLOSED"]);
 
 export function ContractsTable({
   contracts,
@@ -34,6 +30,8 @@ export function ContractsTable({
 }: ContractsTableProps) {
   const t = useTranslations("Contracts");
   const format = useFormatter();
+  const locale = useLocale();
+  const router = useRouter();
 
   return (
     <div className={styles.wrap} data-testid="contracts-table">
@@ -46,12 +44,12 @@ export function ContractsTable({
             <th scope="col">{t("table.period")}</th>
             <th scope="col">{t("table.amount")}</th>
             <th scope="col">{t("table.status")}</th>
-            <th scope="col">{t("table.action")}</th>
+            <th scope="col" className={styles.actionCol}>{t("table.action")}</th>
           </tr>
         </thead>
         <tbody>
           {contracts.map((contract) => {
-            const actionKey = rowActionKey(contract);
+            const action = getContractRowAction(contract);
             return (
               <tr
                 key={contract.id}
@@ -77,25 +75,27 @@ export function ContractsTable({
                 <td>
                   {contract.customerName ? (
                     <span>{contract.customerName}</span>
-                  ) : null}
+                  ) : (
+                    <span className={styles.empty} aria-label={t("table.customerMissing")}>—</span>
+                  )}
                 </td>
                 <td>
-                  <span>{contract.vehicleName}</span>
+                  <span className={styles.primaryLine}>{contract.vehicleName}</span>
                   {contract.plateNumber ? (
-                    <div className={styles.muted} dir="ltr">
-                      {contract.plateNumber}
-                    </div>
+                    <span className={`${styles.muted} ${styles.plate}`}>
+                      <bdi dir="ltr">{contract.plateNumber}</bdi>
+                    </span>
                   ) : null}
                 </td>
                 <td className={styles.num}>
-                  {t("table.days", { count: contract.rentalDays })}
+                  <span className={styles.primaryLine}>{t("table.days", { count: contract.rentalDays })}</span>
                   {contract.startAt ? (
-                    <div className={styles.muted}>
+                    <span className={styles.muted}>
                       {format.dateTime(new Date(contract.startAt), {
                         day: "numeric",
                         month: "short",
                       })}
-                    </div>
+                    </span>
                   ) : null}
                 </td>
                 <td className={styles.amount}>
@@ -104,21 +104,46 @@ export function ContractsTable({
                 <td>
                   <ContractStatusChip status={contract.status} />
                 </td>
-                <td>
-                  {actionKey && onRowAction ? (
+                <td className={styles.actionCol}>
+                  {/* Next step first, then View contract in a fixed last slot so both line up row to row. */}
+                  <div className={styles.actions}>
+                  {action && onRowAction ? (
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="secondaryStrong"
                       size="sm"
+                      className={styles.stepAction}
+                      title={t(action.labelKey)}
                       onClick={(event) => {
                         stopOpen(event);
                         onRowAction(contract);
                       }}
                       onKeyDown={stopOpen}
                     >
-                      {t(actionKey)}
+                      <Icon name={action.icon} />
+                      <span className={styles.stepLabel}>{t(action.labelKey)}</span>
                     </Button>
                   ) : null}
+                  {HAS_SIGNED_CONTRACT.has(contract.status) ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className={styles.viewAction}
+                      aria-label={t("actions.viewContractFor", { number: contract.contractNumber })}
+                      title={t("actions.viewContract")}
+                      onClick={(event) => {
+                        stopOpen(event);
+                        router.push(`/${locale}/contracts/${contract.id}/contract`);
+                      }}
+                      onKeyDown={stopOpen}
+                    >
+                      <Icon name="mdi:file-document-outline" size={18} />
+                    </Button>
+                  ) : (
+                    <span className={styles.viewSlot} aria-hidden="true" />
+                  )}
+                  </div>
                 </td>
               </tr>
             );

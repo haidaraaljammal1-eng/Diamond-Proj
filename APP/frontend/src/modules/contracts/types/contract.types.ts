@@ -75,7 +75,7 @@ export interface ContractListItemDto {
   endAt: string | null;
   createdAt: string;
   hasSalikGpsSignal: boolean;
-  actions: { canCarOut: boolean };
+  actions: { canCarOut: boolean; canCarIn: boolean };
   carOutStatus: "NOT_STARTED" | "DRAFT" | "READY" | "COMPLETED";
 }
 

@@ -4,12 +4,13 @@ import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { AppError } from "src/lib/errors/app-error";
-import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { CAR_OUT_REQUIRED_ANGLES, INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
 import { setTarsProviderForTests } from "src/modules/integrations/tars/tars.provider";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import {
   confirmPaymentViaWebhook,
   confirmRentalPaymentViaStatusToken,
+  linkCardViaFakeProvider,
   createFakePaymentProvider,
 } from "../helpers/fake-payment-provider";
 import type {
@@ -153,7 +154,15 @@ if (!RUN) {
     }
 
     let photoSeq = 0;
-    async function dummyPhotos() {
+    async function outSignature() {
+      photoSeq += 1;
+      const row = await prisma.attachment.create({
+        data: { originalName: "out-signature.png", storageKey: `tars-${run}-${photoSeq}-sig.png`, mimeType: "image/png", size: 8 },
+      });
+      return row.id;
+    }
+
+    async function dummyPhotos(angles: readonly string[] = INSPECTION_ANGLES) {
       const ids: string[] = [];
       for (let i = 0; i < 8; i++) {
         photoSeq += 1;
@@ -167,7 +176,7 @@ if (!RUN) {
         });
         ids.push(row.id);
       }
-      return INSPECTION_ANGLES.map((angle, i) => ({ attachmentId: ids[i]!, angle }));
+      return angles.map((angle, i) => ({ attachmentId: ids[i]!, angle }));
     }
 
     async function createVehicle(label: string) {
@@ -240,13 +249,14 @@ if (!RUN) {
 
       const payments = createFakePaymentProvider(run);
       setPaymentProviderForTests(payments.provider);
+      await linkCardViaFakeProvider(app, payments, rentalToken, closedContractId);
       await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `tars-pay-${closedContractId}`);
 
       const carOut = await app.inject({
         method: "POST",
         url: `/contracts/${closedContractId}/car-out`,
         headers: auth(),
-        payload: { mileageOut: 12000, fuelOut: "F", notes: "clean", photos: await dummyPhotos() },
+        payload: { mileageOut: 12000, fuelOut: "F", notes: "clean", photos: await dummyPhotos(CAR_OUT_REQUIRED_ANGLES), hirerSignatureAttachmentId: await outSignature() },
       });
       assert.equal(carOut.statusCode, 200, carOut.body);
 
@@ -256,6 +266,8 @@ if (!RUN) {
         headers: auth(),
       });
       const returnToken = returnLink.json().data.link.token as string;
+      const confirmReturn = await app.inject({ method: "POST", url: `/contracts/return/${returnToken}/confirm` });
+      assert.equal(confirmReturn.statusCode, 200, confirmReturn.body);
 
       const carIn = await app.inject({
         method: "POST",
@@ -687,12 +699,13 @@ if (!RUN) {
       });
       const payments = createFakePaymentProvider(`${run}-auto`);
       setPaymentProviderForTests(payments.provider);
+      await linkCardViaFakeProvider(app, payments, rentalToken, offer.id);
       await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `tars-auto-${offer.id}`);
       await app.inject({
         method: "POST",
         url: `/contracts/${offer.id}/car-out`,
         headers: auth(),
-        payload: { mileageOut: 500, fuelOut: "F", photos: await dummyPhotos() },
+        payload: { mileageOut: 500, fuelOut: "F", photos: await dummyPhotos(CAR_OUT_REQUIRED_ANGLES), hirerSignatureAttachmentId: await outSignature() },
       });
 
       // Signing, payment and Car-Out are deliberately NOT wired to TARS yet.

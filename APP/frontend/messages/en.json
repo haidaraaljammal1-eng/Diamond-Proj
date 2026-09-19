@@ -752,7 +752,8 @@
       "amount": "Amount",
       "status": "Status",
       "action": "Action",
-      "days": "{count} days"
+      "days": "{count, plural, one {# day} other {# days}}",
+      "customerMissing": "No linked customer"
     },
     "empty": {
       "title": "No contracts yet",
@@ -869,12 +870,20 @@
       "rentalLink": "Generate rental link",
       "confirmPayment": "Confirm payment",
       "carOut": "Car-Out",
-      "carIn": "Car-In",
+      "carIn": "Receive vehicle",
       "returnLink": "Generate return link",
       "returnWaiting": "Waiting for customer return",
       "renew": "Renew",
       "reconcile": "Reconciliation",
-      "close": "Close contract"
+      "close": "Close contract",
+      "viewContract": "View contract",
+      "viewContractFor": "View contract {number}",
+      "manage": "Manage contract"
+    },
+    "document": {
+      "liveTitle": "Contract with latest updates",
+      "liveHint": "The signed contract plus everything recorded after signing: vehicle OUT details, the hirer's OUT signature and damage marks, and return details. Read-only.",
+      "missing": "The signed copy of this contract is not available yet."
     },
     "link": {
       "created": "Rental link created",
@@ -1330,6 +1339,10 @@
     "instructions": "Please bring the vehicle to the office. Staff will complete the return inspection. This page does not close the contract.",
     "receivedTitle": "Return received",
     "receivedBody": "The office has received this vehicle. Settlement continues with the rental office. You do not need to take further action here.",
+    "activeBody": "Your contract is still active. Once you confirm the return, the office starts receiving the vehicle and an extension is no longer possible.",
+    "extendHint": "Want to extend instead? Contact the office and do not confirm the return.",
+    "confirmReturn": "Confirm vehicle return",
+    "confirmedTitle": "Return confirmed",
     "link": {
       "CONTRACT_LINK_EXPIRED": {
         "title": "This return link has expired",

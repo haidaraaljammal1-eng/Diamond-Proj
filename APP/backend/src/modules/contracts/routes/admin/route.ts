@@ -388,7 +388,7 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
     "/:id/return-link",
     {
       schema: {
-        summary: "Generate a return link and start RETOUT",
+        summary: "Generate a return link (contract stays ACTIVE until the hirer confirms)",
         operationId: "generateContractReturnLink",
         tags: ["Contracts"],
         permissions: [PERMISSIONS.CONTRACTS_RETURN],

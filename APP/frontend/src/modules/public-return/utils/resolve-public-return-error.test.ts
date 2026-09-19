@@ -53,3 +53,15 @@ describe("isReturnReceivedStatus", () => {
     assert.equal(isReturnReceivedStatus("CLOSED"), true);
   });
 });
+
+describe("return confirmation state", () => {
+  it("only an ACTIVE contract offers the confirm action", async () => {
+    const { canConfirmReturn, isReturnConfirmedStatus } = await import("./return-view.ts");
+    assert.equal(canConfirmReturn("ACTIVE"), true);
+    for (const status of ["RETOUT", "REVIEW", "CLOSED", "PAID"] as const) {
+      assert.equal(canConfirmReturn(status), false, status);
+    }
+    assert.equal(isReturnConfirmedStatus("RETOUT"), true);
+    assert.equal(isReturnConfirmedStatus("ACTIVE"), false);
+  });
+});

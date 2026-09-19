@@ -36,7 +36,7 @@ There is no generic status PUT. Every change is an explicit service action.
 | SIGNED | Acceptance recorded; legal snapshot frozen |
 | PAID | Confirmed payment; vehicle reserved (not yet RENTED) |
 | ACTIVE | Car-Out done; vehicle RENTED |
-| RETOUT | Return link issued; vehicle stays RENTED |
+| RETOUT | Hirer confirmed the return on the return link; vehicle stays RENTED. Issuing the link alone keeps ACTIVE |
 | REVIEW | Car-In submitted; vehicle already returned; staff reconciliation pending |
 | CLOSED | Staff close; financial lifecycle ended. Vehicle availability was already decided at Car-In. |
 
@@ -124,6 +124,10 @@ Staff with `contracts.read` may stream the frozen legal HIRER / ADDITIONAL_DRIVE
 
 Completion copies the draft into the immutable operational `ContractCarOut` snapshot with server handover time, assigned Vehicle ID, mileage, fuel, damage, photo references and OUT signature. Existing `Vehicle` has no authoritative mileage column, so no new Vehicle mileage field was added. OUT draft and evidence mutations reject after ACTIVE. The signed legal `Contract.snapshot` is unchanged. Existing Car-In and its eight Demo inspection angles (FRONT, REAR, RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES) are unchanged; matching new OUT slots to future IN comparison is later work. Photo joins reference Attachment, never `VehiclePhoto`; streams require `contracts.read`. The additive migration is applied by `npm run dev:bootstrap` on a new local database.
 
+**Return intent.** `POST /contracts/:id/return-link` only issues the token: the Contract stays ACTIVE and renewal stays possible. The public `POST /contracts/return/:token/confirm` is the return-intent event: ACTIVE → RETOUT, `contract.return_started`, unused renewal links revoked. It is idempotent (RETOUT or later returns the current view). Return confirmation, staff `renew`, public renewal confirm and link issuing take the `contract_lifecycle` advisory lock and re-read the status, so a renewal and a return confirmation cannot both win; renewal payment start also refuses a non-ACTIVE contract. **Renewal eligibility is re-checked at application time.** `applyRenewal` takes the same lifecycle lock (lock order: `contract_payment`, then `contract_lifecycle`) and re-reads the Contract; a Contract that has left ACTIVE is never extended and never moved back from RETOUT. Direct callers (staff renew, zero-amount public confirm) get `CONTRACT_INVALID_TRANSITION`. When a renewal payment that started before the return is captured afterwards, payment confirmation and domain application still run in one transaction: the payment is recorded CONFIRMED because the provider took the money, the renewal stays unapplied (`appliedAt` null, no second renewal row or payment attempt), and `contract.renewal_not_applied` (payment id, renewal id, amount) is emitted so staff refund or settle it. Vehicle stays RENTED until Car-In.
+
+Verification (2026-09-19): `contracts-renewal` 8/8 and `tars-integration` 15/15 on `haidara_test`; the in-flight race test fails when the re-check is removed. On the dev database a fresh contract (DE-2026-000017) confirmed: return link keeps ACTIVE, RENTED and Renew; return confirmation gives RETOUT, RENTED, no Renew, Receive vehicle. The in-flight renewal payment could not be reproduced on dev because no card provider is configured there (`PAYMENT_PROVIDER_NOT_CONFIGURED`); it is covered only by the integration test.
+
 Staff Car-In: `POST /contracts/:id/car-in` (`contracts.return`) on RETOUT. Public token Car-In: `POST /contracts/return/:token/car-in` (used RETURN tokens are allowed so a second submit after REVIEW is idempotent). Both write `ContractCarIn` + eight photos, transition RETOUT → REVIEW, emit `contract.return_submitted`, and if the vehicle is RENTED set it AVAILABLE in the same transaction (advisory lock `vehicle_rental`). Car-In never closes the Contract. REVIEW means financial/operational review is still open, not that the customer still has the vehicle.
 
 GPS Salik intelligence is a derived Contract projection (`roadLiabilitySignals`), not a stored boolean and not a lifecycle hold. Detail also includes a compact `postCloseReceivables` summary (count, openAmount, bounded items) without N+1.
@@ -182,7 +186,7 @@ Staff only. Public token routes have no staff permissions.
 | POST | `/contracts/:id/car-out/signature` | car_out |
 | GET | `/contracts/:id/car-out/signature/stream` | read |
 | POST | `/contracts/:id/car-out/complete` | car_out + activate |
-| POST | `/contracts/:id/return-link` | return |
+| POST | `/contracts/:id/return-link` | return (no status change) |
 | POST | `/contracts/:id/car-in` | return |
 | POST | `/contracts/:id/reconcile` | reconcile |
 | GET | `/contracts/:id/reconciliation/road-liabilities` | reconcile |

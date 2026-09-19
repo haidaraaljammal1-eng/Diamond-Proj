@@ -87,10 +87,41 @@ Labels: Awaiting Customer / Form Completed / Signed / Ready for Car-Out / Active
 | AWAITING / FORM | Generate rental link (`contracts.manage`) |
 | SIGNED | Confirm payment (+ optional regenerate link) |
 | PAID | Car-Out |
-| ACTIVE | Return link + Renew |
-| RETOUT | Staff Car-In (`contracts.return`). Waiting copy only if Car-In is not available |
+| ACTIVE | Return link + Renew (both stay available after a return link is issued) |
+| RETOUT | Receive vehicle / Staff Car-In (`contracts.return`). Waiting copy only if Car-In is not available. No Renew |
 | REVIEW | Reconciliation; Close after Backend `canClose` |
 | CLOSED | Read-only |
+
+### Table action column
+
+Each row shows at most two controls, in a fixed order and aligned to the inline-end edge:
+
+1. **Next step** (the row's primary action): Shared `Button` `secondaryStrong` `sm` with an Iconify glyph naming the step. It is never gold-filled, so the page keeps one gold action. One width (`13.5em`) for every label, so the column reads straight.
+
+   | Status | Glyph | Label |
+   | ------ | ----- | ----- |
+   | AWAITING / FORM | `mdi:link-variant` | Generate rental link |
+   | PAID (`canCarOut`) | `mdi:car-key` | Car-Out |
+   | ACTIVE | `mdi:car-clock` | Manage contract (opens the drawer with Renew and the return link) |
+   | RETOUT (`canCarIn`) | `mdi:car-arrow-left` | Receive vehicle (opens the existing Car-In dialog) |
+   | REVIEW | `mdi:scale-balance` | Reconciliation |
+
+   The row action comes from one policy, `getContractRowAction` (`utils/contract-row-action.ts`), used by both the table and the screen handler. It reads only the Backend `status` and list `actions` (`canCarOut`, `canCarIn`); it never looks at whether a link exists. SIGNED, CLOSED, and a refused action show no next step, only View contract.
+
+2. **View contract** (from SIGNED onward): 40×40 icon-only `secondary` button (`mdi:file-document-outline`) with `aria-label` "View contract {number}" and a `title` tooltip. Rows without it keep an empty 40px slot, so both controls line up across rows.
+
+The column sizes to its content (`width: 1%`, `nowrap`), so no button is clipped. When the table itself is narrower than 880px (container query), the next step collapses to its 40×40 glyph; its label stays as the accessible name and tooltip, and cell padding tightens. Tab order inside a row: next step, then View contract. Both buttons stop propagation, so they never open the drawer.
+
+Rows: the plate sits under the vehicle name in the cell direction, with only its text LTR-isolated (`<bdi>`). A contract without a linked Customer shows a muted "—" announced as "No linked customer"; in DEV OCR mode the hirer name exists only in the signed snapshot, which the list endpoint does not return.
+
+## View contract (latest state)
+
+From SIGNED onward (SIGNED, PAID, ACTIVE, RETOUT, REVIEW, CLOSED) every table row also shows **View contract**. It opens `/[locale]/contracts/[id]/contract`, the protected A4 page in read-only mode, showing the contract with everything recorded after signing:
+
+- **Car-Out:** OUT mileage, fuel, the damage marks placed on the vehicle diagrams, and the hirer OUT signature image (streamed from the Car-Out signature endpoint).
+- **Car-In:** IN mileage and fuel. The Car-In DTO carries no damage marks or IN signature yet, so those areas stay empty.
+
+`liveContractView(detail)` (`modules/contracts/utils/live-contract-view.ts`) lays these records over a copy of `Contract.snapshot.officialContract`. The frozen snapshot is never mutated. Only completed events are applied: a Car-Out draft is not shown until the handover is completed. Frontend only, reusing `GET /contracts/:id`; there is no new Backend endpoint. When nothing has been recorded since signing, the page shows the signed copy under its signed title. `/[locale]/contracts/[id]/car-out/contract` still shows the signed copy only.
 
 ## Detail drawer
 
@@ -140,7 +171,15 @@ Step 2 is vehicle photography. Required slots: FRONT, REAR, FRONT_RIGHT, REAR_RI
 
 ## Return link / public return
 
-ACTIVE → `POST /contracts/:id/return-link` → RETOUT. Vehicle stays RENTED. RETOUT fleet action opens contract detail (does not mint a new link). Customer page `/[locale]/return/[token]` is public, token-scoped, no staff JWT, no AppShell. It shows office, contract number, vehicle, agreed return context, and instructions. It never exposes TARS, reconciliation, payment internals, or a close action. Customer cannot submit Car-In.
+**Generating a Return Link does not change Contract lifecycle status.**
+
+| Event | Contract | Vehicle | Renew | Receive vehicle |
+| ----- | -------- | ------- | ----- | --------------- |
+| `POST /contracts/:id/return-link` (issue, copy, open, regenerate) | ACTIVE | RENTED | available | not available |
+| Hirer confirms on the link: `POST /contracts/return/:token/confirm` | RETOUT | RENTED | not available | available |
+| Car-In completed (future Car-In UX) | REVIEW | decided by Car-In | not available | done |
+
+The confirm button sits on the public return page and is shown only while the contract is ACTIVE. Staff who receive the car at the desk open the same link and confirm there; there is no separate staff transition. The page tells the hirer that confirming ends the chance to extend and to contact the office to extend instead. Renewal is serialised with return confirmation on the `contract_lifecycle` advisory lock, and confirming revokes unused renewal links. RETOUT fleet action opens contract detail (does not mint a new link). Customer page `/[locale]/return/[token]` is public, token-scoped, no staff JWT, no AppShell. It shows office, contract number, vehicle, agreed return context, and instructions. It never exposes TARS, reconciliation, payment internals, or a close action. Customer cannot submit Car-In.
 
 ## Car-In
 

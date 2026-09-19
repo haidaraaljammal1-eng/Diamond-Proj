@@ -13,6 +13,7 @@ import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { expiryFromNow, generateOpaqueToken, hashToken } from "src/lib/security/tokens";
 import {
   ACTIVE_PAYMENT_STATUSES,
+  CONTRACT_LIFECYCLE_LOCK_NS,
   CONTRACT_PAYMENT_LOCK_NS,
   PAYMENT_STATUS_TOKEN_TTL_SECONDS,
 } from "src/modules/contracts/contracts.constants";
@@ -216,17 +217,31 @@ async function settleRoadLiabilityForPostClose(tx: Tx, receivableId: string): Pr
   });
 }
 
+/**
+ * Applies an approved renewal to its Contract. Serialised with return
+ * confirmation on the lifecycle lock (lock order: payment, then lifecycle) and
+ * re-checks the Contract under it: a renewal never extends a Contract that has
+ * left ACTIVE, e.g. a return confirmed while the renewal payment was in flight.
+ * Returns false (nothing applied) in that case when `onIneligible` is "skip";
+ * direct callers keep the default and get CONTRACT_INVALID_TRANSITION.
+ */
 async function applyRenewal(
   tx: Tx,
   renewalId: string,
   paymentId?: string | null,
-): Promise<void> {
+  onIneligible: "throw" | "skip" = "throw",
+): Promise<boolean> {
   const renewal = await tx.contractRenewal.findUnique({ where: { id: renewalId } });
   if (!renewal) throw contractError.notFound();
-  if (renewal.appliedAt) return;
+  if (renewal.appliedAt) return true;
 
+  await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, renewal.contractId);
   const contract = await tx.contract.findUnique({ where: { id: renewal.contractId } });
   if (!contract) throw contractError.notFound();
+  if (contract.status !== "ACTIVE") {
+    if (onIneligible === "skip") return false;
+    throw contractError.invalidTransition(contract.status, "ACTIVE");
+  }
   await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
 
   await tx.contractRenewal.update({
@@ -256,6 +271,7 @@ async function applyRenewal(
     data: { usedAt: new Date() },
   });
   await emitPayment(tx, "contract.renewed", contract.id, { additionalDays: renewal.additionalDays });
+  return true;
 }
 
 async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<void> {
@@ -307,9 +323,21 @@ async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<
       }
       break;
     }
-    case "RENEWAL":
-      await applyRenewal(tx, payment.targetId, payment.id);
+    case "RENEWAL": {
+      // The provider already captured the money, so the payment itself stays
+      // CONFIRMED; only the extension is withheld and staff are told to settle it.
+      const applied = await applyRenewal(tx, payment.targetId, payment.id, "skip");
+      if (!applied) {
+        await emitPayment(tx, "contract.renewal_not_applied", payment.contractId, {
+          paymentId: payment.id,
+          renewalId: payment.targetId,
+          amount: payment.amount,
+          currency: payment.currency,
+          dedupe: payment.id,
+        });
+      }
       break;
+    }
     default:
       break;
   }

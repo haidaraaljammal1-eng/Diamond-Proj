@@ -22,6 +22,7 @@ import {
   CONTRACT_PASSPORT_LOCK_NS,
   CONTRACT_OFFICIAL_REVIEW_LOCK_NS,
   CONTRACT_RECONCILE_LOCK_NS,
+  CONTRACT_LIFECYCLE_LOCK_NS,
   CONTRACT_TERMS_VERSION,
   DRIVING_LICENSE_UPLOAD_MIME,
   INSPECTION_ANGLES,
@@ -373,6 +374,7 @@ export function createContractsService(fastify: FastifyInstance) {
             vehicle: { include: { model: { select: { name: true } } } },
             customer: { select: { name: true } },
             carOut: { select: { id: true } },
+            carIn: { select: { id: true } },
             carOutDraft: { select: {
               mileageOut: true, fuelOut: true, hirerSignatureAttachmentId: true,
               photos: { select: { angle: true } },
@@ -432,6 +434,7 @@ export function createContractsService(fastify: FastifyInstance) {
     offer?: z.infer<typeof RenewSchema>,
   ) {
     return withTransaction(prisma, async (tx) => {
+      if (type !== "RENTAL") await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, contractId);
       const contract = await tx.contract.findUnique({ where: { id: contractId } });
       if (!contract) throw contractError.notFound();
       if (contract.status === "CLOSED") throw contractError.alreadyClosed();
@@ -446,15 +449,10 @@ export function createContractsService(fastify: FastifyInstance) {
           throw contractError.invalidTransition(current?.status ?? contract.status, contract.status);
         }
       }
+      // Issuing a return link never moves the lifecycle: the contract stays ACTIVE
+      // (renewal still possible) until the hirer confirms on the link itself.
       if (type === "RETURN") {
-        if (contract.status === "ACTIVE") {
-          assertTransition("ACTIVE", "RETOUT");
-          await tx.contract.update({
-            where: { id: contractId },
-            data: { status: "RETOUT", revision: { increment: 1 } },
-          });
-          await emit(tx, "contract.return_started", contractId);
-        } else if (contract.status !== "RETOUT") {
+        if (contract.status !== "ACTIVE" && contract.status !== "RETOUT") {
           throw contractError.invalidTransition(contract.status, "RETOUT");
         }
       }
@@ -1306,6 +1304,7 @@ export function createContractsService(fastify: FastifyInstance) {
   ) {
     const run = async () =>
       withTransaction(prisma, async (tx) => {
+        await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, contractId);
         const contract = await tx.contract.findUnique({ where: { id: contractId } });
         if (!contract) throw contractError.notFound();
         assertStatus(contract.status, "ACTIVE");
@@ -1354,6 +1353,34 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  /**
+   * The hirer (or staff opening the same link at the desk) confirms the vehicle
+   * return: ACTIVE -> RETOUT. This, not issuing the link, is the return-intent
+   * event. Serialised with renewal on the lifecycle lock; repeating it once the
+   * contract has moved on is a no-op that returns the current view.
+   */
+  async function confirmReturnPublic(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RETURN", { allowCompleted: true });
+      await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, link.contractId);
+      const include = { vehicle: { include: { model: { select: { name: true } } } } };
+      const contract = await tx.contract.findUnique({ where: { id: link.contractId }, include });
+      if (!contract) throw contractError.notFound();
+      if (contract.status === "RETOUT" || contract.status === "REVIEW" || contract.status === "CLOSED") {
+        return publicView(contract);
+      }
+      assertTransition(contract.status, "RETOUT");
+      await tx.contract.update({
+        where: { id: contract.id },
+        data: { status: "RETOUT", revision: { increment: 1 } },
+      });
+      // A renewal offer can no longer be accepted once the return is confirmed.
+      await revokeUnusedRenewalLinks(tx, contract.id);
+      await emit(tx, "contract.return_started", contract.id);
+      return publicView(await tx.contract.findUniqueOrThrow({ where: { id: contract.id }, include }));
+    });
+  }
+
   async function confirmRenewalPublic(token: string) {
     return withTransaction(prisma, async (tx) => {
       const include = {
@@ -1370,6 +1397,7 @@ export function createContractsService(fastify: FastifyInstance) {
         return publicView(already, pickPublicRenewal(already.renewals, true));
       }
 
+      await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, preview.contractId);
       const contract = await tx.contract.findUnique({
         where: { id: preview.contractId },
         include,
@@ -2281,6 +2309,9 @@ export function createContractsService(fastify: FastifyInstance) {
         const row = await tx.contractRenewal.findUnique({ where: { id: renewal.id } });
         if (!row?.approvedAt) throw contractError.renewalOfferRequired();
         if (row.appliedAt) throw contractError.paymentAlreadySettled();
+        // No new renewal payment once the hirer has confirmed the return.
+        const contract = await tx.contract.findUnique({ where: { id: renewal.contractId }, select: { status: true } });
+        if (contract?.status !== "ACTIVE") throw contractError.invalidTransition(contract?.status ?? "ACTIVE", "ACTIVE");
       },
     });
 
@@ -2382,6 +2413,7 @@ export function createContractsService(fastify: FastifyInstance) {
     confirmRoadLiabilityCharge,
     close,
     renew,
+    confirmReturnPublic,
     confirmRenewalPublic,
     getPublic,
     getPublicRental,

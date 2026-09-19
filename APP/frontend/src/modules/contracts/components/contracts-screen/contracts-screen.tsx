@@ -11,6 +11,7 @@ import type { ContractListItemDto } from "../../types/contract.types";
 import { resolveContractsListView } from "../../utils/contract-list-view";
 import { ContractFilters } from "../contract-filters/contract-filters";
 import { ContractsTable } from "../contracts-table/contracts-table";
+import { getContractRowAction } from "../../utils/contract-row-action";
 import { ContractDetailDrawer } from "../contract-detail/contract-detail-drawer";
 import { ContractLinkResultDialog } from "../contract-link-result/contract-link-result-dialog";
 import { CarOutDialog } from "../../forms/car-out/car-out-dialog";
@@ -133,29 +134,25 @@ export function ContractsScreen() {
 
   const openAction = useCallback(
     (contract: ContractListItemDto) => {
-      if (contract.status === "AWAITING" || contract.status === "FORM" || contract.status === "SIGNED") {
-        if (contract.status === "SIGNED") {
-          setDrawerId(contract.id);
+      switch (getContractRowAction(contract)?.kind) {
+        case "rentalLink":
+          void generateRentalLink(contract.id);
           return;
-        }
-        void generateRentalLink(contract.id);
-        return;
+        case "carOut":
+          setCarOutId(contract.id);
+          return;
+        case "carIn":
+          setCarInId(contract.id);
+          return;
+        case "reconcile":
+          setReconcileId(contract.id);
+          return;
+        default:
+          // "manage" (ACTIVE: Renew and the return link) and anything else open the contract.
+          setDrawerId(contract.id);
       }
-      if (contract.status === "PAID") {
-        if (contract.actions.canCarOut) setCarOutId(contract.id);
-        return;
-      }
-      if (contract.status === "ACTIVE") {
-        void generateReturnLink(contract.id);
-        return;
-      }
-      if (contract.status === "REVIEW") {
-        setReconcileId(contract.id);
-        return;
-      }
-      setDrawerId(contract.id);
     },
-    [generateRentalLink, generateReturnLink],
+    [generateRentalLink],
   );
 
   const header = (
