@@ -61,12 +61,70 @@
     "notificationsLabel": "الإشعارات",
     "notificationsMarkAllRead": "تحديد الكل كمقروء",
     "notificationsEmpty": "لا إشعارات جديدة",
-    "notificationItem1Title": "عقد إيجار جديد بانتظار التوقيع",
-    "notificationItem1Time": "قبل 5 دقائق",
-    "notificationItem2Title": "مركبة تجاوزت موعد الصيانة الدوري",
-    "notificationItem2Time": "قبل ساعتين",
-    "notificationItem3Title": "تنبيه GPS — خروج مركبة عن النطاق المحدد",
-    "notificationItem3Time": "أمس"
+    "notificationSummary": "{count, plural, =0 {لا توجد إشعارات غير مقروءة} one {إشعار غير مقروء واحد} two {إشعاران غير مقروءين} few {# إشعارات غير مقروءة} many {# إشعارًا غير مقروء} other {# إشعار غير مقروء}}",
+    "notificationUnread": "إشعار غير مقروء",
+    "notificationFilters": {
+      "label": "تصفية الإشعارات",
+      "all": "الكل",
+      "unread": "غير مقروءة ({count})",
+      "contracts": "العقود",
+      "handoverReturn": "التسليم والإرجاع",
+      "vehicles": "السيارات",
+      "violations": "المخالفات"
+    },
+    "notification": {
+      "contractUnpaid": {
+        "title": "عقد غير مدفوع",
+        "description": "يوجد عقد تجريبي بانتظار الدفع."
+      },
+      "violationUnpaid": {
+        "title": "مخالفة مسجلة وغير مدفوعة",
+        "description": "تحتاج مخالفة تجريبية إلى مراجعة الدفع."
+      },
+      "vehicleReturnOverdue": {
+        "title": "السيارة تجاوزت موعد الإرجاع",
+        "description": "تجاوز إيجار تجريبي موعد الإرجاع المتوقع."
+      },
+      "carOutPending": {
+        "title": "التسليم بانتظار التنفيذ",
+        "description": "عقد تجريبي مدفوع بانتظار تسليم السيارة."
+      },
+      "contractSigned": {
+        "title": "تم توقيع العقد",
+        "description": "تم توقيع عقد تجريبي من المستأجر."
+      },
+      "contractPaid": {
+        "title": "تم دفع العقد",
+        "description": "تم تسجيل دفعة عقد تجريبي."
+      },
+      "vehicleHandedOver": {
+        "title": "تم تسليم السيارة",
+        "description": "السيارة التجريبية مؤجرة الآن."
+      },
+      "vehicleReturned": {
+        "title": "تم إرجاع السيارة",
+        "description": "تم توثيق إرجاع سيارة تجريبية."
+      },
+      "violationNew": {
+        "title": "مخالفة جديدة",
+        "description": "توجد مخالفة تجريبية جديدة جاهزة للمراجعة."
+      },
+      "vehicleMaintenanceDue": {
+        "title": "تحتاج السيارة إلى متابعة",
+        "description": "لدى سيارة تجريبية متابعة تشغيلية مجدولة."
+      }
+    },
+    "desktopDemo": {
+      "action": "إرسال إشعار تجريبي لسطح المكتب",
+      "title": "Diamond Rent Car",
+      "body": "لديك {count, plural, =0 {لا إشعارات جديدة} one {إشعار جديد واحد} two {إشعاران جديدان} few {# إشعارات جديدة} many {# إشعارًا جديدًا} other {# إشعار جديد}}: عقد غير مدفوع، وسيارة متأخرة عن الإرجاع، ومخالفة غير مسددة.",
+      "feedback": {
+        "sent": "تم إرسال إشعار سطح المكتب التجريبي.",
+        "denied": "إشعارات المتصفح محظورة. اسمح بها من إعدادات المتصفح للمحاولة مجددًا.",
+        "unsupported": "هذا المتصفح لا يدعم إشعارات سطح المكتب.",
+        "error": "تعذر إرسال إشعار سطح المكتب التجريبي."
+      }
+    }
   },
   "Dashboard": {
     "crumbsOwner": "DIAMOND OS · لوحة المالك",

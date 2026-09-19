@@ -8,12 +8,15 @@ export function isProviderSimulationEnabled(
 
 /** Explicit browser-only demo surfaces. This flag never enables rental mutations. */
 export function isUiDemoSimulationEnabled(
-  surface: "dashboard" | "whatsapp" | "roadLiabilities",
+  surface: "dashboard" | "whatsapp" | "roadLiabilities" | "notifications",
   flag: string | undefined = process.env.NEXT_PUBLIC_DEMO_SIMULATION_ENABLED,
   nodeEnv: string | undefined = process.env.NODE_ENV,
 ): boolean {
   return (
-    (surface === "dashboard" || surface === "whatsapp" || surface === "roadLiabilities") &&
+    (surface === "dashboard" ||
+      surface === "whatsapp" ||
+      surface === "roadLiabilities" ||
+      surface === "notifications") &&
     nodeEnv !== "production" &&
     flag === "true"
   );

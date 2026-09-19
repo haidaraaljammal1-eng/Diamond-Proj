@@ -35,6 +35,8 @@ export interface PopoverProps {
   className?: string;
   panelClassName?: string;
   disabled?: boolean;
+  /** Align the panel to the trigger start or end edge. */
+  align?: "start" | "end";
   /** Max panel height before flipping above the trigger. */
   maxHeight?: number;
 }
@@ -42,14 +44,28 @@ export interface PopoverProps {
 function measurePanel(
   trigger: HTMLElement,
   maxHeight: number,
+  align: "start" | "end",
+  panelWidth?: number,
 ): PopoverRect {
   const rect = trigger.getBoundingClientRect();
   const below = window.innerHeight - rect.bottom;
   const above = rect.top;
   const flipped = below < maxHeight + PANEL_GAP && above > below;
   const dir = document.documentElement.getAttribute("dir") === "rtl" ? "rtl" : "ltr";
-  const insetInlineStart =
-    dir === "rtl" ? window.innerWidth - rect.right : rect.left;
+  const width = Math.min(
+    panelWidth ?? (window.innerWidth <= 768 ? 420 : 760),
+    window.innerWidth - 24,
+  );
+  const preferredLeft =
+    dir === "rtl"
+      ? align === "end"
+        ? window.innerWidth - rect.left - width
+        : window.innerWidth - rect.right
+      : align === "end"
+        ? rect.right - width
+        : rect.left;
+  const left = Math.max(12, Math.min(preferredLeft, window.innerWidth - width - 12));
+  const insetInlineStart = dir === "rtl" ? window.innerWidth - left - width : left;
 
   return {
     top: flipped ? rect.top - PANEL_GAP : rect.bottom + PANEL_GAP,
@@ -71,6 +87,7 @@ export function Popover({
   className,
   panelClassName,
   disabled = false,
+  align = "start",
   maxHeight = 520,
 }: PopoverProps) {
   const reactId = useId();
@@ -96,23 +113,25 @@ export function Popover({
       return;
     }
     const el = triggerRef.current;
-    if (el) setRect(measurePanel(el, maxHeight));
+    if (el) setRect(measurePanel(el, maxHeight, align, panelRef.current?.offsetWidth));
     onOpenChange(true);
-  }, [close, disabled, maxHeight, onOpenChange, open]);
+  }, [align, close, disabled, maxHeight, onOpenChange, open]);
 
   useEffect(() => {
     if (!open) return;
     const sync = () => {
       const el = triggerRef.current;
-      if (el) setRect(measurePanel(el, maxHeight));
+      if (el) setRect(measurePanel(el, maxHeight, align, panelRef.current?.offsetWidth));
     };
+    const frame = window.requestAnimationFrame(sync);
     window.addEventListener("scroll", sync, true);
     window.addEventListener("resize", sync);
     return () => {
+      window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", sync, true);
       window.removeEventListener("resize", sync);
     };
-  }, [maxHeight, open]);
+  }, [align, maxHeight, open]);
 
   useEffect(() => {
     if (!open) return;

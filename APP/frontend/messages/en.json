@@ -61,12 +61,70 @@
     "notificationsLabel": "Notifications",
     "notificationsMarkAllRead": "Mark all as read",
     "notificationsEmpty": "No new notifications",
-    "notificationItem1Title": "New rental contract awaiting signature",
-    "notificationItem1Time": "5 min ago",
-    "notificationItem2Title": "A vehicle is overdue for scheduled maintenance",
-    "notificationItem2Time": "2 hours ago",
-    "notificationItem3Title": "GPS alert — vehicle left the assigned zone",
-    "notificationItem3Time": "Yesterday"
+    "notificationSummary": "{count, plural, =0 {No unread notifications} one {# unread notification} other {# unread notifications}}",
+    "notificationUnread": "Unread notification",
+    "notificationFilters": {
+      "label": "Notification filters",
+      "all": "All",
+      "unread": "Unread ({count})",
+      "contracts": "Contracts",
+      "handoverReturn": "Handover & Return",
+      "vehicles": "Vehicles",
+      "violations": "Violations"
+    },
+    "notification": {
+      "contractUnpaid": {
+        "title": "Contract payment pending",
+        "description": "A demo contract is awaiting payment."
+      },
+      "violationUnpaid": {
+        "title": "Unpaid violation recorded",
+        "description": "A demo violation needs payment review."
+      },
+      "vehicleReturnOverdue": {
+        "title": "Vehicle return is overdue",
+        "description": "A demo rental has passed its expected return time."
+      },
+      "carOutPending": {
+        "title": "Car-Out pending",
+        "description": "A paid demo contract is waiting for handover."
+      },
+      "contractSigned": {
+        "title": "Contract signed",
+        "description": "A demo contract was signed by the customer."
+      },
+      "contractPaid": {
+        "title": "Contract paid",
+        "description": "A demo contract payment was recorded."
+      },
+      "vehicleHandedOver": {
+        "title": "Vehicle handed over",
+        "description": "A demo vehicle is now rented."
+      },
+      "vehicleReturned": {
+        "title": "Vehicle returned",
+        "description": "A demo vehicle return was documented."
+      },
+      "violationNew": {
+        "title": "New violation",
+        "description": "A new demo violation is ready for review."
+      },
+      "vehicleMaintenanceDue": {
+        "title": "Vehicle follow-up needed",
+        "description": "A demo vehicle has a scheduled operations follow-up."
+      }
+    },
+    "desktopDemo": {
+      "action": "Send Desktop Demo Notification",
+      "title": "Diamond Rent Car",
+      "body": "You have {count, plural, =0 {no new notifications} one {# new notification} other {# new notifications}}: unpaid contract, overdue return, and unpaid violation.",
+      "feedback": {
+        "sent": "Desktop demo notification sent.",
+        "denied": "Browser notifications are blocked. Allow them in browser settings to try again.",
+        "unsupported": "This browser does not support desktop notifications.",
+        "error": "The desktop demo notification could not be sent."
+      }
+    }
   },
   "Dashboard": {
     "crumbsOwner": "DIAMOND OS · Owner Dashboard",

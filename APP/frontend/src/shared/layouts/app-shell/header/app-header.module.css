@@ -386,6 +386,162 @@
   animation: notifPanelIn 0.16s ease-out;
 }
 
+/* The notification center is portalled by the shared Popover. Only its list
+   scrolls, so the header and the page never become the scroll container. */
+.notificationPopover {
+  z-index: 105 !important;
+  width: min(460px, calc(100vw - 24px));
+  min-width: min(460px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: min(640px, calc(100vh - 24px));
+  padding: 0;
+}
+
+.notificationCenter {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(640px, calc(100vh - 24px));
+}
+
+.notificationPopover .notifPanelHead {
+  flex: none;
+  align-items: flex-start;
+  padding: 16px 18px 13px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.notificationPopover .notifPanelHead > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.notificationSummary {
+  color: var(--diamond-dim);
+  font-size: 10.5px;
+}
+
+.notificationFilters {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  padding: 11px 14px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(201, 161, 92, 0.14);
+  scrollbar-width: none;
+}
+
+.notificationFilters::-webkit-scrollbar {
+  display: none;
+}
+
+.notificationFilter {
+  flex: none;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(201, 161, 92, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--diamond-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.notificationFilter:hover,
+.notificationFilter[data-active="true"] {
+  border-color: rgba(201, 161, 92, 0.58);
+  background: rgba(201, 161, 92, 0.16);
+  color: var(--diamond-ink);
+}
+
+.notificationFilter:focus-visible,
+.notificationPopover .notifPanelHead button:focus-visible,
+.desktopDemoButton:focus-visible {
+  outline: 2px solid rgba(201, 161, 92, 0.8);
+  outline-offset: 2px;
+}
+
+.notificationPopover .notifList {
+  min-height: 0;
+  max-height: 392px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notificationPopover .notifRow {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid rgba(201, 161, 92, 0.12);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+}
+
+.notificationPopover .notifRow[data-unread="true"] {
+  background: rgba(201, 161, 92, 0.065);
+}
+
+.notificationPopover .notifRow:hover {
+  background: rgba(201, 161, 92, 0.12);
+}
+
+.notificationCategoryIcon {
+  display: grid;
+  flex: none;
+  width: 27px;
+  height: 27px;
+  margin-top: 1px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(201, 161, 92, 0.16);
+  color: #8a6630;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.notificationCategoryIcon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.notifRowDescription {
+  color: var(--diamond-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.notificationPopover .notifRowTime {
+  margin-top: 1px;
+}
+
+.notificationPopover .notifDot {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.notificationDemoFooter {
+  flex: none;
+  padding: 12px 14px 14px;
+  border-top: 1px solid rgba(201, 161, 92, 0.18);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.desktopDemoButton {
+  width: 100%;
+}
+
+.desktopDemoFeedback {
+  margin: 8px 2px 0;
+  color: var(--diamond-muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 @keyframes notifPanelIn {
   from {
     opacity: 0;
@@ -483,6 +639,21 @@
     inset-inline: 12px;
     width: auto;
     max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .notificationPopover {
+    width: calc(100vw - 24px);
+    min-width: calc(100vw - 24px) !important;
+  }
+
+  .notificationCenter {
+    max-height: calc(100vh - 86px);
+  }
+
+  .notificationPopover .notifList {
+    max-height: min(392px, calc(100vh - 258px));
   }
 }
 

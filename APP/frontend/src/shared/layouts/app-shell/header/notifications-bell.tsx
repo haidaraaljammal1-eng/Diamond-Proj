@@ -1,108 +1,197 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { Popover } from "@/shared/components/ui/popover";
+import { Button } from "@/shared/components/ui/button";
+import { sendDesktopNotification } from "@/modules/notifications/simulation/desktop-notification";
+import {
+  NOTIFICATION_FILTERS,
+  type NotificationCategory,
+  type NotificationFilter,
+} from "@/modules/notifications/simulation/notifications-simulation.fixture";
+import { useNotificationsSimulation } from "@/modules/notifications/simulation/use-notifications-simulation";
 import styles from "./app-header.module.css";
 
-/**
- * NotificationsBell — design-only notification center.
- *
- * DESIGN PLACEHOLDER: there is no notifications Backend endpoint yet (only
- * `dashboard.read` exists today — see `navigation.config.ts`), so the list
- * below is static mock content, not a live feed, and "mark all as read" is
- * inert. This exists to carry the visual system (panel, unread badge, row
- * layout) so a real feed can be dropped in without a redesign.
- */
-const MOCK_UNREAD_COUNT = 3;
-const MOCK_ITEMS = [
-  { key: "1" as const, titleKey: "notificationItem1Title", timeKey: "notificationItem1Time" },
-  { key: "2" as const, titleKey: "notificationItem2Title", timeKey: "notificationItem2Time" },
-  { key: "3" as const, titleKey: "notificationItem3Title", timeKey: "notificationItem3Time" },
-];
+type DesktopFeedback = "sent" | "denied" | "unsupported" | "error" | null;
+
+function CategoryIcon({ category }: { category: NotificationCategory }) {
+  return (
+    <span className={styles.notificationCategoryIcon} aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        {category === "CONTRACTS" && (
+          <>
+            <path d="M7 3.5h7l3 3V20.5H7z" />
+            <path d="M14 3.5v4h4M10 12h4M10 15h4" />
+          </>
+        )}
+        {category === "HANDOVER_RETURN" && (
+          <>
+            <path d="M4 8h14M14 5l4 3-4 3M20 16H6M10 13l-4 3 4 3" />
+          </>
+        )}
+        {category === "VEHICLES" && (
+          <>
+            <path d="m5 16 1.4-5h11.2l1.4 5" />
+            <path d="M7.5 11 9 7.5h6l1.5 3.5M4.5 16h15v3h-2v-1.5h-11V19h-2z" />
+            <path d="M8 15h.01M16 15h.01" />
+          </>
+        )}
+        {category === "VIOLATIONS" && (
+          <>
+            <path d="m12 4 8 15H4z" />
+            <path d="M12 9v4M12 16h.01" />
+          </>
+        )}
+      </svg>
+    </span>
+  );
+}
+
+function relativeTime(createdAt: string, locale: string): string {
+  const elapsedMinutes = Math.max(0, Math.round((Date.now() - Date.parse(createdAt)) / 60_000));
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (elapsedMinutes < 60) return formatter.format(-elapsedMinutes, "minute");
+  const hours = Math.round(elapsedMinutes / 60);
+  if (hours < 24) return formatter.format(-hours, "hour");
+  return formatter.format(-Math.round(hours / 24), "day");
+}
 
 export function NotificationsBell() {
   const t = useTranslations("Shell");
+  const locale = useLocale();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const [desktopFeedback, setDesktopFeedback] = useState<DesktopFeedback>(null);
+  const {
+    enabled,
+    notifications,
+    filter,
+    unreadCount,
+    setFilter,
+    markRead,
+    markAllRead,
+  } = useNotificationsSimulation();
 
-  /* Outside click + Escape close the panel, same contract as the mobile
-     drawer and the locale select. */
-  useEffect(() => {
-    if (!open) return;
+  const sendDesktopDemo = async () => {
+    setDesktopFeedback(
+      await sendDesktopNotification({
+        title: t("desktopDemo.title"),
+        body: t("desktopDemo.body", { count: unreadCount }),
+        tag: "diamond-demo-summary",
+      }),
+    );
+  };
 
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+  const filterLabel = (item: NotificationFilter) => {
+    if (item === "UNREAD") return t("notificationFilters.unread", { count: unreadCount });
+    if (item === "ALL") return t("notificationFilters.all");
+    return t(`notificationFilters.${item === "HANDOVER_RETURN" ? "handoverReturn" : item.toLowerCase()}`);
+  };
 
   return (
-    <div className={styles.notifications} ref={rootRef}>
-      <button
-        type="button"
-        className={styles.notifBell}
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="true"
-        aria-expanded={open}
-        aria-label={t("notificationsLabel")}
-        title={t("notificationsLabel")}
-      >
-        <svg viewBox="0 0 24 24" className={styles.notifBellIcon} aria-hidden="true">
-          <path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" />
-          <path d="M10 19a2 2 0 0 0 4 0" />
-        </svg>
-        {MOCK_UNREAD_COUNT > 0 && (
-          <span className={styles.notifBadge}>{MOCK_UNREAD_COUNT}</span>
-        )}
-      </button>
-
-      {open && (
-        <div className={styles.notifPanel} role="menu">
-          <div className={styles.notifPanelHead}>
-            <b>{t("notificationsLabel")}</b>
-            <span
-              className={styles.notifMarkRead}
-              title={t("navigationActionNote")}
-            >
-              {t("notificationsMarkAllRead")}
-            </span>
-          </div>
-
-          <div className={styles.notifList}>
-            {MOCK_ITEMS.length === 0 ? (
-              <p className={styles.notifEmpty}>{t("notificationsEmpty")}</p>
-            ) : (
-              MOCK_ITEMS.map((item) => (
-                <div
-                  key={item.key}
-                  className={styles.notifRow}
-                  role="menuitem"
-                  title={t("navigationActionNote")}
-                >
-                  <span className={styles.notifDot} aria-hidden="true" />
-                  <span className={styles.notifRowBody}>
-                    <span className={styles.notifRowTitle}>
-                      {t(item.titleKey)}
-                    </span>
-                    <span className={styles.notifRowTime}>
-                      {t(item.timeKey)}
-                    </span>
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      maxHeight={640}
+      className={styles.notifications}
+      panelClassName={styles.notificationPopover}
+      trigger={({ ref, id, "aria-expanded": ariaExpanded, "aria-controls": ariaControls, onClick, onKeyDown }) => (
+        <button
+          ref={ref}
+          id={id}
+          type="button"
+          className={styles.notifBell}
+          onClick={onClick}
+          onKeyDown={onKeyDown}
+          aria-haspopup="dialog"
+          aria-expanded={ariaExpanded}
+          aria-controls={ariaControls}
+          aria-label={t("notificationsLabel")}
+          title={t("notificationsLabel")}
+        >
+          <svg viewBox="0 0 24 24" className={styles.notifBellIcon} aria-hidden="true">
+            <path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" />
+            <path d="M10 19a2 2 0 0 0 4 0" />
+          </svg>
+          {unreadCount > 0 && <span className={styles.notifBadge}>{unreadCount}</span>}
+        </button>
       )}
-    </div>
+    >
+      <section className={styles.notificationCenter} aria-label={t("notificationsLabel")}>
+        <header className={styles.notifPanelHead}>
+          <div>
+            <b>{t("notificationsLabel")}</b>
+            <span className={styles.notificationSummary}>{t("notificationSummary", { count: unreadCount })}</span>
+          </div>
+          {unreadCount > 0 && (
+            <Button type="button" variant="secondary" size="sm" onClick={markAllRead}>
+              {t("notificationsMarkAllRead")}
+            </Button>
+          )}
+        </header>
+
+        <div className={styles.notificationFilters} role="group" aria-label={t("notificationFilters.label")}>
+          {NOTIFICATION_FILTERS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={styles.notificationFilter}
+              data-active={filter === item || undefined}
+              aria-pressed={filter === item}
+              onClick={() => setFilter(item)}
+            >
+              {filterLabel(item)}
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.notifList} role="list">
+          {notifications.length === 0 ? (
+            <p className={styles.notifEmpty}>{t("notificationsEmpty")}</p>
+          ) : (
+            notifications.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={styles.notifRow}
+                data-unread={!item.read || undefined}
+                role="listitem"
+                onClick={() => {
+                  markRead(item.id);
+                  if (item.actionTarget) {
+                    setOpen(false);
+                    router.push(`/${locale}${item.actionTarget}`);
+                  }
+                }}
+              >
+                <CategoryIcon category={item.category} />
+                <span className={styles.notifRowBody}>
+                  <span className={styles.notifRowTitle}>{t(item.titleKey)}</span>
+                  <span className={styles.notifRowDescription}>{t(item.descriptionKey)}</span>
+                  <span className={styles.notifRowTime}>{relativeTime(item.createdAt, locale)}</span>
+                </span>
+                {!item.read && <span className={styles.notifDot} aria-label={t("notificationUnread")} />}
+              </button>
+            ))
+          )}
+        </div>
+
+        {enabled && (
+          <footer className={styles.notificationDemoFooter}>
+            <Button type="button" variant="secondary" size="sm" className={styles.desktopDemoButton} onClick={() => void sendDesktopDemo()}>
+              {t("desktopDemo.action")}
+            </Button>
+            {desktopFeedback && (
+              <p className={styles.desktopDemoFeedback} role="status">
+                {t(`desktopDemo.feedback.${desktopFeedback}`)}
+              </p>
+            )}
+          </footer>
+        )}
+      </section>
+    </Popover>
   );
 }
