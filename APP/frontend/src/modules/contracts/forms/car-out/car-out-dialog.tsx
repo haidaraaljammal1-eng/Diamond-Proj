@@ -10,6 +10,7 @@ import type { DamageMark, OfficialContractView } from "@/modules/public-rental/t
 import { VehicleConditionSheet } from "../../components/vehicle-condition-sheet/vehicle-condition-sheet";
 import { ContractInspectionImage } from "../../components/contract-inspection-image/contract-inspection-image";
 import { ContractTarsInlineStatus } from "../../components/contract-tars/contract-tars-inline-status";
+import { CarOutLedger, type LedgerTarget } from "./car-out-ledger";
 import { useContract } from "../../hooks/use-contract";
 import { useSignedContractSignatures } from "../../hooks/use-signed-contract-signatures";
 import type { CarOutAngle, FuelLevel } from "../../types/contract.types";
@@ -18,7 +19,8 @@ import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-erro
 import { signedContractFromSnapshot } from "../../utils/signed-contract-snapshot";
 import styles from "./car-out-dialog.module.css";
 
-const REQUIRED: readonly CarOutAngle[] = ["FRONT", "REAR", "FRONT_RIGHT", "REAR_RIGHT", "FRONT_LEFT", "REAR_LEFT", "ODOMETER", "DASHBOARD_FUEL"];
+/** Walk-around order: front, driver side, rear, passenger side, then the cabin. */
+const REQUIRED: readonly CarOutAngle[] = ["FRONT", "FRONT_LEFT", "REAR_LEFT", "REAR", "REAR_RIGHT", "FRONT_RIGHT", "ODOMETER", "DASHBOARD_FUEL"];
 const OPTIONAL: readonly CarOutAngle[] = ["LEFT", "RIGHT", "OTHER"];
 const SHEET_WIDTH_PX = (210 / 25.4) * 96;
 
@@ -46,7 +48,7 @@ export interface CarOutDialogProps { contractId: string | null; onClose: () => v
 
 export function CarOutDialog({ contractId, onClose }: CarOutDialogProps) {
   const t = useTranslations("Contracts");
-  return <Dialog open={contractId != null} onClose={onClose} title={t("carOut.title")} description={t("carOut.description")} closeLabel={t("detail.close")} size="wide">
+  return <Dialog open={contractId != null} onClose={onClose} title={t("carOut.title")} closeLabel={t("detail.close")} size="wide">
     {contractId ? <CarOutHandover key={contractId} contractId={contractId} onClose={onClose} /> : null}
   </Dialog>;
 }
@@ -68,6 +70,8 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   const [saved, setSaved] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const focusTarget = useRef<string | null>(null);
+  const [, setFocusRequest] = useState(0);
   const previewRef = useRef<string | null>(null);
   const initialized = useRef(false);
   const photoInputs = useRef<Partial<Record<CarOutAngle, HTMLInputElement | null>>>({});
@@ -91,6 +95,17 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
     setStepOneSaved(savedHandover.mileageOut != null && savedHandover.fuelOut != null && savedHandover.signature.present);
   }, [loaded, carOutHandover, contractId, detail?.id, detail?.carOutHandover]);
   useEffect(() => () => { if (previewRef.current) URL.revokeObjectURL(previewRef.current); }, []);
+  // Ledger navigation: once the target step has rendered, bring the requirement into view and focus it.
+  useEffect(() => {
+    const target = focusTarget.current;
+    if (!target) return;
+    const node = document.getElementById(`car-out-target-${target}`);
+    if (!node) return;
+    focusTarget.current = null;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    node.focus({ preventScroll: true });
+  });
 
   const handover = detail?.id === contractId ? (carOutHandover ?? detail.carOutHandover) : null;
   const signedContract = detail?.id === contractId ? signedContractFromSnapshot(detail.snapshot) : null;
@@ -111,12 +126,6 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   // A paid, not-yet-handed-over contract holds the vehicle: "Reserved" replaces the fleet status instead of contradicting it.
   const reserved = !completed && detail.status === "PAID";
   const vehicleStatus = reserved ? t("carOut.reserved") : t.has(`carOut.vehicleStatus.${detail.vehicle.operationalStatus}`) ? t(`carOut.vehicleStatus.${detail.vehicle.operationalStatus}`) : "—";
-  const completionMissing = [
-    ...(handover.mileageOut == null ? [t("carOut.mileage")] : []),
-    ...(handover.fuelOut == null ? [t("carOut.fuel")] : []),
-    ...(!handover.signature.present ? [t("carOut.signatureMissing")] : []),
-    ...handover.photoEvidence.missing.map(angleLabel),
-  ];
 
   function changeSignature(image: Blob | null) {
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
@@ -158,8 +167,18 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
     return true;
   }
 
-  async function nextToPhotos() {
-    if (await saveDraft(true)) setStep(2);
+  async function nextToPhotos(): Promise<boolean> {
+    const ok = await saveDraft(true);
+    if (ok) setStep(2);
+    return ok;
+  }
+  async function goTo(target: LedgerTarget) {
+    const photo = (REQUIRED as readonly string[]).includes(target);
+    if (photo && step === 1) {
+      if (editable) { if (!(await nextToPhotos())) return; } else setStep(2);
+    } else if (!photo && step === 2) setStep(1);
+    focusTarget.current = photo ? target : target === "mileage" ? "mileage" : "sheet";
+    setFocusRequest((request) => request + 1);
   }
   async function finish() {
     setConfirmOpen(false);
@@ -167,7 +186,6 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   }
 
   return <div className={styles.handover} data-testid="car-out-handover">
-    <div className={styles.scrollArea}>
       <header className={styles.context}>
         <div className={styles.identity}>
           <div className={styles.vehicle}>
@@ -186,15 +204,13 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
           <Chip tone="gold" dot><span className={styles.chipLabel}>{t("carOut.context.status")}</span>{t(`status.${detail.status}`)}</Chip>
           {paymentConfirmed ? <Chip tone="ok" dot><span className={styles.chipLabel}>{t("carOut.paymentStatusLabel")}</span>{t("carOut.paymentConfirmed")}</Chip> : null}
           <Chip tone={reserved ? "gold" : "neutral"} dot><span className={styles.chipLabel}>{t("carOut.vehicleStatusLabel")}</span>{vehicleStatus}</Chip>
-          <ContractTarsInlineStatus contractId={contractId} operation="handover" className={styles.integration} />
+          {completed ? <ContractTarsInlineStatus contractId={contractId} operation="handover" className={styles.integration} /> : null}
         </div>
       </header>
+    <div className={styles.body}>
+    <div className={styles.scrollArea}>
       {saved ? <p className={styles.saved} role="status">{t("carOut.saved")}</p> : null}
       {completed ? <ReadOnlyOut detail={detail} handover={handover} t={t} format={format} /> : <>
-        <nav className={styles.steps} aria-label={t("carOut.stepsLabel")}>
-          <span data-active={step === 1}>{t("carOut.stepOne")}</span>
-          <span data-active={step === 2}>{t("carOut.stepTwo")}</span>
-        </nav>
         {step === 1 ? <>
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
@@ -207,9 +223,9 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
           <section className={styles.section}>
             <h4>{t("carOut.vehicleOut")}</h4>
             <div className={styles.dataLayout}>
-              <VehicleConditionSheet side="OUT" damage={damage} fuel={fuel} onDamage={(marks) => { setDamage(marks); setStepOneSaved(false); }} onFuel={(value) => { setFuel(value); setStepOneSaved(false); }} signatureImageUrl={signaturePreviewUrl} onSignature={changeSignature} editable={editable && !carOutPending} />
+              <div id="car-out-target-sheet" tabIndex={-1} className={styles.sheetTarget}><VehicleConditionSheet side="OUT" damage={damage} fuel={fuel} onDamage={(marks) => { setDamage(marks); setStepOneSaved(false); }} onFuel={(value) => { setFuel(value); setStepOneSaved(false); }} signatureImageUrl={signaturePreviewUrl} onSignature={changeSignature} editable={editable && !carOutPending} /></div>
               <div className={styles.fieldPanel}>
-                <label><span>{t("carOut.mileage")}</span><input type="number" min="0" step="1" inputMode="numeric" value={mileage} disabled={!editable || carOutPending} onChange={(event) => { setMileage(event.target.value); setStepOneSaved(false); }} /></label>
+                <label><span>{t("carOut.mileage")}</span><input id="car-out-target-mileage" type="number" min="0" step="1" inputMode="numeric" value={mileage} disabled={!editable || carOutPending} onChange={(event) => { setMileage(event.target.value); setStepOneSaved(false); }} /></label>
                 <p className={styles.help}>{t("carOut.fuelDamageHint")}</p>
                 <label><span>{t("carOut.notes")}</span><textarea maxLength={2000} rows={4} value={notes} disabled={!editable || carOutPending} onChange={(event) => { setNotes(event.target.value); setStepOneSaved(false); }} /></label>
                 {handover.signature.present && !signature ? <div className={styles.savedSignature}><strong>{t("carOut.signatureSaved")}</strong>{handover.signature.url ? <ContractInspectionImage path={handover.signature.url} alt={t("carOut.signatureSaved")} className={styles.signaturePreview} /> : null}</div> : null}
@@ -220,10 +236,9 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
           <div className={styles.sectionHeader}><h4>{t("carOut.photosTitle")}</h4><strong className={styles.progress}>{t("carOut.progress", { completed: handover.photoEvidence.completed, required: handover.photoEvidence.required })}</strong></div>
           <p className={styles.help}>{t("carOut.photosHint")}</p>
           <div className={styles.progressTrack}><span style={{ width: `${Math.round(100 * handover.photoEvidence.completed / handover.photoEvidence.required)}%` }} /></div>
-          {completionMissing.length ? <p className={styles.missing}>{t("carOut.missing", { items: completionMissing.join(", ") })}</p> : null}
           <div className={styles.photoGrid}>{[...REQUIRED, ...OPTIONAL].map((angle) => {
             const photo = photos.find((item) => item.angle === angle);
-            return <div className={styles.photoSlot} key={angle}>
+            return <div className={styles.photoSlot} key={angle} id={`car-out-target-${angle}`} tabIndex={-1}>
               <div className={styles.photoHeading}><strong>{angleLabel(angle)}</strong><small>{REQUIRED.includes(angle) ? t("carOut.required") : t("carOut.optional")}</small></div>
               {photo ? <ContractInspectionImage path={photo.url} alt={angleLabel(angle)} className={styles.thumbnail} /> : <div className={styles.placeholder}>{t("carOut.notCaptured")}</div>}
               {editable && handover.actions.canUploadPhotos ? <div className={styles.photoActions}>
@@ -237,6 +252,16 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
           })}</div>
         </section>}
       </>}
+    </div>
+    {completed ? null : <CarOutLedger
+      handover={handover}
+      angles={REQUIRED}
+      draft={{ mileage, fuel, damage, signatureDrawn: signature != null }}
+      step={step}
+      photosReachable={step === 2 || !editable || Boolean(signedContract)}
+      onSelect={(target) => void goTo(target)}
+      footer={<ContractTarsInlineStatus contractId={contractId} operation="handover" />}
+    />}
     </div>
     <div className={styles.actions}>
       {errorMessage || validationError ? <p className={`${styles.error} ${styles.actionError}`} role="alert">{validationError ?? errorMessage}</p> : null}
