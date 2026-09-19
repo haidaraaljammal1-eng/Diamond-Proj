@@ -925,7 +925,7 @@
       "vehicleStatusLabel": "Vehicle status",
       "paymentStatusLabel": "Payment",
       "paymentConfirmed": "Confirmed",
-      "title": "Car-Out — handover",
+      "title": "Car-out handover",
       "description": "Record outgoing mileage, fuel and the eight inspection photos.",
       "loading": "Loading handover data…",
       "vehicleOut": "Vehicle OUT",

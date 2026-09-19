@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
+import { Chip } from "@/shared/components/ui/chip";
 import { OfficialContractA4 } from "@/modules/public-rental/components/official-contract-a4/official-contract-a4";
 import type { DamageMark, OfficialContractView } from "@/modules/public-rental/types/official-contract.types";
 import { VehicleConditionSheet } from "../../components/vehicle-condition-sheet/vehicle-condition-sheet";
@@ -102,6 +103,14 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   const editable = handover.actions.canEdit && detail.status === "PAID";
   const photos = handover.photoEvidence.photos;
   const angleLabel = (angle: CarOutAngle) => t(`carOut.angle.${angle}`);
+  const plateNumber = detail.vehicle.plateNumber ?? signedContract?.vehicle.plateNumber ?? null;
+  const plateCode = signedContract?.vehicle.plateCode ?? null;
+  const plate = plateCode && !plateNumber?.includes(plateCode) ? [plateCode, plateNumber].filter(Boolean).join(" ") : plateNumber;
+  const vehicleMeta = [signedContract?.vehicle.color, signedContract?.vehicle.yearMade].filter((part) => part != null && part !== "").join(" · ");
+  const paymentConfirmed = detail.payment?.status === "CONFIRMED";
+  // A paid, not-yet-handed-over contract holds the vehicle: "Reserved" replaces the fleet status instead of contradicting it.
+  const reserved = !completed && detail.status === "PAID";
+  const vehicleStatus = reserved ? t("carOut.reserved") : t.has(`carOut.vehicleStatus.${detail.vehicle.operationalStatus}`) ? t(`carOut.vehicleStatus.${detail.vehicle.operationalStatus}`) : "—";
   const completionMissing = [
     ...(handover.mileageOut == null ? [t("carOut.mileage")] : []),
     ...(handover.fuelOut == null ? [t("carOut.fuel")] : []),
@@ -159,19 +168,27 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
 
   return <div className={styles.handover} data-testid="car-out-handover">
     <div className={styles.scrollArea}>
-      <div className={styles.context}>
-        <div><span>{t("carOut.context.contract")}</span><strong dir="ltr">{detail.contractNumber}</strong></div>
-        <div><span>{t("carOut.context.hirer")}</span><strong>{signedContract?.hirer.name ?? detail.customer?.name ?? "—"}</strong></div>
-        <div><span>{t("carOut.context.vehicle")}</span><strong>{detail.vehicle.displayName}</strong></div>
-        <div><span>{t("carOut.context.plate")}</span><strong dir="ltr">{detail.vehicle.plateNumber ?? "—"}</strong></div>
-        <div><span>{t("carOut.plateCode")}</span><strong>{signedContract?.vehicle.plateCode ?? "—"}</strong></div>
-        <div><span>{t("carOut.color")}</span><strong>{signedContract?.vehicle.color ?? "—"}</strong></div>
-        <div><span>{t("carOut.year")}</span><strong>{signedContract?.vehicle.yearMade ?? "—"}</strong></div>
-        <div><span>{t("carOut.context.status")}</span><strong>{t(`status.${detail.status}`)}</strong></div>
-        <div><span>{t("carOut.paymentStatusLabel")}</span><strong>{detail.payment?.status === "CONFIRMED" ? t("carOut.paymentConfirmed") : "—"}</strong></div>
-        <div><span>{t("carOut.vehicleStatusLabel")}</span><strong>{t.has(`carOut.vehicleStatus.${detail.vehicle.operationalStatus}`) ? t(`carOut.vehicleStatus.${detail.vehicle.operationalStatus}`) : "—"}{!completed && detail.status === "PAID" ? ` · ${t("carOut.reserved")}` : ""}</strong></div>
-      </div>
-      <ContractTarsInlineStatus contractId={contractId} operation="handover" className={styles.integration} />
+      <header className={styles.context}>
+        <div className={styles.identity}>
+          <div className={styles.vehicle}>
+            <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
+            <div className={styles.vehicleMeta}>
+              {plate ? <span className={styles.plate} dir="ltr" aria-label={`${t("carOut.context.plate")} ${plate}`}>{plate}</span> : null}
+              {vehicleMeta ? <span>{vehicleMeta}</span> : null}
+            </div>
+          </div>
+          <dl className={styles.parties}>
+            <div><dt>{t("carOut.context.contract")}</dt><dd dir="ltr">{detail.contractNumber}</dd></div>
+            <div><dt>{t("carOut.context.hirer")}</dt><dd>{signedContract?.hirer.name ?? detail.customer?.name ?? "—"}</dd></div>
+          </dl>
+        </div>
+        <div className={styles.statusLine}>
+          <Chip tone="gold" dot><span className={styles.chipLabel}>{t("carOut.context.status")}</span>{t(`status.${detail.status}`)}</Chip>
+          {paymentConfirmed ? <Chip tone="ok" dot><span className={styles.chipLabel}>{t("carOut.paymentStatusLabel")}</span>{t("carOut.paymentConfirmed")}</Chip> : null}
+          <Chip tone={reserved ? "gold" : "neutral"} dot><span className={styles.chipLabel}>{t("carOut.vehicleStatusLabel")}</span>{vehicleStatus}</Chip>
+          <ContractTarsInlineStatus contractId={contractId} operation="handover" className={styles.integration} />
+        </div>
+      </header>
       {saved ? <p className={styles.saved} role="status">{t("carOut.saved")}</p> : null}
       {completed ? <ReadOnlyOut detail={detail} handover={handover} t={t} format={format} /> : <>
         <nav className={styles.steps} aria-label={t("carOut.stepsLabel")}>

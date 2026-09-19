@@ -860,9 +860,9 @@
         "FAILED": "فشل الربط"
       },
       "inline": {
-        "handover": "TARS — التسليم",
-        "returnDocumentation": "TARS — الإرجاع",
-        "completeContract": "TARS — إكمال العقد"
+        "handover": "TARS · التسليم",
+        "returnDocumentation": "TARS · الإرجاع",
+        "completeContract": "TARS · إكمال العقد"
       }
     },
     "actions": {
@@ -925,7 +925,7 @@
       "vehicleStatusLabel": "حالة السيارة",
       "paymentStatusLabel": "الدفع",
       "paymentConfirmed": "مؤكد",
-      "title": "تسليم السيارة — Car-Out",
+      "title": "تسليم السيارة",
       "description": "سجّل عداد الخروج والوقود وصور الزوايا الثماني.",
       "loading": "جارٍ تحميل بيانات التسليم…",
       "vehicleOut": "بيانات خروج السيارة",

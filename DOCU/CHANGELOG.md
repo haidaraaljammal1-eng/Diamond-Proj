@@ -2,6 +2,8 @@
 
 ## 2026-09-19
 
+- Reworked the Car-Out dialog header only (steps, photo grid and footer unchanged). The title is monolingual without an em dash; vehicle name and a plate block lead, contract and hirer follow, and contract, payment and vehicle states sit on one line of shared `Chip`s with the TARS handover row. Plate code merges into the plate instead of an empty field, and a PAID contract shows the vehicle as Reserved instead of "Available · Reserved". `Contracts.tars.inline.*` in Arabic now use `·` instead of an em dash, which also changes Car-In, Close and the detail drawer. See `DOCU/05-pages/contracts.md`.
+
 - Documented `DIAMOND_SIMULATION_ENABLED=true` in `APP/backend/.env.example`; without it fresh setups hid the DEV License OCR, Passport OCR, and Payment actions. All related env lines are tagged `TEMP-DEV-SIMULATION` for one-search removal. See `DOCU/05-pages/public-rental-flow.md`.
 
 - Added the frontend-only header Notification Center targeting real loaded
