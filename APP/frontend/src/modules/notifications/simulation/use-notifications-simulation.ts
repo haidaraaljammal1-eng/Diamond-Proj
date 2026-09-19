@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { isUiDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import { useNotificationsSimulationStore } from "./notifications-simulation.store";
+import type { NotificationRecordTarget } from "./notifications-simulation.fixture";
 
 export function useNotificationsSimulation() {
   const enabled = isUiDemoSimulationEnabled("notifications");
@@ -13,10 +14,18 @@ export function useNotificationsSimulation() {
   const setFilter = useNotificationsSimulationStore((state) => state.setFilter);
   const markRead = useNotificationsSimulationStore((state) => state.markRead);
   const markAllRead = useNotificationsSimulationStore((state) => state.markAllRead);
+  const registerTargets = useNotificationsSimulationStore((state) => state.registerTargets);
 
   useEffect(() => {
     if (enabled && !active) activate();
   }, [activate, active, enabled]);
+
+  const registerNotificationTargets = useCallback(
+    (targets: NotificationRecordTarget[]) => {
+      if (enabled) registerTargets(targets);
+    },
+    [enabled, registerTargets],
+  );
 
   const visibleNotifications = useMemo(() => {
     if (!enabled || !active) return [];
@@ -38,5 +47,6 @@ export function useNotificationsSimulation() {
     setFilter,
     markRead,
     markAllRead,
+    registerTargets: registerNotificationTargets,
   };
 }

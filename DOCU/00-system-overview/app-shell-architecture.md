@@ -40,7 +40,7 @@ No sidebar/navigation/permission/business logic lives here.
 | --- | --- |
 | `app-shell.tsx` | Layout structure (header + rail + content) |
 | `app-shell.module.css` | Stage + mobile scrim |
-| `header/app-header.tsx` | Demo `#topbar` capsule (brand, role segment, user chip, language) |
+| `header/app-header.tsx` | Demo `#topbar` capsule (left actions, search, breadcrumb, user/language controls) |
 | `sidebar/sidebar.tsx` | Demo `#rail` icon dock, render-only |
 | `sidebar/sidebar-item.tsx` | `.navit` item (link/action, active state, badge) |
 | `sidebar/sidebar-brand.tsx` | Crystal mark + `DIAMOND` wordmark |
@@ -89,6 +89,10 @@ locale layout drives placement via logical CSS properties
 (`inset-inline-start/end`). Mobile drawer hidden transforms use
 `[dir="ltr"]` overrides.
 
+The desktop header keeps the bell with the left action cluster, the search in
+the centered grid track, and the breadcrumb on the opposite side. RTL grid
+placement preserves this physical arrangement without absolute positioning.
+
 ## Permission UX
 
 Backend remains the permission authority. The shell only uses session
@@ -114,6 +118,8 @@ of the Demo layout, so the shell defines none.
 - ≤ 1080px: content margin tightens to the rail.
 - ≤ 900px: rail becomes an off-canvas drawer + scrim; topbar floats full-width;
   burger appears; wordmark/user text/short labels toggle.
+- ≤ 560px: the inactive global search and breadcrumb hide so the header action
+  group remains a single overflow-free row.
 - ≤ 560px / ≤ 400px: content padding tiers.
 
 ## Shared Pieces

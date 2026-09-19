@@ -161,16 +161,16 @@ export function NotificationsBell() {
                 role="listitem"
                 onClick={() => {
                   markRead(item.id);
-                  if (item.actionTarget) {
-                    setOpen(false);
-                    router.push(`/${locale}${item.actionTarget}`);
-                  }
+                  setOpen(false);
+                  router.push(
+                    `/${locale}${item.actionTarget.route}?focus=${encodeURIComponent(item.actionTarget.entityId)}`,
+                  );
                 }}
               >
                 <CategoryIcon category={item.category} />
                 <span className={styles.notifRowBody}>
-                  <span className={styles.notifRowTitle}>{t(item.titleKey)}</span>
-                  <span className={styles.notifRowDescription}>{t(item.descriptionKey)}</span>
+                  <span className={styles.notifRowTitle}>{t(item.titleKey, item.titleValues)}</span>
+                  <span className={styles.notifRowDescription}>{t(item.descriptionKey, item.descriptionValues)}</span>
                   <span className={styles.notifRowTime}>{relativeTime(item.createdAt, locale)}</span>
                 </span>
                 {!item.read && <span className={styles.notifDot} aria-label={t("notificationUnread")} />}

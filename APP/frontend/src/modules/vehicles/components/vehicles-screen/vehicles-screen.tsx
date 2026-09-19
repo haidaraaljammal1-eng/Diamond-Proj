@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
@@ -30,6 +30,9 @@ import { ContractLinkResultDialog } from "@/modules/contracts/components/contrac
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
 import { ReconcileDialog } from "@/modules/contracts/forms/reconcile/reconcile-dialog";
 import { CloseContractDialog } from "@/modules/contracts/forms/close/close-contract-dialog";
+import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
+import { useRecordFocus } from "@/shared/hooks/use-record-focus";
+import vehicleCardStyles from "../vehicle-card/vehicle-card.module.css";
 import styles from "./vehicles-screen.module.css";
 
 export function VehiclesScreen() {
@@ -58,6 +61,7 @@ export function VehiclesScreen() {
   } = useVehicles();
   const { types, isLoading: typesLoading } = useFleetTypeLookup();
   const { generateReturnLink, generateRentalLink } = useContract();
+  const registerNotificationTargets = useNotificationRecordTargets();
 
   const [detailVehicle, setDetailVehicle] = useState<VehicleCardDto | null>(null);
   const [priceVehicle, setPriceVehicle] = useState<VehicleCardDto | null>(null);
@@ -71,6 +75,24 @@ export function VehiclesScreen() {
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeId, setCloseId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    registerNotificationTargets(
+      vehicles.map((vehicle) => ({
+        entityType: "vehicle" as const,
+        entityId: String(vehicle.id),
+        route: "/vehicles" as const,
+        label: vehicle.displayName,
+        reference: vehicle.plateNumber,
+      })),
+    );
+  }, [registerNotificationTargets, vehicles]);
+
+  useRecordFocus({
+    ready: isReady,
+    version: vehicles.map((vehicle) => vehicle.id).join("|"),
+    highlightClassName: vehicleCardStyles.recordFocus,
+  });
 
   const filterLabels = useMemo(
     () => ({

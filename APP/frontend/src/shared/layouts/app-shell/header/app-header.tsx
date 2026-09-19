@@ -28,8 +28,8 @@ const GlobeIcon = (
  * AppHeader — the Demo `#topbar` floating glass capsule, sized to the content
  * area beside the rail rather than to the viewport.
  *
- * Three-column grid, not flex: the start group (rail control + breadcrumb)
- * and end group (notifications, user chip, locale select) sit in two equal
+ * Three-column grid, not flex: the start group (rail controls, notifications,
+ * user chip, locale select) and end group (breadcrumb) sit in two equal
  * `1fr` tracks, so search — the middle, `auto`-sized column — is centered in
  * the bar itself regardless of how long the breadcrumb or the end group get.
  * Both side groups carry `min-width: 0`, so they yield (the breadcrumb
@@ -87,7 +87,27 @@ export function AppHeader() {
 
         <div className={styles.separator} aria-hidden="true" />
 
-        <AppBreadcrumb />
+        <NotificationsBell />
+
+        <div className={styles.meChip} title={t("avatarLabel")}>
+          <div className={styles.meName}>
+            <b>{displayName}</b>
+            <span>{isAdmin ? t("userRoleOwner") : t("userRoleEmployee")}</span>
+          </div>
+          <span className={styles.avatar} aria-hidden="true">
+            {initial}
+          </span>
+        </div>
+
+        <Select
+          variant="ghost"
+          size="sm"
+          icon={GlobeIcon}
+          options={LOCALES}
+          value={locale}
+          onChange={handleLocaleChange}
+          aria-label={t("langTitle")}
+        />
       </div>
 
       <form
@@ -114,27 +134,7 @@ export function AppHeader() {
       </form>
 
       <div className={styles.endGroup}>
-        <NotificationsBell />
-
-        <div className={styles.meChip} title={t("avatarLabel")}>
-          <div className={styles.meName}>
-            <b>{displayName}</b>
-            <span>{isAdmin ? t("userRoleOwner") : t("userRoleEmployee")}</span>
-          </div>
-          <span className={styles.avatar} aria-hidden="true">
-            {initial}
-          </span>
-        </div>
-
-        <Select
-          variant="ghost"
-          size="sm"
-          icon={GlobeIcon}
-          options={LOCALES}
-          value={locale}
-          onChange={handleLocaleChange}
-          aria-label={t("langTitle")}
-        />
+        <AppBreadcrumb />
       </div>
     </header>
   );

@@ -182,9 +182,23 @@
   justify-content: center;
 }
 
+.recordFocus {
+  background: rgba(201, 161, 92, 0.18) !important;
+  box-shadow: 0 0 0 3px rgba(201, 161, 92, 0.22), inset 0 0 0 2px rgba(201, 161, 92, 0.65);
+  animation: record-focus-pulse 1.2s ease-in-out 2;
+}
+
+@keyframes record-focus-pulse {
+  0%,
+  100% { box-shadow: 0 0 0 2px rgba(201, 161, 92, 0.12), inset 0 0 0 2px rgba(201, 161, 92, 0.45); }
+  50% { box-shadow: 0 0 0 7px rgba(201, 161, 92, 0.14), inset 0 0 0 2px rgba(201, 161, 92, 0.75); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card:hover,
-  .card:focus-within {
+  .card:focus-within,
+  .recordFocus {
     transform: none;
+    animation: none;
   }
 }

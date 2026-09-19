@@ -242,3 +242,19 @@
   line-height: 1.35;
   color: var(--diamond-muted);
 }
+
+.recordFocus {
+  background: rgba(201, 161, 92, 0.18) !important;
+  box-shadow: inset 0 0 0 2px rgba(201, 161, 92, 0.65), 0 0 0 4px rgba(201, 161, 92, 0.08);
+  animation: record-focus-pulse 1.2s ease-in-out 2;
+}
+
+@keyframes record-focus-pulse {
+  0%,
+  100% { box-shadow: inset 0 0 0 2px rgba(201, 161, 92, 0.45), 0 0 0 0 rgba(201, 161, 92, 0); }
+  50% { box-shadow: inset 0 0 0 2px rgba(201, 161, 92, 0.75), 0 0 0 6px rgba(201, 161, 92, 0.14); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recordFocus { animation: none; }
+}

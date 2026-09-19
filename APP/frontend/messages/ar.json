@@ -74,44 +74,44 @@
     },
     "notification": {
       "contractUnpaid": {
-        "title": "عقد غير مدفوع",
-        "description": "يوجد عقد تجريبي بانتظار الدفع."
+        "title": "العقد {number} غير مدفوع",
+        "description": "لا يزال الدفع معلقًا للعقد {number}."
       },
       "violationUnpaid": {
-        "title": "مخالفة مسجلة وغير مدفوعة",
-        "description": "تحتاج مخالفة تجريبية إلى مراجعة الدفع."
+        "title": "مخالفة غير مدفوعة — {vehicle} / {contract}",
+        "description": "راجع المخالفة غير المدفوعة المرتبطة بـ {vehicle}."
       },
       "vehicleReturnOverdue": {
-        "title": "السيارة تجاوزت موعد الإرجاع",
-        "description": "تجاوز إيجار تجريبي موعد الإرجاع المتوقع."
+        "title": "{vehicle} — {number}",
+        "description": "تجاوز هذا العقد موعد الإرجاع المتوقع."
       },
       "carOutPending": {
-        "title": "التسليم بانتظار التنفيذ",
-        "description": "عقد تجريبي مدفوع بانتظار تسليم السيارة."
+        "title": "العقد {number} مدفوع وبانتظار التسليم",
+        "description": "أكمل إجراء تسليم السيارة للعقد {number}."
       },
       "contractSigned": {
-        "title": "تم توقيع العقد",
-        "description": "تم توقيع عقد تجريبي من المستأجر."
+        "title": "تم توقيع العقد {number}",
+        "description": "تم حفظ توقيع المستأجر للعقد {number}."
       },
       "contractPaid": {
-        "title": "تم دفع العقد",
-        "description": "تم تسجيل دفعة عقد تجريبي."
+        "title": "تم دفع العقد {number}",
+        "description": "تم تسجيل الدفع للعقد {number}."
       },
       "vehicleHandedOver": {
-        "title": "تم تسليم السيارة",
-        "description": "السيارة التجريبية مؤجرة الآن."
+        "title": "{vehicle} — {reference}",
+        "description": "تم تسليم السيارة وأصبحت مؤجرة الآن."
       },
       "vehicleReturned": {
-        "title": "تم إرجاع السيارة",
-        "description": "تم توثيق إرجاع سيارة تجريبية."
+        "title": "تم إرجاع السيارة — العقد {number}",
+        "description": "تم توثيق الإرجاع للعقد {number}."
       },
       "violationNew": {
-        "title": "مخالفة جديدة",
-        "description": "توجد مخالفة تجريبية جديدة جاهزة للمراجعة."
+        "title": "مخالفة جديدة — {vehicle} / {contract}",
+        "description": "توجد مخالفة جديدة جاهزة للمراجعة."
       },
       "vehicleMaintenanceDue": {
-        "title": "تحتاج السيارة إلى متابعة",
-        "description": "لدى سيارة تجريبية متابعة تشغيلية مجدولة."
+        "title": "متابعة السيارة — {vehicle}",
+        "description": "لدى هذه السيارة متابعة تشغيلية مجدولة."
       }
     },
     "desktopDemo": {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -18,6 +18,9 @@ import { CarInDialog } from "../../forms/car-in/car-in-dialog";
 import { RenewDialog } from "../../forms/renew/renew-dialog";
 import { ReconcileDialog } from "../../forms/reconcile/reconcile-dialog";
 import { CloseContractDialog } from "../../forms/close/close-contract-dialog";
+import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
+import { useRecordFocus } from "@/shared/hooks/use-record-focus";
+import tableStyles from "../contracts-table/contracts-table.module.css";
 import styles from "./contracts-screen.module.css";
 
 export function ContractsScreen() {
@@ -43,6 +46,7 @@ export function ContractsScreen() {
     setPage,
   } = useContracts();
   const { generateRentalLink, generateReturnLink } = useContract();
+  const registerNotificationTargets = useNotificationRecordTargets();
 
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [carOutId, setCarOutId] = useState<string | null>(null);
@@ -50,6 +54,24 @@ export function ContractsScreen() {
   const [renewId, setRenewId] = useState<string | null>(null);
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeTarget, setCloseTarget] = useState<{ id: string; number?: string } | null>(null);
+
+  useEffect(() => {
+    registerNotificationTargets(
+      contracts.map((contract) => ({
+        entityType: "contract" as const,
+        entityId: contract.id,
+        route: "/contracts" as const,
+        label: contract.contractNumber,
+        reference: contract.vehicleName,
+      })),
+    );
+  }, [contracts, registerNotificationTargets]);
+
+  useRecordFocus({
+    ready: isReady,
+    version: contracts.map((contract) => contract.id).join("|"),
+    highlightClassName: tableStyles.recordFocus,
+  });
 
   const view = resolveContractsListView({
     isAllowed,

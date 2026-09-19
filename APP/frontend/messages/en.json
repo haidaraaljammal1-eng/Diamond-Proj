@@ -74,44 +74,44 @@
     },
     "notification": {
       "contractUnpaid": {
-        "title": "Contract payment pending",
-        "description": "A demo contract is awaiting payment."
+        "title": "Contract {number} is unpaid",
+        "description": "Payment is still pending for contract {number}."
       },
       "violationUnpaid": {
-        "title": "Unpaid violation recorded",
-        "description": "A demo violation needs payment review."
+        "title": "Unpaid violation — {vehicle} / {contract}",
+        "description": "Review the unpaid violation linked to {vehicle}."
       },
       "vehicleReturnOverdue": {
-        "title": "Vehicle return is overdue",
-        "description": "A demo rental has passed its expected return time."
+        "title": "{vehicle} — {number}",
+        "description": "This contract has passed its expected return time."
       },
       "carOutPending": {
-        "title": "Car-Out pending",
-        "description": "A paid demo contract is waiting for handover."
+        "title": "Contract {number} paid and awaiting handover",
+        "description": "Complete the Car-Out workflow for contract {number}."
       },
       "contractSigned": {
-        "title": "Contract signed",
-        "description": "A demo contract was signed by the customer."
+        "title": "Contract {number} signed",
+        "description": "The customer signature is recorded for contract {number}."
       },
       "contractPaid": {
-        "title": "Contract paid",
-        "description": "A demo contract payment was recorded."
+        "title": "Contract {number} paid",
+        "description": "Payment is recorded for contract {number}."
       },
       "vehicleHandedOver": {
-        "title": "Vehicle handed over",
-        "description": "A demo vehicle is now rented."
+        "title": "{vehicle} — {reference}",
+        "description": "This vehicle was handed over and is now rented."
       },
       "vehicleReturned": {
-        "title": "Vehicle returned",
-        "description": "A demo vehicle return was documented."
+        "title": "Vehicle returned — contract {number}",
+        "description": "The return was documented for contract {number}."
       },
       "violationNew": {
-        "title": "New violation",
-        "description": "A new demo violation is ready for review."
+        "title": "New violation — {vehicle} / {contract}",
+        "description": "A new violation is ready for review."
       },
       "vehicleMaintenanceDue": {
-        "title": "Vehicle follow-up needed",
-        "description": "A demo vehicle has a scheduled operations follow-up."
+        "title": "Vehicle follow-up — {vehicle}",
+        "description": "This vehicle has a scheduled operations follow-up."
       }
     },
     "desktopDemo": {

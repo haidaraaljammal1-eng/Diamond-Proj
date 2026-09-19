@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
@@ -14,6 +14,10 @@ import { RoadLiabilitiesList } from "../road-liabilities-list/road-liabilities-l
 import { RoadLiabilitiesQueues } from "../road-liabilities-queues/road-liabilities-queues";
 import { RoadLiabilitiesSummaryStrip } from "../road-liabilities-summary/road-liabilities-summary";
 import { RoadLiabilityDetailDrawer } from "../road-liability-detail/road-liability-detail";
+import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
+import { useRecordFocus } from "@/shared/hooks/use-record-focus";
+import rowStyles from "../road-liability-row/road-liability-row.module.css";
+import { isSimulatedRoadLiabilityId } from "../../utils/road-liability-status";
 import styles from "./road-liabilities-screen.module.css";
 
 export function RoadLiabilitiesScreen() {
@@ -22,7 +26,28 @@ export function RoadLiabilitiesScreen() {
   const router = useRouter();
   const simulation = useDemoSimulation("violations");
   const page = useRoadLiabilities();
+  const registerNotificationTargets = useNotificationRecordTargets();
   const [contractId, setContractId] = useState<string | null>(null);
+
+  useEffect(() => {
+    registerNotificationTargets(
+      page.items
+        .filter((item) => !isSimulatedRoadLiabilityId(item.id))
+        .map((item) => ({
+          entityType: "violation" as const,
+          entityId: item.id,
+          route: "/violations" as const,
+          label: item.vehicle?.displayName ?? item.id,
+          reference: item.contract?.contractNumber,
+        })),
+    );
+  }, [page.items, registerNotificationTargets]);
+
+  useRecordFocus({
+    ready: page.isAllowed && !page.isListLoading,
+    version: `${page.pagination?.page ?? 0}:${page.items.map((item) => item.id).join("|")}`,
+    highlightClassName: rowStyles.recordFocus,
+  });
 
   const goContracts = () => {
     setContractId(null);

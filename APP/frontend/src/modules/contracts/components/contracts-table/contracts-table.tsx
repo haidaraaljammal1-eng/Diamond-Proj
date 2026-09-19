@@ -56,6 +56,8 @@ export function ContractsTable({
               <tr
                 key={contract.id}
                 tabIndex={0}
+                data-record-id={contract.id}
+                data-record-number={contract.contractNumber}
                 onClick={() => onOpen(contract)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {

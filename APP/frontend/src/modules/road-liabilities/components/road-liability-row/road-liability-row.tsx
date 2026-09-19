@@ -81,6 +81,7 @@ export function RoadLiabilityRow({ item, selected, onSelect }: RoadLiabilityRowP
       aria-selected={selected}
       data-testid="road-liability-row"
       data-liability-id={item.id}
+      data-record-id={item.id}
       data-work-state={item.workState}
       data-prediction={gpsOnly ? "true" : "false"}
       onClick={() => onSelect(item.id)}
@@ -155,6 +156,7 @@ export function RoadLiabilityCard({ item, selected, onSelect }: RoadLiabilityRow
       aria-pressed={selected}
       data-testid="road-liability-card"
       data-liability-id={item.id}
+      data-record-id={item.id}
       data-work-state={item.workState}
       onClick={() => onSelect(item.id)}
     >

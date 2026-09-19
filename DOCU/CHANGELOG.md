@@ -2,6 +2,13 @@
 
 ## 2026-09-19
 
+- Added the frontend-only header Notification Center targeting real loaded
+  Contract, Vehicle, and Road Liability records. The bell now stays in the
+  left header action cluster; notification actions navigate with `focus` and
+  destination records receive a temporary reduced-motion-aware highlight.
+  Synthetic or unregistered records are not shown. See
+  `DOCU/05-pages/notifications.md`.
+
 - Separated real development rental provider substitutions (License OCR, Passport OCR, successful Payment) from browser-only Dashboard, WhatsApp, and Road Liabilities demos. Restored scoped UI demo controls without re-enabling the old rental journey, set local frontend provider and auth URL flags for port 3100, and persisted Official Contract review as FORM before manual signing to SIGNED. Corrected Car-Out photo documentation to six exterior, odometer, and dashboard/fuel images. See `DOCU/CURRENT-IMPLEMENTATION-STATUS.md` and `DOCU/05-pages/public-rental-flow.md`.
 
 ## 2026-09-18

@@ -79,6 +79,8 @@ export function VehicleCard({
       padding="none"
       className={styles.card}
       data-testid="vehicle-card"
+      data-record-id={String(vehicle.id)}
+      data-record-external-id={vehicle.externalId ?? undefined}
       onClick={() => onOpen(vehicle)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {

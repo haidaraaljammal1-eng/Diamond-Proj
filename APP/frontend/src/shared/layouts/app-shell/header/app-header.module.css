@@ -41,14 +41,34 @@
    would push the tracks uneven and pull the search column off-center. */
 .startGroup,
 .endGroup {
+  grid-row: 1;
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
 }
 
+.startGroup {
+  grid-column: 1;
+  justify-content: flex-start;
+}
+
 .endGroup {
+  grid-column: 3;
   justify-content: flex-end;
+}
+
+/* Keep the action cluster on the physical left in both reading directions;
+   the breadcrumb remains on the physical right while the search stays in the
+   centered middle track. */
+:global([dir="rtl"]) .startGroup {
+  grid-column: 3;
+  justify-content: flex-end;
+}
+
+:global([dir="rtl"]) .endGroup {
+  grid-column: 1;
+  justify-content: flex-start;
 }
 
 .topbar::before {
@@ -205,6 +225,9 @@
    The grid's centered middle column (see `.topbar`) — width is intrinsic to
    this rule, not to the grid track, so it does not stretch to fill space. */
 .search {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
   position: relative;
   display: flex;
   align-items: center;
@@ -314,6 +337,8 @@
 .notifications {
   position: relative;
   flex: none;
+  width: max-content !important;
+  min-width: max-content;
 }
 
 .notifBell {
@@ -723,6 +748,26 @@
      would push the identity controls out of reach. */
   .crumbLink,
   .crumbSep {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    overflow-x: hidden;
+  }
+
+  .startGroup {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  :global([dir="rtl"]) .startGroup {
+    justify-content: flex-end;
+  }
+
+  .search,
+  .endGroup {
     display: none;
   }
 }

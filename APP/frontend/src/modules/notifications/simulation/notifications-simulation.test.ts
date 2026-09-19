@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { isUiDemoSimulationEnabled } from "../../demo-simulation/simulation.enabled.ts";
-import { buildNotificationsFixture } from "./notifications-simulation.fixture.ts";
+import { buildNotificationsFixture, type NotificationRecordTarget } from "./notifications-simulation.fixture.ts";
 import { sendDesktopNotification, type DesktopNotificationApi } from "./desktop-notification.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -17,7 +17,30 @@ describe("notification browser demo", () => {
   });
 
   it("provides the requested synthetic lifecycle coverage", () => {
-    const fixture = buildNotificationsFixture(Date.parse("2026-09-19T12:00:00.000Z"));
+    const targets: NotificationRecordTarget[] = [
+      {
+        entityType: "contract",
+        entityId: "contract-1",
+        route: "/contracts",
+        label: "DR-1052",
+        reference: "Tesla Model 3 — A 45821",
+      },
+      {
+        entityType: "vehicle",
+        entityId: "7",
+        route: "/vehicles",
+        label: "Toyota Camry",
+        reference: "Dubai C 12076",
+      },
+      {
+        entityType: "violation",
+        entityId: "violation-1",
+        route: "/violations",
+        label: "Toyota Camry",
+        reference: "DR-1041",
+      },
+    ];
+    const fixture = buildNotificationsFixture(targets, Date.parse("2026-09-19T12:00:00.000Z"));
     assert.equal(fixture.length, 10);
     assert.equal(fixture.filter((item) => !item.read).length, 4);
     assert.ok(fixture.some((item) => item.type === "CONTRACT_UNPAID"));
@@ -27,6 +50,9 @@ describe("notification browser demo", () => {
     assert.ok(fixture.some((item) => item.type === "VEHICLE_HANDED_OVER"));
     assert.ok(fixture.some((item) => item.type === "VEHICLE_RETURNED"));
     assert.ok(fixture.every((item) => item.id.startsWith("demo-notification-")));
+    assert.ok(fixture.every((item) => item.actionTarget.entityId));
+    assert.ok(fixture.every((item) => item.actionTarget.route));
+    assert.deepEqual(buildNotificationsFixture([], Date.parse("2026-09-19T12:00:00.000Z")), []);
   });
 
   it("keeps the demo store frontend-only and isolated", () => {

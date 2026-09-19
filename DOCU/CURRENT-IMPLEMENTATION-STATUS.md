@@ -22,6 +22,12 @@ The customer reviews the real Official Contract and confirms it through `POST /c
 
 Legacy Finance and GPS fixture code remains in the frontend, but the general demo gate keeps those controls disabled. Their documentation describes retained historical overlays, not currently active local actions.
 
+The header Notification Center is another scoped browser-only UI demo. It uses
+the shared Popover and in-memory Zustand state. Notifications are registered
+only from real records already loaded by Contracts, Vehicles, Dashboard, or
+Violations; each item navigates with a `focus` query and the destination page
+temporarily highlights the matching record. It never writes to Backend or DB.
+
 ## PAID and handover
 
 A PAID Contract reserves its assigned Vehicle: operational status stays `AVAILABLE`, while `isReserved=true` and `isBookable=false`. Staff opens Car-Out from that same Contract. Completion requires mileage, fuel, a real OUT signature, and eight photos: six exterior views (FRONT, REAR, FRONT_RIGHT, REAR_RIGHT, FRONT_LEFT, REAR_LEFT), one ODOMETER, and one DASHBOARD_FUEL. Damage is recorded in the OUT draft. Completion atomically changes `PAID -> ACTIVE` and Vehicle `AVAILABLE -> RENTED`; the evidence becomes immutable.

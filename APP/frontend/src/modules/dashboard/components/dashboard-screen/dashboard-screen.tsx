@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/button";
@@ -22,6 +22,7 @@ import { QuickAccessCard } from "../quick-access-card/quick-access-card";
 import { RecentContractsCard } from "../recent-contracts-card/recent-contracts-card";
 import { TodayDeliveriesCard } from "../today-deliveries-card/today-deliveries-card";
 import { WeeklyMovementCard } from "../weekly-movement-card/weekly-movement-card";
+import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
 import styles from "./dashboard-screen.module.css";
 
 export function DashboardScreen() {
@@ -41,12 +42,31 @@ export function DashboardScreen() {
     refresh,
   } = useDashboardOverview();
   const simulation = useDashboardSimulation();
+  const registerNotificationTargets = useNotificationRecordTargets();
   const overview = selectDashboardPresentation(
     realOverview,
     simulation.active,
     simulation.overview,
   );
   const [drawerId, setDrawerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const records = [
+      ...(realOverview?.recentContracts ?? []),
+      ...(realOverview?.todayDeliveries ?? []),
+    ];
+    registerNotificationTargets(
+      records
+        .filter((record) => !isDashboardSimulationId(record.id))
+        .map((record) => ({
+          entityType: "contract" as const,
+          entityId: record.id,
+          route: "/contracts" as const,
+          label: record.contractNumber,
+          reference: record.vehicleName,
+        })),
+    );
+  }, [realOverview, registerNotificationTargets]);
 
   const isOfficeView = canReadContracts && canReadVehicles;
   const greeting = viewerName
@@ -60,12 +80,12 @@ export function DashboardScreen() {
   const goContracts = useCallback(() => {
     setDrawerId(null);
     router.push(`/${locale}/contracts`);
-  }, [locale, router]);
+  }, [locale, router, setDrawerId]);
 
   const openContract = useCallback((id: string) => {
     if (isDashboardSimulationId(id)) return;
     setDrawerId(id);
-  }, []);
+  }, [setDrawerId]);
 
   const header = (
     <PageHeader
