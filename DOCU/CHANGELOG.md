@@ -2,6 +2,8 @@
 
 ## 2026-09-19
 
+- Documented `DIAMOND_SIMULATION_ENABLED=true` in `APP/backend/.env.example`; without it fresh setups hid the DEV License OCR, Passport OCR, and Payment actions. All related env lines are tagged `TEMP-DEV-SIMULATION` for one-search removal. See `DOCU/05-pages/public-rental-flow.md`.
+
 - Added the frontend-only header Notification Center targeting real loaded
   Contract, Vehicle, and Road Liability records. The bell now stays in the
   left header action cluster; notification actions navigate with `focus` and

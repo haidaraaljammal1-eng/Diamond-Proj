@@ -198,6 +198,21 @@ Frontend unit tests live under `src/modules/public-rental/**/*.test.ts`.
 
 Diamond does not have a general workflow simulation anymore. The only visible DEV actions are successful Driver License OCR, successful Passport OCR, and successful Payment. They require a real Rental Link and Contract. Backend routes are registered only with `NODE_ENV !== production` and `DIAMOND_SIMULATION_ENABLED=true`; frontend controls additionally require `NEXT_PUBLIC_DIAMOND_SIMULATION=true`. The frontend flag is never authorization.
 
+### Enabling and removing the DEV substitutes
+
+Every env line that turns these three actions on is tagged `TEMP-DEV-SIMULATION`:
+
+| File | Line | Tracked |
+|---|---|---|
+| `APP/backend/.env.example` | `DIAMOND_SIMULATION_ENABLED=true` | yes |
+| `APP/backend/.env` | `DIAMOND_SIMULATION_ENABLED=true` (copy from example) | no |
+| `APP/frontend/.env.development` | `NEXT_PUBLIC_DIAMOND_SIMULATION=true` | yes |
+| `APP/frontend/.env.example` | `NEXT_PUBLIC_DIAMOND_SIMULATION=true` | yes |
+
+If the buttons are missing locally, the backend `.env` usually lacks `DIAMOND_SIMULATION_ENABLED=true`: the public context then returns `payment.devSimulationAvailable=false` and the frontend hides all three actions. Restart the backend after changing it.
+
+To remove the substitutes when real providers are ready: search the repo for `TEMP-DEV-SIMULATION`, delete the tagged lines (or set them to `false`), and restart both servers. No code change is needed; production ignores both flags regardless.
+
 This rental provider flag is separate from `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED`, which controls browser-only Dashboard, WhatsApp, and Road Liabilities fixtures. Those UI demos never create backend or rental success.
 
 DEV OCR uses the normal OCR normalization and persisted Contract identity flow. DEV payment derives the real obligation server-side, records `provider=dev_simulation`, and invokes the same locked settlement transition used by verified Stripe payment. It is idempotent and creates no Stripe ids or fake card. Review, signatures, PAID reservation, and Car-Out are real. No SIM panel, reset, session journey, or Car-Out helper remains.
