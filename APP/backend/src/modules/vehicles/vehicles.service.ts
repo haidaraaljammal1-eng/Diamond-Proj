@@ -4,7 +4,9 @@ import type { PrismaClient } from "@prisma/client";
 import type { z } from "zod";
 import { AppError } from "src/lib/errors/app-error";
 import { paginate, parseSort } from "src/lib/http/pagination";
+import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
 import {
+  assertFieldUnchanged,
   assertVinUnchanged,
   conflictError,
   inactiveReferenceError,
@@ -50,7 +52,7 @@ const VEHICLE_SORTABLE = [
 ] as const;
 
 const VEHICLE_CARD_INCLUDE = {
-  company: { select: { id: true, code: true, displayName: true, accentColor: true } },
+  company: { select: COMPANY_REF_SELECT },
   model: { select: { id: true, code: true, name: true } },
   photos: {
     orderBy: [
@@ -362,14 +364,12 @@ export function createVehiclesService(fastify: FastifyInstance) {
   ): Promise<VehiclePublic> {
     const existing = await loadOrThrow(id);
     await assertVehicleMutableForFleetOps(prisma, existing);
+    // The operating company is WRITE-ONCE: it is chosen at Add Vehicle and there
+    // is no transfer workflow. Re-sending the same id is a no-op; any other value
+    // is rejected (422 `immutable_field`) rather than silently ignored. `data`
+    // never carries companyId, so no update path can move a vehicle.
+    assertFieldUnchanged("companyId", existing.companyId, input.companyId);
     const data: Prisma.VehicleUncheckedUpdateInput = {};
-    // The company this vehicle will belong to after this update — the externalId
-    // check below is scoped to it, not to the company it is leaving.
-    const targetCompanyId = input.companyId ?? existing.companyId;
-    if (input.companyId !== undefined && input.companyId !== existing.companyId) {
-      await assertActiveCompany(input.companyId);
-      data.companyId = input.companyId;
-    }
 
     if (input.vin !== undefined) {
       assertVinUnchanged(existing.vin, input.vin);
@@ -393,13 +393,6 @@ export function createVehiclesService(fastify: FastifyInstance) {
         data.plateNumber = null;
       }
     }
-    if (
-      input.externalId === undefined &&
-      data.companyId !== undefined &&
-      existing.externalId
-    ) {
-      await assertExternalIdFree(targetCompanyId, existing.externalId, id);
-    }
     if (input.dailyRate !== undefined) data.dailyRate = input.dailyRate;
     if (input.monthlyRate !== undefined) data.monthlyRate = input.monthlyRate;
     if (input.operationalStatus !== undefined) {
@@ -415,7 +408,8 @@ export function createVehiclesService(fastify: FastifyInstance) {
     if (input.externalId !== undefined) {
       if (input.externalId !== null) {
         const externalId = normalizeExternalId(input.externalId);
-        await assertExternalIdFree(targetCompanyId, externalId, id);
+        // Scoped to the vehicle's permanent company — it can never change.
+        await assertExternalIdFree(existing.companyId, externalId, id);
         data.externalId = externalId;
       } else {
         data.externalId = null;

@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import type { TarsOperationTypeKey } from "src/modules/integrations/tars/tars.constants";
 import { tarsError } from "src/modules/integrations/tars/tars.errors";
@@ -47,7 +48,7 @@ const CONTRACT_INCLUDE = {
       },
     },
   },
-  company: { select: { id: true, code: true, displayName: true, accentColor: true } },
+  company: { select: COMPANY_REF_SELECT },
   reconciliation: true,
   licenseVerifications: {
     where: { status: "VALID" as const },

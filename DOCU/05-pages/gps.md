@@ -25,7 +25,7 @@ All staff-authenticated. Permission: `gps.read`. No public or customer GPS route
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/gps/summary` | Fleet GPS KPIs |
-| GET | `/gps/vehicles` | Paginated vehicle cards with GPS + current rental |
+| GET | `/gps/vehicles` | Paginated vehicle cards with GPS + current rental. Filters: `search`, `status`, `trackingStatus`, `companyId`, `sort`, paging |
 | GET | `/gps/map-points` | Lightweight points with real coordinates only |
 | GET | `/gps/vehicles/:vehicleId` | One vehicle GPS detail |
 
@@ -96,6 +96,35 @@ Accepted ingest (not stale/duplicate) notifies a GPS position observer **after**
 ## currentRental
 
 Reuses `loadCurrentRentalsByVehicleIds` (PAID / ACTIVE / RETOUT). GPS adds `contractNumber` and `startAt`. Staff may see customer display name because Vehicles already does. Map points expose only `contractId` / `contractNumber`. REVIEW after Car-In is not currentRental.
+
+## Operating company
+
+GPS is company-aware without storing a company anywhere.
+
+| Question | Answer |
+| --- | --- |
+| Where does the company come from? | `Vehicle.company` on the GPS read models |
+| Is it persisted? | **No.** `VehicleGpsBinding` and `VehicleGpsLatestState` hold no company |
+| Does a provider ever see it? | **No.** `GpsProvider` exposes only `name` and `configured` |
+
+`GpsVehicleSummary` and `GpsMapPoint` carry the compact ref (`id`, `code`,
+`displayName`, `accentColor`). `GET /gps/vehicles?companyId=` filters
+`Vehicle.companyId` inside Diamond's own query layer and composes with `search`,
+`status` and `trackingStatus`. Company is Diamond business metadata — it is
+never part of a vendor payload, a device binding or a normalized position.
+
+Frontend: the shared `CompanyIdentity` appears on the fleet-panel row (beside the
+vehicle name, above the tracking and operational chips) and in the vehicle detail
+drawer under the plate. The panel gains a Company filter (All Companies / UNIQUE /
+ELITE) from the authoritative `useOperatingCompanies()` chain.
+
+**The map is deliberately not company-filtered.** Search and tracking filters
+already scope the fleet list only, and markers stay free of company chrome;
+company identity belongs to the row and the detail surface. Demo Simulation still
+never persists GPS, and an overlay point with no real vehicle behind it carries
+`company: null` rather than an invented company.
+
+See [operating-companies.md](../00-system-overview/operating-companies.md).
 
 ## Privacy
 

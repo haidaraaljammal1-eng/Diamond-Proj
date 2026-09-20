@@ -65,6 +65,8 @@ function buildListWhere(query: ListQuery, now: Date): Prisma.MaintenanceOrderWhe
   const and: Prisma.MaintenanceOrderWhereInput[] = [];
 
   if (query.vehicleId) and.push({ vehicleId: query.vehicleId });
+  // Company lives on the Vehicle only, so it filters through the relation.
+  if (query.companyId) and.push({ vehicle: { companyId: query.companyId } });
   if (query.maintenanceType) {
     and.push({ maintenanceType: maintenanceTypeFromDto(query.maintenanceType) });
   }

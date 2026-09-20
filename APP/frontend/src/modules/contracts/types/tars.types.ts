@@ -6,6 +6,8 @@
  * no command and no retry shape here — only what the employee is shown.
  */
 
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
+
 export type TarsOperationStatus =
   | "NOT_STARTED"
   | "PENDING"
@@ -24,6 +26,13 @@ export type TarsOperationKey =
 export interface ContractTarsStateDto {
   /** False until a real, credentialed TARS provider exists. Not an error. */
   configured: boolean;
+  /**
+   * The operating company this Contract's TARS traffic routes to, taken from
+   * `Contract.company` by the Backend — never from the Vehicle. UNIQUE TARS and
+   * ELITE TARS are separate integrations, so the employee must see which one a
+   * Contract belongs to even while both providers are unconfigured.
+   */
+  company: OperatingCompanyIdentity;
   externalContractId: string | null;
   lastSuccessfulSyncAt: string | null;
   operations: Record<TarsOperationKey, TarsOperationStatus>;

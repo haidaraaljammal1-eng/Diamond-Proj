@@ -156,8 +156,11 @@ export const CreateVehicleSchema = z
 export const UpdateVehicleSchema = z
   .object({
     /**
-     * Fleet transfer between operating companies. It re-assigns the vehicle from
-     * now on only: Contract.companyId is frozen history and is never re-synced.
+     * WRITE-ONCE — never applied. The operating company is chosen once at Add
+     * Vehicle and can never change: Diamond has no vehicle company transfer
+     * workflow. The field stays declared only so an old or hostile client that
+     * still sends it hits the explicit `immutable_field` 422 in the service
+     * instead of having the key silently stripped and getting a misleading 200.
      */
     companyId: z.number().int().positive(),
     vin: Vin.nullable(),

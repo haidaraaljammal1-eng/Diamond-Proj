@@ -7,6 +7,12 @@ import {
 } from "src/modules/integrations/tars/tars.provider";
 import { getTarsConfig } from "src/modules/integrations/tars/tars.config";
 import { officialContractCompany } from "src/modules/contracts/official-contract";
+import {
+  CreateVehicleSchema,
+  UpdateVehicleSchema,
+} from "src/modules/vehicles/vehicles.schema";
+import { assertFieldUnchanged, DomainErrorReason } from "src/lib/master-data/code";
+import { AppError } from "src/lib/errors/app-error";
 
 const UNIQUE = {
   code: "UNIQUE",
@@ -60,5 +66,37 @@ describe("official contract company resolution", () => {
   test("a malformed company block is ignored rather than printed", () => {
     const broken = { header: { company: { code: "" } } };
     assert.deepEqual(officialContractCompany(broken, UNIQUE), UNIQUE);
+  });
+});
+
+describe("vehicle company write-once rule", () => {
+  test("create requires a company", () => {
+    assert.equal(
+      CreateVehicleSchema.safeParse({ vehicleName: "Civic", companyId: 2 }).success,
+      true,
+    );
+    assert.equal(CreateVehicleSchema.safeParse({ vehicleName: "Civic" }).success, false);
+  });
+
+  test("the update schema still parses companyId so the service can reject it", () => {
+    // Dropping the key would let an old client's transfer attempt be stripped
+    // silently and answered with a misleading 200.
+    const parsed = UpdateVehicleSchema.parse({ companyId: 7, dailyRate: 100 });
+    assert.equal(parsed.companyId, 7);
+  });
+
+  test("a changed company is a 422 immutable_field, an equal one is a no-op", () => {
+    assert.throws(
+      () => assertFieldUnchanged("companyId", 1, 2),
+      (err: unknown) => {
+        assert.ok(err instanceof AppError);
+        assert.equal(err.statusCode, 422);
+        assert.equal(err.context?.field, "companyId");
+        assert.equal(err.context?.reason, DomainErrorReason.IMMUTABLE_FIELD);
+        return true;
+      },
+    );
+    assert.doesNotThrow(() => assertFieldUnchanged("companyId", 1, 1));
+    assert.doesNotThrow(() => assertFieldUnchanged("companyId", 1, undefined));
   });
 });

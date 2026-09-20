@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useNow, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { PageHeader } from "@/shared/components/ui/page-header";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 import { SimulationButton, useDemoSimulation } from "@/modules/demo-simulation";
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
 import { useGps } from "../../hooks/use-gps";
@@ -28,6 +29,7 @@ export function GpsScreen() {
   useGpsSimulationMotion();
 
   const gps = useGps();
+  const { companies, isLoading: companiesLoading } = useOperatingCompanies(gps.isAllowed);
   const now = useNow({ updateInterval: 60_000 });
   const [contractId, setContractId] = useState<string | null>(null);
 
@@ -147,10 +149,13 @@ export function GpsScreen() {
                   count: gps.meta?.total ?? gps.vehicles.length,
                 })
           }
+          companies={companies}
+          companiesLoading={companiesLoading}
           onSearch={gps.applySearch}
           onClearSearch={gps.clearSearch}
           onTrackingFilter={gps.setTrackingFilter}
           onOperationalFilter={gps.setOperationalFilter}
+          onCompanyFilter={gps.setCompanyFilter}
           onPage={gps.setPage}
           now={now}
           onSelect={(vehicleId) => gps.selectVehicle(vehicleId)}

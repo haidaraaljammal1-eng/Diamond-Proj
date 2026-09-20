@@ -13,6 +13,34 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+/* The container carries the layout; the shared marker keeps its own display. */
+.optionBody {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/*
+ * The company marker never shrinks, so the name has to be the part that gives:
+ * without this it line-wraps at narrow widths and the option rows lose their
+ * even height.
+ */
+.optionName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A plate is a code: it stays whole on one line and never absorbs the squeeze. */
+.optionPlate {
+  flex: none;
+  white-space: nowrap;
 }
 
 .list {
@@ -27,6 +55,9 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  /* Grid items default to min-width:auto; without this the row cannot shrink
+     to the list and pushes a horizontal scrollbar instead of truncating. */
+  min-width: 0;
   border: 1px solid #e4dac8;
   border-radius: 8px;
   background: #fff;

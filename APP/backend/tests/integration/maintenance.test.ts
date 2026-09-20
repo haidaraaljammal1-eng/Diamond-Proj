@@ -830,4 +830,205 @@ if (!RUN) {
     });
     assert.equal(orders.length, 0);
   });
+
+  // ---------------------------------------------------------------------------
+  // Operating company (Phase A) — derived from the Vehicle, never stored on the
+  // MaintenanceOrder. Vehicle.companyId is write-once, so the relation is the
+  // authoritative answer.
+  // ---------------------------------------------------------------------------
+
+  async function createCompanyOrder(code: "UNIQUE" | "ELITE", suffix: string) {
+    const vehicle = await createVehicle({
+      companyId: await testCompanyId(prisma, code),
+      vehicleName: `Company ${code} ${suffix}`,
+      plateNumber: `M ${run} ${suffix}`,
+      modelYear: 2024,
+      color: "White",
+    });
+    const res = await createMaintenance({
+      vehicleId: vehicle.id,
+      issueDescription: `Company scoped order ${code} ${suffix}.`,
+      maintenanceType: code === "ELITE" ? "electrical" : "mechanical",
+      startMode: "now",
+    });
+    assert.equal(res.statusCode, 201, res.body);
+    return { vehicleId: vehicle.id as number, order: res.json().data };
+  }
+
+  test("maintenance DTO carries the owning company from the Vehicle", async () => {
+    const unique = await createCompanyOrder("UNIQUE", "OCU");
+    const elite = await createCompanyOrder("ELITE", "OCE");
+
+    assert.equal(unique.order.vehicle.company.code, "UNIQUE");
+    assert.equal(elite.order.vehicle.company.code, "ELITE");
+    for (const company of [unique.order.vehicle.company, elite.order.vehicle.company]) {
+      assert.equal(typeof company.id, "number");
+      assert.equal(typeof company.displayName, "string");
+      assert.equal(typeof company.accentColor, "string");
+      assert.equal("legalNameEn" in company, false);
+    }
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/maintenance/${elite.order.id}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(detail.statusCode, 200, detail.body);
+    assert.equal(detail.json().data.vehicle.company.code, "ELITE");
+  });
+
+  test("MaintenanceOrder stores no company of its own", async () => {
+    const { order } = await createCompanyOrder("ELITE", "OCN");
+    const row = await prisma.maintenanceOrder.findUniqueOrThrow({
+      where: { id: order.id as number },
+    });
+    assert.equal("companyId" in row, false);
+
+    const columns = await prisma.$queryRawUnsafe<Array<{ column_name: string }>>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'maintenance_orders'",
+    );
+    assert.equal(
+      columns.some((column) => column.column_name.toLowerCase().includes("company")),
+      false,
+    );
+  });
+
+  test("companyId filters maintenance through the Vehicle relation", async () => {
+    const unique = await createCompanyOrder("UNIQUE", "OCFU");
+    const elite = await createCompanyOrder("ELITE", "OCFE");
+    const uniqueId = await testCompanyId(prisma, "UNIQUE");
+    const eliteId = await testCompanyId(prisma, "ELITE");
+
+    const uniqueRes = await app.inject({
+      method: "GET",
+      url: `/maintenance?status=in_service&pageSize=100&companyId=${uniqueId}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(uniqueRes.statusCode, 200, uniqueRes.body);
+    const uniqueRows = uniqueRes.json().data as Array<{
+      id: number;
+      vehicle: { company: { code: string } };
+    }>;
+    assert.ok(uniqueRows.length > 0);
+    assert.ok(uniqueRows.every((row) => row.vehicle.company.code === "UNIQUE"));
+    assert.ok(uniqueRows.some((row) => row.id === unique.order.id));
+    assert.equal(uniqueRows.some((row) => row.id === elite.order.id), false);
+
+    const eliteRes = await app.inject({
+      method: "GET",
+      url: `/maintenance?status=in_service&pageSize=100&companyId=${eliteId}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(eliteRes.statusCode, 200, eliteRes.body);
+    const eliteRows = eliteRes.json().data as Array<{
+      id: number;
+      vehicle: { company: { code: string } };
+    }>;
+    assert.ok(eliteRows.every((row) => row.vehicle.company.code === "ELITE"));
+    assert.ok(eliteRows.some((row) => row.id === elite.order.id));
+    assert.equal(eliteRows.some((row) => row.id === unique.order.id), false);
+
+    const all = await app.inject({
+      method: "GET",
+      url: "/maintenance?status=in_service&pageSize=100",
+      headers: auth(readerToken),
+    });
+    const allIds = (all.json().data as Array<{ id: number }>).map((row) => row.id);
+    assert.ok(allIds.includes(unique.order.id));
+    assert.ok(allIds.includes(elite.order.id));
+  });
+
+  test("company composes with status, search and maintenanceType filters", async () => {
+    const elite = await createCompanyOrder("ELITE", "OCX");
+    const eliteId = await testCompanyId(prisma, "ELITE");
+    const uniqueId = await testCompanyId(prisma, "UNIQUE");
+    const plate = encodeURIComponent(`M ${run} OCX`);
+
+    const withType = await app.inject({
+      method: "GET",
+      url: `/maintenance?status=in_service&pageSize=100&companyId=${eliteId}&maintenanceType=electrical`,
+      headers: auth(readerToken),
+    });
+    assert.equal(withType.statusCode, 200, withType.body);
+    const typed = withType.json().data as Array<{
+      id: number;
+      maintenanceType: string;
+      vehicle: { company: { code: string } };
+    }>;
+    assert.ok(typed.some((row) => row.id === elite.order.id));
+    assert.ok(
+      typed.every(
+        (row) =>
+          row.maintenanceType === "electrical" && row.vehicle.company.code === "ELITE",
+      ),
+    );
+
+    const withSearch = await app.inject({
+      method: "GET",
+      url: `/maintenance?status=in_service&pageSize=100&companyId=${eliteId}&search=${plate}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(withSearch.statusCode, 200, withSearch.body);
+    assert.deepEqual(
+      (withSearch.json().data as Array<{ id: number }>).map((row) => row.id),
+      [elite.order.id],
+    );
+
+    // The same search under the other company must return nothing.
+    const crossCompany = await app.inject({
+      method: "GET",
+      url: `/maintenance?status=in_service&pageSize=100&companyId=${uniqueId}&search=${plate}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(crossCompany.statusCode, 200, crossCompany.body);
+    assert.equal((crossCompany.json().data as unknown[]).length, 0);
+
+    // Company must not pull an order into a lifecycle status it is not in.
+    const completedOnly = await app.inject({
+      method: "GET",
+      url: `/maintenance?status=completed&pageSize=100&companyId=${eliteId}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(completedOnly.statusCode, 200, completedOnly.body);
+    assert.equal(
+      (completedOnly.json().data as Array<{ id: number }>).some(
+        (row) => row.id === elite.order.id,
+      ),
+      false,
+    );
+  });
+
+  test("company filter does not change the maintenance lifecycle", async () => {
+    const { vehicleId, order } = await createCompanyOrder("ELITE", "OCL");
+    const eliteId = await testCompanyId(prisma, "ELITE");
+
+    await app.inject({
+      method: "POST",
+      url: `/maintenance/${order.id}/ready`,
+      headers: auth(adminToken),
+    });
+    const completeRes = await app.inject({
+      method: "POST",
+      url: `/maintenance/${order.id}/complete`,
+      headers: auth(adminToken),
+    });
+    assert.equal(completeRes.statusCode, 200, completeRes.body);
+    assert.equal(completeRes.json().data.vehicle.company.code, "ELITE");
+
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicleId } });
+    assert.equal(vehicle.operationalStatus, "AVAILABLE");
+
+    const history = await app.inject({
+      method: "GET",
+      url: `/maintenance?status=completed&pageSize=100&companyId=${eliteId}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(history.statusCode, 200, history.body);
+    const rows = history.json().data as Array<{
+      id: number;
+      vehicle: { company: { code: string } };
+    }>;
+    assert.ok(rows.some((row) => row.id === order.id));
+    assert.ok(rows.every((row) => row.vehicle.company.code === "ELITE"));
+  });
 }

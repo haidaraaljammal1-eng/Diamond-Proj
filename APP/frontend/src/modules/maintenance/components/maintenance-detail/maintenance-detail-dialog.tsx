@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { formatAed } from "@/modules/dashboard/utils/money";
 import { useMaintenanceActions, useMaintenanceDetail } from "../../hooks/use-maintenance";
 import type { MaintenanceOrderDetailDto } from "../../types/maintenance.types";
@@ -46,6 +47,7 @@ export function MaintenanceDetailDialog({
   onCancel,
 }: MaintenanceDetailDialogProps) {
   const t = useTranslations("Maintenance");
+  const tCompany = useTranslations("OperatingCompanies");
   const format = useFormatter();
   const { detail, isLoading, error, loadDetail, clearDetail } =
     useMaintenanceDetail();
@@ -102,6 +104,12 @@ export function MaintenanceDetailDialog({
               </b>
             </div>
             <Kv label={t("detail.vehicle")} value={order.vehicle.displayName} />
+            <div className={styles.row}>
+              <span>{tCompany("company")}</span>
+              <b>
+                <CompanyIdentity company={order.vehicle.company} compact />
+              </b>
+            </div>
             <div className={styles.row}>
               <span>{t("detail.plate")}</span>
               <b className={styles.num} dir="ltr">

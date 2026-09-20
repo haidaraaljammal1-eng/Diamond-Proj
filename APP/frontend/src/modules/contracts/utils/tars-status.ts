@@ -1,4 +1,5 @@
 import type { ChipTone } from "@/shared/components/ui/chip";
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
 import type {
   ContractTarsStateDto,
   TarsOperationKey,
@@ -60,6 +61,12 @@ export interface TarsOperationRow {
 export interface TarsSummary {
   connection: TarsConnectionPresentation;
   configured: boolean;
+  /**
+   * Routing company from `Contract.company`, shown as "TARS · UNIQUE/ELITE".
+   * Null only for a payload that predates company routing: a malformed or stale
+   * projection must not take the TARS section down, exactly like a failed read.
+   */
+  company: OperatingCompanyIdentity | null;
   externalContractId: string | null;
   lastSuccessfulSyncAt: string | null;
   rows: TarsOperationRow[];
@@ -69,6 +76,7 @@ export function buildTarsSummary(state: ContractTarsStateDto): TarsSummary {
   return {
     connection: getTarsConnectionPresentation(state.configured),
     configured: state.configured,
+    company: state.company ?? null,
     externalContractId: state.externalContractId,
     lastSuccessfulSyncAt: state.lastSuccessfulSyncAt,
     rows: TARS_OPERATION_ORDER.map((key) => ({

@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { DataSearch } from "@/shared/components/data-search";
 import { Select } from "@/shared/components/ui/select";
 import type { SelectOption } from "@/shared/components/ui/select";
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
 import type {
   GpsListQuery,
   GpsOperationalFilter,
@@ -20,6 +21,8 @@ import {
 import { GpsVehicleRow } from "../gps-vehicle-row/gps-vehicle-row";
 import styles from "./gps-vehicle-panel.module.css";
 
+const ALL_COMPANIES = "__all_companies__";
+
 export interface GpsVehiclePanelProps {
   vehicles: GpsVehicleListItemDto[];
   meta: GpsPageMeta | null;
@@ -28,10 +31,13 @@ export interface GpsVehiclePanelProps {
   loading: boolean;
   error: string | null;
   resultsLabel: string;
+  companies: OperatingCompanyIdentity[];
+  companiesLoading: boolean;
   onSearch: (value: string) => void;
   onClearSearch: () => void;
   onTrackingFilter: (value: GpsTrackingFilter) => void;
   onOperationalFilter: (value: GpsOperationalFilter) => void;
+  onCompanyFilter: (companyId: number | null) => void;
   onPage: (page: number) => void;
   now: Date;
   onSelect: (vehicleId: number) => void;
@@ -46,16 +52,20 @@ export function GpsVehiclePanel({
   loading,
   error,
   resultsLabel,
+  companies,
+  companiesLoading,
   onSearch,
   onClearSearch,
   onTrackingFilter,
   onOperationalFilter,
+  onCompanyFilter,
   onPage,
   now,
   onSelect,
   onRetry,
 }: GpsVehiclePanelProps) {
   const t = useTranslations("Gps");
+  const tCompany = useTranslations("OperatingCompanies");
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,6 +89,15 @@ export function GpsVehiclePanel({
       value,
       label: value === "all" ? t("filters.all") : t(`operational.${value}`),
     }));
+
+  // Companies are authoritative backend reference data — never a local array.
+  const companyOptions: SelectOption[] = [
+    { value: ALL_COMPANIES, label: tCompany("all") },
+    ...companies.map((company) => ({
+      value: String(company.id),
+      label: company.displayName,
+    })),
+  ];
 
   const page = meta?.page ?? query.page;
   const totalPages = meta?.totalPages ?? 1;
@@ -116,6 +135,18 @@ export function GpsVehiclePanel({
             options={operationalOptions}
             onChange={onOperationalFilter}
             aria-label={t("filters.operational")}
+          />
+          <Select
+            size="sm"
+            variant="ghost"
+            value={query.companyId == null ? ALL_COMPANIES : String(query.companyId)}
+            options={companyOptions}
+            onChange={(value) =>
+              onCompanyFilter(value === ALL_COMPANIES ? null : Number(value))
+            }
+            placeholder={companiesLoading ? tCompany("loading") : tCompany("all")}
+            disabled={companiesLoading && companies.length === 0}
+            aria-label={tCompany("company")}
           />
         </div>
       </div>

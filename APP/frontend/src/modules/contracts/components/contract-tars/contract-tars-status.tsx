@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import { Chip } from "@/shared/components/ui/chip";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { IntegrationStatusRow } from "@/shared/components/integration-status-row";
 import { SimulationButton, applyTarsSimulation, useDemoSimulation } from "@/modules/demo-simulation";
 import { useContractTars } from "../../hooks/use-contract-tars";
@@ -31,7 +32,21 @@ export function ContractTarsStatus({ contractId }: ContractTarsStatusProps) {
   return (
     <section className={styles.section} data-testid="contract-tars">
       <div className={styles.head}>
-        <p className={styles.title}>{t("title")}</p>
+        <div className={styles.heading}>
+          <p className={styles.title}>{t("title")}</p>
+          {/*
+            UNIQUE TARS and ELITE TARS are separate integrations, so the routing
+            company is part of the section's identity, not a status.
+          */}
+          {view.kind === "ready" && view.summary.company ? (
+            <>
+              <span className={styles.sep} aria-hidden="true">
+                ·
+              </span>
+              <CompanyIdentity company={view.summary.company} compact />
+            </>
+          ) : null}
+        </div>
         <div className={styles.headActions}>
           {simulation.enabled ? <SimulationButton surface="tars" /> : null}
           {view.kind === "ready" ? (

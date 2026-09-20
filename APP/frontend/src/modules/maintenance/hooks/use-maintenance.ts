@@ -49,6 +49,7 @@ export interface UseMaintenanceListResult {
   applySearch: (search: string) => void;
   clearSearch: () => void;
   setMaintenanceType: (type: MaintenanceType | null) => void;
+  setCompany: (companyId: number | null) => void;
   setSort: (sort: MaintenanceSortKey) => void;
   clearFilters: () => void;
   setPage: (page: number) => void;
@@ -89,9 +90,16 @@ export function useMaintenanceList(): UseMaintenanceListResult {
       status: query.status,
       search: query.search,
       maintenanceType: query.maintenanceType,
+      companyId: query.companyId,
       sort: query.sort,
     }),
-    [query.status, query.search, query.maintenanceType, query.sort],
+    [
+      query.status,
+      query.search,
+      query.maintenanceType,
+      query.companyId,
+      query.sort,
+    ],
   );
 
   return useMemo(
@@ -128,6 +136,9 @@ export function useMaintenanceList(): UseMaintenanceListResult {
       },
       setMaintenanceType: (type: MaintenanceType | null) => {
         void setQuery({ maintenanceType: type, page: 1 });
+      },
+      setCompany: (companyId: number | null) => {
+        void setQuery({ companyId, page: 1 });
       },
       setSort: (sort: MaintenanceSortKey) => {
         void setQuery({ sort, page: 1 });

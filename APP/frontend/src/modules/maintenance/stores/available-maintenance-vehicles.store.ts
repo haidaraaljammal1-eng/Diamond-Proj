@@ -11,26 +11,31 @@ export type AvailableVehiclesStatus = "idle" | "loading" | "ready" | "error";
 interface AvailableMaintenanceVehiclesState {
   vehicles: VehicleCardDto[];
   search: string;
+  /** Owning-company filter; null means every company. */
+  companyId: number | null;
   status: AvailableVehiclesStatus;
-  load: (search?: string) => Promise<void>;
+  load: (search?: string, companyId?: number | null) => Promise<void>;
   reset: () => void;
 }
 
 let inFlight: Promise<void> | null = null;
 
 export const useAvailableMaintenanceVehiclesStore =
-  create<AvailableMaintenanceVehiclesState>((set) => ({
+  create<AvailableMaintenanceVehiclesState>((set, get) => ({
     vehicles: [],
     search: "",
+    companyId: null,
     status: "idle",
-    async load(search = "") {
+    async load(search = "", companyId) {
       const term = search.trim();
-      set({ status: "loading", search: term });
+      const company = companyId === undefined ? get().companyId : companyId;
+      set({ status: "loading", search: term, companyId: company });
       const run = (async () => {
         try {
           const result = await getVehicles({
             status: "available",
             search: term,
+            companyId: company,
             page: 1,
             pageSize: PICKER_PAGE_SIZE,
             sort: "newest",
@@ -47,6 +52,6 @@ export const useAvailableMaintenanceVehiclesStore =
       await inFlight;
     },
     reset() {
-      set({ vehicles: [], search: "", status: "idle" });
+      set({ vehicles: [], search: "", companyId: null, status: "idle" });
     },
   }));

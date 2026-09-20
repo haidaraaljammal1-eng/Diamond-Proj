@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Icon } from "@/shared/components/ui/icon";
 import { PageHeader } from "@/shared/components/ui/page-header";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 import { AddMaintenanceDialog } from "../../forms/add-maintenance/add-maintenance-dialog";
 import { EditMaintenanceDialog } from "../../forms/edit-maintenance/edit-maintenance-dialog";
 import {
@@ -49,12 +50,15 @@ export function MaintenanceScreen() {
     applySearch,
     clearSearch,
     setMaintenanceType,
+    setCompany,
     setSort,
     clearFilters,
     setPage,
     setHistoryPage,
   } = useMaintenanceList();
   const { actionError, clearActionError } = useMaintenanceActions();
+  const tCompany = useTranslations("OperatingCompanies");
+  const { companies, isLoading: companiesLoading } = useOperatingCompanies(isAllowed);
 
   const [addOpen, setAddOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -103,17 +107,21 @@ export function MaintenanceScreen() {
         periodic: t("type.periodic"),
         other: t("type.other"),
       },
+      companyLabel: tCompany("company"),
+      companyAll: tCompany("all"),
+      companiesLoading: tCompany("loading"),
       sortLabel: t("filters.sortLabel"),
       clear: t("filters.clear"),
       activeCount: t("filters.activeCount", { count: activeFilterCount }),
     }),
-    [t, activeFilterCount],
+    [t, tCompany, activeFilterCount],
   );
 
   const emptyKind = emptyStateKind({
     status: filters.status,
     hasSearch: Boolean(filters.search.trim()),
     hasType: filters.maintenanceType != null,
+    hasCompany: filters.companyId != null,
   });
 
   const actionMessage = resolveMaintenanceErrorMessage(t, actionError);
@@ -237,10 +245,13 @@ export function MaintenanceScreen() {
         searchLoading={isLoading}
         resultsLabel={t("filters.results", { count: meta?.total ?? items.length })}
         labels={filterLabels}
+        companies={companies}
+        companiesLoading={companiesLoading}
         onStatusChange={setStatusFilter}
         onSearchSubmit={applySearch}
         onSearchClear={clearSearch}
         onTypeChange={setMaintenanceType}
+        onCompanyChange={setCompany}
         onSortChange={setSort}
         onClear={clearFilters}
       />

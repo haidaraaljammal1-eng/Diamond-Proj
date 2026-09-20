@@ -241,6 +241,7 @@ export function createGpsService(fastify: FastifyInstance) {
 
     const where: Prisma.VehicleWhereInput = {
       isActive: true,
+      ...(query.companyId ? { companyId: query.companyId } : {}),
       ...(query.status && query.status !== "all"
         ? { operationalStatus: operationalStatusFromDto(query.status) }
         : {}),

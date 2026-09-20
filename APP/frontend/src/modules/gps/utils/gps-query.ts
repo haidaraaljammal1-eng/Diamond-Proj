@@ -16,13 +16,20 @@ export function buildGpsListQuery(params: GpsListQuery): string {
     search.set("trackingStatus", params.trackingStatus);
   }
 
+  if (params.companyId != null) {
+    search.set("companyId", String(params.companyId));
+  }
+
   return search.toString();
 }
 
-export function countGpsActiveFilters(query: Pick<GpsListQuery, "search" | "status" | "trackingStatus">): number {
+export function countGpsActiveFilters(
+  query: Pick<GpsListQuery, "search" | "status" | "trackingStatus" | "companyId">,
+): number {
   let count = 0;
   if (query.search.trim()) count += 1;
   if (query.status !== "all") count += 1;
   if (query.trackingStatus !== "all") count += 1;
+  if (query.companyId != null) count += 1;
   return count;
 }

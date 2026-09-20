@@ -1,4 +1,5 @@
 import type { GpsMotionState, Prisma, VehicleOperationalStatus } from "@prisma/client";
+import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
 import {
   fleetVehicleTypeLabel,
   operationalStatusToDto,
@@ -28,6 +29,7 @@ import {
 } from "src/modules/gps/gps.errors";
 
 export const GPS_VEHICLE_INCLUDE = {
+  company: { select: COMPANY_REF_SELECT },
   model: { select: { name: true } },
   photos: {
     orderBy: [
@@ -253,6 +255,7 @@ function toVehicleSummary(row: GpsVehicleRow): GpsVehicleSummary {
   });
   return {
     id: row.id,
+    company: row.company,
     vehicleName: row.vehicleName,
     displayName,
     vehicleType: fleetVehicleTypeLabel(row.vehicleName, row.model?.name ?? null),
@@ -378,6 +381,7 @@ export function toGpsMapPoint(input: {
   const vehicle = toVehicleSummary(input.row);
   return {
     vehicleId: vehicle.id,
+    company: vehicle.company,
     displayName: vehicle.displayName,
     plateNumber: vehicle.plateNumber,
     operationalStatus: vehicle.operationalStatus,

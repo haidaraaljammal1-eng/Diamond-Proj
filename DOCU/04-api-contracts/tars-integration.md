@@ -30,6 +30,39 @@ No TARS integration exists or may be added for: GPS, Payments, Stripe, Maintenan
 
 `Contract`, `Customer`, `Vehicle`, `ContractCarOut`, `ContractCarIn`, `ContractAcceptance`, `ContractPayment`, `Attachment`, `ContractLink`, `ContractReconciliation` and `ContractRenewal` stay authoritative. There is no `TarsCustomer`, `TarsVehicle` or `TarsRental` model. TARS tables store external references, synchronization state and operation history only — never business data and never Attachment bytes.
 
+## 4b. UNIQUE TARS is not ELITE TARS
+
+**Permanent rule.** TARS is not shared between the two operating companies. There
+are conceptually two separate integrations:
+
+| `Contract.company` | Provider | Configuration | Credentials | API |
+| ------------------ | -------- | ------------- | ----------- | --- |
+| UNIQUE | UNIQUE TARS | UNIQUE | UNIQUE | UNIQUE |
+| ELITE | ELITE TARS | ELITE | ELITE | ELITE |
+
+An ELITE contract must never reach UNIQUE TARS, and a UNIQUE contract must never
+reach ELITE TARS.
+
+**The routing source is `Contract.companyId`** — resolved to the company `code`
+and passed to `createTarsProvider(companyCode)` / `getTarsConfig(companyCode)`.
+It is never taken from:
+
+- the Vehicle's current company,
+- a frontend selection,
+- a request query parameter,
+- a global default company,
+- a hardcoded `UNIQUE` or `ELITE`.
+
+`Contract.companyId` is frozen history, so routing from it keeps an old contract
+pointed at the integration it was written under, whatever happens to the fleet
+later. That is what prevents provider crossover.
+
+**Neither company is configured.** No real UNIQUE or ELITE TARS API exists yet, so
+both resolve to `TarsUnconfiguredProvider`, report `configured: false`, and fail
+closed with `TARS_NOT_CONFIGURED` without writing an operation row. No endpoint,
+credential, token, authentication scheme, request/response schema, fake provider
+or environment secret has been invented for either company.
+
 ## 5. Architecture
 
 ```
@@ -142,6 +175,7 @@ No TARS vendor error codes are invented.
 ```json
 { "data": { "tars": {
   "configured": false,
+  "company": { "id": 2, "code": "ELITE", "displayName": "ELITE", "accentColor": "#3E5C76" },
   "externalContractId": null,
   "lastSuccessfulSyncAt": null,
   "operations": {
@@ -155,6 +189,12 @@ No TARS vendor error codes are invented.
 ```
 
 Statuses are `NOT_STARTED | PENDING | PROCESSING | SUCCEEDED | FAILED`. An authoritative `SUCCEEDED` is never downgraded by a later attempt. No placeholder rows are created to render `NOT_STARTED`.
+
+`company` is the routing company from `Contract.companyId`, so the UI can say
+which of the two integrations this contract belongs to. It is a compact ref
+(`id`, `code`, `displayName`, `accentColor`) — legal names stay on the official
+contract. `company` and `configured` are independent: a contract always has a
+company, and today neither company is connected.
 
 There is no execute/retry endpoint.
 
@@ -173,6 +213,20 @@ Frontend module: `APP/frontend/src/modules/contracts`. Page documentation: `DOCU
 | Inline indicator | `components/contract-tars/contract-tars-inline-status.tsx` |
 | Presentation policy | `utils/tars-status.ts` (pure, unit-tested) |
 | Reusable row | `src/shared/components/integration-status-row/` |
+| Routing company | shared `CompanyIdentity` in the section heading |
+
+**Company display.** The section heading reads `TARS Integration Status · UNIQUE`
+or `· ELITE`, rendered with the shared `CompanyIdentity` (backend `displayName`
+and `accentColor`). There is no TARS-specific company badge, and the company is
+read from `tars.company` — never from the Vehicle. It is identity, not status:
+the connection chip beside it still answers *connected / not connected*
+separately.
+
+Showing the company added **no** action. There is still no execute, retry,
+resync, test-connection or provider-configuration control anywhere in the TARS
+UI, and no customer-facing TARS state. A Demo Simulation TARS preset may fake
+integration state but never the company — the real `Contract.company` is merged
+back over the preset.
 
 No component calls the endpoint directly. The store is intentionally separate from `contracts.store` so a failing integration read cannot touch Contract detail state and a Contract mutation cannot force an integration refetch.
 

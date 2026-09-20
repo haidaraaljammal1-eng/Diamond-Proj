@@ -26,12 +26,26 @@ function tarsMessages(locale: "ar" | "en"): Record<string, never> {
   return messages.Contracts.tars;
 }
 
+const UNIQUE = {
+  id: 1,
+  code: "UNIQUE",
+  displayName: "UNIQUE",
+  accentColor: "#C9A15C",
+};
+const ELITE = {
+  id: 2,
+  code: "ELITE",
+  displayName: "ELITE",
+  accentColor: "#3E5C76",
+};
+
 function stateWith(
   overrides: Partial<ContractTarsStateDto> = {},
   status: TarsOperationStatus = "NOT_STARTED",
 ): ContractTarsStateDto {
   return {
     configured: false,
+    company: UNIQUE,
     externalContractId: null,
     lastSuccessfulSyncAt: null,
     operations: {
@@ -313,3 +327,75 @@ describe("TARS UI has no execution surface", () => {
     assert.ok(!/method:\s*"(POST|PUT|PATCH|DELETE)"/.test(api));
   });
 });
+
+/**
+ * UNIQUE TARS and ELITE TARS are two separate integrations. The UI must say
+ * which one a Contract routes to, and that answer comes from the TARS
+ * projection (`Contract.company`), never from the Vehicle.
+ */
+describe("TARS routing company", () => {
+  const COMPONENTS_DIR = path.join(
+    import.meta.dirname,
+    "../components/contract-tars",
+  );
+
+  it("carries UNIQUE through to the section view", () => {
+    const view = getTarsSectionView("ready", stateWith({ company: UNIQUE }));
+    assert.equal(view.kind, "ready");
+    if (view.kind !== "ready") return;
+    assert.equal(view.summary.company?.code, "UNIQUE");
+    assert.equal(view.summary.company?.displayName, "UNIQUE");
+    assert.equal(view.summary.company?.accentColor, "#C9A15C");
+  });
+
+  it("carries ELITE through to the section view", () => {
+    const view = getTarsSectionView("ready", stateWith({ company: ELITE }));
+    assert.equal(view.kind, "ready");
+    if (view.kind !== "ready") return;
+    assert.equal(view.summary.company?.code, "ELITE");
+    assert.equal(view.summary.company?.accentColor, "#3E5C76");
+  });
+
+  it("keeps the company separate from the connection state", () => {
+    const unconfigured = buildTarsSummary(
+      stateWith({ company: ELITE, configured: false }),
+    );
+    assert.equal(unconfigured.company?.code, "ELITE");
+    assert.equal(unconfigured.connection.translationKey, "notConnected");
+    assert.equal(unconfigured.configured, false);
+  });
+
+  it("survives a projection that carries no company at all", () => {
+    const legacy = stateWith();
+    delete (legacy as Partial<ContractTarsStateDto>).company;
+    const view = getTarsSectionView("ready", legacy);
+    assert.equal(view.kind, "ready");
+    if (view.kind !== "ready") return;
+    // A stale payload drops the marker; it never takes the section down.
+    assert.equal(view.summary.company, null);
+    assert.equal(view.summary.rows.length, 5);
+  });
+
+  it("renders the company through the shared CompanyIdentity, not a TARS badge", () => {
+    const source = readFileSync(
+      path.join(COMPONENTS_DIR, "contract-tars-status.tsx"),
+      "utf8",
+    );
+    assert.ok(source.includes("CompanyIdentity"));
+    assert.ok(source.includes("view.summary.company"));
+    // The company must not be read from a Vehicle anywhere in the TARS UI.
+    assert.equal(/vehicle/i.test(stripTarsComments(source)), false);
+  });
+
+  it("adds no TARS action alongside the company marker", () => {
+    const source = stripTarsComments(
+      readFileSync(path.join(COMPONENTS_DIR, "contract-tars-status.tsx"), "utf8"),
+    );
+    assert.ok(!/<button/i.test(source));
+    assert.ok(!/onClick/.test(source));
+  });
+});
+
+function stripTarsComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+}

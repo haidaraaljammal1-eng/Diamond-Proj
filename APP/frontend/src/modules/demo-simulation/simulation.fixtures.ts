@@ -17,9 +17,13 @@ function ops(
   };
 }
 
+/**
+ * Company is deliberately absent: a preset may fake integration state, never
+ * the Contract's operating company. The real company is merged back in.
+ */
 export const DEMO_TARS_PRESETS: Record<
   "notStarted" | "syncing" | "synced" | "partialFailure",
-  ContractTarsStateDto
+  Omit<ContractTarsStateDto, "company">
 > = {
   notStarted: {
     configured: true,

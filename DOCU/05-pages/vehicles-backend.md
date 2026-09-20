@@ -9,15 +9,22 @@ Every Vehicle belongs to exactly one operating company, and the backend is compa
 | Surface | Behaviour |
 | ------- | --------- |
 | `POST /vehicles` | `companyId` is **required**. It must reference an existing, ACTIVE `OperatingCompany`; an unknown or retired company is a 422 (`invalidParent` / `inactiveReference`). There is no default: staff choose the company when adding a vehicle. |
-| `PUT /vehicles/:id` | Optional `companyId` transfers the vehicle between companies. It re-assigns the vehicle from that moment on and never touches `Contract.companyId`, so existing contracts keep their original company. |
+| `PUT /vehicles/:id` | `companyId` is **write-once** and can never be updated. A different value is rejected with **422** `immutable_field` (`context.field = companyId`); re-sending the vehicle's own company is a no-op. The update never writes the column, so no request, import or bulk path can move a vehicle between companies. |
 | `VehiclePublic` / card / detail | Carry a compact `company` ref (`id`, `code`, `displayName`, `accentColor`), so a fleet list needs no per-row company lookup. Legal names are not here — they belong to the official contract. |
 | `GET /vehicles?companyId=` | Server-side Prisma filter. One dimension only; there is no competing `companyCode` parameter. |
 | `GET /operating-companies` | Reference list for company pickers and filters (see below). |
 
+**No transfer workflow exists.** The company is chosen once at Add Vehicle: a
+UNIQUE vehicle stays UNIQUE forever and an ELITE vehicle stays ELITE forever. The
+field is still declared in `UpdateVehicleSchema` so an old client that sends it
+gets the explicit 422 instead of having the key silently stripped by Zod and
+receiving a misleading 200. `Contract.companyId` is unaffected: it remains the
+historical company stamped at contract creation.
+
 Identifier uniqueness after the company change:
 
 - `plateNumber` and `vin` stay **globally** unique — a plate or chassis belongs to one physical car.
-- `externalId` is unique **per company** (`@@unique([companyId, externalId])`), because UNIQUE and ELITE integrate with separate external systems. Every lookup passes `companyId_externalId`; nulls stay distinct, so vehicles without an external id are unaffected.
+- `externalId` is unique **per company** (`@@unique([companyId, externalId])`), because UNIQUE and ELITE integrate with separate external systems. Every lookup passes `companyId_externalId`; nulls stay distinct, so vehicles without an external id are unaffected. On update the check is scoped to the vehicle's permanent company — there is no target company to re-check against.
 - Road-liability vehicle matching by `externalVehicleRef` now accepts a hit only when exactly one vehicle across all companies carries that id. An ambiguous id matches nothing rather than attributing a charge to the wrong car.
 
 The fleet where-builder was also fixed while adding the filter: `vehicleType` and `search` are both OR groups and used to be spread into the same object, so a search silently dropped the type filter. They now compose through `AND`.

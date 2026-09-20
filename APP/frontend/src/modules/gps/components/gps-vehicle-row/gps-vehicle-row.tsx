@@ -3,6 +3,7 @@
 import type { KeyboardEvent } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Chip } from "@/shared/components/ui/chip";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
 import { VehicleStatus } from "@/modules/vehicles/components/vehicle-status/vehicle-status";
 import type { GpsVehicleListItemDto } from "../../types/gps.types";
@@ -47,7 +48,11 @@ export function GpsVehicleRow({ item, selected, now, onSelect }: GpsVehicleRowPr
         className={styles.photo}
       />
       <div className={styles.body}>
-        <p className={styles.name}>{vehicle.displayName}</p>
+        <div className={styles.identityRow}>
+          <p className={styles.name}>{vehicle.displayName}</p>
+          {/* Company comes from the GPS Vehicle projection — no extra lookup. */}
+          <CompanyIdentity company={vehicle.company} compact />
+        </div>
         <p className={styles.meta}>
           <span dir="ltr">{plate}</span>
           {captured ? (

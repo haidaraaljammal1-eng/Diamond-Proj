@@ -31,6 +31,13 @@
   color: var(--diamond-muted);
 }
 
+/* The row owns the layout so the shared marker keeps its own display. */
+.identityRow {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;

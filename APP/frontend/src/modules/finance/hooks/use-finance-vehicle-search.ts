@@ -7,13 +7,16 @@ import type { VehicleCardDto } from "@/modules/vehicles/types/vehicle.types";
 export function useFinanceVehicleSearch(open: boolean) {
   const [vehicles, setVehicles] = useState<VehicleCardDto[]>([]);
   const [search, setSearch] = useState("");
+  /** Owning-company filter; null means every company. */
+  const [companyId, setCompanyId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const load = useCallback(async (query: string) => {
+  const load = useCallback(async (query: string, company: number | null) => {
     setIsLoading(true);
     try {
       const result = await getVehicles({
         search: query,
+        companyId: company,
         page: 1,
         pageSize: 12,
         sort: "newest",
@@ -26,14 +29,16 @@ export function useFinanceVehicleSearch(open: boolean) {
 
   useEffect(() => {
     if (!open) return;
-    void load(search);
-  }, [open, search, load]);
+    void load(search, companyId);
+  }, [open, search, companyId, load]);
 
   return {
     vehicles,
     isLoading,
     search,
+    companyId,
     applySearch: setSearch,
     clearSearch: () => setSearch(""),
+    setCompany: setCompanyId,
   };
 }

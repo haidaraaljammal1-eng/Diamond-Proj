@@ -95,6 +95,25 @@ if (!RUN) {
     return res.json().data as { id: number; company: { id: number; code: string } };
   }
 
+  /** Updates a fleet vehicle through the real API. */
+  async function updateVehicle(id: number, payload: Record<string, unknown>) {
+    return app.inject({
+      method: "PUT",
+      url: `/vehicles/${id}`,
+      headers: auth(),
+      payload,
+    });
+  }
+
+  /** The company stored for a vehicle, read straight from the database. */
+  async function storedCompanyId(vehicleId: number) {
+    const row = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { companyId: true },
+    });
+    return row.companyId;
+  }
+
   /** Creates an offer (AWAITING contract) for a vehicle. */
   async function createOffer(vehicleId: number, extra: Record<string, unknown> = {}) {
     return app.inject({
@@ -301,6 +320,97 @@ if (!RUN) {
     });
   });
 
+  describe("vehicle company immutability", () => {
+    test("normal fleet fields update while a UNIQUE vehicle stays UNIQUE", async () => {
+      const vehicle = await createVehicleOk(uniqueId, { vehicleName: `MC IMU ${run}` });
+      const res = await updateVehicle(vehicle.id, {
+        dailyRate: 321,
+        monthlyRate: 7654,
+        color: "Pearl White",
+      });
+      assert.equal(res.statusCode, 200, res.body);
+      const data = res.json().data as {
+        dailyRate: number;
+        color: string;
+        company: { id: number; code: string };
+      };
+      assert.equal(data.dailyRate, 321);
+      assert.equal(data.color, "Pearl White");
+      assert.equal(data.company.code, "UNIQUE");
+      assert.equal(await storedCompanyId(vehicle.id), uniqueId);
+    });
+
+    test("normal fleet fields update while an ELITE vehicle stays ELITE", async () => {
+      const vehicle = await createVehicleOk(eliteId, { vehicleName: `MC IME ${run}` });
+      const res = await updateVehicle(vehicle.id, { monthlyRate: 5555 });
+      assert.equal(res.statusCode, 200, res.body);
+      assert.equal(res.json().data.monthlyRate, 5555);
+      assert.equal(res.json().data.company.code, "ELITE");
+      assert.equal(await storedCompanyId(vehicle.id), eliteId);
+    });
+
+    test("UNIQUE to ELITE is rejected and the database still holds UNIQUE", async () => {
+      const vehicle = await createVehicleOk(uniqueId, { vehicleName: `MC U2E ${run}` });
+      const res = await updateVehicle(vehicle.id, { companyId: eliteId, dailyRate: 999 });
+      assert.equal(res.statusCode, 422, res.body);
+      assert.equal(res.json().error.context.field, "companyId");
+      assert.equal(res.json().error.context.reason, "immutable_field");
+      assert.equal(await storedCompanyId(vehicle.id), uniqueId);
+
+      // The whole update is refused — no partial write slips through.
+      const detail = await app.inject({
+        method: "GET",
+        url: `/vehicles/${vehicle.id}`,
+        headers: auth(),
+      });
+      assert.equal(detail.json().data.dailyRate, null);
+      assert.equal(detail.json().data.company.code, "UNIQUE");
+    });
+
+    test("ELITE to UNIQUE is rejected and the database still holds ELITE", async () => {
+      const vehicle = await createVehicleOk(eliteId, { vehicleName: `MC E2U ${run}` });
+      const res = await updateVehicle(vehicle.id, { companyId: uniqueId });
+      assert.equal(res.statusCode, 422, res.body);
+      assert.equal(res.json().error.context.reason, "immutable_field");
+      assert.equal(await storedCompanyId(vehicle.id), eliteId);
+    });
+
+    test("re-sending the vehicle's own company is a no-op, not an error", async () => {
+      const vehicle = await createVehicleOk(eliteId, { vehicleName: `MC SAME ${run}` });
+      const res = await updateVehicle(vehicle.id, { companyId: eliteId, dailyRate: 120 });
+      assert.equal(res.statusCode, 200, res.body);
+      assert.equal(res.json().data.dailyRate, 120);
+      assert.equal(res.json().data.company.code, "ELITE");
+      assert.equal(await storedCompanyId(vehicle.id), eliteId);
+    });
+
+    test("an externalId update stays scoped to the vehicle's permanent company", async () => {
+      const externalId = `EXT-IMM-${run}`;
+      await createVehicleOk(uniqueId, {
+        externalId,
+        vehicleName: `MC EXT U ${run}`,
+        plateNumber: `MC E1 ${run}`.slice(0, 20),
+      });
+      const elite = await createVehicleOk(eliteId, {
+        vehicleName: `MC EXT E ${run}`,
+        plateNumber: `MC E2 ${run}`.slice(0, 20),
+      });
+
+      // Free inside ELITE even though UNIQUE already uses it.
+      const ok = await updateVehicle(elite.id, { externalId });
+      assert.equal(ok.statusCode, 200, ok.body);
+      assert.equal(ok.json().data.externalId, externalId);
+
+      // Taken inside ELITE now.
+      const other = await createVehicleOk(eliteId, {
+        vehicleName: `MC EXT E2 ${run}`,
+        plateNumber: `MC E3 ${run}`.slice(0, 20),
+      });
+      const clash = await updateVehicle(other.id, { externalId });
+      assert.equal(clash.statusCode, 409, clash.body);
+    });
+  });
+
   describe("contracts", () => {
     test("a contract inherits its company from the vehicle and ignores a client value", async () => {
       const elite = await createVehicleOk(eliteId, { vehicleName: `MC C E ${run}` });
@@ -317,21 +427,23 @@ if (!RUN) {
       assert.equal(stored.companyId, eliteId);
     });
 
-    test("transferring the vehicle never re-brands existing contracts", async () => {
+    test("a rejected company change leaves old and new contracts on the same company", async () => {
       const vehicle = await createVehicleOk(uniqueId, { vehicleName: `MC XFER ${run}` });
       const first = await createOffer(vehicle.id);
       assert.equal(first.statusCode, 201, first.body);
       const firstId = first.json().data.id as string;
       assert.equal(first.json().data.company.code, "UNIQUE");
 
-      const transfer = await app.inject({
-        method: "PUT",
-        url: `/vehicles/${vehicle.id}`,
-        headers: auth(),
-        payload: { companyId: eliteId },
+      // Vehicle company is write-once: the transfer attempt is refused outright.
+      const transfer = await updateVehicle(vehicle.id, { companyId: eliteId });
+      assert.equal(transfer.statusCode, 422, transfer.body);
+      assert.equal(transfer.json().error.context.reason, "immutable_field");
+
+      const stillUnique = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+        select: { companyId: true },
       });
-      assert.equal(transfer.statusCode, 200, transfer.body);
-      assert.equal(transfer.json().data.company.code, "ELITE");
+      assert.equal(stillUnique.companyId, uniqueId, "vehicle company moved");
 
       const unchanged = await app.inject({
         method: "GET",
@@ -340,11 +452,12 @@ if (!RUN) {
       });
       assert.equal(unchanged.json().data.company.code, "UNIQUE");
 
+      // A new contract inherits the same permanent company, not a transferred one.
       const second = await createOffer(vehicle.id);
       assert.equal(second.statusCode, 201, second.body);
-      assert.equal(second.json().data.company.code, "ELITE");
+      assert.equal(second.json().data.company.code, "UNIQUE");
 
-      // The list filters on the contract's own company, not the vehicle's current one.
+      // The list filters on the contract's own company.
       const uniqueList = await app.inject({
         method: "GET",
         url: `/contracts?companyId=${uniqueId}&pageSize=100`,
@@ -359,7 +472,7 @@ if (!RUN) {
         headers: auth(),
       });
       const eliteIds = (eliteList.json().data as Array<{ id: string }>).map((row) => row.id);
-      assert.ok(!eliteIds.includes(firstId), "historical contract moved into the new company");
+      assert.ok(!eliteIds.includes(firstId), "historical contract moved into another company");
     });
   });
 

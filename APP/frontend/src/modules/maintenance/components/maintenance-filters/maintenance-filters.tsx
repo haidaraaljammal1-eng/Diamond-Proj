@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { DataSearch } from "@/shared/components/data-search";
 import { Select } from "@/shared/components/ui/select";
 import type { SelectOption } from "@/shared/components/ui/select";
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
 import type {
   MaintenanceFiltersState,
   MaintenanceSortKey,
@@ -17,6 +18,7 @@ import {
 import styles from "./maintenance-filters.module.css";
 
 const ALL_TYPES = "__all__";
+const ALL_COMPANIES = "__all_companies__";
 
 const TYPE_KEYS: MaintenanceType[] = [
   "mechanical",
@@ -39,6 +41,9 @@ export interface MaintenanceFiltersLabels {
   typeLabel: string;
   typeAll: string;
   types: Record<MaintenanceType, string>;
+  companyLabel: string;
+  companyAll: string;
+  companiesLoading: string;
   sortLabel: string;
   clear: string;
   activeCount: string;
@@ -50,10 +55,13 @@ export interface MaintenanceFiltersProps {
   searchLoading: boolean;
   resultsLabel: string;
   labels: MaintenanceFiltersLabels;
+  companies: OperatingCompanyIdentity[];
+  companiesLoading: boolean;
   onStatusChange: (status: MaintenanceStatusFilter) => void;
   onSearchSubmit: (search: string) => void;
   onSearchClear: () => void;
   onTypeChange: (type: MaintenanceType | null) => void;
+  onCompanyChange: (companyId: number | null) => void;
   onSortChange: (sort: MaintenanceSortKey) => void;
   onClear: () => void;
 }
@@ -64,10 +72,13 @@ export function MaintenanceFilters({
   searchLoading,
   resultsLabel,
   labels,
+  companies,
+  companiesLoading,
   onStatusChange,
   onSearchSubmit,
   onSearchClear,
   onTypeChange,
+  onCompanyChange,
   onSortChange,
   onClear,
 }: MaintenanceFiltersProps) {
@@ -79,6 +90,15 @@ export function MaintenanceFilters({
   const sortOptions: SelectOption<MaintenanceSortKey>[] = MAINTENANCE_SORT_KEYS.map(
     (key) => ({ value: key, label: labels.sort[key] }),
   );
+
+  // Companies are authoritative backend reference data — never a local array.
+  const companyOptions: SelectOption[] = [
+    { value: ALL_COMPANIES, label: labels.companyAll },
+    ...companies.map((company) => ({
+      value: String(company.id),
+      label: company.displayName,
+    })),
+  ];
 
   return (
     <div className={styles.toolbar}>
@@ -135,6 +155,20 @@ export function MaintenanceFilters({
             variant="ghost"
             size="sm"
             aria-label={labels.typeLabel}
+          />
+        </div>
+        <div className={styles.control}>
+          <Select
+            options={companyOptions}
+            value={filters.companyId == null ? ALL_COMPANIES : String(filters.companyId)}
+            onChange={(value) =>
+              onCompanyChange(value === ALL_COMPANIES ? null : Number(value))
+            }
+            placeholder={companiesLoading ? labels.companiesLoading : labels.companyAll}
+            disabled={companiesLoading && companies.length === 0}
+            variant="ghost"
+            size="sm"
+            aria-label={labels.companyLabel}
           />
         </div>
         <div className={styles.control}>

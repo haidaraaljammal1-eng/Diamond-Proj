@@ -7,5 +7,9 @@ export function applyTarsSimulation(
   real: ContractTarsStateDto | null,
   preset: SimulatedTarsPreset | null,
 ): ContractTarsStateDto | null {
-  return preset ? DEMO_TARS_PRESETS[preset] : real;
+  if (!preset) return real;
+  // The routing company stays authoritative: a simulated preset never decides
+  // whether a Contract belongs to UNIQUE TARS or ELITE TARS.
+  if (!real) return null;
+  return { ...DEMO_TARS_PRESETS[preset], company: real.company };
 }

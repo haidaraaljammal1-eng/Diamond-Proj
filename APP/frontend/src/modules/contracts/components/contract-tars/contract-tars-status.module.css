@@ -15,6 +15,20 @@
   margin-bottom: 10px;
 }
 
+/* Title and routing company read as one label: "TARS · UNIQUE". */
+.heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sep {
+  color: var(--diamond-dim);
+  font-size: 11px;
+  line-height: 1;
+}
+
 .headActions {
   display: flex;
   align-items: center;

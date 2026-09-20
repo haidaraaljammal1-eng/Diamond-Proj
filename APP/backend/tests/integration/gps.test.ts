@@ -390,4 +390,195 @@ if (!RUN) {
     assert.ok(row.currentRental.startAt);
     assert.ok(row.currentRental.endAt);
   });
+
+  // ---------------------------------------------------------------------------
+  // Operating company (Phase A) — read from the Vehicle. GPS persists no company
+  // and never sends one to a provider.
+  // ---------------------------------------------------------------------------
+
+  test("GPS projections carry the owning company from the Vehicle", async () => {
+    const uniqueVehicle = await createVehicle({
+      companyId: await testCompanyId(prisma, "UNIQUE"),
+      vehicleName: `GPS Unique ${run}`,
+      plateNumber: `G ${run} CU`,
+      modelYear: 2024,
+      color: "White",
+    });
+    const eliteVehicle = await createVehicle({
+      companyId: await testCompanyId(prisma, "ELITE"),
+      vehicleName: `GPS Elite ${run}`,
+      plateNumber: `G ${run} CE`,
+      modelYear: 2024,
+      color: "Black",
+    });
+
+    // Scope by the run token so the assertion never depends on page 1 of a
+    // shared test database (pageSize is capped at 100).
+    const list = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&search=${encodeURIComponent(run)}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(list.statusCode, 200, list.body);
+    const rows = list.json().data as Array<{
+      vehicle: { id: number; company: { id: number; code: string; accentColor: string } };
+    }>;
+    const uniqueRow = rows.find((item) => item.vehicle.id === uniqueVehicle.id);
+    const eliteRow = rows.find((item) => item.vehicle.id === eliteVehicle.id);
+    assert.ok(uniqueRow);
+    assert.ok(eliteRow);
+    assert.equal(uniqueRow.vehicle.company.code, "UNIQUE");
+    assert.equal(eliteRow.vehicle.company.code, "ELITE");
+    assert.equal(typeof eliteRow.vehicle.company.accentColor, "string");
+    assert.equal("legalNameEn" in eliteRow.vehicle.company, false);
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles/${eliteVehicle.id}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(detail.statusCode, 200, detail.body);
+    assert.equal(detail.json().data.vehicle.company.code, "ELITE");
+  });
+
+  test("companyId filters the GPS list and composes with the existing filters", async () => {
+    const uniqueId = await testCompanyId(prisma, "UNIQUE");
+    const eliteId = await testCompanyId(prisma, "ELITE");
+    const eliteVehicle = await createVehicle({
+      companyId: eliteId,
+      vehicleName: `GPS Elite Filter ${run}`,
+      plateNumber: `G ${run} FE`,
+      modelYear: 2023,
+      color: "Blue",
+    });
+
+    const scoped = `&search=${encodeURIComponent(run)}`;
+
+    const eliteRes = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&companyId=${eliteId}${scoped}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(eliteRes.statusCode, 200, eliteRes.body);
+    const eliteRows = eliteRes.json().data as Array<{
+      vehicle: { id: number; company: { code: string } };
+    }>;
+    assert.ok(eliteRows.length > 0);
+    assert.ok(eliteRows.every((item) => item.vehicle.company.code === "ELITE"));
+    assert.ok(eliteRows.some((item) => item.vehicle.id === eliteVehicle.id));
+
+    const uniqueRes = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&companyId=${uniqueId}${scoped}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(uniqueRes.statusCode, 200, uniqueRes.body);
+    const uniqueRows = uniqueRes.json().data as Array<{
+      vehicle: { id: number; company: { code: string } };
+    }>;
+    assert.ok(uniqueRows.length > 0);
+    assert.ok(uniqueRows.every((item) => item.vehicle.company.code === "UNIQUE"));
+    assert.equal(uniqueRows.some((item) => item.vehicle.id === eliteVehicle.id), false);
+
+    // The filter alone, with no other narrowing, still returns one company only.
+    const companyOnly = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&companyId=${eliteId}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(companyOnly.statusCode, 200, companyOnly.body);
+    assert.ok(
+      (
+        companyOnly.json().data as Array<{ vehicle: { company: { code: string } } }>
+      ).every((item) => item.vehicle.company.code === "ELITE"),
+    );
+
+    // Company + search
+    const withSearch = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&companyId=${eliteId}&search=${encodeURIComponent(`G ${run} FE`)}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(withSearch.statusCode, 200, withSearch.body);
+    assert.deepEqual(
+      (withSearch.json().data as Array<{ vehicle: { id: number } }>).map(
+        (item) => item.vehicle.id,
+      ),
+      [eliteVehicle.id],
+    );
+
+    const crossCompanySearch = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&companyId=${uniqueId}&search=${encodeURIComponent(`G ${run} FE`)}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(crossCompanySearch.statusCode, 200, crossCompanySearch.body);
+    assert.equal((crossCompanySearch.json().data as unknown[]).length, 0);
+
+    // Company + operational status, and company + tracking status.
+    const withStatus = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&companyId=${eliteId}&status=available`,
+      headers: auth(readerToken),
+    });
+    assert.equal(withStatus.statusCode, 200, withStatus.body);
+    assert.ok(
+      (
+        withStatus.json().data as Array<{
+          vehicle: { operationalStatus: string; company: { code: string } };
+        }>
+      ).every(
+        (item) =>
+          item.vehicle.operationalStatus === "available" &&
+          item.vehicle.company.code === "ELITE",
+      ),
+    );
+
+    const withTracking = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=100&companyId=${eliteId}&trackingStatus=not_configured`,
+      headers: auth(readerToken),
+    });
+    assert.equal(withTracking.statusCode, 200, withTracking.body);
+    assert.ok(
+      (
+        withTracking.json().data as Array<{
+          gps: { trackingStatus: string };
+          vehicle: { company: { code: string } };
+        }>
+      ).every(
+        (item) =>
+          item.gps.trackingStatus === "not_configured" &&
+          item.vehicle.company.code === "ELITE",
+      ),
+    );
+  });
+
+  test("GPS state stores no company and no company reaches the provider", async () => {
+    const stateColumns = await prisma.$queryRawUnsafe<Array<{ column_name: string }>>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name IN ('vehicle_gps_latest_states', 'vehicle_gps_bindings')",
+    );
+    assert.ok(stateColumns.length > 0);
+    assert.equal(
+      stateColumns.some((column) => column.column_name.toLowerCase().includes("company")),
+      false,
+    );
+
+    // The provider boundary carries no company: it exposes identity and
+    // configuration only, so company filtering cannot reach a vendor.
+    const { createGpsProvider } = await import("src/modules/gps/gps.provider");
+    const provider = createGpsProvider();
+    assert.deepEqual(Object.keys(provider).sort(), ["configured", "name"]);
+
+    const eliteId = await testCompanyId(prisma, "ELITE");
+    const res = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles?pageSize=50&companyId=${eliteId}`,
+      headers: auth(readerToken),
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    // The read projects a company ref; it never echoes a raw companyId column.
+    assert.equal(res.body.includes(String.raw`"companyId"`), false);
+    assert.ok(res.body.includes(String.raw`"company"`));
+  });
 }

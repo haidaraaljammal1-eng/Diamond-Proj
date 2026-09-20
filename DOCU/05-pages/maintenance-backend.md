@@ -20,6 +20,10 @@ Workshop maintenance orders for Diamond fleet vehicles. TARS, contracts, payment
 | `cost` | Optional actual known cost in whole AED (`null` until entered) |
 | `createdByUserId` | From authenticated staff context |
 
+There is deliberately **no `MaintenanceOrder.companyId`**. The operating company
+is derived from the order's Vehicle, because `Vehicle.companyId` is write-once —
+see [Operating company](#operating-company) below.
+
 On `POST /maintenance/:id/complete`, when `cost` is set, Finance records one `MAINTENANCE_EXPENSE` ledger entry (`dedupeKey = maintenance:<id>`). Maintenance cost is a company expense only — never a customer receivable. See [finance-backend.md](./finance-backend.md).
 
 `OVERDUE` is **not** persisted. API exposes `overdue: boolean` when:
@@ -73,7 +77,7 @@ Base path: `/maintenance` (admin autoload).
 
 | Method | Path | Permission | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/maintenance` | `maintenance.read` | List/search/filter orders. Each row includes the Vehicle projection (`id`, `displayName`, `vehicleName`, `plateNumber`, `modelYear`, `color`, `operationalStatus`, `primaryImageUrl`) from one Prisma include — not a per-row detail fetch. |
+| `GET` | `/maintenance` | `maintenance.read` | List/search/filter orders. Each row includes the Vehicle projection (`id`, `company`, `displayName`, `vehicleName`, `plateNumber`, `modelYear`, `color`, `operationalStatus`, `primaryImageUrl`) from one Prisma include — not a per-row detail fetch. |
 | `GET` | `/maintenance/summary` | `maintenance.read` | KPI counts |
 | `GET` | `/maintenance/:id` | `maintenance.read` | Order detail + vehicle projection |
 | `POST` | `/maintenance` | `maintenance.manage` | Add vehicle to maintenance |
@@ -105,7 +109,33 @@ Base path: `/maintenance` (admin autoload).
 
 ### Vehicle selector
 
-Reuse `GET /vehicles?status=available&active=true&search=...` for the Add Maintenance dialog. Response cards include `id`, `displayName`, `plateNumber`, `modelYear`, `color`, `operationalStatus`.
+Reuse `GET /vehicles?status=available&active=true&search=...&companyId=...` for the Add Maintenance dialog. Response cards include `id`, `company`, `displayName`, `plateNumber`, `modelYear`, `color`, `operationalStatus`.
+
+## Operating company
+
+Maintenance is company-aware without storing a company.
+
+| Question | Answer |
+| --- | --- |
+| Where does the company come from? | `MaintenanceOrder → Vehicle → Vehicle.company` |
+| Is it persisted on the order? | **No.** `MaintenanceOrder` has no `companyId` column |
+| Why is deriving safe? | `Vehicle.companyId` is write-once; Diamond has no vehicle company transfer workflow |
+
+The embedded Vehicle projection on list and detail carries the compact ref
+(`id`, `code`, `displayName`, `accentColor`) from the shared
+`COMPANY_REF_SELECT`, so a card never needs a company lookup per order.
+
+`GET /maintenance?companyId=` filters through the Vehicle relation
+(`vehicle.companyId`) and composes with `status`, `search`, `maintenanceType`,
+`vehicleId`, sort and pagination. Company changes nothing about the lifecycle,
+the cost rules or the vehicle status transitions.
+
+**Finance boundary.** A completed order with a `cost` still writes one
+`MAINTENANCE_EXPENSE` ledger entry, and that entry carries **no company yet**.
+Maintenance *derives* its company; the future ledger entry will *persist* its own
+`companyId` at write time, because a recognized financial movement is history and
+must never be re-derived from a Vehicle later. That is Phase C — see
+[operating-company-rollout-audit.md](../00-system-overview/operating-company-rollout-audit.md).
 
 ## Conflict reasons
 

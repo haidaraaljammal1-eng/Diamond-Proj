@@ -5,11 +5,16 @@ Diamond runs one fleet, one staff team and one workflow for two rental companies
 It never forks the Contract lifecycle, Car-Out/Car-In, payments, reservation or
 maintenance, and it never changes contract numbering.
 
-Status: **database + backend + frontend done.** Vehicles and Contracts expose
-company identity and server-side filters, Add Vehicle requires an active company,
-the public rental flow shows the Contract company, and the printed A4 reads the
-legal names frozen in the authoritative official-contract view. TARS routing is
-company-aware but both providers remain unconfigured.
+Status: **database + backend + frontend done, and rolled out to the first
+operational modules.** Vehicles and Contracts expose company identity and
+server-side filters, Add Vehicle requires an active company, the public rental
+flow shows the Contract company, and the printed A4 reads the legal names frozen
+in the authoritative official-contract view. Phase A added TARS company display,
+both Vehicle pickers, Maintenance and GPS. TARS routing is company-aware but both
+providers remain unconfigured.
+
+Which domains carry company today, which still do not, and which phase owns each
+gap: [operating-company-rollout-audit.md](./operating-company-rollout-audit.md).
 
 ## `OperatingCompany`
 
@@ -39,15 +44,18 @@ statement, reporting) must read this field instead of hardcoding a colour.
 
 ## Ownership
 
-- **`Vehicle.companyId` — required.** Every fleet vehicle, active or retired,
-  belongs to exactly one company. Changing it re-assigns the vehicle from that
-  moment on.
+- **`Vehicle.companyId` — required and WRITE-ONCE.** Every fleet vehicle, active
+  or retired, belongs to exactly one company, chosen once at Add Vehicle. It can
+  never change afterwards: Diamond has **no vehicle company transfer workflow**.
+  See [Write-once company](#write-once-company) below.
 - **`Contract.companyId` — required, historical.** The company that owned the
   Vehicle when the Contract was created. It is frozen history, like
-  `contractNumber` and `snapshot`: transferring a Vehicle to the other company
-  must never re-brand a signed Contract, its official document or its accounting.
-  Nothing in the database cascades a Vehicle company change into Contracts; the
-  Backend will set the Contract's company from the Vehicle at creation time.
+  `contractNumber` and `snapshot`, and stays the authoritative contract/company
+  dimension for filters, the legal snapshot, TARS routing and future invoices,
+  statements and reporting — it is never derived away, even though the Vehicle's
+  company can no longer move. Nothing in the database cascades a company change
+  into Contracts; the Backend sets the Contract's company from the Vehicle at
+  creation time.
 - Both relations use `onDelete: Restrict`. A company that owns vehicles or
   contracts cannot be deleted; deactivate it with `isActive = false` instead.
 - Indexes: `vehicles.companyId`, `contracts.companyId`, `operating_companies.isActive`.
@@ -113,7 +121,7 @@ global-`externalId` behaviour.
 | ---- | --------- |
 | `GET /operating-companies` | Active companies by default, `?activeOnly=false` includes retired ones. Read-only reference data, permission `reference_data.lookup` / `vehicles.read` / `contracts.read` (any). `GET /operating-companies/:id` also exists. |
 | Vehicle create | `companyId` required; unknown or retired company rejected. No hidden default anywhere in the vehicle service. |
-| Vehicle update | Optional `companyId` transfers the vehicle. Never rewrites Contract history. |
+| Vehicle update | `companyId` is **write-once**. A different value is a 422 `immutable_field`; the same value is a no-op. No update path writes it. |
 | Vehicle DTOs + fleet filter | `company` ref on every projection; `?companyId=` filters in Prisma. |
 | Contract create | `companyId` is derived from the Vehicle server-side; a client value is ignored. |
 | Contract DTOs + list filter | `company` ref on list and detail; `?companyId=` filters `Contract.companyId`. |
@@ -122,9 +130,32 @@ global-`externalId` behaviour.
 | TARS | `createTarsProvider(companyCode)` / `getTarsConfig(companyCode)`, routed from `Contract.companyId`; status DTO carries the routing company; both companies still unconfigured and fail closed. |
 | Legacy creators | The sales import and purchase experiences have no company input, so they resolve `resolveDefaultOperatingCompanyId` (UNIQUE) explicitly in `src/modules/operating-companies/default-company.ts`. Delete that module once the importer carries a company column. |
 
-Tests: `tests/integration/multi-company.test.ts` (14), `tests/integration/operating-companies.test.ts` (10),
-`tests/unit/multi-company-routing.test.ts` (5). Fixtures resolve a real company through
+Tests: `tests/integration/multi-company.test.ts` (20), `tests/integration/operating-companies.test.ts` (10),
+`tests/unit/multi-company-routing.test.ts` (8). Fixtures resolve a real company through
 `tests/helpers/operating-company.ts` instead of inventing ids.
+
+## Write-once company
+
+The operating company is selected **once**, when the Vehicle is created, and can
+never be changed. A vehicle created under UNIQUE stays UNIQUE forever; one created
+under ELITE stays ELITE forever. There is no transfer workflow, no admin override
+and no bulk reassignment.
+
+| Surface | Rule |
+| ------- | ---- |
+| `POST /vehicles` | `companyId` **required**. The company must exist and be active (422 `invalid_parent` / `inactive_reference`). No default. |
+| `PUT /vehicles/:id` | `companyId` is still parsed, then refused: a different value throws `immutableFieldError("companyId")` → **422** with `context.reason = immutable_field`. The same value is a no-op, exactly like `vin`. `data.companyId` is never set, so no update path can move a vehicle. |
+| Sales import | Matching an existing Vehicle (by per-company `externalId`, else by global VIN) reuses that row and never writes its company. An ELITE vehicle matched from an import that resolves the default company stays ELITE. |
+| Frontend | Add Vehicle requires the company; every later surface shows it read-only. The rate-only edit dialog sends `{ dailyRate, monthlyRate }` and never `companyId`. |
+
+The field is deliberately kept in `UpdateVehicleSchema` rather than dropped: Zod
+strips unknown keys, so removing it would answer an old client's transfer attempt
+with a misleading `200` and a silently unchanged company. Explicit rejection
+matches the existing `vin` / master-data `code` immutability convention.
+
+Because the company can never move, `externalId` lookups during update are scoped
+to the vehicle's permanent company and the per-company `@@unique([companyId,
+externalId])` constraint needs no re-check against a target company.
 
 ## Frontend behaviour (phase 3, done)
 
@@ -135,7 +166,8 @@ Tests: `tests/integration/multi-company.test.ts` (14), `tests/integration/operat
 - Fleet cards/details show a small accent marker and the toolbar filters by
   authoritative company id. Clear Filters resets company to All Companies.
 - The current Edit Vehicle action is intentionally a default-rate dialog. It shows
-  the company read-only; company transfer is not exposed through that rate-only UX.
+  the company read-only, and no Diamond surface edits it — the company is
+  write-once in the Backend, so there is nothing to expose.
 - Contracts show `Contract.company` in rows, drawer and signed-document context.
   Their company filter participates in the existing keyed query, latest-wins gate,
   focus/visibility refresh and 30-second visible-tab polling.
@@ -213,6 +245,108 @@ verified in AR/EN on desktop and 390px mobile.
 "legacy stored deposit", `official-contract.test.ts` review field-lock cases
 (`OFFICIAL_CONTRACT_FIELD_LOCKED`, committed at HEAD), and `public-rental-flow.test.ts`
 payment-provider cases, which depend on local provider env flags.
+
+## Phase A — TARS UI, Vehicle pickers, Maintenance, GPS (done)
+
+Phase A changed **no database**: no Prisma edit, no migration, no new `companyId`
+column anywhere. Every surface below reads the company through a relation that
+already exists.
+
+### Derived, never duplicated
+
+`Vehicle.companyId` is write-once, so a Vehicle relation is a permanently correct
+answer to "which company". Two domains therefore **derive** their company instead
+of storing one:
+
+| Domain | Company source | What is *not* stored |
+| ------ | -------------- | -------------------- |
+| Maintenance | `MaintenanceOrder → Vehicle → Vehicle.company` | `MaintenanceOrder` has **no** `companyId` |
+| GPS | `Vehicle.company` on the GPS read models | `VehicleGpsBinding` and `VehicleGpsLatestState` store **no** company |
+
+A record gets its own persisted `companyId` only when it is frozen history that
+must not be recomputed later — which is why `Contract.companyId` exists and
+`MaintenanceOrder.companyId` deliberately does not.
+
+### Maintenance
+
+- The embedded Vehicle projection on the maintenance list and detail carries the
+  compact company ref, so a card never needs a company lookup per order.
+- `GET /maintenance?companyId=` filters through the Vehicle relation
+  (`vehicle.companyId`) and composes with `status`, `search`,
+  `maintenanceType`, `vehicleId`, sort and pagination.
+- The frontend shows the marker on the card, in the detail dialog and in the
+  completed-history row, and adds a Company filter (All Companies / UNIQUE /
+  ELITE) built from the authoritative company store. Clear Filters returns it to
+  All Companies.
+- **The maintenance lifecycle is unchanged**: create, scheduled / in service,
+  ready for pickup, complete, cancel, the optional cost rules, and the Vehicle
+  `AVAILABLE` ↔ `SERVICE` transitions all behave exactly as before.
+- A completed order's cost still writes one `MAINTENANCE_EXPENSE` ledger entry.
+  That entry does **not** carry a company yet — see *Deferred* below.
+
+### GPS
+
+- `GpsVehicleSummary` and `GpsMapPoint` carry the company ref; the list row and
+  the vehicle detail drawer show it.
+- `GET /gps/vehicles?companyId=` filters `Vehicle.companyId` and composes with
+  `search`, `status` and `trackingStatus`.
+- **No company reaches a provider.** `GpsProvider` exposes only `name` and
+  `configured`, so there is nothing for a company value to travel on. Company is
+  Diamond business metadata, applied inside Diamond's own query layer.
+- The map is **not** company-filtered, matching the existing behaviour of the
+  search and tracking filters: they scope the fleet list, not the markers. Map
+  markers stay free of company chrome; company identity lives in the row and the
+  detail surface.
+- Demo Simulation still never persists GPS, and an overlay point with no real
+  vehicle behind it carries `company: null` rather than an invented company.
+
+### Vehicle pickers
+
+Both pickers already loaded `VehicleCardDto`, which carries `company`:
+
+| Picker | Shows company | Filters by company |
+| ------ | ------------- | ------------------ |
+| Maintenance (Add Vehicle to Maintenance) | option row + selected summary | yes, through `GET /vehicles?companyId=` |
+| Finance (Add / Correct Expense) | option row + selected summary | yes, through `GET /vehicles?companyId=` |
+
+Both narrow through the existing server-side Vehicles query. Neither fetches a
+full fleet to filter locally, and the vehicle name stays visually dominant over
+the company marker.
+
+### TARS
+
+The Backend already routed and reported the company; the frontend type dropped
+it. `ContractTarsStateDto.company` now reaches the UI and the section heading
+reads `TARS Integration Status · UNIQUE` or `· ELITE`.
+
+- **UNIQUE TARS and ELITE TARS are two separate integrations** — separate
+  provider, configuration, credentials and API. A contract never crosses.
+- **Routing reads `Contract.companyId`** only: never the Vehicle's current
+  company, a frontend selection, a query parameter, a global default or a
+  hardcoded code. This is what protects historical contracts from provider
+  crossover.
+- **The real TARS APIs still do not exist.** Both companies remain
+  `configured = false` and fail closed with `TARS_NOT_CONFIGURED`. No endpoint,
+  credential, token, request/response schema, fake provider or environment secret
+  was added.
+- The TARS UI remains display-only: no execute, retry, test-connection or
+  configuration control was introduced alongside the company marker.
+- A Demo Simulation TARS preset may fake integration state but never the company:
+  the real `Contract.company` is merged back over the preset.
+
+### Deferred on purpose
+
+| Item | Phase |
+| ---- | ----- |
+| `FinancialLedgerEntry.companyId` (incl. `MAINTENANCE_EXPENSE`) | C |
+| `ManualExpense.companyId` | C |
+| Road liabilities, imports, dashboard company scope | B |
+| Invoices, daily statements, company-scoped RBAC | later |
+
+The Maintenance → Finance boundary is the one to keep straight: **Maintenance
+derives its company from the Vehicle; the future ledger entry will persist its
+own `companyId` at write time**, because a recognized financial movement is
+history and must never be re-derived from a Vehicle later.
 
 ## Later document work
 

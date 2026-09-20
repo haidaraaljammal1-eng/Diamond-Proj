@@ -52,6 +52,7 @@ const DEFAULT_QUERY: GpsListQuery = {
   search: "",
   status: "all",
   trackingStatus: "all",
+  companyId: null,
   page: 1,
   pageSize: GPS_PAGE_SIZE,
 };

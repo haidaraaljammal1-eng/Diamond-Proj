@@ -32,8 +32,16 @@ export type MaintenanceStatusFilter =
 
 export type MaintenanceSortKey = "newest" | "scheduledAt" | "expectedCompletion";
 
+import type { VehicleCompanyRefDto } from "@/modules/vehicles/types/vehicle.types";
+
 export interface MaintenanceVehicleDto {
   id: number;
+  /**
+   * Owning company, projected by the Backend from the Vehicle. A
+   * MaintenanceOrder has no company of its own, so the card never needs a
+   * second lookup to say whether an order is UNIQUE or ELITE.
+   */
+  company: VehicleCompanyRefDto;
   vehicleName: string | null;
   displayName: string;
   plateNumber: string | null;
@@ -80,6 +88,8 @@ export interface MaintenanceFiltersState {
   status: MaintenanceStatusFilter;
   search: string;
   maintenanceType: MaintenanceType | null;
+  /** Owning-company filter (Vehicle relation); null means All Companies. */
+  companyId: number | null;
   sort: MaintenanceSortKey;
 }
 

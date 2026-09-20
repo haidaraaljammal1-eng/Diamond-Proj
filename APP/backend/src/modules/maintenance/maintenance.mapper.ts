@@ -4,6 +4,7 @@ import type {
   Prisma,
   VehicleOperationalStatus,
 } from "@prisma/client";
+import { COMPANY_REF_SELECT, type CompanyRef } from "src/modules/operating-companies/company-ref";
 import {
   operationalStatusToDto,
   resolvePrimaryImage,
@@ -74,6 +75,7 @@ export function maintenanceTypeFromDto(type: MaintenanceTypeDto): MaintenanceTyp
 
 type VehicleProjectionRow = {
   id: number;
+  company: CompanyRef;
   vehicleName: string | null;
   plateNumber: string | null;
   modelYear: number | null;
@@ -90,6 +92,7 @@ type VehicleProjectionRow = {
 };
 
 export const MAINTENANCE_VEHICLE_INCLUDE = {
+  company: { select: COMPANY_REF_SELECT },
   model: { select: { name: true } },
   photos: {
     orderBy: [
@@ -129,6 +132,7 @@ function toVehicleProjection(vehicle: VehicleProjectionRow) {
   const primary = resolvePrimaryImage(vehicle.id, vehicle.photos);
   return {
     id: vehicle.id,
+    company: vehicle.company,
     vehicleName: vehicle.vehicleName,
     displayName: vehicleDisplayName({
       vehicleName: vehicle.vehicleName,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildMaintenanceQuery,
   countActiveFilters,
   emptyStateKind,
   isActiveMaintenanceStatus,
@@ -20,6 +21,7 @@ describe("maintenance filters", () => {
         status: "all",
         search: "",
         maintenanceType: null,
+        companyId: null,
         sort: "newest",
       }),
       0,
@@ -29,10 +31,64 @@ describe("maintenance filters", () => {
         status: "scheduled",
         search: "A 12",
         maintenanceType: "tires",
+        companyId: null,
         sort: "scheduledAt",
       }),
       4,
     );
+  });
+
+  it("counts the operating-company filter", () => {
+    assert.equal(
+      countActiveFilters({
+        status: "all",
+        search: "",
+        maintenanceType: null,
+        companyId: 2,
+        sort: "newest",
+      }),
+      1,
+    );
+  });
+
+  it("sends companyId to the Backend and omits All Companies", () => {
+    const scoped = buildMaintenanceQuery({
+      status: "in_service",
+      search: "",
+      maintenanceType: null,
+      companyId: 2,
+      sort: "newest",
+      page: 1,
+      pageSize: 20,
+    });
+    assert.ok(scoped.includes("companyId=2"));
+
+    const all = buildMaintenanceQuery({
+      status: "in_service",
+      search: "",
+      maintenanceType: null,
+      companyId: null,
+      sort: "newest",
+      page: 1,
+      pageSize: 20,
+    });
+    assert.equal(all.includes("companyId"), false);
+  });
+
+  it("composes company with status, search and maintenanceType", () => {
+    const query = buildMaintenanceQuery({
+      status: "scheduled",
+      search: "A 12345",
+      maintenanceType: "tires",
+      companyId: 2,
+      sort: "scheduledAt",
+      page: 1,
+      pageSize: 20,
+    });
+    assert.ok(query.includes("status=scheduled"));
+    assert.ok(query.includes("search=A+12345"));
+    assert.ok(query.includes("maintenanceType=tires"));
+    assert.ok(query.includes("companyId=2"));
   });
 
   it("treats completed as inactive", () => {
@@ -57,6 +113,15 @@ describe("maintenance filters", () => {
     assert.equal(
       emptyStateKind({ status: "completed", hasSearch: false, hasType: false }),
       "history",
+    );
+    assert.equal(
+      emptyStateKind({
+        status: "all",
+        hasSearch: false,
+        hasType: false,
+        hasCompany: true,
+      }),
+      "search",
     );
   });
 });

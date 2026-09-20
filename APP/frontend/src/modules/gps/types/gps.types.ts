@@ -1,3 +1,5 @@
+import type { VehicleCompanyRefDto } from "@/modules/vehicles/types/vehicle.types";
+
 export type GpsOperationalStatus = "available" | "rented" | "service";
 
 export type GpsTrackingStatus =
@@ -31,6 +33,11 @@ export interface GpsLocationDto {
 
 export interface GpsVehicleSummaryDto {
   id: number;
+  /**
+   * Owning company, projected by the Backend from the Vehicle. Diamond business
+   * metadata only: GPS state persists no company and no vendor ever sees one.
+   */
+  company: VehicleCompanyRefDto;
   vehicleName: string | null;
   displayName: string;
   vehicleType: string | null;
@@ -71,6 +78,11 @@ export interface GpsVehicleDetailDto extends GpsVehicleListItemDto {
 
 export interface GpsMapPointDto {
   vehicleId: number;
+  /**
+   * Null only on a Demo Simulation overlay point that has no real vehicle row
+   * behind it — the simulation must never invent a company.
+   */
+  company: VehicleCompanyRefDto | null;
   displayName: string;
   plateNumber: string | null;
   operationalStatus: GpsOperationalStatus;
@@ -104,6 +116,8 @@ export interface GpsListQuery {
   search: string;
   status: GpsOperationalFilter;
   trackingStatus: GpsTrackingFilter;
+  /** Owning-company filter (Vehicle.companyId); null means All Companies. */
+  companyId: number | null;
   page: number;
   pageSize: number;
 }

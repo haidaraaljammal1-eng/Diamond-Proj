@@ -52,6 +52,7 @@ export interface UseGpsResult {
   clearSearch: () => void;
   setTrackingFilter: (status: GpsTrackingFilter) => void;
   setOperationalFilter: (status: GpsOperationalFilter) => void;
+  setCompanyFilter: (companyId: number | null) => void;
   setPage: (page: number) => void;
   clearFilters: () => void;
   selectVehicle: (vehicleId: number, options?: { openDetail?: boolean }) => void;
@@ -158,6 +159,9 @@ export function useGps(): UseGpsResult {
       },
       setOperationalFilter: (status: GpsOperationalFilter) => {
         void setQuery({ status, page: 1 });
+      },
+      setCompanyFilter: (companyId: number | null) => {
+        void setQuery({ companyId, page: 1 });
       },
       setPage: (page: number) => {
         void setQuery({ page });

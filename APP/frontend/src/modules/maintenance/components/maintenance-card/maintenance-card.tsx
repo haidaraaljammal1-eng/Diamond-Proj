@@ -3,6 +3,7 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
 import { formatAed } from "@/modules/dashboard/utils/money";
 import { useMaintenanceActions } from "../../hooks/use-maintenance";
@@ -68,7 +69,11 @@ export function MaintenanceCard({
           className={styles.photo}
         />
         <div className={styles.headBody}>
-          <h4 className={styles.name}>{name}</h4>
+          <div className={styles.identityRow}>
+            <h4 className={styles.name}>{name}</h4>
+            {/* Company is read from the order's Vehicle projection — no lookup. */}
+            <CompanyIdentity company={order.vehicle.company} compact />
+          </div>
           <p className={styles.garage}>
             <span dir="ltr" className={styles.plate}>
               {plate}

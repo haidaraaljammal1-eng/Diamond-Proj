@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { createFormatter } from "use-intl/core";
 import { countsInSummaryOnlineTotal, formatGpsCoordinates, toValidGpsDate } from "./gps-status.ts";
-import { buildGpsListQuery } from "./gps-query.ts";
+import { buildGpsListQuery, countGpsActiveFilters } from "./gps-query.ts";
 import { shouldInvalidateLeafletSize } from "./gps-map.ts";
 import {
   applyGpsOverlayToSummary,
@@ -41,6 +41,7 @@ describe("GPS query", () => {
       search: "Patrol",
       status: "rented",
       trackingStatus: "moving",
+      companyId: null,
       page: 2,
       pageSize: 8,
     });
@@ -48,6 +49,43 @@ describe("GPS query", () => {
     assert.ok(query.includes("status=rented"));
     assert.ok(query.includes("trackingStatus=moving"));
     assert.ok(query.includes("page=2"));
+    assert.equal(query.includes("companyId"), false);
+  });
+
+  it("sends companyId and composes it with the other filters", () => {
+    const query = buildGpsListQuery({
+      search: "Patrol",
+      status: "rented",
+      trackingStatus: "moving",
+      companyId: 2,
+      page: 1,
+      pageSize: 8,
+    });
+    assert.ok(query.includes("companyId=2"));
+    assert.ok(query.includes("search=Patrol"));
+    assert.ok(query.includes("status=rented"));
+    assert.ok(query.includes("trackingStatus=moving"));
+  });
+
+  it("counts the operating-company filter as an active filter", () => {
+    assert.equal(
+      countGpsActiveFilters({
+        search: "",
+        status: "all",
+        trackingStatus: "all",
+        companyId: null,
+      }),
+      0,
+    );
+    assert.equal(
+      countGpsActiveFilters({
+        search: "",
+        status: "all",
+        trackingStatus: "all",
+        companyId: 2,
+      }),
+      1,
+    );
   });
 
   it("omits all-filters so pagination stays server-side", () => {
@@ -55,6 +93,7 @@ describe("GPS query", () => {
       search: "",
       status: "all",
       trackingStatus: "all",
+      companyId: null,
       page: 1,
       pageSize: 8,
     });
@@ -129,6 +168,12 @@ function vehicle(id: number, status: GpsTrackingStatus): GpsVehicleListItemDto {
   return {
     vehicle: {
       id,
+      company: {
+        id: 1,
+        code: "UNIQUE",
+        displayName: "UNIQUE",
+        accentColor: "#C9A15C",
+      },
       vehicleName: `Car ${id}`,
       displayName: `Car ${id}`,
       vehicleType: "SUV",
@@ -261,5 +306,73 @@ describe("GPS filters", () => {
       "no_data",
       "unassigned",
     ]);
+  });
+});
+
+/**
+ * GPS company identity is Diamond business metadata read from the Vehicle. It
+ * is never persisted in GPS state, never simulated, and never sent to a vendor.
+ */
+describe("GPS operating company", () => {
+  const COMPONENTS = path.join(import.meta.dirname, "../components");
+
+  it("reads the company from the list row vehicle projection", () => {
+    const item = vehicle(11, "parked");
+    assert.equal(item.vehicle.company.code, "UNIQUE");
+    assert.equal(item.vehicle.company.accentColor, "#C9A15C");
+  });
+
+  it("shows the shared CompanyIdentity in the list row and the detail drawer", () => {
+    for (const file of [
+      "gps-vehicle-row/gps-vehicle-row.tsx",
+      "gps-detail/gps-detail.tsx",
+    ]) {
+      const source = readFileSync(path.join(COMPONENTS, file), "utf8");
+      assert.ok(
+        source.includes("CompanyIdentity"),
+        `${file} must render the shared CompanyIdentity`,
+      );
+      assert.ok(source.includes("vehicle.company"));
+    }
+  });
+
+  it("offers All Companies / UNIQUE / ELITE from the authoritative store", () => {
+    const panel = readFileSync(
+      path.join(COMPONENTS, "gps-vehicle-panel/gps-vehicle-panel.tsx"),
+      "utf8",
+    );
+    assert.ok(panel.includes("ALL_COMPANIES"));
+    assert.ok(panel.includes("onCompanyFilter"));
+    // Options come from the backend company list, never a hardcoded array.
+    assert.equal(/\["UNIQUE"/.test(panel), false);
+    assert.equal(panel.includes('"ELITE"'), false);
+
+    const screen = readFileSync(
+      path.join(COMPONENTS, "gps-screen/gps-screen.tsx"),
+      "utf8",
+    );
+    assert.ok(screen.includes("useOperatingCompanies"));
+    assert.equal(screen.includes("apiRequest"), false);
+    assert.equal(screen.includes("fetch("), false);
+  });
+
+  it("keeps the map markers free of company chrome", () => {
+    const canvas = readFileSync(
+      path.join(COMPONENTS, "gps-map/gps-map-canvas.tsx"),
+      "utf8",
+    );
+    assert.equal(canvas.includes("CompanyIdentity"), false);
+    assert.equal(canvas.includes("company"), false);
+  });
+
+  it("never sends the company filter anywhere but the Diamond GPS API", () => {
+    const api = readFileSync(path.join(import.meta.dirname, "../api/gps.api.ts"), "utf8");
+    assert.ok(api.includes("/gps/vehicles"));
+    const simulation = readFileSync(
+      path.join(import.meta.dirname, "./gps-simulation.ts"),
+      "utf8",
+    );
+    // A simulated overlay point has no real row behind it, so it has no company.
+    assert.ok(simulation.includes("existing?.company ?? null"));
   });
 });

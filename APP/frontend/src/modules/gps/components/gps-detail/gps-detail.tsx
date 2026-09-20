@@ -4,6 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
 import { Drawer } from "@/shared/components/ui/drawer";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
 import { VehicleStatus } from "@/modules/vehicles/components/vehicle-status/vehicle-status";
 import type { GpsVehicleDetailDto } from "../../types/gps.types";
@@ -79,6 +80,9 @@ export function GpsDetailDrawer({
               <p className={styles.plate} dir="ltr">
                 {vehicle.plateNumber || t("noPlate")}
               </p>
+              <div className={styles.identityRow}>
+                <CompanyIdentity company={vehicle.company} compact />
+              </div>
               <div className={styles.chips}>
                 <Chip tone={trackingChipTone(gps.trackingStatus)} dot>
                   {t(`status.${gps.trackingStatus}`)}

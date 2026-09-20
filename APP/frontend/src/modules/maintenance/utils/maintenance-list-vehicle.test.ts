@@ -12,6 +12,7 @@ function cardIdentity(order: MaintenanceOrderDto) {
     plate: order.vehicle.plateNumber,
     photo: order.vehicle.primaryImageUrl,
     year: order.vehicle.modelYear,
+    company: order.vehicle.company,
   };
 }
 
@@ -38,6 +39,12 @@ describe("maintenance list vehicle projection", () => {
       updatedAt: "2026-09-10T08:00:00.000Z",
       vehicle: {
         id: 7,
+        company: {
+          id: 2,
+          code: "ELITE",
+          displayName: "ELITE",
+          accentColor: "#3E5C76",
+        },
         vehicleName: "Toyota Corolla 2025",
         displayName: "Toyota Corolla 2025",
         plateNumber: "Dubai A 45821",
@@ -53,5 +60,9 @@ describe("maintenance list vehicle projection", () => {
     assert.equal(card.name, "Toyota Corolla 2025");
     assert.equal(card.year, 2025);
     assert.equal(card.photo, "/vehicles/7/photos/primary");
+    // Company travels on the same list row — no per-card company lookup.
+    assert.equal(card.company.code, "ELITE");
+    assert.equal(card.company.displayName, "ELITE");
+    assert.equal(card.company.accentColor, "#3E5C76");
   });
 });

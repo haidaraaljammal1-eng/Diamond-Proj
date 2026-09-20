@@ -11,6 +11,7 @@ export const DEFAULT_MAINTENANCE_FILTERS: MaintenanceFiltersState = {
   status: "all",
   search: "",
   maintenanceType: null,
+  companyId: null,
   sort: "newest",
 };
 
@@ -69,6 +70,8 @@ export function buildMaintenanceQuery(
 
   if (params.maintenanceType) search.set("maintenanceType", params.maintenanceType);
 
+  if (params.companyId != null) search.set("companyId", String(params.companyId));
+
   if (params.sort && params.sort !== "newest") {
     search.set("sort", MAINTENANCE_SORT_PARAM[params.sort]);
   }
@@ -81,6 +84,7 @@ export function countActiveFilters(filters: MaintenanceFiltersState): number {
   if (filters.status !== DEFAULT_MAINTENANCE_FILTERS.status) count += 1;
   if (filters.search.trim()) count += 1;
   if (filters.maintenanceType != null) count += 1;
+  if (filters.companyId != null) count += 1;
   if (filters.sort !== DEFAULT_MAINTENANCE_FILTERS.sort) count += 1;
   return count;
 }
@@ -89,8 +93,9 @@ export function emptyStateKind(input: {
   status: MaintenanceStatusFilter;
   hasSearch: boolean;
   hasType: boolean;
+  hasCompany?: boolean;
 }): "search" | "scheduled" | "inService" | "ready" | "history" | "active" {
-  if (input.hasSearch || input.hasType) return "search";
+  if (input.hasSearch || input.hasType || input.hasCompany) return "search";
   if (input.status === "scheduled") return "scheduled";
   if (input.status === "in_service") return "inService";
   if (input.status === "ready_for_pickup") return "ready";

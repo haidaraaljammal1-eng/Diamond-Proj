@@ -21,6 +21,7 @@ export async function getMaintenanceList(
     status: "all",
     search: "",
     maintenanceType: null,
+    companyId: null,
     sort: "newest",
     page: 1,
     pageSize: MAINTENANCE_PAGE_SIZE,

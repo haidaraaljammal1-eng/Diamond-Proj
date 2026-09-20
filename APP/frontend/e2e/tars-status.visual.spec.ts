@@ -47,6 +47,20 @@ async function openFirstContract(page: Page, locale: "ar" | "en") {
   await expect(page.getByTestId("contract-detail")).toBeVisible({ timeout: DESK_TIMEOUT });
 }
 
+/** Matches the real projection: the Backend always routes from Contract.company. */
+const UNIQUE_COMPANY = {
+  id: 1,
+  code: "UNIQUE",
+  displayName: "UNIQUE",
+  accentColor: "#C9A15C",
+};
+const ELITE_COMPANY = {
+  id: 2,
+  code: "ELITE",
+  displayName: "ELITE",
+  accentColor: "#3E5C76",
+};
+
 function mockTars(
   page: Page,
   body: {
@@ -54,13 +68,16 @@ function mockTars(
     externalContractId: string | null;
     lastSuccessfulSyncAt: string | null;
     operations: Record<string, string>;
+    company?: typeof UNIQUE_COMPANY;
   },
 ) {
   return page.route("**/contracts/*/tars", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ data: { tars: body } }),
+      body: JSON.stringify({
+        data: { tars: { company: UNIQUE_COMPANY, ...body } },
+      }),
     }),
   );
 }
@@ -317,6 +334,8 @@ test.describe("TARS integration status — mocked projection states", () => {
 
     const tars = page.getByTestId("contract-tars");
     await expectLoaded(tars.getByText("Connected")).toBeVisible();
+    // Company is identity, not connection state: both are shown, separately.
+    await expect(tars.locator('[data-company-code="UNIQUE"]')).toBeVisible();
     await expect(tars.getByText("TARS-2026-000411")).toBeVisible();
     await expect(tars.getByText("Last Sync")).toBeVisible();
     await expect(tars.getByText("Synced", { exact: true })).toHaveCount(2);
@@ -336,6 +355,7 @@ test.describe("TARS integration status — mocked projection states", () => {
     await login(page, "ar");
     await mockTars(page, {
       configured: true,
+      company: ELITE_COMPANY,
       externalContractId: "TARS-2026-000411",
       lastSuccessfulSyncAt: "2026-09-09T09:30:00.000Z",
       operations: ALL("SUCCEEDED"),
@@ -345,6 +365,8 @@ test.describe("TARS integration status — mocked projection states", () => {
     const tars = page.getByTestId("contract-tars");
     await expectLoaded(tars.getByText("متصل", { exact: true })).toBeVisible();
     await expect(tars.getByText("تمت المزامنة", { exact: true })).toHaveCount(5);
+    // ELITE TARS is a separate integration; RTL must still say which one.
+    await expect(tars.locator('[data-company-code="ELITE"]')).toBeVisible();
     await expect(tars.getByText("TARS-2026-000411")).toBeVisible();
 
     await tars.screenshot({ path: `${SHOTS}/ar-connected-succeeded.png` });

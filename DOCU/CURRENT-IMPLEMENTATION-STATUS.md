@@ -43,13 +43,15 @@ Migration `20260920012059_multi_company_foundation` inserted both companies, bac
 all 32 existing Vehicles to UNIQUE and all 17 existing Contracts from their Vehicle, and
 then made both columns NOT NULL. Contract numbering stays global (`DE-{year}-{sequence}`).
 
-The backend is now company-aware end to end: `GET /operating-companies`, required company on vehicle creation, optional company transfer on vehicle update, `company` on Vehicle and Contract DTOs, `?companyId=` filters on both lists, contract company derived from the Vehicle and frozen in the official-contract snapshot, the renting company on the public rental context, and TARS provider resolution keyed by `Contract.companyId` (both companies still unconfigured). `externalId` is unique per company; plate and VIN stay globally unique.
+The backend is now company-aware end to end: `GET /operating-companies`, required company on vehicle creation, a **write-once** vehicle company that no update path can change (422 `immutable_field`), `company` on Vehicle and Contract DTOs, `?companyId=` filters on both lists, contract company derived from the Vehicle and frozen in the official-contract snapshot, the renting company on the public rental context, and TARS provider resolution keyed by `Contract.companyId` (both companies still unconfigured). `externalId` is unique per company; plate and VIN stay globally unique.
 
 The frontend now loads active companies through a dedicated API/store/hook chain.
 Add Vehicle requires a company with no default. Fleet and Contracts show compact
 accent-aware company identity and filter server-side by company id; Contract UI
 always reads historical `Contract.company`. The existing rate-only vehicle editor
-shows Company read-only instead of pretending to support a master-data transfer.
+shows Company read-only, which matches the final rule: the operating company is
+selected once at Add Vehicle and is immutable afterwards — Diamond has no vehicle
+company transfer workflow on either side of the stack.
 
 The public rental UI displays the Contract company. The Official Contract keeps
 the approved black A4 header, dimensions, logo, contact block and legal body; only
@@ -59,6 +61,50 @@ Contract company to their context headers without changing either workflow.
 Placeholder accents remain `#C9A15C` and `#3E5C76`, sourced from backend data.
 TARS provider routing remains company-aware and unconfigured for both companies.
 Future invoices and statements must reuse the same authoritative company identity.
+
+### Phase A rollout — TARS UI, Vehicle pickers, Maintenance, GPS
+
+Company visibility now reaches the first operational modules, with **no database
+change** (no Prisma edit, no migration, no new `companyId` column, no Finance
+schema change). The full domain-by-domain map, including what is still missing
+and which phase owns it, lives in
+`DOCU/00-system-overview/operating-company-rollout-audit.md`.
+
+Maintenance and GPS **derive** company from the Vehicle rather than storing one,
+which is safe because `Vehicle.companyId` is write-once. `MaintenanceOrder` has
+no company column; `VehicleGpsBinding` and `VehicleGpsLatestState` hold none.
+Maintenance list/detail embed the company on the existing Vehicle projection and
+`GET /maintenance?companyId=` filters through the Vehicle relation, composing
+with status, search, type, vehicle, sort and paging; the maintenance lifecycle,
+cost rules and AVAILABLE/SERVICE transitions are unchanged. GPS exposes company on
+`GpsVehicleSummary` and `GpsMapPoint`, `GET /gps/vehicles?companyId=` filters
+`Vehicle.companyId`, and no company reaches a provider — the `GpsProvider`
+boundary carries only `name` and `configured`. The map stays unfiltered and free
+of company chrome, matching the existing search and tracking filters.
+
+Both Vehicle pickers (Maintenance, Finance) show the company per option, keep it
+in the selected-vehicle summary, and filter through the existing
+`GET /vehicles?companyId=` query.
+
+TARS now displays its routing company: `TARS · UNIQUE` / `TARS · ELITE`, read
+from `tars.company` (`Contract.companyId`), never from the Vehicle. **UNIQUE TARS
+and ELITE TARS remain two separate integrations** — separate provider,
+configuration, credentials and API — and both are still unconfigured and fail
+closed with `TARS_NOT_CONFIGURED`. No TARS endpoint, credential or payload shape
+was invented, and no execute/retry/test control was added.
+
+Finance stores no company yet: `FinancialLedgerEntry` and `ManualExpense` get
+`companyId` in **Phase C**, so a completed maintenance expense will persist its
+company at write time instead of being re-derived from the Vehicle. Road
+liabilities, imports and dashboard company scope are **Phase B**. Invoices, daily
+statements and company-scoped RBAC come later.
+
+Verified on 2026-09-20 in the browser against real UNIQUE and ELITE data:
+maintenance cards, detail and All/UNIQUE/ELITE filter with Clear Filters resetting
+to All Companies; both Vehicle pickers before and after selection; the GPS fleet
+list, detail drawer and company filter; and the TARS section on both a UNIQUE and
+an ELITE contract. Arabic RTL and English LTR at 1440px and 390px, no horizontal
+overflow.
 
 ## RETOUT and Car-In
 

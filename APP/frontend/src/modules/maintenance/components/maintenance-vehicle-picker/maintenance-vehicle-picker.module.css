@@ -19,6 +19,16 @@
   color: var(--diamond-champagne);
 }
 
+/* Plate and company share one line under the vehicle name; the container owns
+   the layout so the shared marker keeps its own display. */
+.identityRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
 .list {
   display: flex;
   flex-direction: column;

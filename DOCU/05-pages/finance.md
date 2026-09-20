@@ -118,12 +118,22 @@ Real-mode search uses backend-supported fields. Simulation search covers contrac
 
 `POST /finance/expenses` — categories: Vehicle Cleaning, Fuel, Parking, Government Fees, Office/Admin, Marketing, Operations, Other.
 
-- Optional vehicle, vendor, receipt number, attachment, note
+- Optional vehicle, vendor, receipt number, attachment, note. The vehicle picker
+  shows the owning company (UNIQUE / ELITE) on each option and keeps it in the
+  selected-vehicle summary, and narrows through the existing server-side
+  `GET /vehicles?companyId=` query. The vehicle name stays dominant over the
+  company marker.
 - Void → reversal ledger row; no hard delete. Standalone **Void Expense** still requires Void Reason / سبب الإلغاء. Voided Ledger presentation stays **Voided / ملغى** with a struck-through original amount.
 - Correct → in-place update of the same Manual Expense (same ID, ACTIVE) + immutable **Correction History / سجل التعديلات** inside the same details. **Correct Expense has no Void Reason field.** A VOID expense cannot be corrected. Saving without changes does not create history.
 - Add / Correct / Void forms pass relative FormError keys (`required`, `wholeAed`, `positiveAmount`, `tooLong`) — never `validation.*` prefixes
 
 **No Manual Income.** Maintenance expenses originate from Maintenance module only.
+
+**Finance stores no operating company yet.** `ManualExpense` and
+`FinancialLedgerEntry` have no `companyId`; the picker only *displays* the
+Vehicle's company. Persisting company on financial rows — so a recognized
+movement is never re-derived from a Vehicle later — is Phase C. See
+[operating-company-rollout-audit.md](../00-system-overview/operating-company-rollout-audit.md).
 
 Simulated ledger expense View opens a demo-only detail. Add Expense and Void stay disabled while simulation is on. Correct Expense is frontend-only during simulation (same ID, in-place, Correction History, no backend writes). Fake IDs are never sent to Finance mutation APIs.
 

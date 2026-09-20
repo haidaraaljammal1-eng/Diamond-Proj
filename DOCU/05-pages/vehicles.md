@@ -148,9 +148,12 @@ authoritative active-company lookup.
 
 Pencil on **AVAILABLE** active cards only (`vehicles.manage`). `PUT /vehicles/:id`
 partial `{ dailyRate, monthlyRate }`. Backend rejects rented vehicles. This dialog
-is deliberately rate-only, so it shows Company as read-only context and does not
-invent a company-transfer flow; the backend transfer capability remains available
-for a future suitable vehicle-master editor.
+is deliberately rate-only and shows Company as read-only context.
+
+The operating company is **write-once**: it is chosen in Add Vehicle and can never
+be changed afterwards. No Diamond screen edits it, no company-transfer flow exists
+anywhere in the product, and the update payload never carries `companyId` — the
+Backend answers one with 422 `immutable_field`.
 
 ## Delete (fleet deactivate)
 

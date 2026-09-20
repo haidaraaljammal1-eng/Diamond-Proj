@@ -95,6 +95,12 @@
   color: var(--diamond-gold-hi);
 }
 
+/* The cell owns the layout so the shared marker keeps its own display. */
+.companyCell {
+  display: flex;
+  margin-top: 3px;
+}
+
 .muted {
   margin-top: 2px;
   font-size: 11px;

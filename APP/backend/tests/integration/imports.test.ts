@@ -179,6 +179,16 @@ if (!RUN) {
     await prisma.vehicle.create({
       data: { companyId: await testCompanyId(prisma), vin: `VINX-${run}`, externalId: `EXTVEH-${run}`, modelId: model.id },
     });
+    // An ELITE vehicle matched by VIN: the sales import has no company column and
+    // resolves the default company (UNIQUE), so this row proves that matching an
+    // existing vehicle never re-assigns its permanent company.
+    await prisma.vehicle.create({
+      data: {
+        companyId: await testCompanyId(prisma, "ELITE"),
+        vin: `VINELITE-${run}`,
+        modelId: model.id,
+      },
+    });
   });
 
   after(async () => {
@@ -430,6 +440,46 @@ if (!RUN) {
       await prisma.purchaseExperience.findUnique({ where: { externalSaleId: `SALE-CONF-${run}` } }),
       null,
     );
+  });
+
+  test("importing against an ELITE vehicle never re-assigns its company", async () => {
+    const eliteId = await testCompanyId(prisma, "ELITE");
+    const uniqueId = await testCompanyId(prisma);
+    const header = "name,vehicleModelCode,branchCode,vin,externalSaleId";
+    const csv =
+      `${header}\nElite Buyer,${MODEL},${BRANCH},VINELITE-${run},SALE-ELITE-${run}\n`;
+    const up = await upload(adminToken, "elite.csv", "text/csv", csv);
+    assert.equal(up.statusCode, 201);
+    const id = up.json().data.id as number;
+    await app.inject({
+      method: "PUT",
+      url: `/imports/${id}/mapping`,
+      headers: auth(adminToken),
+      payload: { mapping: Object.fromEntries(header.split(",").map((h) => [h, h])) },
+    });
+    await app.inject({ method: "POST", url: `/imports/${id}/validate`, headers: auth(adminToken) });
+    const confirm = await app.inject({
+      method: "POST",
+      url: `/imports/${id}/confirm`,
+      headers: auth(adminToken),
+      payload: {},
+    });
+    assert.equal(confirm.json().data.importedRows, 1, confirm.body);
+
+    // The row matched the existing ELITE vehicle and left its company alone.
+    const veh = await prisma.vehicle.findUniqueOrThrow({
+      where: { vin: `VINELITE-${run}` },
+      select: { id: true, companyId: true },
+    });
+    assert.equal(veh.companyId, eliteId, "import transferred the vehicle's company");
+    assert.notEqual(veh.companyId, uniqueId);
+
+    // No shadow vehicle was created under the import's default company either.
+    const experience = await prisma.purchaseExperience.findUniqueOrThrow({
+      where: { externalSaleId: `SALE-ELITE-${run}` },
+      select: { vehicleId: true },
+    });
+    assert.equal(experience.vehicleId, veh.id);
   });
 
   test("valid XLSX flows through the same pipeline and imports", async () => {

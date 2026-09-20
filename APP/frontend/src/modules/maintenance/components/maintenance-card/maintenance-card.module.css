@@ -64,6 +64,15 @@
   min-width: 0;
 }
 
+/* The row owns the layout so the shared marker keeps its own display. */
+.identityRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
 .name {
   margin: 0;
   font-size: 13px;

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { PaginationQuerySchema } from "src/lib/http/pagination";
-import { VehicleOperationalStatusDtoSchema } from "src/modules/vehicles/vehicles.schema";
+import {
+  VehicleCompanyRefSchema,
+  VehicleOperationalStatusDtoSchema,
+} from "src/modules/vehicles/vehicles.schema";
 import { GPS_TRACKING_STATUSES } from "src/modules/gps/gps.constants";
 
 export const GpsTrackingStatusDtoSchema = z.enum(GPS_TRACKING_STATUSES);
@@ -23,6 +26,11 @@ export type GpsLocationProjection = z.infer<typeof GpsLocationProjectionSchema>;
 
 export const GpsVehicleSummarySchema = z.object({
   id: z.number().int(),
+  /**
+   * Owning company, read from the Vehicle. Diamond business metadata only: it
+   * is never persisted in GPS state and never sent to a GPS vendor.
+   */
+  company: VehicleCompanyRefSchema,
   vehicleName: z.string().nullable(),
   displayName: z.string(),
   vehicleType: z.string().nullable(),
@@ -77,6 +85,7 @@ export type GpsVehicleDetail = z.infer<typeof GpsVehicleDetailSchema>;
 
 export const GpsMapPointSchema = z.object({
   vehicleId: z.number().int(),
+  company: VehicleCompanyRefSchema,
   displayName: z.string(),
   plateNumber: z.string().nullable(),
   operationalStatus: VehicleOperationalStatusDtoSchema,
@@ -109,6 +118,8 @@ export const ListGpsVehiclesQuerySchema = PaginationQuerySchema.extend({
   search: z.string().trim().min(1).optional(),
   status: z.enum(["all", "available", "rented", "service"]).optional().default("all"),
   trackingStatus: GpsTrackingStatusDtoSchema.optional(),
+  /** Owning-company filter. Applied to Vehicle.companyId inside Diamond only. */
+  companyId: z.coerce.number().int().positive().optional(),
   sort: z.string().optional(),
 });
 export type ListGpsVehiclesQuery = z.infer<typeof ListGpsVehiclesQuerySchema>;

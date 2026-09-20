@@ -120,6 +120,7 @@ export function seedMapPointsFromVehicles(
 ): GpsMapPointDto[] {
   return vehicles.map((item) => ({
     vehicleId: item.vehicle.id,
+    company: item.vehicle.company,
     displayName: item.vehicle.displayName,
     plateNumber: item.vehicle.plateNumber,
     operationalStatus: item.vehicle.operationalStatus,
@@ -160,6 +161,8 @@ export function applyGpsOverlayToMapPoints(
     const existing = byId.get(fix.vehicleId);
     return {
       vehicleId: fix.vehicleId,
+      // No real row behind the fix means no company — never a fabricated one.
+      company: existing?.company ?? null,
       displayName: existing?.displayName ?? `Vehicle ${fix.vehicleId}`,
       plateNumber: existing?.plateNumber ?? null,
       operationalStatus: existing?.operationalStatus ?? "available",

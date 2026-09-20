@@ -3,6 +3,7 @@
 import type { KeyboardEvent } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Icon } from "@/shared/components/ui/icon";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { formatAed } from "@/modules/dashboard/utils/money";
 import type { MaintenanceOrderDetailDto } from "../../types/maintenance.types";
 import { MaintenanceStatusChip } from "../maintenance-status-chip/maintenance-status-chip";
@@ -69,6 +70,9 @@ export function MaintenanceHistory({
                   {order.vehicle.displayName || t("vehicleUnknown")}
                   <div className={styles.muted} dir="ltr">
                     {order.vehicle.plateNumber || t("noPlate")}
+                  </div>
+                  <div className={styles.companyCell}>
+                    <CompanyIdentity company={order.vehicle.company} compact />
                   </div>
                 </td>
                 <td>{t(`type.${order.maintenanceType}`)}</td>

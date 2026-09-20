@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { PaginationQuerySchema } from "src/lib/http/pagination";
-import { VehicleOperationalStatusDtoSchema } from "src/modules/vehicles/vehicles.schema";
+import {
+  VehicleCompanyRefSchema,
+  VehicleOperationalStatusDtoSchema,
+} from "src/modules/vehicles/vehicles.schema";
 
 export const MaintenanceStatusDtoSchema = z.enum([
   "scheduled",
@@ -33,6 +36,12 @@ const Cost = z.number().int().nonnegative();
 
 export const MaintenanceVehicleSchema = z.object({
   id: z.number().int(),
+  /**
+   * Owning company, derived from the Vehicle. A MaintenanceOrder stores no
+   * company of its own: `Vehicle.companyId` is write-once, so the relation is
+   * already authoritative and a copy could only drift.
+   */
+  company: VehicleCompanyRefSchema,
   vehicleName: z.string().nullable(),
   displayName: z.string(),
   plateNumber: z.string().nullable(),
@@ -84,6 +93,8 @@ export const ListMaintenanceQuerySchema = PaginationQuerySchema.extend({
     .optional()
     .default("all"),
   vehicleId: z.coerce.number().int().positive().optional(),
+  /** Owning-company filter, applied through the Vehicle relation. */
+  companyId: z.coerce.number().int().positive().optional(),
   maintenanceType: MaintenanceTypeDtoSchema.optional(),
   sort: z.string().optional(),
 });
