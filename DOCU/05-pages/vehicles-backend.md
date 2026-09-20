@@ -2,6 +2,26 @@
 
 Diamond HTML Demo (`demo.html` → Fleet / Vehicles) drives the scope. This document covers the backend contract for the Vehicles page only.
 
+## Operating company (UNIQUE / ELITE)
+
+Every Vehicle belongs to exactly one operating company, and the backend is company-aware:
+
+| Surface | Behaviour |
+| ------- | --------- |
+| `POST /vehicles` | `companyId` is **required**. It must reference an existing, ACTIVE `OperatingCompany`; an unknown or retired company is a 422 (`invalidParent` / `inactiveReference`). There is no default: staff choose the company when adding a vehicle. |
+| `PUT /vehicles/:id` | Optional `companyId` transfers the vehicle between companies. It re-assigns the vehicle from that moment on and never touches `Contract.companyId`, so existing contracts keep their original company. |
+| `VehiclePublic` / card / detail | Carry a compact `company` ref (`id`, `code`, `displayName`, `accentColor`), so a fleet list needs no per-row company lookup. Legal names are not here — they belong to the official contract. |
+| `GET /vehicles?companyId=` | Server-side Prisma filter. One dimension only; there is no competing `companyCode` parameter. |
+| `GET /operating-companies` | Reference list for company pickers and filters (see below). |
+
+Identifier uniqueness after the company change:
+
+- `plateNumber` and `vin` stay **globally** unique — a plate or chassis belongs to one physical car.
+- `externalId` is unique **per company** (`@@unique([companyId, externalId])`), because UNIQUE and ELITE integrate with separate external systems. Every lookup passes `companyId_externalId`; nulls stay distinct, so vehicles without an external id are unaffected.
+- Road-liability vehicle matching by `externalVehicleRef` now accepts a hit only when exactly one vehicle across all companies carries that id. An ambiguous id matches nothing rather than attributing a charge to the wrong car.
+
+The fleet where-builder was also fixed while adding the filter: `vehicleType` and `search` are both OR groups and used to be spread into the same object, so a search silently dropped the type filter. They now compose through `AND`.
+
 ## Demo requirements (summary)
 
 | Demo concept                                           | Backend                                                     |

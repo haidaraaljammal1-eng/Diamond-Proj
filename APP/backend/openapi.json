@@ -3410,10 +3410,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -4256,10 +4281,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -5100,10 +5150,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -5947,10 +6022,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -7312,10 +7412,39 @@
                           "properties": {
                             "officeDisplayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "officeDisplayName"
+                            "officeDisplayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -8547,10 +8676,39 @@
                           "properties": {
                             "officeDisplayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "officeDisplayName"
+                            "officeDisplayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -9711,10 +9869,39 @@
                           "properties": {
                             "officeDisplayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "officeDisplayName"
+                            "officeDisplayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -10891,10 +11078,39 @@
                           "properties": {
                             "officeDisplayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "officeDisplayName"
+                            "officeDisplayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -12068,10 +12284,39 @@
                           "properties": {
                             "officeDisplayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "officeDisplayName"
+                            "officeDisplayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -13687,10 +13932,39 @@
                           "properties": {
                             "officeDisplayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "officeDisplayName"
+                            "officeDisplayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -14903,10 +15177,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -15771,10 +16070,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -19124,10 +19448,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -19820,10 +20169,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -20412,10 +20786,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -21004,10 +21403,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -21608,10 +22032,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -22719,10 +23168,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -23565,10 +24039,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -24421,10 +24920,35 @@
                           "properties": {
                             "displayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "displayName"
+                            "displayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -91224,6 +91748,17 @@
           },
           {
             "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "query",
+            "name": "companyId",
+            "required": false
+          },
+          {
+            "schema": {
               "type": "string",
               "enum": [
                 "AWAITING",
@@ -91314,6 +91849,32 @@
                               "REVIEW",
                               "CLOSED"
                             ]
+                          },
+                          "company": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "accentColor": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "displayName",
+                              "accentColor"
+                            ],
+                            "additionalProperties": false
                           },
                           "vehicleId": {
                             "type": "integer",
@@ -91406,6 +91967,7 @@
                           "id",
                           "contractNumber",
                           "status",
+                          "company",
                           "vehicleId",
                           "vehicleName",
                           "plateNumber",
@@ -91910,6 +92472,32 @@
                             "REVIEW",
                             "CLOSED"
                           ]
+                        },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
                         },
                         "vehicleId": {
                           "type": "integer",
@@ -93136,6 +93724,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -93607,6 +94196,32 @@
                             "configured": {
                               "type": "boolean"
                             },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "code",
+                                "displayName",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
+                            },
                             "externalContractId": {
                               "nullable": true,
                               "type": "string"
@@ -93682,6 +94297,7 @@
                           },
                           "required": [
                             "configured",
+                            "company",
                             "externalContractId",
                             "lastSuccessfulSyncAt",
                             "operations"
@@ -94193,6 +94809,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -95418,6 +96060,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -95953,10 +96596,39 @@
                           "properties": {
                             "officeDisplayName": {
                               "type": "string"
+                            },
+                            "company": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "legalNameAr": {
+                                  "type": "string"
+                                },
+                                "legalNameEn": {
+                                  "type": "string"
+                                },
+                                "accentColor": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "displayName",
+                                "legalNameAr",
+                                "legalNameEn",
+                                "accentColor"
+                              ],
+                              "additionalProperties": false
                             }
                           },
                           "required": [
-                            "officeDisplayName"
+                            "officeDisplayName",
+                            "company"
                           ],
                           "additionalProperties": false
                         },
@@ -97712,6 +98384,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -98937,6 +99635,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -103836,6 +104535,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -105061,6 +105786,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -109999,6 +110725,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -111224,6 +111976,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -111771,6 +112524,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -112996,6 +113775,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -114136,6 +114916,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -115361,6 +116167,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -116875,6 +117682,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -118100,6 +118933,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -119112,6 +119946,32 @@
                             "CLOSED"
                           ]
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vehicleId": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -120337,6 +121197,7 @@
                         "id",
                         "contractNumber",
                         "status",
+                        "company",
                         "vehicleId",
                         "customerId",
                         "createdByUserId",
@@ -153140,6 +154001,957 @@
                       },
                       "required": [
                         "recipients"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operating-companies/": {
+      "get": {
+        "operationId": "listOperatingCompanies",
+        "summary": "List operating companies",
+        "tags": [
+          "Operating companies"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "activeOnly",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "legalNameAr": {
+                            "type": "string"
+                          },
+                          "legalNameEn": {
+                            "type": "string"
+                          },
+                          "accentColor": {
+                            "type": "string"
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "displayName",
+                          "legalNameAr",
+                          "legalNameEn",
+                          "accentColor",
+                          "isActive"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {},
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "conflicts": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "suggestedActions": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operating-companies/{id}": {
+      "get": {
+        "operationId": "getOperatingCompany",
+        "summary": "Get one operating company",
+        "tags": [
+          "Operating companies"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "legalNameAr": {
+                          "type": "string"
+                        },
+                        "legalNameEn": {
+                          "type": "string"
+                        },
+                        "accentColor": {
+                          "type": "string"
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "code",
+                        "displayName",
+                        "legalNameAr",
+                        "legalNameEn",
+                        "accentColor",
+                        "isActive"
                       ],
                       "additionalProperties": false
                     }
@@ -189598,6 +191410,17 @@
               "maximum": 9007199254740991
             },
             "in": "query",
+            "name": "companyId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "query",
             "name": "modelId",
             "required": false
           },
@@ -189663,6 +191486,32 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "company": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "accentColor": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "displayName",
+                              "accentColor"
+                            ],
+                            "additionalProperties": false
                           },
                           "vin": {
                             "nullable": true,
@@ -189867,6 +191716,7 @@
                         },
                         "required": [
                           "id",
+                          "company",
                           "vin",
                           "vehicleName",
                           "modelId",
@@ -190339,6 +192189,12 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "companyId": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
                   "vehicleName": {
                     "type": "string",
                     "minLength": 1,
@@ -190386,7 +192242,10 @@
                     "minLength": 1,
                     "maxLength": 100
                   }
-                }
+                },
+                "required": [
+                  "companyId"
+                ]
               }
             }
           }
@@ -190406,6 +192265,32 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
                         },
                         "vin": {
                           "nullable": true,
@@ -190473,6 +192358,7 @@
                       },
                       "required": [
                         "id",
+                        "company",
                         "vin",
                         "vehicleName",
                         "modelId",
@@ -191367,6 +193253,32 @@
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vin": {
                           "nullable": true,
                           "type": "string"
@@ -191607,6 +193519,7 @@
                       },
                       "required": [
                         "id",
+                        "company",
                         "vin",
                         "vehicleName",
                         "modelId",
@@ -192046,6 +193959,12 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "companyId": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
                   "vin": {
                     "nullable": true,
                     "type": "string",
@@ -192143,6 +194062,32 @@
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vin": {
                           "nullable": true,
                           "type": "string"
@@ -192209,6 +194154,7 @@
                       },
                       "required": [
                         "id",
+                        "company",
                         "vin",
                         "vehicleName",
                         "modelId",
@@ -192665,6 +194611,32 @@
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vin": {
                           "nullable": true,
                           "type": "string"
@@ -192731,6 +194703,7 @@
                       },
                       "required": [
                         "id",
+                        "company",
                         "vin",
                         "vehicleName",
                         "modelId",
@@ -193187,6 +195160,32 @@
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
                         },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "accentColor": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "displayName",
+                            "accentColor"
+                          ],
+                          "additionalProperties": false
+                        },
                         "vin": {
                           "nullable": true,
                           "type": "string"
@@ -193253,6 +195252,7 @@
                       },
                       "required": [
                         "id",
+                        "company",
                         "vin",
                         "vehicleName",
                         "modelId",

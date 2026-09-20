@@ -43,7 +43,9 @@ Migration `20260920012059_multi_company_foundation` inserted both companies, bac
 all 32 existing Vehicles to UNIQUE and all 17 existing Contracts from their Vehicle, and
 then made both columns NOT NULL. Contract numbering stays global (`DE-{year}-{sequence}`).
 
-**Nothing above the database exists yet.** Backend routes and DTOs, Frontend filters, the
+The backend is now company-aware end to end: `GET /operating-companies`, required company on vehicle creation, optional company transfer on vehicle update, `company` on Vehicle and Contract DTOs, `?companyId=` filters on both lists, contract company derived from the Vehicle and frozen in the official-contract snapshot, the renting company on the public rental context, and TARS provider resolution keyed by `Contract.companyId` (both companies still unconfigured). `externalId` is unique per company; plate and VIN stay globally unique.
+
+**No frontend exists yet.** Backend routes and DTOs, Frontend filters, the
 official-contract company branding and company-aware TARS routing are later phases. Because
 both columns are required, vehicle and contract creation code still has to pass a company:
 `npm run typecheck` currently reports 36 errors (5 in `src/`, 31 in test fixtures), and

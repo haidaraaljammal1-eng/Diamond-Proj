@@ -2,7 +2,7 @@
 
 Diamond HTML Demo (`demo.html` → Fleet / Vehicles) is the behavioral source of truth. The **latest approved Fleet screenshot** is the visual reference for `VehicleCard`. Backend contract: [vehicles-backend.md](./vehicles-backend.md).
 
-> **Operating company (UNIQUE / ELITE):** the database already stores the owning company on every Vehicle and Contract; no API, filter or UI exposes it yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding company behaviour here.
+> **Operating company (UNIQUE / ELITE):** the backend is ready — `GET /operating-companies`, required `companyId` on vehicle creation, `company` on every Vehicle DTO and `?companyId=` on the fleet list. The UI (Add Vehicle Select, card badge, fleet filter) is not built yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding it.
 
 ## Route / Permission
 

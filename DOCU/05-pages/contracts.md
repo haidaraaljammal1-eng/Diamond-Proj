@@ -2,7 +2,7 @@
 
 Staff Contracts desk for Diamond Rent Car. Backend contract: [contracts-backend.md](./contracts-backend.md). Visual source: `demo.html` `vContracts` (table + drawer). Fleet Set Rental Price is the create-offer entry. No mock contracts.
 
-> **Operating company (UNIQUE / ELITE):** the database already stores the owning company on every Vehicle and Contract; no API, filter or UI exposes it yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding company behaviour here.
+> **Operating company (UNIQUE / ELITE):** the backend is ready — `company` on contract list items and detail, `?companyId=` on the list (filtering historical `Contract.companyId`), and company identity in the official-contract header. The UI (row badge, filter) is not built yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding it.
 
 ## Route / Permission
 

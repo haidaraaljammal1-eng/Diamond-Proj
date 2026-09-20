@@ -4,7 +4,31 @@ Contract is the single rental aggregate. There is no parallel `Rental` model. Fr
 
 Money is whole AED integers (same pattern as Vehicle rates). Default currency is `AED`. Contract has no `branchId` — Vehicle/Customer do not carry a clear rental-branch owner in the current schema.
 
-> **Operating company (UNIQUE / ELITE):** the database already stores the owning company on every Vehicle and Contract; no API, filter or UI exposes it yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding company behaviour here.
+> **Operating company (UNIQUE / ELITE):** see the section below and [operating-companies.md](../00-system-overview/operating-companies.md).
+
+## Operating company (UNIQUE / ELITE)
+
+`Contract.companyId` is **historical ownership**: the company that owned the Vehicle when the contract was created.
+
+- **Derivation.** `POST /contracts/offers` loads the Vehicle and persists `companyId: vehicle.companyId`. A company sent by the client is ignored — the field is not in the request schema and is never read from the request.
+- **Immutability.** No update path re-syncs the company from the Vehicle. Transferring a Vehicle to the other company leaves every existing Contract, its official document and its accounting untouched; only contracts created afterwards carry the new company.
+- **DTOs.** Contract list items and contract detail carry a compact `company` ref (`id`, `code`, `displayName`, `accentColor`).
+- **Filter.** `GET /contracts?companyId=` filters on `Contract.companyId`, never on `vehicle.companyId`, so a transferred vehicle cannot move its old contracts into the other company's list.
+- **Numbering is unchanged.** Both companies share the single global `DE-{year}-{sequence}` sequence.
+
+### Official contract
+
+`OfficialContractView.header.company` carries `code`, `displayName`, `legalNameAr`, `legalNameEn` and `accentColor`, resolved from the Contract's own company. Signing freezes it into `snapshot.officialContract` with the rest of the legal view, so a later fleet transfer can never re-brand a signed agreement.
+
+Contracts signed before multi-company existed have no company block in their snapshot. `officialContractCompany(frozen, live)` returns the frozen company when present and otherwise falls back to the live one, which for those contracts is UNIQUE (their `companyId` was backfilled to UNIQUE and is immutable). **Stored snapshot JSON is never rewritten.**
+
+### Public rental link
+
+`office.company` (`code`, `displayName`, `legalNameAr`, `legalNameEn`) is exposed on the public contract view and the public rental context, read from the Contract. The customer sees which company they are renting from and can never select or change it. No lifecycle, OCR, signature or payment behaviour changed.
+
+### TARS routing
+
+`createTarsProvider(companyCode)` and `getTarsConfig(companyCode)` resolve per company. Both the status read and the execute path take the code from `Contract.companyId` — never from the Vehicle's current company or a request parameter. `GET /contracts/:id/tars` returns the routing `company` alongside `configured`, so the UI can show "TARS · UNIQUE" without implying a connection. Both companies remain unconfigured: no endpoints, credentials, payloads or env variables were invented, and an execute attempt still fails closed with `TARS_NOT_CONFIGURED` and writes no operation row.
 
 ## Models
 
