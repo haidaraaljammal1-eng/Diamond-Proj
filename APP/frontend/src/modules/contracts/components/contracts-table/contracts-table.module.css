@@ -50,10 +50,19 @@
   color: var(--diamond-gold-hi);
 }
 
-.company {
+/* The cell owns the stacking so the shared CompanyIdentity keeps its own display
+   rule; overriding it across CSS modules depended on stylesheet order and put the
+   marker beside the number until a full reload. */
+.numberCell {
   display: flex;
-  width: max-content;
-  margin-block-start: 5px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.numberLine {
+  display: inline-flex;
+  align-items: center;
 }
 
 .gpsDot {

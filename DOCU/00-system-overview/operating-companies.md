@@ -148,6 +148,37 @@ Tests: `tests/integration/multi-company.test.ts` (14), `tests/integration/operat
 - Shared `CompanyIdentity` consumes `displayName` and backend `accentColor` as a
   compact identity marker separate from lifecycle status chips.
 
+Phase 3 report (what shipped, the verification round and the open items):
+[multi-company-phase3-report.md](./multi-company-phase3-report.md).
+
+## Frontend verification suite
+
+`APP/frontend/e2e/multi-company.visual.spec.ts` runs the whole company surface
+against the live stack (backend :3001, frontend :3100): ELITE projections through
+an intercepted DTO, Fleet marker + filter + Add Vehicle options, the Contracts
+company column, the signed A4 under UNIQUE, and AR/EN at 390px.
+
+Two environment rules keep it deterministic:
+
+- It signs in **once** and reuses the stored session. `/auth/login` allows five
+  attempts per minute per caller (`RATE_LIMIT_AUTH_MAX`), so a per-test login
+  made the last tests 429 and surface as *Invalid credentials*.
+- The A4 test walks the signed rows until one renders a document. Contracts
+  created before the official-contract snapshot existed (for example
+  `DE-2026-000017`, whose snapshot holds only
+  `vehicle|customer|commercial|termsVersion|contractNumber`) have no A4 at all and
+  correctly show *the signed copy is not available yet*. That is pre-existing data,
+  unrelated to company identity, and is not repaired from the frontend.
+
+## Company marker layout rule
+
+`CompanyIdentity` is `inline-flex` by default. A surface that needs a different
+arrangement gives the **container** the layout (the contracts table cell stacks
+number and marker with `.numberCell`); it must not re-declare `display` on the
+shared component from its own CSS module. Both rules are single-class, so the
+winner depended on which CSS chunk loaded last, and the marker jumped onto the
+contract-number line until a full reload put the order back.
+
 ## Official Contract visual rule
 
 The approved black A4 header remains the visual source of truth. Its logo,
