@@ -34,6 +34,7 @@ export interface UseContractsResult {
   applySearch: (search: string) => void;
   clearSearch: () => void;
   setDateRange: (from: string, to: string) => void;
+  setCompany: (companyId: number | null) => void;
   setSort: (sort: ContractSortKey) => void;
   clearFilters: () => void;
   setPage: (page: number) => void;
@@ -79,9 +80,10 @@ export function useContracts(): UseContractsResult {
       search: query.search,
       from: query.from,
       to: query.to,
+      companyId: query.companyId,
       sort: query.sort,
     }),
-    [query.status, query.search, query.from, query.to, query.sort],
+    [query.status, query.search, query.from, query.to, query.companyId, query.sort],
   );
 
   return useMemo(
@@ -108,6 +110,9 @@ export function useContracts(): UseContractsResult {
       },
       setDateRange: (from: string, to: string) => {
         void setQuery({ from, to, page: 1 });
+      },
+      setCompany: (companyId: number | null) => {
+        void setQuery({ companyId, page: 1 });
       },
       setSort: (sort: ContractSortKey) => {
         void setQuery({ sort, page: 1 });

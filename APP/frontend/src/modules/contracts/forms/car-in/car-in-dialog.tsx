@@ -5,6 +5,8 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
+import { CompanyIdentity } from "@/shared/components/company-identity";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 import type { DamageMark } from "@/modules/public-rental/types/official-contract.types";
 import { VehicleConditionSheet } from "../../components/vehicle-condition-sheet/vehicle-condition-sheet";
 import { ContractInspectionImage } from "../../components/contract-inspection-image/contract-inspection-image";
@@ -41,6 +43,7 @@ function CarInReturn({ contractId, onClose }: { contractId: string; onClose: () 
   const t = useTranslations("Contracts");
   const format = useFormatter();
   const { detail, detailStatus, carInHandover, carInPending, carInError, loadContract, loadCarIn, saveCarInDraft, uploadCarInPhoto, uploadCarInSignature, deleteCarInPhoto, completeCarIn } = useContract();
+  const { companies } = useOperatingCompanies();
   const [step, setStep] = useState<1 | 2>(1);
   const [loaded, setLoaded] = useState(false);
   const [mileage, setMileage] = useState("");
@@ -88,7 +91,12 @@ function CarInReturn({ contractId, onClose }: { contractId: string; onClose: () 
   });
 
   const handover = detail?.id === contractId ? (carInHandover ?? detail.carInHandover) : null;
-  const signedContract = detail?.id === contractId ? signedContractFromSnapshot(detail.snapshot) : null;
+  const historicalCompany = detail?.id === contractId
+    ? companies.find((company) => company.id === detail.company.id)
+    : undefined;
+  const signedContract = detail?.id === contractId
+    ? signedContractFromSnapshot(detail.snapshot, historicalCompany)
+    : null;
   const errorMessage = resolveContractsErrorMessage(t, carInError);
   if (!loaded || detailStatus === "loading" || !detail || detail.id !== contractId || !handover) {
     return <div className={styles.loading} role="status">{detailStatus === "error" ? (errorMessage ?? t("carIn.loadFailed")) : t("carIn.loading")}</div>;
@@ -160,7 +168,10 @@ function CarInReturn({ contractId, onClose }: { contractId: string; onClose: () 
       <header className={styles.context}>
         <div className={styles.identity}>
           <div className={styles.vehicle}>
-            <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
+            <div className={styles.vehicleTitleLine}>
+              <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
+              <CompanyIdentity company={detail.company} />
+            </div>
             <div className={styles.vehicleMeta}>
               {plate ? <span className={styles.plate} dir="ltr" aria-label={`${t("carIn.context.plate")} ${plate}`}>{plate}</span> : null}
               {vehicleMeta ? <span>{vehicleMeta}</span> : null}

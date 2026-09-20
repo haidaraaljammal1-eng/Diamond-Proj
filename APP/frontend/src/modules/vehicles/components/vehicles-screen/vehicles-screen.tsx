@@ -32,6 +32,7 @@ import { ReconcileDialog } from "@/modules/contracts/forms/reconcile/reconcile-d
 import { CloseContractDialog } from "@/modules/contracts/forms/close/close-contract-dialog";
 import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
 import { useRecordFocus } from "@/shared/hooks/use-record-focus";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 import vehicleCardStyles from "../vehicle-card/vehicle-card.module.css";
 import styles from "./vehicles-screen.module.css";
 
@@ -55,11 +56,14 @@ export function VehiclesScreen() {
     applySearch,
     clearSearch,
     setVehicleType,
+    setCompany,
     setSort,
     clearFilters,
     setPage,
   } = useVehicles();
   const { types, isLoading: typesLoading } = useFleetTypeLookup();
+  const { companies, isLoading: companiesLoading } = useOperatingCompanies(isAllowed);
+  const tCompany = useTranslations("OperatingCompanies");
   const { generateReturnLink, generateRentalLink } = useContract();
   const registerNotificationTargets = useNotificationRecordTargets();
 
@@ -117,11 +121,14 @@ export function VehiclesScreen() {
       typeLabel: t("filters.typeLabel"),
       typeAll: t("filters.typeAll"),
       typesLoading: t("filters.typesLoading"),
+      companyLabel: tCompany("company"),
+      companyAll: tCompany("all"),
+      companiesLoading: tCompany("loading"),
       sortLabel: t("filters.sortLabel"),
       clear: t("filters.clear"),
       activeCount: t("filters.activeCount", { count: activeFilterCount }),
     }),
-    [t, activeFilterCount],
+    [t, tCompany, activeFilterCount],
   );
 
   const showNotice = useCallback((message: string) => {
@@ -258,6 +265,8 @@ export function VehiclesScreen() {
         activeFilterCount={activeFilterCount}
         types={types}
         typesLoading={typesLoading}
+        companies={companies}
+        companiesLoading={companiesLoading}
         searchLoading={isLoading}
         resultsLabel={t("filters.results", { count: meta?.total ?? 0 })}
         labels={filterLabels}
@@ -265,6 +274,7 @@ export function VehiclesScreen() {
         onSearchSubmit={applySearch}
         onSearchClear={clearSearch}
         onTypeChange={setVehicleType}
+        onCompanyChange={setCompany}
         onSortChange={setSort}
         onClear={clearFilters}
       />

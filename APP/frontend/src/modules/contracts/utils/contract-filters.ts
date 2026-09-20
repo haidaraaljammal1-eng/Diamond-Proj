@@ -9,6 +9,7 @@ export const DEFAULT_CONTRACT_FILTERS: ContractFiltersState = {
   search: "",
   from: "",
   to: "",
+  companyId: null,
   sort: "newest",
 };
 
@@ -46,6 +47,7 @@ export function buildContractsQuery(params: ContractsListQuery): string {
 
   if (params.vehicleId) search.set("vehicleId", String(params.vehicleId));
   if (params.customerId) search.set("customerId", String(params.customerId));
+  if (params.companyId != null) search.set("companyId", String(params.companyId));
 
   if (params.sort && params.sort !== "newest") {
     search.set("sort", CONTRACT_SORT_PARAM[params.sort]);
@@ -59,6 +61,7 @@ export function countActiveContractFilters(filters: ContractFiltersState): numbe
   if (filters.status !== DEFAULT_CONTRACT_FILTERS.status) count += 1;
   if (filters.search.trim()) count += 1;
   if (filters.from.trim() || filters.to.trim()) count += 1;
+  if (filters.companyId != null) count += 1;
   if (filters.sort !== DEFAULT_CONTRACT_FILTERS.sort) count += 1;
   return count;
 }

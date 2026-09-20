@@ -112,7 +112,7 @@ export function PaymentStep({
         {t("contract")}{" "}
         <span dir="ltr">{context.contract.contractNumber}</span>
         {" · "}
-        {context.office.displayName}
+        {context.office.company.displayName}
       </p>
 
       {panel === "processing" || payPending ? (

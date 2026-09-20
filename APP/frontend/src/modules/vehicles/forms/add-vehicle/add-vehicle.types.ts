@@ -14,6 +14,7 @@ export function toCreateVehiclePayload(values: AddVehicleFormValues): CreateVehi
   const monthlyRate = parseOptionalInt(values.monthlyRate);
 
   return {
+    companyId: Number(values.companyId),
     vehicleName: values.vehicleName.trim(),
     ...(modelYear !== undefined ? { modelYear } : {}),
     ...(values.plateNumber.trim() ? { plateNumber: values.plateNumber.trim() } : {}),

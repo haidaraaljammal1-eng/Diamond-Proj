@@ -69,7 +69,16 @@ interface OfficialCustody {
  * Price policy: no rental price, rate amount or rate basis appears here.
  */
 export interface OfficialContractView {
-  header: { officeDisplayName: string };
+  header: {
+    officeDisplayName: string;
+    company: {
+      code: string;
+      displayName: string;
+      legalNameAr: string;
+      legalNameEn: string;
+      accentColor: string;
+    };
+  };
   contract: {
     agreementNumber: string;
     status: ContractStatus;

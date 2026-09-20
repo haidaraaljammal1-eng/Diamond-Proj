@@ -58,6 +58,13 @@ export type ContractSortKey =
   | "startAt"
   | "number";
 
+export interface ContractCompanyRefDto {
+  id: number;
+  code: string;
+  displayName: string;
+  accentColor: string;
+}
+
 export interface ContractListItemDto {
   id: string;
   contractNumber: string;
@@ -77,6 +84,7 @@ export interface ContractListItemDto {
   hasSalikGpsSignal: boolean;
   actions: { canCarOut: boolean; canCarIn: boolean };
   carOutStatus: "NOT_STARTED" | "DRAFT" | "READY" | "COMPLETED";
+  company: ContractCompanyRefDto;
 }
 
 export interface ContractActionsDto {
@@ -298,6 +306,7 @@ export interface ContractDetailDto {
   closedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  company: ContractCompanyRefDto;
   vehicle: ContractVehicleRefDto;
   customer: ContractCustomerRefDto | null;
   payment: ContractPaymentDto | null;
@@ -402,6 +411,7 @@ export interface ContractFiltersState {
   search: string;
   from: string;
   to: string;
+  companyId: number | null;
   sort: ContractSortKey;
 }
 

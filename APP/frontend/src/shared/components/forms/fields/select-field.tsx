@@ -50,6 +50,7 @@ export function SelectField<T extends FieldValues>({
             onChange={field.onChange}
             onBlur={field.onBlur}
             placeholder={placeholder}
+            aria-label={placeholder}
             searchable={searchable}
             clearable={clearable}
             disabled={disabled}

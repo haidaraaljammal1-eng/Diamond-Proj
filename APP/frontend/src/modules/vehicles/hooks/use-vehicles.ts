@@ -53,6 +53,7 @@ export interface UseVehiclesResult {
   applySearch: (search: string) => void;
   clearSearch: () => void;
   setVehicleType: (vehicleType: string | null) => void;
+  setCompany: (companyId: number | null) => void;
   setSort: (sort: VehicleSortKey) => void;
   clearFilters: () => void;
   setPage: (page: number) => void;
@@ -97,9 +98,10 @@ export function useVehicles(): UseVehiclesResult {
       status: query.status,
       search: query.search,
       vehicleType: query.vehicleType,
+      companyId: query.companyId,
       sort: query.sort,
     }),
-    [query.status, query.search, query.vehicleType, query.sort],
+    [query.status, query.search, query.vehicleType, query.companyId, query.sort],
   );
 
   return useMemo(
@@ -139,6 +141,9 @@ export function useVehicles(): UseVehiclesResult {
       },
       setVehicleType: (vehicleType: string | null) => {
         void setQuery({ vehicleType, page: 1 });
+      },
+      setCompany: (companyId: number | null) => {
+        void setQuery({ companyId, page: 1 });
       },
       setSort: (sort: VehicleSortKey) => {
         void setQuery({ sort, page: 1 });

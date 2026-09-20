@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Icon } from "@/shared/components/ui/icon";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import type { VehicleCardDto } from "../../types/vehicle.types";
 import {
   shouldShowCurrentRental,
@@ -107,7 +108,10 @@ export function VehicleCard({
       </div>
 
       <div className={styles.body}>
-        <h4 className={styles.title}>{vehicle.displayName}</h4>
+        <div className={styles.identityRow}>
+          <h4 className={styles.title}>{vehicle.displayName}</h4>
+          <CompanyIdentity company={vehicle.company} compact />
+        </div>
         <div className={styles.meta}>
           {vehicle.modelYear != null ? (
             <span className={styles.metaItem}>{format.number(vehicle.modelYear)}</span>

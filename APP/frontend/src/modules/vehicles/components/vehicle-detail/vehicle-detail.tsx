@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehiclePhotoButton } from "../../forms/add-vehicle/vehicle-photo-button";
 import type { VehicleDetailDto } from "../../types/vehicle.types";
 import {
@@ -69,7 +70,10 @@ export function VehicleDetail({
         />
         <div className={styles.heroFooter}>
           <div className={styles.heroTitle}>
-            <h3>{vehicle.displayName}</h3>
+            <div className={styles.heroIdentity}>
+              <h3>{vehicle.displayName}</h3>
+              <CompanyIdentity company={vehicle.company} compact className={styles.heroCompany} />
+            </div>
             <p>
               {vehicle.plateNumber ? (
                 <span dir="ltr">{vehicle.plateNumber}</span>

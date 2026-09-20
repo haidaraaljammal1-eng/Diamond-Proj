@@ -16,8 +16,6 @@ export const OFFICIAL_CONTRACT_TEMPLATE_VERSION = "DIAMOND_CONTRACT_V1";
 export const CONTRACT_HEADER = {
   logoSrc: "/official-contract/diamond-contract-logo.png",
   logoAlt: "Diamond Elite Rent Car",
-  companyAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
-  companyEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
   mobile: "Mob: +971 50 549 6332",
   emailLabel: "Email:",
   email: "alladiamondcar@gmail.com",

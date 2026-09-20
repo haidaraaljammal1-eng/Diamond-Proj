@@ -57,7 +57,16 @@ function view(overrides: Partial<OfficialContractView> = {}): OfficialContractVi
   const custody = { status: "NOT_AVAILABLE" as const, occurredAt: null, mileage: null, fuel: null, inspectionAngles: [], damage: [], signatureStatus: "NOT_SIGNED" as const };
   const unsigned = { status: "NOT_SIGNED" as const, signedAt: null, hasImage: false, required: false };
   return {
-    header: { officeDisplayName: "Diamond Rent Car" },
+    header: {
+      officeDisplayName: "Diamond Rent Car",
+      company: {
+        code: "UNIQUE",
+        displayName: "UNIQUE",
+        legalNameAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
+        legalNameEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+        accentColor: "#C9A15C",
+      },
+    },
     contract: { agreementNumber: "DE-2026-000391", status: "FORM", templateVersion: "DIAMOND_CONTRACT_V1", termsVersion: "diamond-rental-terms-v1" },
     vehicle: { plateCode: null, plateNumber: "Q 12345", vehicleType: "Nissan Patrol", yearMade: 2025, color: "White", notes: null },
     hirer: {

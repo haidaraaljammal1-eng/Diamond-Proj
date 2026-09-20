@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { FormBuilder } from "@/shared/components/forms/form-builder";
 import { useVehicles } from "../../hooks/use-vehicles";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 import { resolveVehiclesErrorMessage } from "../../utils/resolve-vehicles-error";
 import { addVehicleFields } from "./add-vehicle.fields";
 import {
@@ -27,6 +28,7 @@ export interface AddVehicleDialogProps {
 }
 
 const EMPTY_FORM_VALUES: AddVehicleFormValues = {
+  companyId: "",
   vehicleName: "",
   modelYear: "",
   plateNumber: "",
@@ -38,6 +40,7 @@ const EMPTY_FORM_VALUES: AddVehicleFormValues = {
 
 export function AddVehicleDialog({ open, onClose, onSuccess }: AddVehicleDialogProps) {
   const t = useTranslations("Vehicles");
+  const tCompany = useTranslations("OperatingCompanies");
   const [photo, setPhoto] = useState<File | null>(null);
   const {
     addVehicle,
@@ -45,6 +48,7 @@ export function AddVehicleDialog({ open, onClose, onSuccess }: AddVehicleDialogP
     createError,
     clearCreateError,
   } = useVehicles();
+  const { companies, isLoading: companiesLoading } = useOperatingCompanies(open);
 
   useEffect(() => {
     if (open) clearCreateError();
@@ -56,6 +60,7 @@ export function AddVehicleDialog({ open, onClose, onSuccess }: AddVehicleDialogP
   };
 
   const fieldLabels = {
+    company: companiesLoading ? tCompany("loading") : tCompany("company"),
     vehicleName: t("form.vehicleNameLabel"),
     vehicleNamePlaceholder: t("form.vehicleNamePlaceholder"),
     modelYear: t("form.modelYearLabel"),
@@ -110,7 +115,11 @@ export function AddVehicleDialog({ open, onClose, onSuccess }: AddVehicleDialogP
 
       <FormBuilder<AddVehicleFormValues>
         className={styles.form}
-        fields={addVehicleFields(fieldLabels)}
+        fields={addVehicleFields(
+          fieldLabels,
+          companies.map((company) => ({ value: String(company.id), label: company.displayName })),
+          companiesLoading,
+        )}
         schema={addVehicleFormSchema}
         defaultValues={EMPTY_FORM_VALUES}
         onSubmit={handleSubmit}

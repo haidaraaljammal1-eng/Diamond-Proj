@@ -83,8 +83,15 @@ export type ContractPaymentStatus =
 
 export type ContractPaymentMethod = "BANK_TRANSFER" | "CARD" | "MANUAL";
 
+export interface PublicOperatingCompanyDto {
+  code: string;
+  displayName: string;
+  legalNameAr: string;
+  legalNameEn: string;
+}
+
 export interface PublicRentalContext {
-  office: { displayName: string };
+  office: { displayName: string; company: PublicOperatingCompanyDto };
   flow: { step: PublicRentalFlowStep };
   contract: {
     contractNumber: string;
@@ -143,7 +150,7 @@ export interface PublicRentalContext {
 }
 
 export interface PublicPaymentContext {
-  office: { displayName: string };
+  office: { displayName: string; company: PublicOperatingCompanyDto };
   contractNumber: string;
   vehicle: { displayName: string; plateNumber: string | null };
   rentalDays: number;

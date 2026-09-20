@@ -63,7 +63,7 @@
   display: grid;
   align-items: end;
   gap: 10px;
-  grid-template-columns: minmax(160px, 1.4fr) minmax(180px, 1fr) minmax(130px, 0.8fr);
+  grid-template-columns: minmax(160px, 1.4fr) minmax(180px, 1fr) repeat(2, minmax(130px, 0.8fr));
 }
 
 .search,

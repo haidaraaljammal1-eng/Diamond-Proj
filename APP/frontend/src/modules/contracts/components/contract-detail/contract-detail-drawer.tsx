@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Drawer } from "@/shared/components/ui/drawer";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { StripePaymentActions } from "@/modules/payments/components/stripe-payment-actions";
 import { useStripeCheckout } from "@/modules/payments/hooks/use-stripe-checkout";
 import {
@@ -97,6 +98,7 @@ export function ContractDetailDrawer({
           <div className={styles.summary}>
             <div className={styles.summaryHead}>
               <ContractStatusChip status={detail.status} />
+              <CompanyIdentity company={detail.company} />
             </div>
             <Kv label={t("table.customer")} value={detail.customer?.name} />
             {detail.customer?.mobile ? (

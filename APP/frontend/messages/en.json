@@ -512,6 +512,13 @@
       "cancel": "Cancel"
     }
   },
+  "OperatingCompanies": {
+    "company": "Company",
+    "all": "All Companies",
+    "unique": "UNIQUE",
+    "elite": "ELITE",
+    "loading": "Loading companies…"
+  },
   "Vehicles": {
     "crumbs": "Fleet",
     "title": "Vehicles",
@@ -685,7 +692,8 @@
       "description": "Update the vehicle's default daily and monthly rates. Rental-offer pricing is set separately in Contracts.",
       "dailyRateLabel": "Daily rate (AED)",
       "monthlyRateLabel": "Monthly rate (AED)",
-      "success": "Default rates updated."
+      "success": "Default rates updated.",
+      "companyReadOnlyHint": "Company is shown for context. This rate-only dialog does not transfer vehicle ownership."
     },
     "deactivate": {
       "title": "Remove vehicle from fleet?",

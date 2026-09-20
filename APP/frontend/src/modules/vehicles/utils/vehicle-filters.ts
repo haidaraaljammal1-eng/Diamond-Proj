@@ -10,6 +10,7 @@ export const DEFAULT_VEHICLE_FILTERS: VehicleFiltersState = {
   status: "all",
   search: "",
   vehicleType: null,
+  companyId: null,
   sort: "newest",
 };
 
@@ -47,6 +48,7 @@ export function buildVehiclesQuery(params: VehiclesListQuery): string {
   if (term) search.set("search", term);
 
   if (params.vehicleType) search.set("vehicleType", params.vehicleType);
+  if (params.companyId != null) search.set("companyId", String(params.companyId));
 
   if (params.sort && params.sort !== "newest") {
     search.set("sort", VEHICLE_SORT_PARAM[params.sort]);
@@ -61,6 +63,7 @@ export function countActiveFilters(filters: VehicleFiltersState): number {
   if (filters.status !== DEFAULT_VEHICLE_FILTERS.status) count += 1;
   if (filters.search.trim()) count += 1;
   if (filters.vehicleType != null) count += 1;
+  if (filters.companyId != null) count += 1;
   if (filters.sort !== DEFAULT_VEHICLE_FILTERS.sort) count += 1;
   return count;
 }

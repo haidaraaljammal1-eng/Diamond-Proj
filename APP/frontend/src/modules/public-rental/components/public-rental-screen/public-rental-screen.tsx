@@ -188,7 +188,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   return (
     <div className={styles.root}>
       <div className={styles.shell}>
-        <RentalHeader officeName={context.office.displayName} />
+        <RentalHeader officeName={context.office.company.displayName} />
         {allowed !== "handover" ? (
           <RentalProgress
             allowed={allowed}

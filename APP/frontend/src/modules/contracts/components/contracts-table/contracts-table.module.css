@@ -50,6 +50,12 @@
   color: var(--diamond-gold-hi);
 }
 
+.company {
+  display: flex;
+  width: max-content;
+  margin-block-start: 5px;
+}
+
 .gpsDot {
   display: inline-block;
   width: 7px;

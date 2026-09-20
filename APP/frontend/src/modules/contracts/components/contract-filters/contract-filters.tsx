@@ -15,8 +15,10 @@ import type {
 import { CONTRACT_SORT_KEYS } from "../../utils/contract-filters";
 import { CONTRACT_STATUSES } from "../../constants/inspection";
 import styles from "./contract-filters.module.css";
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
 
 const STATUS_FILTERS: ContractStatusFilter[] = ["all", ...CONTRACT_STATUSES];
+const ALL_COMPANIES = "__all_companies__";
 
 export interface ContractFiltersLabels {
   status: Record<ContractStatusFilter, string>;
@@ -27,6 +29,9 @@ export interface ContractFiltersLabels {
   searchButton: string;
   searchClear: string;
   sortLabel: string;
+  companyLabel: string;
+  companyAll: string;
+  companiesLoading: string;
   dateRange: DateRangePickerLabels;
   clear: string;
   activeCount: string;
@@ -38,12 +43,15 @@ export interface ContractFiltersProps {
   searchLoading: boolean;
   resultsLabel: string;
   locale: string;
+  companies: OperatingCompanyIdentity[];
+  companiesLoading: boolean;
   labels: ContractFiltersLabels;
   onStatusChange: (status: ContractStatusFilter) => void;
   onSearchSubmit: (search: string) => void;
   onSearchClear: () => void;
   onDateRangeApply: (from: string, to: string) => void;
   onDateRangeClear: () => void;
+  onCompanyChange: (companyId: number | null) => void;
   onSortChange: (sort: ContractSortKey) => void;
   onClear: () => void;
 }
@@ -54,12 +62,15 @@ export function ContractFilters({
   searchLoading,
   resultsLabel,
   locale,
+  companies,
+  companiesLoading,
   labels,
   onStatusChange,
   onSearchSubmit,
   onSearchClear,
   onDateRangeApply,
   onDateRangeClear,
+  onCompanyChange,
   onSortChange,
   onClear,
 }: ContractFiltersProps) {
@@ -67,6 +78,10 @@ export function ContractFilters({
     value: key,
     label: labels.sort[key],
   }));
+  const companyOptions: SelectOption[] = [
+    { value: ALL_COMPANIES, label: labels.companyAll },
+    ...companies.map((company) => ({ value: String(company.id), label: company.displayName })),
+  ];
 
   return (
     <section className={styles.toolbar} data-testid="contract-filters">
@@ -128,6 +143,19 @@ export function ContractFilters({
             onApply={(range) => onDateRangeApply(range.from, range.to)}
             onClear={onDateRangeClear}
             disabled={searchLoading}
+          />
+        </div>
+
+        <div className={styles.control}>
+          <Select
+            variant="ghost"
+            size="sm"
+            options={companyOptions}
+            value={filters.companyId == null ? ALL_COMPANIES : String(filters.companyId)}
+            onChange={(value) => onCompanyChange(value === ALL_COMPANIES ? null : Number(value))}
+            placeholder={companiesLoading ? labels.companiesLoading : labels.companyAll}
+            disabled={companiesLoading && companies.length === 0}
+            aria-label={labels.companyLabel}
           />
         </div>
 

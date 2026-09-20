@@ -182,6 +182,15 @@
   justify-content: center;
 }
 
+.identityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.identityRow .title { min-width: 0; }
+
 .recordFocus {
   background: rgba(201, 161, 92, 0.18) !important;
   box-shadow: 0 0 0 3px rgba(201, 161, 92, 0.22), inset 0 0 0 2px rgba(201, 161, 92, 0.65);

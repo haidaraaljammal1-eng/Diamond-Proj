@@ -1,6 +1,7 @@
 .page { display: grid; align-content: start; gap: 24px; padding: 24px; min-width: 0; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
 .toolbar h1 { margin: 0 0 4px; font-size: 24px; color: var(--diamond-ink); }
+.titleLine { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .toolbar p { margin: 0; color: var(--diamond-muted); font-size: 14px; }
 .sheet { width: max-content; max-width: none; margin: 0 auto; box-shadow: 0 20px 55px rgba(30, 27, 22, .18); }
 @media (max-width: 900px) {

@@ -1,0 +1,29 @@
+.identity {
+  --company-accent: var(--diamond-gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  padding: 2px 1px;
+  color: var(--diamond-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.055em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.marker {
+  inline-size: 3px;
+  block-size: 13px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--company-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--company-accent) 35%, transparent);
+}
+
+.label { white-space: nowrap; }
+
+.compact { font-size: 10px; }
+.compact .marker { block-size: 11px; }

@@ -65,6 +65,15 @@
   color: #fff;
 }
 
+.heroIdentity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.heroCompany { color: #fff; }
+
 .heroTitle p {
   font-size: 11px;
   color: var(--diamond-gold-hi);

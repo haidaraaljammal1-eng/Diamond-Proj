@@ -24,6 +24,11 @@ describe("buildContractsQuery", () => {
     assert.ok(buildContractsQuery({ status: "PAID" }).includes("status=PAID"));
   });
 
+  it("uses the authoritative company id when narrowed", () => {
+    const query = new URLSearchParams(buildContractsQuery({ companyId: 2 }));
+    assert.equal(query.get("companyId"), "2");
+  });
+
   it("trims the search term and drops a blank one", () => {
     assert.ok(buildContractsQuery({ search: " DE-2026 " }).includes("search=DE-2026"));
     assert.ok(!buildContractsQuery({ search: "   " }).includes("search="));
@@ -84,9 +89,10 @@ describe("countActiveContractFilters", () => {
         search: " patrol ",
         from: "2026-01-01",
         to: "2026-01-31",
+        companyId: 2,
         sort: "amountDesc",
       }),
-      4,
+      5,
     );
   });
 

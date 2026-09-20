@@ -22,6 +22,7 @@ function fixture(partial: Partial<VehicleCardDto> & Pick<VehicleCardDto, "operat
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     displayName: "Range Rover 2024",
+    company: { id: 1, code: "UNIQUE", displayName: "UNIQUE", accentColor: "#C9A15C" },
     model: { id: 1, code: "RR", name: "Range Rover" },
     primaryImage: null,
     currentRental: null,

@@ -20,6 +20,7 @@ function parseOptionalInt(
  */
 export const addVehicleFormSchema = z
   .object({
+    companyId: z.string().trim().min(1, { message: "required" }),
     vehicleName: z.string().trim().min(1, { message: "required" }),
     modelYear: z.string().trim(),
     plateNumber: z.string().trim(),

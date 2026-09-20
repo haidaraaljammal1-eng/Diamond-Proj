@@ -5,10 +5,11 @@ Diamond runs one fleet, one staff team and one workflow for two rental companies
 It never forks the Contract lifecycle, Car-Out/Car-In, payments, reservation or
 maintenance, and it never changes contract numbering.
 
-Status: **database + backend done; frontend not started.** The schema, the
-company-aware Vehicle and Contract APIs, the official-contract company block,
-the public rental context and the TARS routing seam are live. No UI exposes any
-of it yet.
+Status: **database + backend + frontend done.** Vehicles and Contracts expose
+company identity and server-side filters, Add Vehicle requires an active company,
+the public rental flow shows the Contract company, and the printed A4 reads the
+legal names frozen in the authoritative official-contract view. TARS routing is
+company-aware but both providers remain unconfigured.
 
 ## `OperatingCompany`
 
@@ -125,7 +126,44 @@ Tests: `tests/integration/multi-company.test.ts` (14), `tests/integration/operat
 `tests/unit/multi-company-routing.test.ts` (5). Fixtures resolve a real company through
 `tests/helpers/operating-company.ts` instead of inventing ids.
 
-## State right now, for the next agent
+## Frontend behaviour (phase 3, done)
+
+- `modules/operating-companies` owns the read-only API, Zustand store and hook for
+  active companies. UI components do not fetch directly.
+- Add Vehicle uses Shared Select + FormBuilder and requires `companyId`; it never
+  defaults silently to UNIQUE.
+- Fleet cards/details show a small accent marker and the toolbar filters by
+  authoritative company id. Clear Filters resets company to All Companies.
+- The current Edit Vehicle action is intentionally a default-rate dialog. It shows
+  the company read-only; company transfer is not exposed through that rate-only UX.
+- Contracts show `Contract.company` in rows, drawer and signed-document context.
+  Their company filter participates in the existing keyed query, latest-wins gate,
+  focus/visibility refresh and 30-second visible-tab polling.
+- For a pre-multi-company staff snapshot that lacks `header.company`, the reader
+  projects the missing block from historical `Contract.company` plus the backend
+  company lookup. It never uses the Vehicle and never rewrites the frozen JSON.
+- Car-Out and Car-In show `Contract.company` in their existing contextual headers;
+  their custody workflows are unchanged.
+- Public Rental renders `office.company.displayName`; customers cannot select it.
+- Shared `CompanyIdentity` consumes `displayName` and backend `accentColor` as a
+  compact identity marker separate from lifecycle status chips.
+
+## Official Contract visual rule
+
+The approved black A4 header remains the visual source of truth. Its logo,
+dimensions, contact block, typography hierarchy and legal body are unchanged.
+Only `header.company.legalNameAr` and `header.company.legalNameEn` vary:
+
+- UNIQUE: `شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و` /
+  `DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C`
+- ELITE: `شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و` /
+  `DIAMOND ELITE CAR RENTALS CO. LLC S.O.C`
+
+No new ELITE logo was invented. The existing logo remains because the repository
+contains no authoritative company-specific replacement. Its existing alt text is
+a pre-existing branding mismatch and was not used to redesign the contract.
+
+## Current state
 
 Read this before touching anything company-related.
 
@@ -135,9 +173,9 @@ and the full backend above. Both migrations are applied to `diamond` and `haidar
 `prisma validate`, `db:generate`, backend `typecheck` and `build` are clean, and the focused
 company suites pass.
 
-**Deliberately NOT done: the frontend.** No Add Vehicle company Select, no fleet company badge
-or filter UI, no contract company badge or filter UI, no A4 template change, no Car-Out/Car-In
-company marker. The backend already returns everything those screens need.
+The frontend company lookup, Add Vehicle Select, Fleet and Contracts display/filter,
+official A4 names, public rental identity and custody context are implemented and
+verified in AR/EN on desktop and 390px mobile.
 
 **Known pre-existing test failures, not caused by this work and not repaired here:**
 `tests/unit/integration-catalog.test.ts` (CRM kind), `contracts.test.ts` "full lifecycle" and
@@ -145,22 +183,12 @@ company marker. The backend already returns everything those screens need.
 (`OFFICIAL_CONTRACT_FIELD_LOCKED`, committed at HEAD), and `public-rental-flow.test.ts`
 payment-provider cases, which depend on local provider env flags.
 
-**Next phase (frontend) needs:** `GET /operating-companies` for the picker, `company` on
-Vehicle and Contract DTOs for badges, `?companyId=` on both list endpoints for filters, and
-`header.company` for the A4 header. Nothing else in the backend has to change.
+## Later document work
 
-## What later phases must do
-
-- **Backend:** require `companyId` on vehicle creation, inherit it onto the
-  Contract from the Vehicle, expose it on the Vehicle and Contract DTOs, and add
-  the company filter to both list endpoints.
-- **Official contract:** take the legal names and accent from the company row and
-  freeze them into the signed snapshot at SIGNED. Existing frozen snapshots stay
-  untouched.
-- **TARS:** resolve the provider from `Contract.companyId → OperatingCompany.code`.
-  No credential or URL belongs in this table.
 - **Invoices / statements / accounting:** persist the company they were issued
   for. They must never infer it later from the Vehicle's current owner.
+- Reuse the authoritative `displayName`, legal AR/EN names and `accentColor` rather
+  than introducing document-specific UNIQUE/ELITE conditionals.
 
 Contract numbering stays global: `DE-{year}-{sequence}` from the single
 `ContractNumberSequence`. Company has no effect on it.

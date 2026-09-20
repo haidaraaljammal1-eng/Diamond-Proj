@@ -32,7 +32,7 @@ temporarily highlights the matching record. It never writes to Backend or DB.
 
 A PAID Contract reserves its assigned Vehicle: operational status stays `AVAILABLE`, while `isReserved=true` and `isBookable=false`. Staff opens Car-Out from that same Contract. Completion requires mileage, fuel, a real OUT signature, and eight photos: six exterior views (FRONT, REAR, FRONT_RIGHT, REAR_RIGHT, FRONT_LEFT, REAR_LEFT), one ODOMETER, and one DASHBOARD_FUEL. Damage is recorded in the OUT draft. Completion atomically changes `PAID -> ACTIVE` and Vehicle `AVAILABLE -> RENTED`; the evidence becomes immutable.
 
-## Multi-company (UNIQUE / ELITE) — database phase only
+## Multi-company (UNIQUE / ELITE) — end to end
 
 The database now models two operating companies. `OperatingCompany` holds `code`
 (UNIQUE / ELITE), display and legal Arabic/English names, an accent colour and
@@ -45,14 +45,20 @@ then made both columns NOT NULL. Contract numbering stays global (`DE-{year}-{se
 
 The backend is now company-aware end to end: `GET /operating-companies`, required company on vehicle creation, optional company transfer on vehicle update, `company` on Vehicle and Contract DTOs, `?companyId=` filters on both lists, contract company derived from the Vehicle and frozen in the official-contract snapshot, the renting company on the public rental context, and TARS provider resolution keyed by `Contract.companyId` (both companies still unconfigured). `externalId` is unique per company; plate and VIN stay globally unique.
 
-**No frontend exists yet.** Backend routes and DTOs, Frontend filters, the
-official-contract company branding and company-aware TARS routing are later phases. Because
-both columns are required, vehicle and contract creation code still has to pass a company:
-`npm run typecheck` currently reports 36 errors (5 in `src/`, 31 in test fixtures), and
-creating a Vehicle or Contract through the API fails until the Backend phase lands. Reading,
-Car-Out, Car-In, payments, reconciliation and close are unaffected. The exact file list, the
-inheritance rule, the `externalId` uniqueness decision and the placeholder accent colours are
-in `DOCU/00-system-overview/operating-companies.md`.
+The frontend now loads active companies through a dedicated API/store/hook chain.
+Add Vehicle requires a company with no default. Fleet and Contracts show compact
+accent-aware company identity and filter server-side by company id; Contract UI
+always reads historical `Contract.company`. The existing rate-only vehicle editor
+shows Company read-only instead of pretending to support a master-data transfer.
+
+The public rental UI displays the Contract company. The Official Contract keeps
+the approved black A4 header, dimensions, logo, contact block and legal body; only
+the Arabic/English legal-name lines come from the authoritative official view, so
+ELITE changes يونيك / UNIQUE to إيليت / ELITE. Car-Out and Car-In add historical
+Contract company to their context headers without changing either workflow.
+Placeholder accents remain `#C9A15C` and `#3E5C76`, sourced from backend data.
+TARS provider routing remains company-aware and unconfigured for both companies.
+Future invoices and statements must reuse the same authoritative company identity.
 
 ## RETOUT and Car-In
 

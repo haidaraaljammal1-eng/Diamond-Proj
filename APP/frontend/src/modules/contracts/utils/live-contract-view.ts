@@ -1,6 +1,7 @@
 import type { OfficialContractView } from "@/modules/public-rental/types/official-contract.types";
 import type { ContractDetailDto } from "../types/contract.types";
 import { signedContractFromSnapshot } from "./signed-contract-snapshot.ts";
+import type { OperatingCompanyDto } from "@/modules/operating-companies";
 
 /**
  * The signed legal view with every custody event recorded since signing laid
@@ -8,8 +9,11 @@ import { signedContractFromSnapshot } from "./signed-contract-snapshot.ts";
  * Car-In (mileage, fuel). Only completed events are applied; a Car-Out draft
  * is not part of the contract until the handover is completed.
  */
-export function liveContractView(detail: ContractDetailDto): OfficialContractView | null {
-  const signed = signedContractFromSnapshot(detail.snapshot);
+export function liveContractView(
+  detail: ContractDetailDto,
+  historicalCompany?: OperatingCompanyDto,
+): OfficialContractView | null {
+  const signed = signedContractFromSnapshot(detail.snapshot, historicalCompany);
   if (!signed) return null;
   const view: OfficialContractView = {
     ...signed,

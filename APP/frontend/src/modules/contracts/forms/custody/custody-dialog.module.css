@@ -51,6 +51,7 @@
 .identity { display: flex; align-items: end; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap; }
 .vehicle { display: grid; gap: 8px; min-width: 0; }
 .vehicleName { font-size: 22px; font-weight: 700; line-height: 1.2; color: var(--diamond-ink); overflow-wrap: anywhere; }
+.vehicleTitleLine { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .vehicleMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: var(--diamond-muted); }
 /* Reads like the physical plate the attendant matches against the car. */
 .plate { padding: 3px 10px; border: 1.5px solid var(--diamond-ink); border-radius: 6px; background: color-mix(in oklch, var(--diamond-ink) 4%, transparent); color: var(--diamond-ink); font-size: 13px; font-weight: 700; letter-spacing: .08em; font-variant-numeric: tabular-nums; white-space: nowrap; }

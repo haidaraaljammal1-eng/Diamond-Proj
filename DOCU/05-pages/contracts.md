@@ -2,7 +2,7 @@
 
 Staff Contracts desk for Diamond Rent Car. Backend contract: [contracts-backend.md](./contracts-backend.md). Visual source: `demo.html` `vContracts` (table + drawer). Fleet Set Rental Price is the create-offer entry. No mock contracts.
 
-> **Operating company (UNIQUE / ELITE):** the backend is ready — `company` on contract list items and detail, `?companyId=` on the list (filtering historical `Contract.companyId`), and company identity in the official-contract header. The UI (row badge, filter) is not built yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding it.
+> **Operating company (UNIQUE / ELITE):** implemented. Rows, drawer, signed-document page and custody headers use historical `Contract.company`; the server-side filter sends `?companyId=`. The Official Contract prints the company identity supplied by its authoritative backend view/snapshot. Read [operating-companies.md](../00-system-overview/operating-companies.md).
 
 ## Route / Permission
 
@@ -55,6 +55,7 @@ Server-side only. Changing any filter resets to page 1.
 | Status chips | `status` | omitted when `all` |
 | Search | `search` | Explicit submit via Shared `DataSearch` — no per-keystroke request |
 | Date range | `from` / `to` | `YYYY-MM-DD` → ISO instants via Shared `DateRangePicker` (explicit Apply; one toolbar control) |
+| Company | `companyId` | Historical `Contract.companyId`; active options from `GET /operating-companies` |
 | Sort | `sort` | UX presets → Backend `field:direction` (`createdAt`, `agreedAmount`, `startAt`, `contractNumber`) |
 | Pagination | `page` / `pageSize` | default 20 |
 | Result count | — | `meta.total` |
@@ -117,7 +118,19 @@ The column sizes to its content (`width: 1%`, `nowrap`), so no button is clipped
 
 Rows: the plate sits under the vehicle name in the cell direction, with only its text LTR-isolated (`<bdi>`). A contract without a linked Customer shows a muted "—" announced as "No linked customer"; in DEV OCR mode the hirer name exists only in the signed snapshot, which the list endpoint does not return.
 
+The contract-number cell also shows a compact company identity marker. It uses
+the backend accent but remains visually separate from the status chip.
+
 ## View contract (latest state)
+
+The operational page shows the Contract company marker. Inside the printed A4,
+the approved black header, logo, contact block, proportions, A4 dimensions and
+legal body stay unchanged. Only the two legal company-name lines come from
+`OfficialContractView.header.company`: UNIQUE prints يونيك / UNIQUE and ELITE
+prints إيليت / ELITE. The current Vehicle company is never consulted.
+For a legacy staff snapshot without this block, the frontend combines historical
+`Contract.company` with the authoritative Operating Company lookup for rendering
+only; the signed snapshot remains untouched.
 
 From SIGNED onward (SIGNED, PAID, ACTIVE, RETOUT, REVIEW, CLOSED) every table row also shows **View contract**. It opens `/[locale]/contracts/[id]/contract`, the protected A4 page in read-only mode, showing the contract with everything recorded after signing:
 
@@ -164,7 +177,15 @@ SIGNED → customer Stripe Checkout on the public rental page (`POST /contracts/
 
 ## Car-Out
 
-The contract-scoped Car-Out dialog opens from a PAID Contract. Its wide Shared Dialog fills most of the viewport, with one content scrollbar and a fixed action footer. It shows a short preview of the frozen signed A4 contract from `Contract.snapshot.officialContract`, confirmed payment, and contract/vehicle identity. **Open full-size A4 contract** opens `/[locale]/contracts/[id]/car-out/contract` in a protected page, rendered at its original A4 size. The legal copy stays read-only; Vehicle OUT edits remain in the same Car-Out draft. Staff signature images are read through `contracts.read`.
+The contract-scoped Car-Out dialog opens from a PAID Contract. Its contextual
+header shows historical `Contract.company`; the custody workflow is unchanged.
+Its wide Shared Dialog fills most of the viewport, with one content scrollbar
+and a fixed action footer. It shows a short preview of the frozen signed A4
+contract from `Contract.snapshot.officialContract`, confirmed payment, and
+contract/vehicle identity. **Open full-size A4 contract** opens
+`/[locale]/contracts/[id]/car-out/contract` in a protected page, rendered at its
+original A4 size. The legal copy stays read-only; Vehicle OUT edits remain in the
+same Car-Out draft. Staff signature images are read through `contracts.read`.
 
 Header: vehicle name first, then a plate block (plate code merged into the number, LTR) with color and year, then contract number and hirer. One status line holds shared `Chip`s for contract status, confirmed payment (omitted until confirmed) and vehicle status, followed by the TARS handover row. While PAID and not handed over, vehicle status reads Reserved alone; the fleet status is not appended.
 
@@ -186,7 +207,12 @@ The confirm button sits on the public return page and is shown only while the co
 
 ## Car-In
 
-Staff operational action on RETOUT, opened by **Receive vehicle / استلام السيارة** when the Backend says `actions.canCarIn`. It is the return side of the same custody workflow as Car-Out and uses the same wide Shared Dialog, header, ledger, two steps, photo grid and footer. PAID, ACTIVE, REVIEW and CLOSED never offer it.
+Staff operational action on RETOUT, opened by **Receive vehicle / استلام السيارة**
+when the Backend says `actions.canCarIn`. Its contextual header shows historical
+`Contract.company`; no return fields, evidence rules or lifecycle behavior changed.
+It is the return side of the same custody workflow as Car-Out and uses the same
+wide Shared Dialog, header, ledger, two steps, photo grid and footer. PAID, ACTIVE,
+REVIEW and CLOSED never offer it.
 
 **Staged endpoints** (`contracts.return`, read through `contracts.read`), one per action, each returning the authoritative Car-In work state:
 

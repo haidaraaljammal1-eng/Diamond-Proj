@@ -32,7 +32,7 @@ export function RentalSummary({ context }: RentalSummaryProps) {
       <dl className={styles.rows}>
         <div className={styles.row}>
           <dt>{t("office")}</dt>
-          <dd className={styles.value}>{context.office.displayName}</dd>
+          <dd className={styles.value}>{context.office.company.displayName}</dd>
         </div>
         <div className={styles.row}>
           <dt>{t("vehicle")}</dt>

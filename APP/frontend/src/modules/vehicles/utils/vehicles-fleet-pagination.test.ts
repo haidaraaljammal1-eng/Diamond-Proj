@@ -87,6 +87,12 @@ describe("buildVehiclesQuery — filters", () => {
     assert.ok(!buildVehiclesQuery({ vehicleType: null }).includes("vehicleType="));
   });
 
+  it("sends the authoritative company id only when selected", () => {
+    const query = new URLSearchParams(buildVehiclesQuery({ companyId: 2 }));
+    assert.equal(query.get("companyId"), "2");
+    assert.ok(!buildVehiclesQuery({ companyId: null }).includes("companyId="));
+  });
+
   it("maps the sort preset to the Backend field:direction form", () => {
     assert.ok(
       buildVehiclesQuery({ sort: "priceDesc" }).includes(
@@ -211,9 +217,10 @@ describe("countActiveFilters", () => {
         status: "service",
         search: " camry ",
         vehicleType: "Toyota Camry",
+        companyId: 2,
         sort: "plate",
       }),
-      4,
+      5,
     );
   });
 

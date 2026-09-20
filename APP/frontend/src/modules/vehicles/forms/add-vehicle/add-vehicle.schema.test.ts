@@ -6,6 +6,7 @@ import { toCreateVehiclePayload } from "./add-vehicle.types.ts";
 describe("addVehicleFormSchema", () => {
   it("requires vehicleName", () => {
     const result = addVehicleFormSchema.safeParse({
+      companyId: "",
       vehicleName: "",
       modelYear: "",
       plateNumber: "",
@@ -19,6 +20,7 @@ describe("addVehicleFormSchema", () => {
 
   it("accepts minimal valid payload", () => {
     const result = addVehicleFormSchema.safeParse({
+      companyId: "2",
       vehicleName: "Toyota Land Cruiser",
       modelYear: "",
       plateNumber: "",
@@ -32,6 +34,7 @@ describe("addVehicleFormSchema", () => {
 
   it("rejects negative daily rate", () => {
     const result = addVehicleFormSchema.safeParse({
+      companyId: "1",
       vehicleName: "Toyota Land Cruiser",
       modelYear: "",
       plateNumber: "",
@@ -45,6 +48,7 @@ describe("addVehicleFormSchema", () => {
 
   it("rejects invalid model year", () => {
     const result = addVehicleFormSchema.safeParse({
+      companyId: "1",
       vehicleName: "Toyota Land Cruiser",
       modelYear: "1800",
       plateNumber: "",
@@ -60,6 +64,20 @@ describe("addVehicleFormSchema", () => {
     assert.equal("operationalStatus" in addVehicleFormSchema.shape, false);
   });
 
+  it("requires an Operating Company", () => {
+    const result = addVehicleFormSchema.safeParse({
+      companyId: "",
+      vehicleName: "Toyota Land Cruiser",
+      modelYear: "",
+      plateNumber: "",
+      color: "",
+      dailyRate: "",
+      monthlyRate: "",
+      vin: "",
+    });
+    assert.equal(result.success, false);
+  });
+
   it("does not include modelId", () => {
     assert.equal("modelId" in addVehicleFormSchema.shape, false);
   });
@@ -72,6 +90,7 @@ describe("addVehicleFormSchema", () => {
 describe("toCreateVehiclePayload", () => {
   it("maps form values to API payload without modelId", () => {
     const payload = toCreateVehiclePayload({
+      companyId: "2",
       vehicleName: "Toyota Land Cruiser",
       modelYear: "2024",
       plateNumber: "A 12345",
@@ -81,6 +100,7 @@ describe("toCreateVehiclePayload", () => {
       vin: "VIN123",
     });
     assert.deepEqual(payload, {
+      companyId: 2,
       vehicleName: "Toyota Land Cruiser",
       modelYear: 2024,
       plateNumber: "A 12345",

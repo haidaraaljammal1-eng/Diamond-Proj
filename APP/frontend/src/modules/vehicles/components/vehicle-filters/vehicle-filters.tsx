@@ -10,6 +10,7 @@ import type {
   VehicleStatusFilter,
 } from "../../types/vehicle.types";
 import { VEHICLE_SORT_KEYS } from "../../utils/vehicle-filters";
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
 import styles from "./vehicle-filters.module.css";
 
 const STATUS_FILTERS: VehicleStatusFilter[] = [
@@ -20,6 +21,7 @@ const STATUS_FILTERS: VehicleStatusFilter[] = [
 ];
 
 const ALL_TYPES = "__all__";
+const ALL_COMPANIES = "__all_companies__";
 
 export interface FleetVehicleTypeOption {
   value: string;
@@ -37,6 +39,9 @@ export interface VehicleFiltersLabels {
   typeLabel: string;
   typeAll: string;
   typesLoading: string;
+  companyLabel: string;
+  companyAll: string;
+  companiesLoading: string;
   sortLabel: string;
   clear: string;
   activeCount: string;
@@ -47,6 +52,8 @@ export interface VehicleFiltersProps {
   activeFilterCount: number;
   types: FleetVehicleTypeOption[];
   typesLoading: boolean;
+  companies: OperatingCompanyIdentity[];
+  companiesLoading: boolean;
   searchLoading: boolean;
   /** Already-translated result counter shown at the end of the status row. */
   resultsLabel: string;
@@ -55,6 +62,7 @@ export interface VehicleFiltersProps {
   onSearchSubmit: (search: string) => void;
   onSearchClear: () => void;
   onTypeChange: (vehicleType: string | null) => void;
+  onCompanyChange: (companyId: number | null) => void;
   onSortChange: (sort: VehicleSortKey) => void;
   onClear: () => void;
 }
@@ -65,6 +73,8 @@ export function VehicleFilters({
   activeFilterCount,
   types,
   typesLoading,
+  companies,
+  companiesLoading,
   searchLoading,
   resultsLabel,
   labels,
@@ -72,6 +82,7 @@ export function VehicleFilters({
   onSearchSubmit,
   onSearchClear,
   onTypeChange,
+  onCompanyChange,
   onSortChange,
   onClear,
 }: VehicleFiltersProps) {
@@ -84,6 +95,10 @@ export function VehicleFilters({
     value: key,
     label: labels.sort[key],
   }));
+  const companyOptions: SelectOption[] = [
+    { value: ALL_COMPANIES, label: labels.companyAll },
+    ...companies.map((company) => ({ value: String(company.id), label: company.displayName })),
+  ];
 
   return (
     <section className={styles.toolbar} data-testid="vehicle-filters">
@@ -150,6 +165,19 @@ export function VehicleFilters({
             placeholder={typesLoading ? labels.typesLoading : labels.typeAll}
             disabled={typesLoading && types.length === 0}
             aria-label={labels.typeLabel}
+          />
+        </div>
+
+        <div className={styles.control}>
+          <Select
+            variant="ghost"
+            size="sm"
+            options={companyOptions}
+            value={filters.companyId == null ? ALL_COMPANIES : String(filters.companyId)}
+            onChange={(value) => onCompanyChange(value === ALL_COMPANIES ? null : Number(value))}
+            placeholder={companiesLoading ? labels.companiesLoading : labels.companyAll}
+            disabled={companiesLoading && companies.length === 0}
+            aria-label={labels.companyLabel}
           />
         </div>
 

@@ -9,6 +9,16 @@ const unsigned = { status: "NOT_SIGNED", signedAt: null, hasImage: false, requir
 
 function signedView(): OfficialContractView {
   return {
+    header: {
+      officeDisplayName: "Diamond Rent Car",
+      company: {
+        code: "UNIQUE",
+        displayName: "UNIQUE",
+        legalNameAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
+        legalNameEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+        accentColor: "#C9A15C",
+      },
+    },
     contract: { agreementNumber: "DE-1", status: "SIGNED", templateVersion: "1", termsVersion: "1" },
     vehicleOut: { ...custody, damage: [] },
     vehicleIn: { ...custody, damage: [] },

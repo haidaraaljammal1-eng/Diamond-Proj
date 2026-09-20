@@ -5,6 +5,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import type { ContractListItemDto } from "../../types/contract.types";
 import { getContractRowAction } from "../../utils/contract-row-action";
 import { ContractStatusChip } from "../contract-status/contract-status";
@@ -68,6 +69,7 @@ export function ContractsTable({
                   <span className={styles.number} dir="ltr">
                     {contract.contractNumber}
                   </span>
+                  <CompanyIdentity company={contract.company} compact className={styles.company} />
                   {contract.hasSalikGpsSignal ? (
                     <span className={styles.gpsDot} title={t("detail.gpsSalikTitle")} data-testid="contract-gps-salik-dot" />
                   ) : null}

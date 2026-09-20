@@ -5,6 +5,8 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
+import { CompanyIdentity } from "@/shared/components/company-identity";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 import { OfficialContractA4 } from "@/modules/public-rental/components/official-contract-a4/official-contract-a4";
 import type { DamageMark, OfficialContractView } from "@/modules/public-rental/types/official-contract.types";
 import { VehicleConditionSheet } from "../../components/vehicle-condition-sheet/vehicle-condition-sheet";
@@ -59,6 +61,7 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   const locale = useLocale();
   const format = useFormatter();
   const { detail, detailStatus, carOutHandover, carOutPending, carOutError, loadContract, loadCarOut, saveCarOutDraft, uploadCarOutPhoto, uploadCarOutSignature, deleteCarOutPhoto, completeCarOut } = useContract();
+  const { companies } = useOperatingCompanies();
   const [step, setStep] = useState<1 | 2>(1);
   const [loaded, setLoaded] = useState(false);
   const [mileage, setMileage] = useState("");
@@ -107,7 +110,12 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   });
 
   const handover = detail?.id === contractId ? (carOutHandover ?? detail.carOutHandover) : null;
-  const signedContract = detail?.id === contractId ? signedContractFromSnapshot(detail.snapshot) : null;
+  const historicalCompany = detail?.id === contractId
+    ? companies.find((company) => company.id === detail.company.id)
+    : undefined;
+  const signedContract = detail?.id === contractId
+    ? signedContractFromSnapshot(detail.snapshot, historicalCompany)
+    : null;
   const errorMessage = resolveContractsErrorMessage(t, carOutError);
   if (!loaded || detailStatus === "loading" || !detail || detail.id !== contractId || !handover) {
     return <div className={styles.loading} role="status">{detailStatus === "error" ? (errorMessage ?? t("carOut.loadFailed")) : t("carOut.loading")}</div>;
@@ -187,7 +195,10 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
       <header className={styles.context}>
         <div className={styles.identity}>
           <div className={styles.vehicle}>
-            <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
+            <div className={styles.vehicleTitleLine}>
+              <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
+              <CompanyIdentity company={detail.company} />
+            </div>
             <div className={styles.vehicleMeta}>
               {plate ? <span className={styles.plate} dir="ltr" aria-label={`${t("carOut.context.plate")} ${plate}`}>{plate}</span> : null}
               {vehicleMeta ? <span>{vehicleMeta}</span> : null}

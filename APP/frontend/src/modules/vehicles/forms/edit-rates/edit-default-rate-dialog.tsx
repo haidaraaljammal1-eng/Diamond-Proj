@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { FormBuilder } from "@/shared/components/forms/form-builder";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import type { FormField } from "@/shared/components/forms/form-builder";
 import { useVehicles } from "../../hooks/use-vehicles";
 import type { VehicleCardDto } from "../../types/vehicle.types";
@@ -89,6 +90,10 @@ export function EditDefaultRateDialog({
       title={t("editRates.title", { name: vehicle.displayName })}
       description={t("editRates.description")}
     >
+      <div className={styles.companyContext}>
+        <CompanyIdentity company={vehicle.company} />
+        <p>{t("editRates.companyReadOnlyHint")}</p>
+      </div>
       {errorMessage ? (
         <p className={styles.error} role="alert">{errorMessage}</p>
       ) : null}

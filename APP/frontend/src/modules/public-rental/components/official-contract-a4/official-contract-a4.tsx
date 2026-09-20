@@ -12,6 +12,7 @@ import type {
   OfficialSignatureSlot,
 } from "../../types/official-contract.types";
 import { toggleDamageMark, type DiagramView } from "../../utils/official-contract-damage-zones";
+import { officialContractCompanyNames } from "../../utils/official-contract-company";
 import {
   buildOfficialContractDocument,
   type ContractFieldModel,
@@ -79,6 +80,7 @@ export function OfficialContractA4({
     damageOut,
     pendingSignatures,
   });
+  const companyNames = officialContractCompanyNames(contract);
   const [tool, setTool] = useState<DamageMarkType>("SCRATCH");
 
   const renderField = (field: ContractFieldModel, stacked: boolean) => {
@@ -185,8 +187,8 @@ export function OfficialContractA4({
       <header className={styles.hdr}>
         <img className={styles.logo} src={CONTRACT_HEADER.logoSrc} alt={CONTRACT_HEADER.logoAlt} />
         <div className={styles.hdrCo}>
-          <span className={styles.coAr} dir="rtl" lang="ar">{CONTRACT_HEADER.companyAr}</span>
-          <span className={styles.coEn}>{CONTRACT_HEADER.companyEn}</span>
+          <span className={styles.coAr} dir="rtl" lang="ar">{companyNames.ar}</span>
+          <span className={styles.coEn}>{companyNames.en}</span>
           <span className={styles.coL}>{CONTRACT_HEADER.mobile}</span>
           <span className={styles.coL}>
             {CONTRACT_HEADER.emailLabel} <span dir="ltr">{CONTRACT_HEADER.email}</span>

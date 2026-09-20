@@ -2,7 +2,7 @@
 
 Diamond HTML Demo (`demo.html` → Fleet / Vehicles) is the behavioral source of truth. The **latest approved Fleet screenshot** is the visual reference for `VehicleCard`. Backend contract: [vehicles-backend.md](./vehicles-backend.md).
 
-> **Operating company (UNIQUE / ELITE):** the backend is ready — `GET /operating-companies`, required `companyId` on vehicle creation, `company` on every Vehicle DTO and `?companyId=` on the fleet list. The UI (Add Vehicle Select, card badge, fleet filter) is not built yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding it.
+> **Operating company (UNIQUE / ELITE):** implemented end to end. Active options come from `GET /operating-companies`; Add Vehicle requires `companyId`; cards/details show the backend company and accent; the toolbar sends `?companyId=`. Read [operating-companies.md](../00-system-overview/operating-companies.md).
 
 ## Route / Permission
 
@@ -69,6 +69,7 @@ Every filter is server-side; changing any filter resets to page 1.
 | Status chips        | `status`      | `all` omitted from request                                              |
 | Search              | `search`      | Explicit submit via Shared `DataSearch` — server-side; trimmed on apply |
 | Vehicle type        | `vehicleType` | Options from `GET /vehicles/filter-options` (active fleet only)         |
+| Company             | `companyId`   | Active options from `GET /operating-companies`; All omitted            |
 | Sort                | `sort`        | UX presets mapped to Backend `field:direction` (see below)              |
 | Result count        | —             | `meta.total` from Backend pagination                                    |
 | Active filter badge | —             | `countActiveFilters()` pure helper (user filters only)                  |
@@ -124,7 +125,10 @@ Composes shared `Card` (`padding="none"`, `interactive`) with Demo `.car` intern
 
 ## Add Vehicle
 
-Free-text `vehicleName` via Shared `Dialog` + `FormBuilder`. No `modelId`, `operationalStatus`, or `isActive` in the form. Backend starts `AVAILABLE`.
+Free-text `vehicleName` via Shared `Dialog` + `FormBuilder`. A required Shared
+Select loads UNIQUE/ELITE from the Operating Companies hook and submits the chosen
+`companyId`; there is no implicit default. No `modelId`, `operationalStatus`, or
+`isActive` in the form. Backend starts `AVAILABLE`.
 
 ### Vehicle photo UX (current scope)
 
@@ -137,11 +141,16 @@ Free-text `vehicleName` via Shared `Dialog` + `FormBuilder`. No `modelId`, `oper
 - Detail with photo: hero shows the same image + overlay **Replace Photo** at the bottom-end of the header (does not cover name, status, or plate). Shared `secondaryStrong`, always visible (not hover-only). Behavior unchanged: upload new → delete old → refetch.
 - **Development demo fleet** (`DEMO-FLEET-01..20`) has **no seeded photos** — cards use the existing placeholder.
 
-On success: list + type filter options refresh.
+On success: list + type filter options refresh. Company options remain the
+authoritative active-company lookup.
 
 ## Edit Default Rates
 
-Pencil on **AVAILABLE** active cards only (`vehicles.manage`). `PUT /vehicles/:id` partial `{ dailyRate, monthlyRate }`. Backend rejects rented vehicles.
+Pencil on **AVAILABLE** active cards only (`vehicles.manage`). `PUT /vehicles/:id`
+partial `{ dailyRate, monthlyRate }`. Backend rejects rented vehicles. This dialog
+is deliberately rate-only, so it shows Company as read-only context and does not
+invent a company-transfer flow; the backend transfer capability remains available
+for a future suitable vehicle-master editor.
 
 ## Delete (fleet deactivate)
 

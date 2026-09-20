@@ -23,6 +23,7 @@ import { useNotificationRecordTargets } from "@/modules/notifications/simulation
 import { useRecordFocus } from "@/shared/hooks/use-record-focus";
 import tableStyles from "../contracts-table/contracts-table.module.css";
 import styles from "./contracts-screen.module.css";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 
 export function ContractsScreen() {
   const t = useTranslations("Contracts");
@@ -42,10 +43,13 @@ export function ContractsScreen() {
     applySearch,
     clearSearch,
     setDateRange,
+    setCompany,
     setSort,
     clearFilters,
     setPage,
   } = useContracts();
+  const { companies, isLoading: companiesLoading } = useOperatingCompanies(isAllowed);
+  const tCompany = useTranslations("OperatingCompanies");
   const { generateRentalLink, generateReturnLink } = useContract();
   const registerNotificationTargets = useNotificationRecordTargets();
 
@@ -109,6 +113,9 @@ export function ContractsScreen() {
       searchButton: t("search.button"),
       searchClear: t("search.clear"),
       sortLabel: t("filters.sortLabel"),
+      companyLabel: tCompany("company"),
+      companyAll: tCompany("all"),
+      companiesLoading: tCompany("loading"),
       dateRange: {
         fieldLabel: t("filters.dateRange"),
         placeholder: tDateRange("placeholder"),
@@ -129,7 +136,7 @@ export function ContractsScreen() {
       clear: t("filters.clear"),
       activeCount: t("filters.activeCount", { count: activeFilterCount }),
     }),
-    [t, tDateRange, activeFilterCount],
+    [t, tDateRange, tCompany, activeFilterCount],
   );
 
   const openAction = useCallback(
@@ -222,12 +229,15 @@ export function ContractsScreen() {
             searchLoading={isLoading}
             resultsLabel={t("filters.results", { count: meta?.total ?? 0 })}
             locale={locale}
+            companies={companies}
+            companiesLoading={companiesLoading}
             labels={filterLabels}
             onStatusChange={setStatusFilter}
             onSearchSubmit={applySearch}
             onSearchClear={clearSearch}
             onDateRangeApply={setDateRange}
             onDateRangeClear={() => setDateRange("", "")}
+            onCompanyChange={setCompany}
             onSortChange={setSort}
             onClear={clearFilters}
           />

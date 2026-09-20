@@ -28,6 +28,13 @@ export interface VehicleModelRefDto {
   name: string;
 }
 
+export interface VehicleCompanyRefDto {
+  id: number;
+  code: string;
+  displayName: string;
+  accentColor: string;
+}
+
 export interface VehicleCardDto {
   id: number;
   vin: string | null;
@@ -44,6 +51,7 @@ export interface VehicleCardDto {
   createdAt: string;
   updatedAt: string;
   displayName: string;
+  company: VehicleCompanyRefDto;
   model: VehicleModelRefDto | null;
   primaryImage: VehicleImageDto | null;
   currentRental: VehicleCurrentRentalDto | null;
@@ -68,6 +76,8 @@ export interface VehicleFiltersState {
   search: string;
   /** Fleet vehicle type/name from server filter options, or `null` for all. */
   vehicleType: string | null;
+  /** Operating Company id, or `null` for the complete fleet. */
+  companyId: number | null;
   sort: VehicleSortKey;
 }
 
@@ -78,6 +88,7 @@ export interface VehiclesListQuery extends Partial<VehicleFiltersState> {
 
 /** Payload for `POST /vehicles` (Backend permission: `vehicles.manage`). */
 export interface CreateVehiclePayload {
+  companyId: number;
   vehicleName: string;
   vin?: string;
   modelYear?: number;
@@ -108,4 +119,5 @@ export interface VehiclePublicDto {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  company: VehicleCompanyRefDto;
 }

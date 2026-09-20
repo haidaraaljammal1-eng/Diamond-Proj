@@ -62,7 +62,7 @@
   display: grid;
   align-items: center;
   gap: 10px;
-  grid-template-columns: minmax(150px, 1.3fr) minmax(115px, 0.85fr) minmax(115px, 0.85fr) auto;
+  grid-template-columns: minmax(150px, 1.3fr) repeat(3, minmax(115px, 0.85fr));
 }
 
 .search,

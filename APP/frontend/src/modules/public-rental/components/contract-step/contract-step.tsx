@@ -83,7 +83,7 @@ export function ContractStep({
   return (
     <article className={styles.sheet} data-testid="contract-step">
       <header className={styles.masthead}>
-        <p className={styles.office}>{context.office.displayName}</p>
+        <p className={styles.office}>{context.office.company.displayName}</p>
         <p className={styles.number}>
           {t("numberLabel")}{" "}
           <b dir="ltr">{context.contract.contractNumber}</b>
