@@ -147,6 +147,8 @@ function assertNoSensitivePayload(input: unknown, allowed: string[] = []) {
   }
 }
 
+const TEST_COMPANY = { id: 1, code: "UNIQUE", displayName: "UNIQUE", accentColor: "#C9A15C" };
+
 describe("tars unconfigured provider", () => {
   test("every mandatory capability fails closed and fabricates nothing", async () => {
     const provider = new TarsUnconfiguredProvider();
@@ -170,7 +172,7 @@ describe("tars unconfigured provider", () => {
   });
 
   test("the runtime factory never resolves a configured provider today", () => {
-    const provider = createTarsProvider();
+    const provider = createTarsProvider("UNIQUE");
     assert.equal(provider.name, "none");
     assert.equal(provider.configured, false);
   });
@@ -179,6 +181,7 @@ describe("tars unconfigured provider", () => {
 describe("tars projection", () => {
   test("no integration row reports configured=false and NOT_STARTED everywhere", () => {
     const state = toTarsContractIntegrationState({
+      company: TEST_COMPANY,
       configured: false,
       integration: null,
       operations: [],
@@ -197,6 +200,7 @@ describe("tars projection", () => {
 
   test("a failed attempt followed by a successful retry reports SUCCEEDED", () => {
     const state = toTarsContractIntegrationState({
+      company: TEST_COMPANY,
       configured: true,
       integration: { externalContractId: "EXT-1", lastSuccessfulSyncAt: APPROVED_AT },
       operations: [
@@ -210,6 +214,7 @@ describe("tars projection", () => {
 
   test("an authoritative success is not downgraded by a later attempt", () => {
     const state = toTarsContractIntegrationState({
+      company: TEST_COMPANY,
       configured: true,
       integration: null,
       operations: [

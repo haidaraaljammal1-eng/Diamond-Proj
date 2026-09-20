@@ -2,6 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * Requires RUN_INTEGRATION=true and TEST_DATABASE_URL pointing at disposable
@@ -101,7 +102,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(adminToken),
-      payload,
+      payload: { companyId: await testCompanyId(prisma), ...payload },
     });
     assert.equal(res.statusCode, 201, res.body);
     return res.json().data;

@@ -18,6 +18,7 @@ import type { PublicRentalContextSchema } from "src/modules/contracts/contracts.
 import type { z } from "zod";
 
 export const PUBLIC_RENTAL_INCLUDE = {
+  company: { select: { code: true, displayName: true, legalNameAr: true, legalNameEn: true } },
   vehicle: { include: { model: { select: { name: true } } } },
   customer: true,
   payments: { orderBy: { createdAt: "desc" as const }, take: 1 },
@@ -62,7 +63,11 @@ export function toPublicRentalContext(
     verification?.status === "VALID" ? formatStoredExpiry(verification.expiryDate) : null;
 
   return {
-    office: { displayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT },
+    // The renting company comes from the Contract, not from the customer.
+    office: {
+      displayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT,
+      company: row.company,
+    },
     flow: { step },
     contract: {
       contractNumber: row.contractNumber,

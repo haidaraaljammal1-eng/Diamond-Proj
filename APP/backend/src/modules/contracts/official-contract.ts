@@ -72,6 +72,15 @@ export type OfficialFieldSource =
   | "NONE";
 
 export const OFFICIAL_CONTRACT_INCLUDE = {
+  company: {
+    select: {
+      code: true,
+      displayName: true,
+      legalNameAr: true,
+      legalNameEn: true,
+      accentColor: true,
+    },
+  },
   vehicle: { include: { model: { select: { name: true } } } },
   customer: true,
   acceptance: { select: { acceptedAt: true } },
@@ -141,6 +150,15 @@ export function buildOfficialContractView(
   row: OfficialContractRow,
   options: { officeDisplayName: string; now?: Date; requiresCardSetupBeforeSigning?: boolean },
 ): OfficialContractBuild {
+  // The company comes from the Contract's own (historical) company, never from
+  // the Vehicle's current owner.
+  const company = {
+    code: row.company.code,
+    displayName: row.company.displayName,
+    legalNameAr: row.company.legalNameAr,
+    legalNameEn: row.company.legalNameEn,
+    accentColor: row.company.accentColor,
+  };
   const now = options.now ?? new Date();
   const license = row.licenseVerifications[0] ?? null;
   const passport = row.passportExtractions[0] ?? null;
@@ -260,7 +278,7 @@ export function buildOfficialContractView(
   }
 
   const live: OfficialContractView = {
-    header: { officeDisplayName: options.officeDisplayName },
+    header: { officeDisplayName: options.officeDisplayName, company },
     contract: {
       agreementNumber: row.contractNumber,
       status: row.status,
@@ -349,6 +367,28 @@ export function buildOfficialContractView(
   return { view: applyFrozenOfficialContract(live, row.snapshot), provenance };
 }
 
+type OfficialContractCompany = OfficialContractView["header"]["company"];
+
+/**
+ * The company identity to print for a signed contract.
+ *
+ * A snapshot frozen since multi-company support carries its own company block:
+ * that is what the hirer signed, so it wins. Snapshots frozen before it carry no
+ * company block at all; those contracts were all UNIQUE and their
+ * `Contract.companyId` was backfilled to UNIQUE, so the live company is the
+ * correct fallback. The stored JSON is never rewritten either way.
+ */
+export function officialContractCompany(
+  frozen: unknown,
+  live: OfficialContractCompany,
+): OfficialContractCompany {
+  if (!frozen || typeof frozen !== "object") return live;
+  const header = (frozen as { header?: { company?: OfficialContractCompany } }).header;
+  const company = header?.company;
+  if (!company || typeof company.code !== "string" || !company.code) return live;
+  return company;
+}
+
 /**
  * After signing, the agreement's legal content is served from the frozen
  * snapshot. Custody events (OUT / IN damage marked by staff at Car-Out /
@@ -366,6 +406,7 @@ export function applyFrozenOfficialContract(
   const date = (value: unknown) => (value ? new Date(value as string) : null);
   return {
     ...live,
+    header: { ...live.header, company: officialContractCompany(frozen, live.header.company) },
     vehicle: frozen.vehicle,
     hirer: frozen.hirer,
     additionalDriver: frozen.additionalDriver,

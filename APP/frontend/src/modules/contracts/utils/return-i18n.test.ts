@@ -30,7 +30,20 @@ describe("return / car-in i18n", () => {
     for (const locale of [en, ar]) {
       assert.ok(nested(locale, ["Contracts", "actions", "carIn"]).length > 0);
       assert.ok(nested(locale, ["Contracts", "carIn", "title"]).length > 0);
-      assert.ok(nested(locale, ["Contracts", "carIn", "description"]).length > 0);
+      // The staged Car-In dialog: return details, then the same photo set as Car-Out.
+      for (const key of ["vehicleIn", "mileage", "fuel", "damage", "saveDraft", "nextToPhotos", "backToData", "complete", "confirmTitle", "confirmDescription", "confirm", "stepOneRequired", "photosTitle"]) {
+        assert.ok(nested(locale, ["Contracts", "carIn", key]).length > 0, key);
+      }
+      for (const angle of ["FRONT", "FRONT_LEFT", "REAR_LEFT", "REAR", "REAR_RIGHT", "FRONT_RIGHT", "ODOMETER", "DASHBOARD_FUEL", "LEFT", "RIGHT", "OTHER"]) {
+        assert.ok(nested(locale, ["Contracts", "carIn", "angle", angle]).length > 0, angle);
+        assert.ok(nested(locale, ["Contracts", "carOut", "angle", angle]).length > 0, angle);
+      }
+      for (const key of ["title", "details", "photos", "mileage", "damage", "signature", "count"]) {
+        assert.ok(nested(locale, ["Contracts", "carIn", "ledger", key]).length > 0, key);
+      }
+      for (const state of ["done", "missing", "unsaved", "optional"]) {
+        assert.ok(nested(locale, ["Contracts", "carIn", "ledger", "state", state]).length > 0, state);
+      }
       assert.ok(nested(locale, ["Contracts", "reconcile", "categoriesLabel"]).length > 0);
       assert.ok(nested(locale, ["Contracts", "reconcile", "type", "VIOLATION"]).length > 0);
       assert.ok(nested(locale, ["PublicReturn", "title"]).length > 0);
@@ -42,16 +55,14 @@ describe("return / car-in i18n", () => {
       nested(en, ["Contracts", "actions", "carIn"]),
       nested(ar, ["Contracts", "actions", "carIn"]),
     );
-    assert.equal(nested(ar, ["Contracts", "carIn", "title"]), "استلام المركبة");
-    assert.equal(
-      nested(ar, ["Contracts", "carIn", "description"]),
-      "سجّل حالة المركبة عند الإرجاع. تصبح المركبة متاحة فوراً. هذا لا يغلق العقد.",
-    );
-    assert.equal(nested(en, ["Contracts", "carIn", "title"]), "Car-In — return inspection");
-    assert.equal(
-      nested(en, ["Contracts", "carIn", "description"]),
-      "Record incoming mileage, fuel and the eight inspection photos. The vehicle becomes available again. This does not close the contract.",
-    );
+    assert.equal(nested(ar, ["Contracts", "carIn", "title"]), "استلام السيارة");
+    assert.equal(nested(ar, ["Contracts", "carIn", "complete"]), "تأكيد استلام السيارة");
+    assert.equal(nested(ar, ["Contracts", "carIn", "nextToPhotos"]), "التالي إلى تصوير السيارة");
+    assert.equal(nested(ar, ["Contracts", "carIn", "backToData"]), "رجوع إلى بيانات الاستلام");
+    assert.equal(nested(en, ["Contracts", "carIn", "complete"]), "Complete Vehicle Receipt");
+    assert.equal(nested(en, ["Contracts", "carIn", "backToData"]), "Back to return details");
+    // Every Car-In label differs from its English twin: no untranslated fallback text.
+    assert.notEqual(nested(en, ["Contracts", "carIn", "title"]), nested(ar, ["Contracts", "carIn", "title"]));
     assert.notEqual(
       nested(en, ["PublicReturn", "instructions"]),
       nested(ar, ["PublicReturn", "instructions"]),

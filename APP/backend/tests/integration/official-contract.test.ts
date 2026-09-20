@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { createFakeDocumentOcrProvider } from "../helpers/fake-document-ocr-provider";
 import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -34,6 +35,7 @@ if (!RUN) {
         url: "/vehicles",
         headers: auth(),
         payload: {
+          companyId: await testCompanyId(prisma),
           vehicleName,
           plateNumber: `O${run}${seq}`.slice(0, 20),
           dailyRate: 350,

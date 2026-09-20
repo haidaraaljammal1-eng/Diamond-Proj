@@ -10,18 +10,19 @@ import type { DamageMark, OfficialContractView } from "@/modules/public-rental/t
 import { VehicleConditionSheet } from "../../components/vehicle-condition-sheet/vehicle-condition-sheet";
 import { ContractInspectionImage } from "../../components/contract-inspection-image/contract-inspection-image";
 import { ContractTarsInlineStatus } from "../../components/contract-tars/contract-tars-inline-status";
-import { CarOutLedger, type LedgerTarget } from "./car-out-ledger";
+import { CustodyLedger, type LedgerTarget } from "../custody/custody-ledger";
+import { CustodyPhotoGrid } from "../custody/custody-photos";
+import { CUSTODY_OPTIONAL_ANGLES, CUSTODY_REQUIRED_ANGLES } from "../custody/custody-angles";
 import { useContract } from "../../hooks/use-contract";
 import { useSignedContractSignatures } from "../../hooks/use-signed-contract-signatures";
 import type { CarOutAngle, FuelLevel } from "../../types/contract.types";
 import { createIdempotencyKey } from "../../utils/contract-link";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
 import { signedContractFromSnapshot } from "../../utils/signed-contract-snapshot";
-import styles from "./car-out-dialog.module.css";
+import styles from "../custody/custody-dialog.module.css";
 
-/** Walk-around order: front, driver side, rear, passenger side, then the cabin. */
-const REQUIRED: readonly CarOutAngle[] = ["FRONT", "FRONT_LEFT", "REAR_LEFT", "REAR", "REAR_RIGHT", "FRONT_RIGHT", "ODOMETER", "DASHBOARD_FUEL"];
-const OPTIONAL: readonly CarOutAngle[] = ["LEFT", "RIGHT", "OTHER"];
+const REQUIRED = CUSTODY_REQUIRED_ANGLES;
+const OPTIONAL = CUSTODY_OPTIONAL_ANGLES;
 const SHEET_WIDTH_PX = (210 / 25.4) * 96;
 
 function SignedContract({ contractId, contract }: { contractId: string; contract: OfficialContractView }) {
@@ -74,8 +75,6 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   const [, setFocusRequest] = useState(0);
   const previewRef = useRef<string | null>(null);
   const initialized = useRef(false);
-  const photoInputs = useRef<Partial<Record<CarOutAngle, HTMLInputElement | null>>>({});
-  const uploadInputs = useRef<Partial<Record<CarOutAngle, HTMLInputElement | null>>>({});
 
   useEffect(() => {
     let active = true;
@@ -117,7 +116,6 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
   const completed = handover.status === "COMPLETED" || detail.status === "ACTIVE";
   const editable = handover.actions.canEdit && detail.status === "PAID";
   const photos = handover.photoEvidence.photos;
-  const angleLabel = (angle: CarOutAngle) => t(`carOut.angle.${angle}`);
   const plateNumber = detail.vehicle.plateNumber ?? signedContract?.vehicle.plateNumber ?? null;
   const plateCode = signedContract?.vehicle.plateCode ?? null;
   const plate = plateCode && !plateNumber?.includes(plateCode) ? [plateCode, plateNumber].filter(Boolean).join(" ") : plateNumber;
@@ -232,30 +230,27 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
               </div>
             </div>
           </section>
-        </> : <section className={styles.section}>
-          <div className={styles.sectionHeader}><h4>{t("carOut.photosTitle")}</h4><strong className={styles.progress}>{t("carOut.progress", { completed: handover.photoEvidence.completed, required: handover.photoEvidence.required })}</strong></div>
-          <p className={styles.help}>{t("carOut.photosHint")}</p>
-          <div className={styles.progressTrack}><span style={{ width: `${Math.round(100 * handover.photoEvidence.completed / handover.photoEvidence.required)}%` }} /></div>
-          <div className={styles.photoGrid}>{[...REQUIRED, ...OPTIONAL].map((angle) => {
-            const photo = photos.find((item) => item.angle === angle);
-            return <div className={styles.photoSlot} key={angle} id={`car-out-target-${angle}`} tabIndex={-1}>
-              <div className={styles.photoHeading}><strong>{angleLabel(angle)}</strong><small>{REQUIRED.includes(angle) ? t("carOut.required") : t("carOut.optional")}</small></div>
-              {photo ? <ContractInspectionImage path={photo.url} alt={angleLabel(angle)} className={styles.thumbnail} /> : <div className={styles.placeholder}>{t("carOut.notCaptured")}</div>}
-              {editable && handover.actions.canUploadPhotos ? <div className={styles.photoActions}>
-                <input ref={(node) => { photoInputs.current[angle] = node; }} type="file" accept="image/*" capture="environment" tabIndex={-1} className={styles.fileInput} aria-label={angleLabel(angle)} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadCarOutPhoto(contractId, angle, file); }} />
-                <input ref={(node) => { uploadInputs.current[angle] = node; }} type="file" accept="image/*" tabIndex={-1} className={styles.fileInput} aria-label={`${t("carOut.upload")} ${angleLabel(angle)}`} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadCarOutPhoto(contractId, angle, file); }} />
-                <Button type="button" variant="secondary" size="sm" disabled={carOutPending} onClick={() => photoInputs.current[angle]?.click()}>{photo ? t("carOut.retake") : t("carOut.capture")}</Button>
-                <Button type="button" variant="secondary" size="sm" disabled={carOutPending} onClick={() => uploadInputs.current[angle]?.click()}>{photo ? t("carOut.replacePhoto") : t("carOut.upload")}</Button>
-                {photo && handover.actions.canDeletePhotos ? <Button type="button" variant="ghost" size="sm" disabled={carOutPending} onClick={() => void deleteCarOutPhoto(contractId, photo.id)}>{t("carOut.delete")}</Button> : null}
-              </div> : null}
-            </div>;
-          })}</div>
-        </section>}
+        </> : <CustodyPhotoGrid
+          namespace="Contracts.carOut"
+          idPrefix="car-out"
+          required={REQUIRED}
+          optional={OPTIONAL}
+          photos={photos}
+          progress={handover.photoEvidence}
+          editable={editable}
+          canUpload={handover.actions.canUploadPhotos}
+          canDelete={handover.actions.canDeletePhotos}
+          pending={carOutPending}
+          onUpload={(angle, file) => void uploadCarOutPhoto(contractId, angle, file)}
+          onDelete={(photoId) => void deleteCarOutPhoto(contractId, photoId)}
+        />}
       </>}
     </div>
-    {completed ? null : <CarOutLedger
-      handover={handover}
+    {completed ? null : <CustodyLedger
+      namespace="Contracts.carOut"
+      saved={{ mileage: handover.mileageOut, fuel: handover.fuelOut, damage: handover.damageOut, signaturePresent: handover.signature.present }}
       angles={REQUIRED}
+      photoEvidence={handover.photoEvidence}
       draft={{ mileage, fuel, damage, signatureDrawn: signature != null }}
       step={step}
       photosReachable={step === 2 || !editable || Boolean(signedContract)}

@@ -4,6 +4,7 @@ import ExcelJS from "exceljs";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { createComplaintsService } from "src/modules/complaints/complaints.service";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN = process.env.RUN_INTEGRATION === "true";
 
@@ -41,7 +42,7 @@ if (!RUN) {
 
   async function makeExperience(branchId: number, name = "Buyer") {
     const customer = await prisma.customer.create({ data: { name, mobile: "0501110000" } });
-    const vehicle = await prisma.vehicle.create({ data: { vin: `VIN-${run}-${seq++}`, modelId, modelYear: 2024 } });
+    const vehicle = await prisma.vehicle.create({ data: { companyId: await testCompanyId(prisma), vin: `VIN-${run}-${seq++}`, modelId, modelYear: 2024 } });
     const exp = await prisma.purchaseExperience.create({ data: { customerId: customer.id, vehicleId: vehicle.id, branchId, deliveryDate: new Date() } });
     return { customerId: customer.id, expId: exp.id };
   }

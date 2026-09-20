@@ -20,6 +20,7 @@ import type {
   TarsProvider,
   TarsProviderResult,
 } from "src/modules/integrations/tars/tars.types";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * TARS mandatory-integration foundation. Requires RUN_INTEGRATION=true and
@@ -185,6 +186,7 @@ if (!RUN) {
         url: "/vehicles",
         headers: auth(),
         payload: {
+         companyId: await testCompanyId(prisma),
           vehicleName: `TARS-${label}-${run}`,
           plateNumber: `TARS ${label} ${run}`,
           dailyRate: 400,

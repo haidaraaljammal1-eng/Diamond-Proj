@@ -52,12 +52,12 @@ model Customer {
   drivingLicenseExpiry DateTime?
   address              String?
 
-  experiences            PurchaseExperience[]
-  callQueueItems         CallCenterQueueItem[]
-  complaints             Complaint[]
-  contracts              Contract[]
-  documents              CustomerDocument[]
-  whatsAppConversations  WhatsAppConversation[]
+  experiences           PurchaseExperience[]
+  callQueueItems        CallCenterQueueItem[]
+  complaints            Complaint[]
+  contracts             Contract[]
+  documents             CustomerDocument[]
+  whatsAppConversations WhatsAppConversation[]
 
   @@index([mobile])
   @@index([email])
@@ -67,6 +67,12 @@ model Customer {
 
 model Vehicle {
   id                Int                      @id @default(autoincrement())
+  /// Owning Diamond company. Required: every fleet vehicle, active or retired,
+  /// belongs to exactly one company. Changing it re-assigns the vehicle from now
+  /// on; it never rewrites the company of Contracts already created (see
+  /// Contract.companyId).
+  companyId         Int
+  company           OperatingCompany         @relation(fields: [companyId], references: [id], onDelete: Restrict)
   // Strongest vehicle identifier where available. Stored normalized (UPPER+trim);
   // unique when present (nullable => many null VINs allowed).
   vin               String?                  @unique
@@ -87,7 +93,10 @@ model Vehicle {
   dailyRate         Int?
   monthlyRate       Int?
   operationalStatus VehicleOperationalStatus @default(AVAILABLE)
-  externalId        String?                  @unique
+  /// Integration id from the owning company's external system. Unique WITHIN a
+  /// company: UNIQUE and ELITE may legitimately reuse the same id in their own
+  /// namespaces. Lookups must always pass companyId + externalId.
+  externalId        String?
   isActive          Boolean                  @default(true)
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt
@@ -102,6 +111,8 @@ model Vehicle {
   roadLiabilities           RoadLiability[]
   roadLiabilityObservations RoadLiabilityObservation[]
 
+  @@unique([companyId, externalId])
+  @@index([companyId])
   @@index([modelId])
   @@index([isActive])
   @@index([operationalStatus])

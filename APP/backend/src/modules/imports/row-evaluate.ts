@@ -5,6 +5,7 @@ import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { normalizeName } from "src/lib/master-data/code";
 import { ImportErrorReason, rowIssue, type RowIssue } from "src/modules/imports/imports.errors";
 import type { ParsedRow } from "src/modules/imports/row-parse";
+import { resolveDefaultOperatingCompanyId } from "src/modules/operating-companies/default-company";
 
 /**
  * Read-only evaluation of a parsed row against the authoritative tables: resolves
@@ -314,7 +315,12 @@ export async function evaluateRow(
   let vehicleConflict = false;
   if (parsed.vehicle.externalId) {
     const existing = await db.vehicle.findUnique({
-      where: { externalId: parsed.vehicle.externalId },
+      where: {
+        companyId_externalId: {
+          companyId: await resolveDefaultOperatingCompanyId(db),
+          externalId: parsed.vehicle.externalId,
+        },
+      },
       select: { id: true, vin: true },
     });
     if (existing) {
@@ -484,7 +490,12 @@ function customerData(parsed: ParsedRow) {
 async function getOrCreateVehicle(tx: Db, parsed: ParsedRow, plan: VehiclePlan): Promise<number> {
   if (plan.mode === "existing" && plan.id) return plan.id;
   const v = parsed.vehicle;
+  // The sales import has no company column, so imported vehicles belong to the
+  // explicit default company. externalId is unique per company, so every lookup
+  // below is scoped to it too.
+  const companyId = await resolveDefaultOperatingCompanyId(tx);
   const data = {
+    companyId,
     vin: v.vin,
     modelId: plan.modelId,
     modelYear: v.modelYear,
@@ -493,7 +504,10 @@ async function getOrCreateVehicle(tx: Db, parsed: ParsedRow, plan: VehiclePlan):
   };
   if (v.externalId) {
     await acquireAdvisoryLock(tx, "import_vehicle_ext", v.externalId);
-    const found = await tx.vehicle.findUnique({ where: { externalId: v.externalId }, select: { id: true } });
+    const found = await tx.vehicle.findUnique({
+      where: { companyId_externalId: { companyId, externalId: v.externalId } },
+      select: { id: true },
+    });
     if (found) return found.id;
   }
   if (v.vin) {
@@ -506,7 +520,11 @@ async function getOrCreateVehicle(tx: Db, parsed: ParsedRow, plan: VehiclePlan):
     return created.id;
   } catch (err) {
     if (isUniqueViolation(err)) {
-      const where = v.externalId ? { externalId: v.externalId } : v.vin ? { vin: v.vin } : null;
+      const where = v.externalId
+        ? { companyId_externalId: { companyId, externalId: v.externalId } }
+        : v.vin
+          ? { vin: v.vin }
+          : null;
       if (where) {
         const again = await tx.vehicle.findUnique({ where, select: { id: true } });
         if (again) return again.id;

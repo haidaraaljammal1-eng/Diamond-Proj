@@ -12,6 +12,7 @@ import type {
   ContractStatusFilter,
 } from "../types/contract.types";
 import { countActiveContractFilters } from "../utils/contract-filters";
+import { startContractsRevalidation } from "../utils/contracts-revalidation";
 import {
   CONTRACTS_MANAGE_PERMISSION,
   CONTRACTS_PAGE_PERMISSIONS,
@@ -59,6 +60,19 @@ export function useContracts(): UseContractsResult {
     if (isAllowed) void load();
   }, [isAllowed, load]);
 
+  // Contracts also change outside this page (Rental Link payment, another session):
+  // re-read quietly on focus, on tab return, and on a slow poll while visible.
+  useEffect(() => {
+    if (!isAllowed) return;
+    return startContractsRevalidation(() => refresh({ quiet: true }), {
+      window,
+      document,
+      setInterval: (callback, ms) => window.setInterval(callback, ms),
+      clearInterval: (handle) => window.clearInterval(handle as number),
+      now: () => Date.now(),
+    });
+  }, [isAllowed, refresh]);
+
   const filters = useMemo<ContractFiltersState>(
     () => ({
       status: query.status,
@@ -82,7 +96,7 @@ export function useContracts(): UseContractsResult {
       error: status === "error" ? error : null,
       canManage,
       loadContracts: load,
-      refreshContracts: refresh,
+      refreshContracts: () => refresh(),
       setStatusFilter: (statusFilter: ContractStatusFilter) => {
         void setQuery({ status: statusFilter, page: 1 });
       },

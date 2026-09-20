@@ -109,6 +109,7 @@ test("resolveCurrentRental stub stays null; list/detail load from Contracts", ()
 
 test("CreateVehicleSchema accepts vehicleName without modelId property", () => {
   const parsed = CreateVehicleSchema.parse({
+    companyId: 1,
     vehicleName: "Toyota Land Cruiser",
     modelYear: 2025,
     plateNumber: "Dubai A 47291",
@@ -121,14 +122,16 @@ test("CreateVehicleSchema accepts vehicleName without modelId property", () => {
 });
 
 test("CreateVehicleSchema rejects empty vehicle identity", () => {
-  assert.throws(() => CreateVehicleSchema.parse({ vin: "VIN-ONLY" }));
+  assert.throws(() => CreateVehicleSchema.parse({ companyId: 1, vin: "VIN-ONLY" }));
   assert.throws(() =>
-    CreateVehicleSchema.parse({ modelId: null, vin: "VIN-NULL-MODEL" }),
+    CreateVehicleSchema.parse({ companyId: 1, modelId: null, vin: "VIN-NULL-MODEL" }),
   );
+  // The owning company is required too: a vehicle never enters the fleet unowned.
+  assert.throws(() => CreateVehicleSchema.parse({ vehicleName: "No Company" }));
 });
 
 test("CreateVehicleSchema accepts legacy modelId without vehicleName", () => {
-  const parsed = CreateVehicleSchema.parse({ modelId: 42, vin: "VIN-LEGACY" });
+  const parsed = CreateVehicleSchema.parse({ companyId: 1, modelId: 42, vin: "VIN-LEGACY" });
   assert.equal(parsed.modelId, 42);
   assert.equal(parsed.vehicleName, undefined);
 });

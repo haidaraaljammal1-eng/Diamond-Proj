@@ -93,6 +93,8 @@ export const CreateOfferSchema = z.object({
 
 export const ListContractsQuerySchema = PaginationQuerySchema.extend({
   search: z.string().trim().min(1).optional(),
+  /** Filters on Contract.companyId — historical ownership, never the Vehicle's current company. */
+  companyId: z.coerce.number().int().positive().optional(),
   status: ContractStatusSchema.optional(),
   vehicleId: z.coerce.number().int().positive().optional(),
   customerId: z.coerce.number().int().positive().optional(),
@@ -147,8 +149,26 @@ export const CarOutDraftPatchSchema = z.object({
   hirerSignatureAttachmentId: z.string().uuid().nullable().optional(),
 }).strict();
 export const CarOutPhotoQuerySchema = z.object({ angle: z.enum(CAR_OUT_PHOTO_ANGLES) });
-const CarOutEvidenceAngleSchema = z.enum([...INSPECTION_ANGLES, ...CAR_OUT_PHOTO_ANGLES]);
+/// The full stored-angle union: legacy INSPECTION_ANGLES rows can still exist on a
+/// final Car-In created through the legacy public single-shot flow (see CarInSchema),
+/// alongside the current CAR_OUT_PHOTO_ANGLES vocabulary used by both custody events.
+export const CarOutEvidenceAngleSchema = z.enum([...INSPECTION_ANGLES, ...CAR_OUT_PHOTO_ANGLES]);
 
+/// Staged Car-In draft, mirroring CarOutDraftPatchSchema. The IN signature is
+/// uploaded through its own endpoint, not patched here, same as OUT.
+export const CarInDraftPatchSchema = z.object({
+  mileageIn: z.number().int().nonnegative().optional(),
+  fuelIn: FuelLevelSchema.optional(),
+  damageIn: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+}).strict();
+export const CarInPhotoQuerySchema = z.object({ angle: z.enum(CAR_OUT_PHOTO_ANGLES) });
+
+/// Legacy single-shot Car-In payload. Still used by the public return-token
+/// route with the original 8-angle INSPECTION_ANGLES vocabulary — see
+/// DOCU/05-pages/contracts-backend.md for the compatibility note. The staged
+/// staff workflow (CarInDraftPatchSchema + CarInPhotoQuerySchema + complete)
+/// uses CAR_OUT_PHOTO_ANGLES instead.
 export const CarInSchema = z.object({
   occurredAt: z.coerce.date().optional(),
   mileageIn: z.number().int().nonnegative(),
@@ -288,10 +308,20 @@ export const ContractPostCloseReceivablesSummarySchema = z.object({
   items: z.array(ContractPostCloseReceivableItemSchema),
 });
 
+/// The Contract's own company (historical ownership), not the Vehicle's current
+/// one. Legal names live on the official contract, not on operational lists.
+export const ContractCompanyRefSchema = z.object({
+  id: z.number().int(),
+  code: z.string(),
+  displayName: z.string(),
+  accentColor: z.string(),
+});
+
 export const ContractListItemSchema = z.object({
   id: z.string(),
   contractNumber: z.string(),
   status: ContractStatusSchema,
+  company: ContractCompanyRefSchema,
   vehicleId: z.number().int(),
   vehicleName: z.string(),
   plateNumber: z.string().nullable(),
@@ -340,10 +370,38 @@ export const CarOutHandoverSchema = z.object({
   }),
 });
 
+/// The staged Car-In work state: draft-in-progress or the completed handover,
+/// same shape as CarOutHandoverSchema. Unlike OUT, the IN signature is
+/// mandatory for `actions.canComplete` to ever become true.
+export const CarInHandoverSchema = z.object({
+  status: z.enum(["NOT_STARTED", "DRAFT", "READY", "COMPLETED"]),
+  mileageIn: z.number().int().nonnegative().nullable(),
+  fuelIn: z.string().nullable(),
+  damageIn: z.array(DamageMarkSchema),
+  notes: z.string().nullable(),
+  photoEvidence: z.object({
+    required: z.number().int(), completed: z.number().int(),
+    missing: z.array(z.enum(CAR_OUT_PHOTO_ANGLES)), complete: z.boolean(), ready: z.boolean(),
+    photos: z.array(z.object({
+      id: z.string().uuid(), contractId: z.string().uuid(), vehicleId: z.number().int().nullable(),
+      stage: z.literal("IN"), attachmentId: z.string().uuid(), angle: CarOutEvidenceAngleSchema,
+      url: z.string(), uploadedAt: z.date(), uploadedByUserId: z.number().int().nullable(),
+      checksum: z.string().nullable(),
+    })),
+  }),
+  signature: z.object({ present: z.boolean(), attachmentId: z.string().uuid().nullable(), url: z.string().nullable() }),
+  actualReturnAt: z.date().nullable(),
+  actions: z.object({
+    canEdit: z.boolean(), canUploadPhotos: z.boolean(), canDeletePhotos: z.boolean(),
+    canSign: z.boolean(), canSaveDraft: z.boolean(), canComplete: z.boolean(),
+  }),
+});
+
 export const ContractDetailSchema = z.object({
   id: z.string(),
   contractNumber: z.string(),
   status: ContractStatusSchema,
+  company: ContractCompanyRefSchema,
   vehicleId: z.number().int(),
   customerId: z.number().int().nullable(),
   createdByUserId: z.number().int(),
@@ -385,6 +443,7 @@ export const ContractDetailSchema = z.object({
     })
     .nullable(),
   carOutHandover: CarOutHandoverSchema,
+  carInHandover: CarInHandoverSchema,
   carOut: z
     .object({
       id: z.string(),
@@ -470,7 +529,13 @@ export const ContractLinkIssuedSchema = z.object({
 });
 
 export const PublicContractViewSchema = z.object({
-  office: z.object({ displayName: z.string() }),
+  office: z.object({
+    displayName: z.string(),
+    company: ContractCompanyRefSchema.pick({ code: true, displayName: true }).extend({
+      legalNameAr: z.string(),
+      legalNameEn: z.string(),
+    }),
+  }),
   contractNumber: z.string(),
   status: ContractStatusSchema,
   priceType: ContractPriceTypeSchema,
@@ -542,7 +607,13 @@ export const PublicIdentityDraftSchema = z.object({
 });
 
 export const PublicRentalContextSchema = z.object({
-  office: z.object({ displayName: z.string() }),
+  office: z.object({
+    displayName: z.string(),
+    company: ContractCompanyRefSchema.pick({ code: true, displayName: true }).extend({
+      legalNameAr: z.string(),
+      legalNameEn: z.string(),
+    }),
+  }),
   flow: z.object({ step: PublicRentalFlowStepSchema }),
   contract: z.object({
     contractNumber: z.string(),
@@ -723,8 +794,23 @@ const OfficialSignatureSchema = z.object({
   required: z.boolean(),
 });
 
+/// Company identity as printed on the agreement. Frozen into the signed snapshot
+/// at SIGNED, so a later fleet transfer never re-brands an existing contract.
+/// Contracts signed before multi-company existed carry no company block; the
+/// backend resolves those to UNIQUE on read WITHOUT rewriting the stored JSON.
+export const OfficialContractCompanySchema = z.object({
+  code: z.string(),
+  displayName: z.string(),
+  legalNameAr: z.string(),
+  legalNameEn: z.string(),
+  accentColor: z.string(),
+});
+
 export const OfficialContractViewSchema = z.object({
-  header: z.object({ officeDisplayName: z.string() }),
+  header: z.object({
+    officeDisplayName: z.string(),
+    company: OfficialContractCompanySchema,
+  }),
   contract: z.object({
     agreementNumber: z.string(),
     status: ContractStatusSchema,

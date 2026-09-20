@@ -2,6 +2,8 @@
 
 Staff Contracts desk for Diamond Rent Car. Backend contract: [contracts-backend.md](./contracts-backend.md). Visual source: `demo.html` `vContracts` (table + drawer). Fleet Set Rental Price is the create-offer entry. No mock contracts.
 
+> **Operating company (UNIQUE / ELITE):** the database already stores the owning company on every Vehicle and Contract; no API, filter or UI exposes it yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding company behaviour here.
+
 ## Route / Permission
 
 - `/ar/contracts`
@@ -40,6 +42,7 @@ UI dialog/drawer state stays in the screen. Transient issued-link URLs live in t
 | Status | `components/contract-status/` |
 | Link result | `components/contract-link-result/` |
 | Forms | `forms/offer`, `payment`, `car-out`, `car-in`, `renew`, `reconcile`, `close` |
+| Shared custody UI | `forms/custody/`: `custody-dialog.module.css`, `custody-ledger`, `custody-photos`, `custody-angles`, `custody-ledger.model`, `custody-draft` |
 | Policy | `utils/contract-actions.ts`, `utils/contract-status.ts`, `utils/contract-timeline.ts` |
 | TARS status | `api/tars.api.ts`, `stores/contract-tars.store.ts`, `hooks/use-contract-tars.ts`, `components/contract-tars/`, `utils/tars-status.ts` |
 
@@ -103,7 +106,7 @@ Each row shows at most two controls, in a fixed order and aligned to the inline-
    | AWAITING / FORM | `mdi:link-variant` | Generate rental link |
    | PAID (`canCarOut`) | `mdi:car-key` | Car-Out |
    | ACTIVE | `mdi:car-clock` | Manage contract (opens the drawer with Renew and the return link) |
-   | RETOUT (`canCarIn`) | `mdi:car-arrow-left` | Receive vehicle (opens the existing Car-In dialog) |
+   | RETOUT (`canCarIn`) | `mdi:car-arrow-left` | Receive vehicle (opens the staged Car-In dialog) |
    | REVIEW | `mdi:scale-balance` | Reconciliation |
 
    The row action comes from one policy, `getContractRowAction` (`utils/contract-row-action.ts`), used by both the table and the screen handler. It reads only the Backend `status` and list `actions` (`canCarOut`, `canCarIn`); it never looks at whether a link exists. SIGNED, CLOSED, and a refused action show no next step, only View contract.
@@ -183,7 +186,29 @@ The confirm button sits on the public return page and is shown only while the co
 
 ## Car-In
 
-Staff operational action on RETOUT via `POST /contracts/:id/car-in` (`contracts.return`). Same fields as Backend `CarInSchema`: optional `occurredAt`, `mileageIn`, `fuelIn`, notes, eight inspection photos. RETOUT → REVIEW. Vehicle RENTED → AVAILABLE. Car-In never closes the contract. Public `POST /contracts/return/:token/car-in` remains for the hashed token path.
+Staff operational action on RETOUT, opened by **Receive vehicle / استلام السيارة** when the Backend says `actions.canCarIn`. It is the return side of the same custody workflow as Car-Out and uses the same wide Shared Dialog, header, ledger, two steps, photo grid and footer. PAID, ACTIVE, REVIEW and CLOSED never offer it.
+
+**Staged endpoints** (`contracts.return`, read through `contracts.read`), one per action, each returning the authoritative Car-In work state:
+
+| Action | Call |
+| ------ | ---- |
+| Read work state | `GET /contracts/:id/car-in` |
+| Save draft | `PATCH /contracts/:id/car-in` (`mileageIn`, `fuelIn`, `damageIn`, `notes`) |
+| IN signature | `POST /contracts/:id/car-in/signature`, streamed back from `/car-in/signature/stream` |
+| Photo slot | `POST /contracts/:id/car-in/photos?angle=…`, `DELETE /car-in/photos/:photoId`, stream `/car-in/photos/:photoId/stream` |
+| Complete | `POST /contracts/:id/car-in/complete` (`Idempotency-Key`) |
+
+The legacy single-shot staff payload is gone from the frontend; the deprecated `POST /contracts/:id/car-in` alias is never called. Public `POST /contracts/return/:token/car-in` remains for the hashed token path.
+
+**Step 1 — Return details (بيانات استلام السيارة).** `VehicleConditionSheet side="IN"` (damage map, damage tools, fuel selector, hirer signature pad) beside the field panel (`mileageIn`, notes, saved-signature preview). IN values are independent: nothing is prefilled from Car-Out. Required to continue: mileage, fuel and an IN signature (drawn now or saved earlier); damage and notes are optional. **Save Draft** persists mileage/fuel/damage/notes and uploads a newly drawn signature; the Contract stays RETOUT and the Vehicle stays RENTED. Reopening the dialog restores mileage, fuel, damage, notes, signature and photos from the server.
+
+**Step 2 — Vehicle photos (تصوير السيارة).** Exactly the Car-Out slot set: FRONT, FRONT_LEFT, REAR_LEFT, REAR, REAR_RIGHT, FRONT_RIGHT, ODOMETER, DASHBOARD_FUEL required, plus optional LEFT, RIGHT, OTHER (`forms/custody/custody-angles.ts`, shared with Car-Out). Camera capture, upload, replace and delete per slot; progress comes from the DTO `photoEvidence`, never from a hardcoded count.
+
+**Next** (التالي إلى تصوير السيارة) validates, saves the draft and uploads the signature before moving on; a failure keeps Step 1 open with the error in the footer region. **Back** (رجوع إلى بيانات الاستلام) keeps all state, with no refetch.
+
+**Complete** (تأكيد استلام السيارة) is enabled only when the DTO says `actions.canComplete`; the frontend does not recompute completion rules. It opens the nested Shared confirmation Dialog and then calls `/car-in/complete`. The response is authoritative: RETOUT → REVIEW, Vehicle RENTED → AVAILABLE, and the store refreshes contract, list and fleet, so the new state appears without a manual browser refresh. Car-In never closes the contract, and no OUT/IN comparison exists yet.
+
+**Ledger.** The return ledger (`forms/custody/custody-ledger.tsx`, shared with Car-Out) lists Mileage IN, Fuel IN, Damage IN (optional) and IN signature, then the eight photo slots, with the same rhombus states: saved, missing, not saved (a local edit), optional. `custody-ledger.model.ts` holds the pure state/progress rules and `custody-draft.ts` the Step 1 validation and PATCH body; both are unit-tested.
 
 Drawer Car-In copy: Vehicle returned / حالة الحيازة: انتهت. GPS Salik is a small informational champagne flag (`hasSalikGpsSignal`), never “waiting for a violation”. Compact Post-Close Charges appear when receivables exist.
 
@@ -204,6 +229,16 @@ ACTIVE contracts only. The same Contract stays ACTIVE; no second Contract or Ren
 ## Refresh
 
 Sensitive mutations refetch the contract, contracts list, and vehicles list.
+
+**External changes.** Contracts also change outside this page: a customer confirming or paying through a Rental Link, or another staff session. While the Contracts page is mounted, `useContracts()` re-reads `GET /contracts` through the store's `refresh({ quiet: true })`:
+
+- when the window regains focus;
+- when the tab becomes visible again (`visibilitychange`);
+- every 30 s while the tab is visible (`CONTRACTS_REVALIDATE_INTERVAL_MS` in `utils/contracts-revalidation.ts`). Polling stops while the tab is hidden and resumes when it is visible.
+
+A hidden tab never refreshes. Focus and visibility events within 2 s collapse into one request, and a new one never starts while one is in flight. The quiet refresh keeps the rows on screen (no loading state, no skeleton); filters, page, sort and the open drawer are untouched; a failed background read keeps the current rows. Status chip and row action re-derive from the same refreshed `ContractListItemDto` (`getContractRowAction`), so SIGNED → PAID shows "Ready for Car-Out" and Car-Out together.
+
+List requests go through a latest-wins gate (`utils/list-request-gate.ts`): a request for the same query joins the one in flight, and a request for a new query (filter, page, sort) marks the older one stale so it cannot overwrite newer rows. This complements the refetch after local staff mutations.
 
 ## Errors / idempotency
 

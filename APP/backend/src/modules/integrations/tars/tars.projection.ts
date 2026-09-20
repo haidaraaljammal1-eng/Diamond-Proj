@@ -15,6 +15,8 @@ import {
 export interface TarsContractIntegrationState {
   /** False until a real, credentialed TARS provider exists. */
   configured: boolean;
+  /** Operating company this contract's TARS traffic routes to (Contract.companyId). */
+  company: { id: number; code: string; displayName: string; accentColor: string };
   externalContractId: string | null;
   lastSuccessfulSyncAt: Date | null;
   operations: Record<TarsProjectionKey, TarsProjectionStatus>;
@@ -28,6 +30,8 @@ export interface TarsProjectionOperationRow {
 
 export interface TarsProjectionInput {
   configured: boolean;
+  /** Routing target for this contract's TARS traffic (Contract.companyId). */
+  company: { id: number; code: string; displayName: string; accentColor: string };
   integration: {
     externalContractId: string | null;
     lastSuccessfulSyncAt: Date | null;
@@ -61,6 +65,7 @@ export function toTarsContractIntegrationState(
 
   return {
     configured: input.configured,
+    company: input.company,
     externalContractId: input.integration?.externalContractId ?? null,
     lastSuccessfulSyncAt: input.integration?.lastSuccessfulSyncAt ?? null,
     operations,

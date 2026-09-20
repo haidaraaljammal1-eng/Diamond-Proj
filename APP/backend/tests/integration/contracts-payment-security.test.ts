@@ -22,6 +22,7 @@ import {
   sendTestStripeWebhook,
 } from "../helpers/fake-payment-provider";
 import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -109,7 +110,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(token),
-        payload: { vehicleName: `SEC-RN-${seq}`, plateNumber: `SEC ${run}${seq}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `SEC-RN-${seq}`, plateNumber: `SEC ${run}${seq}`, dailyRate: 400 },
       });
       assert.equal(vehicleRes.statusCode, 201, vehicleRes.body);
       const vId = vehicleRes.json().data.id as number;
@@ -181,7 +182,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(token),
-        payload: { vehicleName: `PSEC ${run}`, plateNumber: `PSEC ${run}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `PSEC ${run}`, plateNumber: `PSEC ${run}`, dailyRate: 400 },
       });
       assert.equal(vehicle.statusCode, 201, vehicle.body);
       vehicleId = vehicle.json().data.id as number;
@@ -389,7 +390,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(token),
-        payload: { vehicleName: `SEC-CL-${seq}`, plateNumber: `CL ${run}${seq}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `SEC-CL-${seq}`, plateNumber: `CL ${run}${seq}`, dailyRate: 400 },
       });
       assert.equal(vehicleRes.statusCode, 201, vehicleRes.body);
       const vId = vehicleRes.json().data.id as number;
@@ -489,7 +490,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(token),
-        payload: { vehicleName: `SEC-CL-${seq}`, plateNumber: `CL ${run}${seq}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `SEC-CL-${seq}`, plateNumber: `CL ${run}${seq}`, dailyRate: 400 },
       });
       assert.equal(vehicleRes.statusCode, 201, vehicleRes.body);
       const offerRes = await app.inject({

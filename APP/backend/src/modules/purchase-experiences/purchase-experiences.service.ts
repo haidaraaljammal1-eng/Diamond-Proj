@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { AppError } from "src/lib/errors/app-error";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
+import { resolveDefaultOperatingCompanyId } from "src/modules/operating-companies/default-company";
 import type { Tx } from "src/lib/db/transaction";
 import { paginate, parseSort } from "src/lib/http/pagination";
 import {
@@ -235,6 +236,9 @@ export function createPurchaseExperiencesService(fastify: FastifyInstance) {
         }
         const created = await tx.vehicle.create({
           data: {
+            // CX purchase experiences carry no company: the vehicle belongs to
+            // the explicit default operating company.
+            companyId: await resolveDefaultOperatingCompanyId(tx),
             vin,
             modelId: vehicle.modelId,
             modelYear: vehicle.modelYear ?? null,

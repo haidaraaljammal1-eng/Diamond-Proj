@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * End-to-end import-pipeline tests (upload → map → validate → preview → confirm →
@@ -176,7 +177,7 @@ if (!RUN) {
     await prisma.customer.create({ data: { name: "Phone Owner", mobile: normalizePhone(ambigMobile) } });
     // A pre-existing vehicle to drive VIN-conflict / VIN-immutability on import.
     await prisma.vehicle.create({
-      data: { vin: `VINX-${run}`, externalId: `EXTVEH-${run}`, modelId: model.id },
+      data: { companyId: await testCompanyId(prisma), vin: `VINX-${run}`, externalId: `EXTVEH-${run}`, modelId: model.id },
     });
   });
 
@@ -420,7 +421,9 @@ if (!RUN) {
     assert.equal(confirm.json().data.importedRows, 0);
 
     // The existing vehicle's VIN is untouched (VIN immutable during import).
-    const veh = await prisma.vehicle.findUnique({ where: { externalId: `EXTVEH-${run}` } });
+    const veh = await prisma.vehicle.findUnique({
+      where: { companyId_externalId: { companyId: await testCompanyId(prisma), externalId: `EXTVEH-${run}` } },
+    });
     assert.equal(veh?.vin, `VINX-${run}`);
     // No conflicting experience was written.
     assert.equal(

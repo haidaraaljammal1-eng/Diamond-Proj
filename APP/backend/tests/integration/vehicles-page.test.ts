@@ -2,6 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * Vehicles page backend tests (create/search/prices/deactivate/legacy model).
@@ -96,7 +97,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(adminToken),
-      payload,
+      payload: { companyId: await testCompanyId(prisma), ...payload },
     });
     assert.equal(res.statusCode, 201, res.body);
     return res.json().data;
@@ -212,7 +213,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(readerToken),
-      payload: { vehicleName: "Blocked Car", plateNumber: `D ${run}99` },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: "Blocked Car", plateNumber: `D ${run}99` },
     });
     assert.equal(forbidden.statusCode, 403);
   });
@@ -414,7 +415,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(adminToken),
-      payload: { vehicleName: "Bad Rate Car", vin: `VIN-${run}-BADRATE`, dailyRate: -1 },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: "Bad Rate Car", vin: `VIN-${run}-BADRATE`, dailyRate: -1 },
     });
     assert.equal(bad.statusCode, 422);
   });
@@ -455,6 +456,7 @@ if (!RUN) {
       url: "/vehicles",
       headers: auth(adminToken),
       payload: {
+       companyId: await testCompanyId(prisma),
         vehicleName: "Toyota Land Cruiser",
         modelYear: 2025,
         plateNumber: `D ${run}OMIT`,
@@ -511,6 +513,7 @@ if (!RUN) {
       url: "/vehicles",
       headers: auth(adminToken),
       payload: {
+       companyId: await testCompanyId(prisma),
         vehicleName: "First Fleet Car",
         plateNumber: `D ${run}FIRST`,
         modelYear: 2026,
@@ -534,6 +537,7 @@ if (!RUN) {
       url: "/vehicles",
       headers: auth(adminToken),
       payload: {
+       companyId: await testCompanyId(prisma),
         vehicleName: "Ignored Status Car",
         vin: `VIN-${run}-IGN2`,
         plateNumber: `D ${run}88`,
@@ -550,6 +554,7 @@ if (!RUN) {
       url: "/vehicles",
       headers: auth(adminToken),
       payload: {
+       companyId: await testCompanyId(prisma),
         vehicleName: "Duplicate Plate",
         vin: `VIN-${run}-DUP1`,
         plateNumber: `D ${run}01`,

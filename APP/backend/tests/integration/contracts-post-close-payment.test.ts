@@ -12,6 +12,7 @@ import {
   settlePayment,
 } from "../helpers/payment-integration-helpers";
 import { sendTestStripeWebhook } from "../helpers/fake-payment-provider";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -41,6 +42,7 @@ if (!RUN) {
       const vehicleBefore = await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicleId } });
       const contract = await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `PCP-${run}-${seq}`,
           status: "CLOSED",
           vehicleId,
@@ -126,7 +128,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(token),
-        payload: { vehicleName: `PCP ${run}`, plateNumber: `PCP ${run}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `PCP ${run}`, plateNumber: `PCP ${run}`, dailyRate: 400 },
       });
       assert.equal(vehicle.statusCode, 201, vehicle.body);
       vehicleId = vehicle.json().data.id as number;

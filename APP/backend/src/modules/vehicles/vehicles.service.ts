@@ -50,6 +50,7 @@ const VEHICLE_SORTABLE = [
 ] as const;
 
 const VEHICLE_CARD_INCLUDE = {
+  company: { select: { id: true, code: true, displayName: true, accentColor: true } },
   model: { select: { id: true, code: true, name: true } },
   photos: {
     orderBy: [
@@ -102,6 +103,7 @@ async function assertVehicleMutableForFleetOps(
 function toVehiclePublic(row: VehicleCardRow): VehiclePublic {
   return {
     id: row.id,
+    company: row.company,
     vin: row.vin,
     vehicleName: row.vehicleName,
     modelId: row.modelId,
@@ -166,9 +168,26 @@ export function createVehiclesService(fastify: FastifyInstance) {
     if (existing && existing.id !== exceptId) throw vinConflict();
   }
 
-  async function assertExternalIdFree(externalId: string, exceptId?: number) {
-    const existing = await prisma.vehicle.findUnique({ where: { externalId } });
+  /** externalId is unique per company, so the check always carries a company. */
+  async function assertExternalIdFree(
+    companyId: number,
+    externalId: string,
+    exceptId?: number,
+  ) {
+    const existing = await prisma.vehicle.findUnique({
+      where: { companyId_externalId: { companyId, externalId } },
+    });
     if (existing && existing.id !== exceptId) throw externalIdConflict();
+  }
+
+  /** A vehicle may only belong to an EXISTING, ACTIVE operating company. */
+  async function assertActiveCompany(companyId: number) {
+    const company = await prisma.operatingCompany.findUnique({
+      where: { id: companyId },
+      select: { id: true, isActive: true },
+    });
+    if (!company) throw invalidParentError("companyId");
+    if (!company.isActive) throw inactiveReferenceError("companyId");
   }
 
   async function assertPlateFree(plateNumber: string, exceptId?: number) {
@@ -203,27 +222,32 @@ export function createVehiclesService(fastify: FastifyInstance) {
   }
 
   async function list(query: z.infer<typeof ListVehiclesQuerySchema>) {
-    const vehicleTypeFilter = query.vehicleType
-      ? {
-          OR: [
-            { vehicleName: { equals: query.vehicleType, mode: "insensitive" as const } },
-            {
-              vehicleName: null,
-              model: {
-                name: { equals: query.vehicleType, mode: "insensitive" as const },
-              },
+    // Fleet type and free-text search are both OR groups. They must sit in
+    // separate AND entries: spreading two `OR` keys into one object silently
+    // drops the first, which used to lose the type filter whenever a search ran.
+    const anyOf: Prisma.VehicleWhereInput[] = [];
+    if (query.vehicleType) {
+      anyOf.push({
+        OR: [
+          { vehicleName: { equals: query.vehicleType, mode: "insensitive" as const } },
+          {
+            vehicleName: null,
+            model: {
+              name: { equals: query.vehicleType, mode: "insensitive" as const },
             },
-          ],
-        }
-      : {};
+          },
+        ],
+      });
+    }
 
     const where: Prisma.VehicleWhereInput = {
       ...(query.active !== undefined ? { isActive: query.active } : {}),
+      ...(query.companyId !== undefined ? { companyId: query.companyId } : {}),
       ...(query.modelId !== undefined ? { modelId: query.modelId } : {}),
-      ...vehicleTypeFilter,
       ...(query.status && query.status !== "all"
         ? { operationalStatus: operationalStatusFromDto(query.status) }
         : {}),
+      ...(anyOf.length ? { AND: anyOf } : {}),
       ...(query.search
         ? {
             OR: [
@@ -298,12 +322,13 @@ export function createVehiclesService(fastify: FastifyInstance) {
   async function create(
     input: z.infer<typeof CreateVehicleSchema>,
   ): Promise<VehiclePublic> {
+    await assertActiveCompany(input.companyId);
     if (input.modelId != null) await assertActiveModel(input.modelId);
     const vehicleName = input.vehicleName ?? null;
     const vin = input.vin ? normalizeVin(input.vin) : null;
     if (vin) await assertVinFree(vin);
     const externalId = input.externalId ? normalizeExternalId(input.externalId) : null;
-    if (externalId) await assertExternalIdFree(externalId);
+    if (externalId) await assertExternalIdFree(input.companyId, externalId);
     const plateNumber = input.plateNumber
       ? normalizePlateNumber(input.plateNumber)
       : null;
@@ -311,6 +336,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
     try {
       const row = await prisma.vehicle.create({
         data: {
+          companyId: input.companyId,
           vehicleName,
           vin,
           modelId: input.modelId ?? null,
@@ -337,6 +363,13 @@ export function createVehiclesService(fastify: FastifyInstance) {
     const existing = await loadOrThrow(id);
     await assertVehicleMutableForFleetOps(prisma, existing);
     const data: Prisma.VehicleUncheckedUpdateInput = {};
+    // The company this vehicle will belong to after this update — the externalId
+    // check below is scoped to it, not to the company it is leaving.
+    const targetCompanyId = input.companyId ?? existing.companyId;
+    if (input.companyId !== undefined && input.companyId !== existing.companyId) {
+      await assertActiveCompany(input.companyId);
+      data.companyId = input.companyId;
+    }
 
     if (input.vin !== undefined) {
       assertVinUnchanged(existing.vin, input.vin);
@@ -360,6 +393,13 @@ export function createVehiclesService(fastify: FastifyInstance) {
         data.plateNumber = null;
       }
     }
+    if (
+      input.externalId === undefined &&
+      data.companyId !== undefined &&
+      existing.externalId
+    ) {
+      await assertExternalIdFree(targetCompanyId, existing.externalId, id);
+    }
     if (input.dailyRate !== undefined) data.dailyRate = input.dailyRate;
     if (input.monthlyRate !== undefined) data.monthlyRate = input.monthlyRate;
     if (input.operationalStatus !== undefined) {
@@ -375,7 +415,7 @@ export function createVehiclesService(fastify: FastifyInstance) {
     if (input.externalId !== undefined) {
       if (input.externalId !== null) {
         const externalId = normalizeExternalId(input.externalId);
-        await assertExternalIdFree(externalId, id);
+        await assertExternalIdFree(targetCompanyId, externalId, id);
         data.externalId = externalId;
       } else {
         data.externalId = null;

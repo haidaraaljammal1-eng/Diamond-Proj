@@ -47,6 +47,7 @@ const CONTRACT_INCLUDE = {
       },
     },
   },
+  company: { select: { id: true, code: true, displayName: true, accentColor: true } },
   reconciliation: true,
   licenseVerifications: {
     where: { status: "VALID" as const },

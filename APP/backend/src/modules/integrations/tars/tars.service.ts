@@ -91,7 +91,10 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
   ): Promise<TarsContractIntegrationState> {
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
-      select: { id: true },
+      select: {
+        id: true,
+        company: { select: { id: true, code: true, displayName: true, accentColor: true } },
+      },
     });
     if (!contract) throw tarsError.contractNotFound();
 
@@ -108,7 +111,9 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     ]);
 
     return toTarsContractIntegrationState({
-      configured: createTarsProvider().configured,
+      // Routed by the contract's own company, never by the vehicle's current one.
+      configured: createTarsProvider(contract.company.code).configured,
+      company: contract.company,
       integration,
       operations,
     });
@@ -288,7 +293,14 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     operationType: TarsOperationTypeKey,
     options: { idempotencyKey?: string } = {},
   ): Promise<TarsExecutionResult> {
-    const provider = createTarsProvider();
+    // Historical Contract ownership decides which company's TARS account this
+    // mandatory procedure belongs to.
+    const routing = await prisma.contract.findUnique({
+      where: { id: contractId },
+      select: { company: { select: { code: true } } },
+    });
+    if (!routing) throw tarsError.contractNotFound();
+    const provider = createTarsProvider(routing.company.code);
     if (!provider.configured) throw tarsError.notConfigured();
 
     const input = await buildOperationInput(contractId, operationType);

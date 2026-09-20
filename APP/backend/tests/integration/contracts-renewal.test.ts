@@ -11,6 +11,7 @@ import {
   linkCardViaFakeProvider,
 } from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * Contract renewal focused integration. Requires RUN_INTEGRATION=true and
@@ -127,7 +128,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(),
-        payload: { vehicleName: `RN-${run}-${seq}`, plateNumber: `RN ${run}${seq}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `RN-${run}-${seq}`, plateNumber: `RN ${run}${seq}`, dailyRate: 400 },
       });
       assert.equal(vehicleRes.statusCode, 201, vehicleRes.body);
       const vehicleId = vehicleRes.json().data.id as number;
@@ -210,7 +211,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(),
-        payload: { vehicleName: `RN-WAIT-${run}`, plateNumber: `RW ${run}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `RN-WAIT-${run}`, plateNumber: `RW ${run}`, dailyRate: 400 },
       });
       assert.equal(awaiting.statusCode, 201, awaiting.body);
       const offer = await app.inject({

@@ -3,7 +3,9 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { createContractsService } from "src/modules/contracts/contracts.service";
 import {
-  CarInSchema,
+  CarInDraftPatchSchema,
+  CarInPhotoQuerySchema,
+  CarInHandoverSchema,
   CarOutSchema,
   CarOutDraftPatchSchema,
   CarOutPhotoQuerySchema,
@@ -408,27 +410,157 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
     },
   );
 
-  app.post(
+  app.get(
     "/:id/car-in",
     {
       schema: {
-        summary: "Record Car-In and move the contract to REVIEW",
-        operationId: "contractCarIn",
-        tags: ["Contracts"],
-        permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        summary: "Read the staged Car-In draft and completed handover",
+        operationId: "getContractCarIn",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_READ],
         params: ContractIdParam,
-        body: CarInSchema,
+        response: { 200: dataResponse(CarInHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({ data: (await contracts.get(request.params.id)).carInHandover }),
+  );
+
+  app.patch(
+    "/:id/car-in",
+    {
+      schema: {
+        summary: "Save RETOUT Contract Car-In draft without completing the return",
+        operationId: "saveContractCarInDraft",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam, body: CarInDraftPatchSchema,
+        response: { 200: dataResponse(CarInHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const data = await contracts.saveCarInDraft(request.params.id, request.body);
+      request.setAudit({ action: "contracts.car_in_draft", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/car-in/photos",
+    {
+      schema: {
+        summary: "Upload or replace one RETOUT Contract IN photo slot",
+        operationId: "uploadContractCarInPhoto",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam, querystring: CarInPhotoQuerySchema,
+        consumes: ["multipart/form-data"],
+        response: { 200: dataResponse(CarInHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const file = await request.file();
+      if (!file) throw AppError.validation("IN photo is required");
+      const data = await contracts.uploadCarInPhoto(request.params.id, request.query.angle, file, requireAuth(request).id);
+      request.setAudit({ action: "contracts.car_in_photo", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.delete(
+    "/:id/car-in/photos/:photoId",
+    {
+      schema: {
+        summary: "Delete one draft IN photo slot",
+        operationId: "deleteContractCarInPhoto",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: InspectionPhotoParam,
+        response: { 200: dataResponse(CarInHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const data = await contracts.deleteCarInPhoto(request.params.id, request.params.photoId);
+      request.setAudit({ action: "contracts.car_in_photo_delete", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/car-in/signature",
+    {
+      schema: {
+        summary: "Capture or replace the RETOUT Contract hirer IN signature",
+        operationId: "uploadContractCarInSignature",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam, consumes: ["multipart/form-data"],
+        response: { 200: dataResponse(CarInHandoverSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const file = await request.file();
+      if (!file) throw AppError.validation("Hirer IN signature is required");
+      const data = await contracts.uploadCarInSignature(request.params.id, file, requireAuth(request).id);
+      request.setAudit({ action: "contracts.car_in_signature", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.get(
+    "/:id/car-in/signature/stream",
+    {
+      schema: {
+        summary: "Stream secured hirer IN signature",
+        operationId: "streamContractCarInSignature",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_READ],
+        params: ContractIdParam, response: { 200: z.any(), ...commonErrorResponses },
+      },
+    },
+    async (request, reply) => {
+      const { attachment, stream } = await contracts.openCarInSignatureStream(request.params.id);
+      return reply.header("content-type", attachment.mimeType).send(stream);
+    },
+  );
+
+  app.post(
+    "/:id/car-in/complete",
+    {
+      schema: {
+        summary: "Complete the saved Car-In draft and move the contract to REVIEW",
+        operationId: "completeContractCarIn",
+        tags: ["Contracts"], permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam,
         response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
       },
     },
     async (request) => {
       requireAuth(request);
       const key = request.headers["idempotency-key"];
-      const data = await contracts.carInStaff(
-        request.params.id,
-        request.body,
-        typeof key === "string" ? key : undefined,
-      );
+      const data = await contracts.completeCarInStaff(request.params.id, typeof key === "string" ? key : undefined);
+      request.setAudit({ action: "contracts.car_in", entityType: "contract", entityId: request.params.id });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/car-in",
+    {
+      schema: {
+        summary: "[Deprecated] Alias for the Car-In complete route",
+        description:
+          "Superseded by PATCH /:id/car-in (save the draft) and POST /:id/car-in/complete " +
+          "(finish it). This route no longer reads a body; it completes whatever draft " +
+          "was already saved, exactly like /:id/car-in/complete.",
+        operationId: "contractCarIn",
+        tags: ["Contracts"],
+        deprecated: true,
+        hide: true,
+        permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.completeCarInStaff(request.params.id, typeof key === "string" ? key : undefined);
       request.setAudit({
         action: "contracts.car_in",
         entityType: "contract",

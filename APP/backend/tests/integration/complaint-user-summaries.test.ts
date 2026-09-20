@@ -2,6 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 // BE-4 close-out: assignee/actor SafeUserRef projections (no per-row user N+1,
 // no PII). Verifies the additive summary embeds on list / detail / timeline.
@@ -51,7 +52,7 @@ if (!RUN) {
 
   async function makeAssignedComplaint() {
     const customer = await prisma.customer.create({ data: { name: `Buyer ${seq}`, mobile: "0501110000" } });
-    const vehicle = await prisma.vehicle.create({ data: { vin: `VIN-${run}-${seq++}`, modelId, modelYear: 2024 } });
+    const vehicle = await prisma.vehicle.create({ data: { companyId: await testCompanyId(prisma), vin: `VIN-${run}-${seq++}`, modelId, modelYear: 2024 } });
     const exp = await prisma.purchaseExperience.create({ data: { customerId: customer.id, vehicleId: vehicle.id, branchId: branchA, deliveryDate: new Date() } });
     const create = await app.inject({ method: "POST", url: "/complaints", headers: auth(adminT), payload: { customerId: customer.id, purchaseExperienceId: exp.id, departmentId: deptId, description: "N+1 removal check" } });
     assert.equal(create.statusCode, 200, create.body);

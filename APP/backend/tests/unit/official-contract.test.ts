@@ -15,6 +15,13 @@ function row(overrides: Partial<Record<keyof OfficialContractRow, unknown>> = {}
     id: "c1",
     contractNumber: "DE-2026-000391",
     status: "AWAITING",
+    company: {
+      code: "UNIQUE",
+      displayName: "UNIQUE",
+      legalNameAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
+      legalNameEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+      accentColor: "#C9A15C",
+    },
     vehicleId: 7,
     customerId: null,
     createdByUserId: 1,

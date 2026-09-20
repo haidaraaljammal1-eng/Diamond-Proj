@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import type { ContractDetail, ContractListItem } from "src/modules/contracts/contracts.schema";
 import { carOutReadiness } from "src/modules/contracts/car-out-evidence";
+import { carInReadiness } from "src/modules/contracts/car-in-evidence";
 import { readDamageMarks } from "src/modules/contracts/official-contract-interactive";
 import {
   EMPTY_ROAD_LIABILITY_SIGNALS,
@@ -9,6 +10,7 @@ import {
 } from "src/modules/contracts/contract-road-liability-signals";
 
 const DETAIL_INCLUDE = {
+  company: { select: { id: true, code: true, displayName: true, accentColor: true } },
   vehicle: { include: { model: { select: { name: true } } } },
   customer: true,
   payments: {
@@ -34,9 +36,15 @@ const DETAIL_INCLUDE = {
     include: {
       photos: {
         orderBy: { sortOrder: "asc" as const },
-        include: { attachment: { select: { mimeType: true } } },
+        include: { attachment: { select: { mimeType: true, createdAt: true, uploadedById: true, checksum: true } } },
       },
     },
+  },
+  carInDraft: {
+    include: { photos: {
+      orderBy: { createdAt: "asc" as const },
+      include: { attachment: { select: { mimeType: true, createdAt: true, uploadedById: true, checksum: true } } },
+    } },
   },
   reconciliation: { include: { lines: { orderBy: { createdAt: "asc" as const } } } },
   renewals: { orderBy: { createdAt: "asc" as const } },
@@ -71,6 +79,7 @@ export function toListItem(row: {
   startAt: Date | null;
   endAt: Date | null;
   createdAt: Date;
+  company: ContractDetailRow["company"];
   vehicle: ContractDetailRow["vehicle"];
   customer: { name: string } | null;
   hasSalikGpsSignal?: boolean;
@@ -82,6 +91,7 @@ export function toListItem(row: {
     id: row.id,
     contractNumber: row.contractNumber,
     status: row.status,
+    company: row.company,
     vehicleId: row.vehicleId,
     vehicleName: displayName(row.vehicle),
     plateNumber: row.vehicle.plateNumber,
@@ -96,7 +106,7 @@ export function toListItem(row: {
     createdAt: row.createdAt,
     hasSalikGpsSignal: row.hasSalikGpsSignal ?? false,
     // Same rule as the detail `actions.canCarIn`.
-    actions: { canCarOut: row.canCarOut, canCarIn: row.status === "RETOUT" && !row.carIn },
+    actions: { canCarOut: row.canCarOut, canCarIn: row.status === "RETOUT" && !row.carIn && row.vehicle.operationalStatus === "RENTED" },
     carOutStatus: row.carOutStatus,
   };
 }
@@ -113,7 +123,7 @@ function actionsFor(row: ContractDetailRow, canCarOut: boolean): ContractDetail[
     canConfirmPayment: false,
     canCarOut,
     canGenerateReturnLink: row.status === "ACTIVE",
-    canCarIn: row.status === "RETOUT" && !row.carIn,
+    canCarIn: row.status === "RETOUT" && !row.carIn && row.vehicle.operationalStatus === "RENTED",
     canReconcile: row.status === "REVIEW",
     canClose:
       row.status === "REVIEW" &&
@@ -168,10 +178,38 @@ export function toDetail(
     uploadedByUserId: p.attachment.uploadedById,
     checksum: p.attachment.checksum,
   })) ?? [];
+  // Mileage/fuel/notes/photos come from the final row once it exists, else the draft.
+  // The IN signature and damage have no home on the final ContractCarIn model (by
+  // design, see contracts.prisma), so they always read from the draft, which is
+  // never deleted on completion.
+  const canCarIn = row.status === "RETOUT" && !row.carIn && row.vehicle.operationalStatus === "RENTED";
+  const inSource = row.carIn ?? row.carInDraft;
+  const inSignaturePresent = Boolean(row.carInDraft?.hirerSignatureAttachmentId);
+  const inProgress = carInReadiness({
+    mileageIn: inSource?.mileageIn ?? null,
+    fuelIn: inSource?.fuelIn ?? null,
+    hasSignature: inSignaturePresent,
+    photos: inSource?.photos ?? [],
+  });
+  const inStatus = row.carIn ? "COMPLETED" : row.carInDraft
+    ? inProgress.ready ? "READY" : "DRAFT" : "NOT_STARTED";
+  const inPhotos = inSource?.photos.map((p) => ({
+    id: p.id,
+    contractId: row.id,
+    vehicleId: row.vehicleId,
+    stage: "IN" as const,
+    attachmentId: p.attachmentId,
+    angle: p.angle,
+    url: `/contracts/${row.id}/car-in/photos/${p.id}/stream`,
+    uploadedAt: p.attachment.createdAt,
+    uploadedByUserId: p.attachment.uploadedById,
+    checksum: p.attachment.checksum,
+  })) ?? [];
   return {
     id: row.id,
     contractNumber: row.contractNumber,
     status: row.status,
+    company: row.company,
     vehicleId: row.vehicleId,
     customerId: row.customerId,
     createdByUserId: row.createdByUserId,
@@ -232,6 +270,28 @@ export function toDetail(
         canSign: canCarOut,
         canSaveDraft: canCarOut,
         canComplete: canCarOut && outProgress.ready,
+      },
+    },
+    carInHandover: {
+      status: inStatus,
+      mileageIn: inSource?.mileageIn ?? null,
+      fuelIn: inSource?.fuelIn ?? null,
+      damageIn: readDamageMarks(row.carInDraft?.damageIn),
+      notes: inSource?.notes ?? null,
+      photoEvidence: { ...inProgress, photos: inPhotos },
+      signature: {
+        present: inSignaturePresent,
+        attachmentId: row.carInDraft?.hirerSignatureAttachmentId ?? null,
+        url: inSignaturePresent ? `/contracts/${row.id}/car-in/signature/stream` : null,
+      },
+      actualReturnAt: row.carIn?.occurredAt ?? null,
+      actions: {
+        canEdit: canCarIn,
+        canUploadPhotos: canCarIn,
+        canDeletePhotos: canCarIn,
+        canSign: canCarIn,
+        canSaveDraft: canCarIn,
+        canComplete: canCarIn && inProgress.ready,
       },
     },
     carOut: row.carOut

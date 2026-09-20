@@ -7,6 +7,7 @@ import {
   createFakePaymentProvider,
   type TestWebhookPayload,
 } from "./fake-payment-provider";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 export const PAYMENT_PERMS = [
   "vehicles.read",
@@ -88,6 +89,7 @@ export async function seedReviewContract(
 ) {
   const contract = await prisma.contract.create({
     data: {
+      companyId: await testCompanyId(prisma),
       contractNumber: `PAY-${input.run}-${input.seq}`,
       status: "REVIEW",
       vehicleId: input.vehicleId,

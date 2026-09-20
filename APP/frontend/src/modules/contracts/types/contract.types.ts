@@ -171,6 +171,50 @@ export interface ContractCarOutHandoverDto {
   };
 }
 
+/** One staged Car-In evidence photo. Same shape as OUT, stage `IN`. */
+export interface CarInEvidencePhotoDto {
+  id: string;
+  contractId: string;
+  vehicleId: number | null;
+  stage: "IN";
+  attachmentId: string;
+  angle: CarOutAngle | InspectionAngle;
+  url: string;
+  uploadedAt: string;
+  uploadedByUserId: number | null;
+  checksum: string | null;
+}
+
+/**
+ * Staged Car-In work state, mirroring `ContractCarOutHandoverDto`.
+ * Unlike OUT, `actions.canComplete` never becomes true without the IN signature.
+ */
+export interface ContractCarInHandoverDto {
+  status: "NOT_STARTED" | "DRAFT" | "READY" | "COMPLETED";
+  mileageIn: number | null;
+  fuelIn: string | null;
+  damageIn: DamageMark[];
+  notes: string | null;
+  photoEvidence: {
+    required: number;
+    completed: number;
+    missing: CarOutAngle[];
+    complete: boolean;
+    ready: boolean;
+    photos: CarInEvidencePhotoDto[];
+  };
+  signature: { present: boolean; attachmentId: string | null; url: string | null };
+  actualReturnAt: string | null;
+  actions: {
+    canEdit: boolean;
+    canUploadPhotos: boolean;
+    canDeletePhotos: boolean;
+    canSign: boolean;
+    canSaveDraft: boolean;
+    canComplete: boolean;
+  };
+}
+
 export interface ContractCarInDto {
   id: string;
   occurredAt: string;
@@ -258,6 +302,7 @@ export interface ContractDetailDto {
   customer: ContractCustomerRefDto | null;
   payment: ContractPaymentDto | null;
   carOutHandover: ContractCarOutHandoverDto;
+  carInHandover: ContractCarInHandoverDto;
   carOut: ContractCarOutDto | null;
   carIn: ContractCarInDto | null;
   reconciliation: ContractReconciliationDto | null;
@@ -288,6 +333,13 @@ export interface InspectionPhotoInput {
   angle: InspectionAngle;
 }
 
+export interface CarInDraftPatch {
+  mileageIn?: number;
+  fuelIn?: FuelLevel;
+  damageIn?: DamageMark[];
+  notes?: string | null;
+}
+
 export interface CarOutDraftPatch {
   mileageOut?: number;
   fuelOut?: FuelLevel;
@@ -306,14 +358,6 @@ export interface CarOutPayload extends CustodyPaperInput {
   occurredAt?: string;
   mileageOut: number;
   fuelOut: FuelLevel;
-  notes?: string;
-  photos: InspectionPhotoInput[];
-}
-
-export interface CarInPayload extends CustodyPaperInput {
-  occurredAt?: string;
-  mileageIn: number;
-  fuelIn: FuelLevel;
   notes?: string;
   photos: InspectionPhotoInput[];
 }

@@ -30,8 +30,8 @@ You do not need to remember migrate vs generate vs seed order.
 1. Validates `NODE_ENV !== production` and that `DATABASE_URL` is a **local** development database (prints `host:port / database` — never the password)
 2. `prisma migrate deploy` — applies **existing** migrations only
 3. `npm run db:generate` — current Prisma Client
-4. `npm run db:seed` — idempotent permissions catalog + `system_admin` grants
-5. `npm run db:seed:demo` — create-missing `DEMO-FLEET-01` … `DEMO-FLEET-20`
+4. `npm run db:seed` — idempotent permissions catalog + `system_admin` grants + the UNIQUE / ELITE operating companies
+5. `npm run db:seed:demo` — create-missing `DEMO-FLEET-01` … `DEMO-FLEET-20` (created under UNIQUE)
 6. Verifies the minimum development state
 
 It never runs:

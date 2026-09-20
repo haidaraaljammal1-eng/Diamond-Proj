@@ -23,15 +23,21 @@ import {
   uploadCarOutSignature as uploadCarOutSignatureRequest,
   deleteCarOutPhoto as deleteCarOutPhotoRequest,
   completeCarOut as completeCarOutRequest,
-  submitCarIn as submitCarInRequest,
+  getCarIn as getCarInRequest,
+  saveCarInDraft as saveCarInDraftRequest,
+  uploadCarInPhoto as uploadCarInPhotoRequest,
+  uploadCarInSignature as uploadCarInSignatureRequest,
+  deleteCarInPhoto as deleteCarInPhotoRequest,
+  completeCarIn as completeCarInRequest,
   uploadContractAttachment,
 } from "../api/contracts.api";
 import type { PageMeta } from "../api/contracts.api.types";
 import { CONTRACTS_PAGE_SIZE } from "../api/contracts.api.types";
 import type {
-  CarInPayload,
+  CarInDraftPatch,
   CarOutPayload,
   CarOutDraftPatch,
+  ContractCarInHandoverDto,
   ContractCarOutHandoverDto,
   CarOutAngle,
   ConfirmContractPaymentPayload,
@@ -45,6 +51,7 @@ import type {
   RenewPayload,
 } from "../types/contract.types";
 import { DEFAULT_CONTRACT_FILTERS } from "../utils/contract-filters";
+import { createListRequestGate } from "../utils/list-request-gate";
 import { buildPublicContractUrl } from "../utils/contract-link";
 import type { InspectionAngle } from "../types/contract.types";
 
@@ -78,12 +85,14 @@ interface ContractsState {
   carOut: MutationSlot;
   carOutHandover: ContractCarOutHandoverDto | null;
   carIn: MutationSlot;
+  carInHandover: ContractCarInHandoverDto | null;
   returnLink: MutationSlot;
   renewSlot: MutationSlot;
   reconcileSlot: MutationSlot;
   closeSlot: MutationSlot;
   load: () => Promise<void>;
-  refresh: () => Promise<void>;
+  /** `quiet` re-reads the list without the loading state (background revalidation). */
+  refresh: (options?: { quiet?: boolean }) => Promise<void>;
   setQuery: (partial: Partial<ContractsQuery>) => void;
   resetFilters: () => void;
   fetchContract: (id: string) => Promise<void>;
@@ -114,14 +123,12 @@ interface ContractsState {
   uploadCarOutSignature: (id: string, file: File) => Promise<boolean>;
   deleteCarOutPhoto: (id: string, photoId: string) => Promise<boolean>;
   completeCarOut: (id: string, idempotencyKey: string) => Promise<boolean>;
-  submitCarIn: (
-    id: string,
-    payload: Omit<CarInPayload, "photos" | "hirerSignatureAttachmentId"> & {
-      photos: { angle: InspectionAngle; file: File }[];
-      hirerSignature?: Blob | null;
-    },
-    idempotencyKey: string,
-  ) => Promise<boolean>;
+  loadCarIn: (id: string) => Promise<void>;
+  saveCarInDraft: (id: string, payload: CarInDraftPatch) => Promise<boolean>;
+  uploadCarInPhoto: (id: string, angle: CarOutAngle, file: File) => Promise<boolean>;
+  uploadCarInSignature: (id: string, file: File) => Promise<boolean>;
+  deleteCarInPhoto: (id: string, photoId: string) => Promise<boolean>;
+  completeCarIn: (id: string, idempotencyKey: string) => Promise<boolean>;
   generateReturnLink: (id: string, locale: string) => Promise<boolean>;
   generateRenewalLink: (
     id: string,
@@ -150,7 +157,7 @@ async function uploadHirerSignature(image: Blob | null | undefined): Promise<str
   return (await uploadContractAttachment(file)).id;
 }
 
-let listInFlight: Promise<void> | null = null;
+const listGate = createListRequestGate();
 let detailInFlight: Promise<void> | null = null;
 
 function toIssuedLink(
@@ -180,11 +187,13 @@ async function refreshFleet(): Promise<void> {
 }
 
 export const useContractsStore = create<ContractsState>((set, get) => {
-  async function fetchList(): Promise<void> {
+  async function fetchList(isCurrent: () => boolean, quiet: boolean): Promise<void> {
     const { query } = get();
-    set({ status: "loading", error: null });
+    if (!quiet) set({ status: "loading", error: null });
     try {
       const result = await getContracts(query);
+      // A newer query started while this one was in flight: its rows win.
+      if (!isCurrent()) return;
       set({
         contracts: result.data,
         meta: result.meta,
@@ -192,20 +201,19 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         error: null,
       });
     } catch (error) {
+      if (!isCurrent()) return;
+      // A failed background re-read keeps the rows already on screen.
+      if (quiet && get().status === "ready") return;
       set({ status: "error", error: normalizeApiError(error) });
     }
   }
 
-  function runList(): Promise<void> {
-    if (listInFlight) return listInFlight;
-    listInFlight = fetchList().finally(() => {
-      listInFlight = null;
-    });
-    return listInFlight;
+  function runList(quiet = false): Promise<void> {
+    return listGate.run(JSON.stringify(get().query), (isCurrent) => fetchList(isCurrent, quiet));
   }
 
   function refreshList(): Promise<void> {
-    return refreshAfterPending(() => listInFlight, runList);
+    return refreshAfterPending(() => listGate.current(), () => runList());
   }
 
   async function refreshAll(): Promise<void> {
@@ -214,7 +222,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     if (detailId) await get().fetchContract(detailId);
   }
 
-  async function refreshCarOutState(id: string): Promise<void> {
+  async function refreshContractState(id: string): Promise<void> {
     await Promise.all([refreshList(), get().fetchContract(id)]);
   }
 
@@ -239,6 +247,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     carOut: IDLE_SLOT,
     carOutHandover: null,
     carIn: IDLE_SLOT,
+    carInHandover: null,
     returnLink: IDLE_SLOT,
     renewSlot: IDLE_SLOT,
     reconcileSlot: IDLE_SLOT,
@@ -246,12 +255,13 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     load() {
       const status = get().status;
       if (status === "ready" || status === "loading") {
-        return listInFlight ?? Promise.resolve();
+        return listGate.current() ?? Promise.resolve();
       }
       return runList();
     },
-    refresh() {
-      return refreshList();
+    /** A quiet background re-read joins whatever is in flight; an explicit refresh waits it out and takes a new snapshot. */
+    refresh(options) {
+      return options?.quiet ? runList(true) : refreshList();
     },
     setQuery(partial) {
       set((state) => ({
@@ -393,7 +403,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await saveCarOutDraftRequest(id, payload);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await refreshCarOutState(id);
+        await refreshContractState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -405,7 +415,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await uploadCarOutPhotoRequest(id, angle, file);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await refreshCarOutState(id);
+        await refreshContractState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -417,7 +427,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await uploadCarOutSignatureRequest(id, file);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await refreshCarOutState(id);
+        await refreshContractState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -429,7 +439,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await deleteCarOutPhotoRequest(id, photoId);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await refreshCarOutState(id);
+        await refreshContractState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -448,28 +458,67 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         return false;
       }
     },
-    async submitCarIn(id, payload, idempotencyKey) {
+    async loadCarIn(id) {
+      set({ carInHandover: null });
+      try {
+        const handover = await getCarInRequest(id);
+        set({ carInHandover: handover });
+      } catch (error) {
+        set({ carIn: { pending: false, error: normalizeApiError(error) } });
+      }
+    },
+    async saveCarInDraft(id, payload) {
       set({ carIn: { pending: true, error: null } });
       try {
-        const photos: InspectionPhotoInput[] = [];
-        for (const photo of payload.photos) {
-          const attachment = await uploadContractAttachment(photo.file);
-          photos.push({ attachmentId: attachment.id, angle: photo.angle });
-        }
-        const detail = await submitCarInRequest(
-          id,
-          {
-            occurredAt: payload.occurredAt,
-            mileageIn: payload.mileageIn,
-            fuelIn: payload.fuelIn,
-            notes: payload.notes,
-            photos,
-            damage: payload.damage,
-            hirerSignatureAttachmentId: await uploadHirerSignature(payload.hirerSignature),
-          },
-          idempotencyKey,
-        );
-        set({ carIn: IDLE_SLOT, detail, detailStatus: "ready" });
+        const handover = await saveCarInDraftRequest(id, payload);
+        set({ carIn: IDLE_SLOT, carInHandover: handover });
+        await refreshContractState(id);
+        return true;
+      } catch (error) {
+        set({ carIn: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async uploadCarInPhoto(id, angle, file) {
+      set({ carIn: { pending: true, error: null } });
+      try {
+        const handover = await uploadCarInPhotoRequest(id, angle, file);
+        set({ carIn: IDLE_SLOT, carInHandover: handover });
+        return true;
+      } catch (error) {
+        set({ carIn: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async uploadCarInSignature(id, file) {
+      set({ carIn: { pending: true, error: null } });
+      try {
+        const handover = await uploadCarInSignatureRequest(id, file);
+        set({ carIn: IDLE_SLOT, carInHandover: handover });
+        await refreshContractState(id);
+        return true;
+      } catch (error) {
+        set({ carIn: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async deleteCarInPhoto(id, photoId) {
+      set({ carIn: { pending: true, error: null } });
+      try {
+        const handover = await deleteCarInPhotoRequest(id, photoId);
+        set({ carIn: IDLE_SLOT, carInHandover: handover });
+        return true;
+      } catch (error) {
+        set({ carIn: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    /** RETOUT → REVIEW and vehicle RENTED → AVAILABLE, both authoritative from the response. */
+    async completeCarIn(id, idempotencyKey) {
+      set({ carIn: { pending: true, error: null } });
+      try {
+        const detail = await completeCarInRequest(id, idempotencyKey);
+        set({ carIn: IDLE_SLOT, detail, detailStatus: "ready", carInHandover: detail.carInHandover });
         await refreshAll();
         return true;
       } catch (error) {

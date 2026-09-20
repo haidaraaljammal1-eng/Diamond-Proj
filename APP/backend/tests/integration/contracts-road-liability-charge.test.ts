@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient, RoadLiabilityType } from "@prisma/client";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * Road-liability charge review. Requires RUN_INTEGRATION=true and
@@ -80,6 +81,7 @@ if (!RUN) {
       seq += 1;
       const contract = await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `RLC-${run}-${seq}`,
           status: "REVIEW",
           vehicleId,
@@ -185,7 +187,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(adminToken),
-        payload: { vehicleName: `RLC ${run}`, plateNumber: `RLC ${run}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `RLC ${run}`, plateNumber: `RLC ${run}`, dailyRate: 400 },
       });
       assert.equal(vehicle.statusCode, 201, vehicle.body);
       vehicleId = vehicle.json().data.id as number;
@@ -583,6 +585,7 @@ if (!RUN) {
       seq += 1;
       const closed = await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `RLC-CL-${run}-${seq}`,
           status: "CLOSED",
           vehicleId,

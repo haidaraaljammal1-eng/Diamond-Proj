@@ -6,8 +6,20 @@ import { BooleanQueryParam } from "src/lib/master-data/code";
 export const VehicleOperationalStatusDtoSchema = z.enum(["available", "rented", "service"]);
 export type VehicleOperationalStatusDto = z.infer<typeof VehicleOperationalStatusDtoSchema>;
 
+/// Compact owning-company reference carried on every Vehicle projection, so a
+/// fleet list never needs one company lookup per row. Legal names stay out: they
+/// belong to the official contract, not to fleet screens.
+export const VehicleCompanyRefSchema = z.object({
+  id: z.number().int(),
+  code: z.string(),
+  displayName: z.string(),
+  accentColor: z.string(),
+});
+export type VehicleCompanyRef = z.infer<typeof VehicleCompanyRefSchema>;
+
 export const VehiclePublicSchema = z.object({
   id: z.number().int(),
+  company: VehicleCompanyRefSchema,
   vin: z.string().nullable(),
   vehicleName: z.string().nullable(),
   modelId: z.number().int().nullable(),
@@ -84,6 +96,8 @@ export type VehicleDetail = z.infer<typeof VehicleDetailSchema>;
 
 export const ListVehiclesQuerySchema = PaginationQuerySchema.extend({
   search: z.string().trim().min(1).optional(),
+  /** Owning company filter. One stable dimension; omit for every company. */
+  companyId: z.coerce.number().int().positive().optional(),
   modelId: z.coerce.number().int().positive().optional(),
   /** Active fleet type/name filter (direct vehicleName or legacy model name). */
   vehicleType: z.string().trim().min(1).optional(),
@@ -121,6 +135,8 @@ function hasCreateVehicleIdentity(body: {
 /** Create accepts fleet fields only — operational status is always initialized server-side. */
 export const CreateVehicleSchema = z
   .object({
+    /** Required: staff choose the owning company when adding a vehicle. */
+    companyId: z.number().int().positive(),
     vehicleName: VehicleName.optional(),
     vin: Vin.optional(),
     /** Optional legacy catalog link — omit entirely for direct-name Diamond fleet vehicles. */
@@ -139,6 +155,11 @@ export const CreateVehicleSchema = z
 
 export const UpdateVehicleSchema = z
   .object({
+    /**
+     * Fleet transfer between operating companies. It re-assigns the vehicle from
+     * now on only: Contract.companyId is frozen history and is never re-synced.
+     */
+    companyId: z.number().int().positive(),
     vin: Vin.nullable(),
     vehicleName: VehicleName.nullable(),
     modelId: z.number().int().positive().nullable(),

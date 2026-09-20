@@ -136,10 +136,10 @@ model RoadLiability {
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
 
-  observations          RoadLiabilityObservation[]
-  reconciliationLine    ContractReconciliationLine?
-  customerCharge        RoadLiabilityCustomerCharge?
-  postCloseReceivable   ContractPostCloseReceivable?
+  observations        RoadLiabilityObservation[]
+  reconciliationLine  ContractReconciliationLine?
+  customerCharge      RoadLiabilityCustomerCharge?
+  postCloseReceivable ContractPostCloseReceivable?
 
   @@index([occurredAt])
   @@index([type])
@@ -166,11 +166,11 @@ enum ContractPostCloseReceivableStatus {
 /// One employee-confirmed customer charge from one RoadLiability.
 /// Destination is either current Reconciliation or a Post-Close Receivable — never both.
 model RoadLiabilityCustomerCharge {
-  id                     String                                  @id @default(uuid())
-  roadLiabilityId        String                                  @unique
-  roadLiability          RoadLiability                           @relation(fields: [roadLiabilityId], references: [id], onDelete: Restrict)
+  id                     String                                 @id @default(uuid())
+  roadLiabilityId        String                                 @unique
+  roadLiability          RoadLiability                          @relation(fields: [roadLiabilityId], references: [id], onDelete: Restrict)
   contractId             String
-  contract               Contract                                @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  contract               Contract                               @relation(fields: [contractId], references: [id], onDelete: Restrict)
   destinationType        RoadLiabilityCustomerChargeDestination
   officialAmountSnapshot Int
   customerChargeAmount   Int
@@ -178,12 +178,12 @@ model RoadLiabilityCustomerCharge {
   adjustmentReason       String?
   adjustmentNote         String?
   confirmedByUserId      Int?
-  confirmedBy            User?                                   @relation("RoadLiabilityCustomerChargeConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  confirmedBy            User?                                  @relation("RoadLiabilityCustomerChargeConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
   confirmedAt            DateTime
-  reconciliationLineId   String?                                 @unique
-  reconciliationLine     ContractReconciliationLine?             @relation(fields: [reconciliationLineId], references: [id], onDelete: SetNull)
+  reconciliationLineId   String?                                @unique
+  reconciliationLine     ContractReconciliationLine?            @relation(fields: [reconciliationLineId], references: [id], onDelete: SetNull)
   postCloseReceivable    ContractPostCloseReceivable?
-  createdAt              DateTime                                @default(now())
+  createdAt              DateTime                               @default(now())
 
   @@index([contractId])
   @@map("road_liability_customer_charges")
@@ -195,8 +195,8 @@ model ContractPostCloseReceivable {
   id               String                            @id @default(uuid())
   contractId       String
   contract         Contract                          @relation(fields: [contractId], references: [id], onDelete: Restrict)
-  customerChargeId String                      @unique
-  customerCharge   RoadLiabilityCustomerCharge @relation(fields: [customerChargeId], references: [id], onDelete: Restrict)
+  customerChargeId String                            @unique
+  customerCharge   RoadLiabilityCustomerCharge       @relation(fields: [customerChargeId], references: [id], onDelete: Restrict)
   roadLiabilityId  String                            @unique
   roadLiability    RoadLiability                     @relation(fields: [roadLiabilityId], references: [id], onDelete: Restrict)
   amount           Int

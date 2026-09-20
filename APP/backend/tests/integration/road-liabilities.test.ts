@@ -2,6 +2,7 @@ import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * Requires RUN_INTEGRATION=true and TEST_DATABASE_URL pointing at disposable
@@ -106,7 +107,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(adminToken),
-        payload,
+        payload: { companyId: await testCompanyId(prisma), ...payload },
       });
       assert.equal(res.statusCode, 201, res.body);
       return res.json().data as { id: number };
@@ -133,6 +134,7 @@ if (!RUN) {
     }) {
       return prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: input.number,
           status: input.status,
           vehicleId,
@@ -521,6 +523,7 @@ if (!RUN) {
 
       const scheduledOnly = await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `RL-C-${run}-sched`,
           status: "SIGNED",
           vehicleId: attrVehicle,
@@ -559,6 +562,7 @@ if (!RUN) {
       ).id;
       await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `RL-C-${run}-amb1`,
           status: "ACTIVE",
           vehicleId: ambVehicle,
@@ -579,6 +583,7 @@ if (!RUN) {
       });
       await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `RL-C-${run}-amb2`,
           status: "ACTIVE",
           vehicleId: ambVehicle,

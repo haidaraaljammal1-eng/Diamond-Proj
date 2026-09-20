@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { imageMultipart, injectDocumentOcr, seedReadyIdentity, TEST_PNG } from "../helpers/public-identity";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -30,7 +31,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(),
-        payload: { vehicleName: `OCI-${run}-${seq}`, plateNumber: `C${run}${seq}`.slice(0, 20), dailyRate: 300, color: "Grey", modelYear: 2023 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `OCI-${run}-${seq}`, plateNumber: `C${run}${seq}`.slice(0, 20), dailyRate: 300, color: "Grey", modelYear: 2023 },
       });
       assert.equal(vehicle.statusCode, 201, vehicle.body);
       const created = await app.inject({

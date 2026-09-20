@@ -4,6 +4,8 @@ Contract is the single rental aggregate. There is no parallel `Rental` model. Fr
 
 Money is whole AED integers (same pattern as Vehicle rates). Default currency is `AED`. Contract has no `branchId` — Vehicle/Customer do not carry a clear rental-branch owner in the current schema.
 
+> **Operating company (UNIQUE / ELITE):** the database already stores the owning company on every Vehicle and Contract; no API, filter or UI exposes it yet. Read [operating-companies.md](../00-system-overview/operating-companies.md) before adding company behaviour here.
+
 ## Models
 
 Prisma: `APP/backend/prisma/schema/contracts.prisma` (Customer rental fields live on existing `Customer` in `operational.prisma`).
@@ -122,13 +124,45 @@ The PAID Car-Out draft stores mileage, the existing nine-level fuel code, struct
 
 Staff with `contracts.read` may stream the frozen legal HIRER / ADDITIONAL_DRIVER / SPONSOR signature images via `GET /contracts/:id/official-contract/signatures/:slot/stream` for the read-only Car-Out contract preview. The response is private and uncached; this does not change the legal snapshot or customer signing routes.
 
-Completion copies the draft into the immutable operational `ContractCarOut` snapshot with server handover time, assigned Vehicle ID, mileage, fuel, damage, photo references and OUT signature. Existing `Vehicle` has no authoritative mileage column, so no new Vehicle mileage field was added. OUT draft and evidence mutations reject after ACTIVE. The signed legal `Contract.snapshot` is unchanged. Existing Car-In and its eight Demo inspection angles (FRONT, REAR, RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES) are unchanged; matching new OUT slots to future IN comparison is later work. Photo joins reference Attachment, never `VehiclePhoto`; streams require `contracts.read`. The additive migration is applied by `npm run dev:bootstrap` on a new local database.
+Completion copies the draft into the immutable operational `ContractCarOut` snapshot with server handover time, assigned Vehicle ID, mileage, fuel, damage, photo references and OUT signature. Existing `Vehicle` has no authoritative mileage column, so no new Vehicle mileage field was added. OUT draft and evidence mutations reject after ACTIVE. The signed legal `Contract.snapshot` is unchanged. Staged Car-In now reuses these same OUT angles (see below); the old eight Demo inspection angles (RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES) survive only on the legacy public token route and on historical rows. Photo joins reference Attachment, never `VehiclePhoto`; streams require `contracts.read`. The additive migration is applied by `npm run dev:bootstrap` on a new local database.
 
 **Return intent.** `POST /contracts/:id/return-link` only issues the token: the Contract stays ACTIVE and renewal stays possible. The public `POST /contracts/return/:token/confirm` is the return-intent event: ACTIVE → RETOUT, `contract.return_started`, unused renewal links revoked. It is idempotent (RETOUT or later returns the current view). Return confirmation, staff `renew`, public renewal confirm and link issuing take the `contract_lifecycle` advisory lock and re-read the status, so a renewal and a return confirmation cannot both win; renewal payment start also refuses a non-ACTIVE contract. **Renewal eligibility is re-checked at application time.** `applyRenewal` takes the same lifecycle lock (lock order: `contract_payment`, then `contract_lifecycle`) and re-reads the Contract; a Contract that has left ACTIVE is never extended and never moved back from RETOUT. Direct callers (staff renew, zero-amount public confirm) get `CONTRACT_INVALID_TRANSITION`. When a renewal payment that started before the return is captured afterwards, payment confirmation and domain application still run in one transaction: the payment is recorded CONFIRMED because the provider took the money, the renewal stays unapplied (`appliedAt` null, no second renewal row or payment attempt), and `contract.renewal_not_applied` (payment id, renewal id, amount) is emitted so staff refund or settle it. Vehicle stays RENTED until Car-In.
 
 Verification (2026-09-19): `contracts-renewal` 8/8 and `tars-integration` 15/15 on `haidara_test`; the in-flight race test fails when the re-check is removed. On the dev database a fresh contract (DE-2026-000017) confirmed: return link keeps ACTIVE, RENTED and Renew; return confirmation gives RETOUT, RENTED, no Renew, Receive vehicle. The in-flight renewal payment could not be reproduced on dev because no card provider is configured there (`PAYMENT_PROVIDER_NOT_CONFIGURED`); it is covered only by the integration test.
 
-Staff Car-In: `POST /contracts/:id/car-in` (`contracts.return`) on RETOUT. Public token Car-In: `POST /contracts/return/:token/car-in` (used RETURN tokens are allowed so a second submit after REVIEW is idempotent). Both write `ContractCarIn` + eight photos, transition RETOUT → REVIEW, emit `contract.return_submitted`, and if the vehicle is RENTED set it AVAILABLE in the same transaction (advisory lock `vehicle_rental`). Car-In never closes the Contract. REVIEW means financial/operational review is still open, not that the customer still has the vehicle.
+### Staged Car-In (staff)
+
+Car-In is now a resumable draft workflow that mirrors Car-Out, not a single submit.
+
+```
+RETOUT → Car-In draft → save / resume → Complete → REVIEW
+Vehicle: RENTED throughout the draft → AVAILABLE only at Complete
+```
+
+Entry requires Contract **RETOUT**, Vehicle **RENTED**, an existing Car-Out, and no final Car-In (`actions.canCarIn`). `ContractCarInDraft` + `ContractCarInDraftPhoto` hold mileage, the nine-level fuel code, structured IN damage, notes, the hirer IN signature and photo evidence. Saving, uploading, replacing or deleting draft evidence never changes Contract or Vehicle status, so the draft can be closed and reopened; a reopened draft restores everything, including the signature and photos.
+
+**Car-In now uses the same photo vocabulary as Car-Out**, so OUT and IN evidence line up: required FRONT, FRONT_LEFT, REAR_LEFT, REAR, REAR_RIGHT, FRONT_RIGHT, ODOMETER, DASHBOARD_FUEL (8), optional LEFT, RIGHT, OTHER. The old Car-In-only set (RIGHT_SIDE, LEFT_SIDE, FRONT_PLATE, REAR_PLATE, INTERIOR_ODOMETER, TIRES) is rejected by the staged endpoints; `CAR_OUT_REQUIRED_ANGLES` / `CAR_OUT_PHOTO_ANGLES` are the shared constants.
+
+**The IN signature is mandatory at Complete** and is enforced in the backend, not only in the UI: `actions.canComplete` stays false without it and completion returns 422. Unlike `ContractCarOut`, the final `ContractCarIn` carries no signature or damage column; the signature is persisted to `OfficialContractSignature` slot `VEHICLE_IN_HIRER` and the damage to `OfficialContractReviewDraft.damageIn`, exactly as the legacy path did. The draft row is never deleted on completion, so the captured signature and damage stay readable afterwards.
+
+Complete runs in one transaction under advisory lock `vehicle_rental`: re-read Contract and Vehicle, verify RETOUT + RENTED + Car-Out present + no existing Car-In, verify mileage, fuel, the signature and all eight required slots, create `ContractCarIn`, copy draft photos into `ContractCarInPhoto`, persist damage and the IN signature, RETOUT → REVIEW, Vehicle RENTED → AVAILABLE, complete the RETURN links, emit `contract.return_submitted`. All or nothing. A second Complete (including two concurrent ones) converges on the single existing Car-In instead of creating a second one, and `Idempotency-Key` replays through `runIdempotent` (scope `contract:car-in-complete:${contractId}`). After REVIEW every draft mutation (patch, photo upload, photo delete, signature) returns 409.
+
+| Method | Path | Notes |
+| ------ | ---- | ----- |
+| GET | `/contracts/:id/car-in` | `contracts.read`. Work state: status, draft values, signature, photo evidence, `actions` |
+| PATCH | `/contracts/:id/car-in` | `contracts.return`. Partial save of mileage / fuel / damage / notes |
+| POST | `/contracts/:id/car-in/photos?angle=` | `contracts.return`. Multipart; one photo per angle, re-upload replaces the slot |
+| DELETE | `/contracts/:id/car-in/photos/:photoId` | `contracts.return`. Draft photos only |
+| POST | `/contracts/:id/car-in/signature` | `contracts.return`. Multipart PNG; replaces the draft IN signature |
+| GET | `/contracts/:id/car-in/signature/stream` | `contracts.read` |
+| GET | `/contracts/:id/car-in/photos/:photoId/stream` | `contracts.read`. Draft and final photos |
+| POST | `/contracts/:id/car-in/complete` | `contracts.return`. The one authoritative staff completion |
+
+**Legacy compatibility.** `POST /contracts/:id/car-in` (staff) no longer reads a body; it is a hidden, deprecated alias that completes the saved draft through the same function as `/car-in/complete`, so there is exactly one authoritative staff workflow. A caller that still posts the old full payload no longer has it applied, and completion fails loudly if no draft was saved first. The public token route `POST /contracts/return/:token/car-in` is **unchanged**: it keeps the legacy single-shot `CarInSchema` with the original eight `INSPECTION_ANGLES`, still writes `ContractCarIn` directly, and used RETURN tokens are still allowed so a second submit after REVIEW is idempotent. Documented staff policy remains that the customer does not submit Car-In.
+
+Car-In never closes the Contract. REVIEW means financial/operational review is still open, not that the customer still has the vehicle.
+
+**OUT vs IN comparison is not implemented yet.** The two evidence sets now share one vocabulary, which is the prerequisite, but nothing compares mileage, fuel or damage between Car-Out and Car-In.
 
 GPS Salik intelligence is a derived Contract projection (`roadLiabilitySignals`), not a stored boolean and not a lifecycle hold. Detail also includes a compact `postCloseReceivables` summary (count, openAmount, bounded items) without N+1.
 
@@ -187,7 +221,14 @@ Staff only. Public token routes have no staff permissions.
 | GET | `/contracts/:id/car-out/signature/stream` | read |
 | POST | `/contracts/:id/car-out/complete` | car_out + activate |
 | POST | `/contracts/:id/return-link` | return (no status change) |
-| POST | `/contracts/:id/car-in` | return |
+| GET | `/contracts/:id/car-in` | read (staged work state) |
+| PATCH | `/contracts/:id/car-in` | return (draft save) |
+| POST | `/contracts/:id/car-in/photos?angle=` | return |
+| DELETE | `/contracts/:id/car-in/photos/:photoId` | return |
+| POST | `/contracts/:id/car-in/signature` | return |
+| GET | `/contracts/:id/car-in/signature/stream` | read |
+| POST | `/contracts/:id/car-in/complete` | return |
+| POST | `/contracts/:id/car-in` | return (deprecated alias for complete, no body) |
 | POST | `/contracts/:id/reconcile` | reconcile |
 | GET | `/contracts/:id/reconciliation/road-liabilities` | reconcile |
 | POST | `/contracts/:id/reconciliation/road-liabilities/:roadLiabilityId/confirm-charge` | reconcile |

@@ -43,10 +43,15 @@ export function createVehicleMatchService(prisma: Db) {
 
     const externalRef = input.externalVehicleRef?.trim() || null;
     if (externalRef) {
-      const byExternal = await prisma.vehicle.findUnique({
+      // externalId is unique per company, and an incoming road liability names
+      // no company. Match across companies and only accept an unambiguous hit,
+      // so a shared id in both fleets never silently attributes to the wrong car.
+      const externalMatches = await prisma.vehicle.findMany({
         where: { externalId: externalRef },
         select: { id: true, plateNumber: true },
+        take: 2,
       });
+      const byExternal = externalMatches.length === 1 ? externalMatches[0] : null;
       if (byExternal) {
         return {
           vehicleId: byExternal.id,

@@ -83,6 +83,8 @@ import { createFilesService } from "src/modules/files/files.service";
 import type { MultipartFile } from "@fastify/multipart";
 import type {
   CarInSchema,
+  CarInDraftPatchSchema,
+  CarInPhotoQuerySchema,
   CarOutSchema,
   CarOutDraftPatchSchema,
   CarOutPhotoQuerySchema,
@@ -313,6 +315,10 @@ export function createContractsService(fastify: FastifyInstance) {
         data: {
           contractNumber,
           vehicleId: input.vehicleId,
+          // Historical ownership, derived server-side from the Vehicle that is
+          // being rented. Never taken from the request, and never re-synced
+          // afterwards: transferring the Vehicle must not re-brand this Contract.
+          companyId: vehicle.companyId,
           customerId: input.customerId ?? null,
           createdByUserId: actorUserId,
           assignedEmployeeUserId: input.assignedEmployeeUserId ?? null,
@@ -337,6 +343,9 @@ export function createContractsService(fastify: FastifyInstance) {
   async function list(query: z.infer<typeof ListContractsQuerySchema>) {
     const where: Prisma.ContractWhereInput = {
       ...(query.status ? { status: query.status } : {}),
+      // Contract.companyId, never vehicle.companyId: a transferred vehicle must
+      // not move its old contracts into the other company's list.
+      ...(query.companyId ? { companyId: query.companyId } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       ...(query.customerId ? { customerId: query.customerId } : {}),
       ...(query.from || query.to
@@ -371,6 +380,7 @@ export function createContractsService(fastify: FastifyInstance) {
         const rows = await prisma.contract.findMany({
           where,
           include: {
+            company: { select: { id: true, code: true, displayName: true, accentColor: true } },
             vehicle: { include: { model: { select: { name: true } } } },
             customer: { select: { name: true } },
             carOut: { select: { id: true } },
@@ -662,6 +672,236 @@ export function createContractsService(fastify: FastifyInstance) {
     return (await get(contractId)).carOutHandover;
   }
 
+  /**
+   * Staged Car-In draft eligibility, mirroring `assertCarOutDraftEligible`.
+   * Entry rule: Contract = RETOUT, Vehicle = RENTED, no final Car-In yet, and
+   * Car-Out must already exist. Draft work never changes Contract or Vehicle status.
+   */
+  async function assertCarInDraftEligible(tx: Tx, contractId: string) {
+    const contract = await tx.contract.findUnique({
+      where: { id: contractId },
+      include: {
+        vehicle: { select: { operationalStatus: true } },
+        carIn: { select: { id: true } },
+        carOut: { select: { id: true } },
+      },
+    });
+    if (!contract) throw contractError.notFound();
+    if (contract.status !== "RETOUT" || contract.carIn) {
+      throw contractError.invalidTransition(contract.status, "REVIEW");
+    }
+    if (!contract.carOut) throw contractError.carOutRequired();
+    if (contract.vehicle.operationalStatus !== "RENTED") throw contractError.vehicleNotRented();
+    return contract;
+  }
+
+  async function validateInAttachment(tx: Tx, attachmentId: string, signature = false) {
+    const attachment = await tx.attachment.findUnique({
+      where: { id: attachmentId }, select: { mimeType: true, size: true },
+    });
+    const allowed = signature ? attachment?.mimeType === "image/png"
+      : attachment?.mimeType === "image/png" || attachment?.mimeType === "image/jpeg";
+    if (!attachment || !allowed || attachment.size > env.MAX_UPLOAD_SIZE) {
+      throw AppError.validation(signature ? "IN signature must be a valid PNG attachment" : "IN photo must be a valid image attachment");
+    }
+  }
+
+  async function saveCarInDraft(contractId: string, input: z.infer<typeof CarInDraftPatchSchema>) {
+    await withTransaction(prisma, async (tx) => {
+      await assertCarInDraftEligible(tx, contractId);
+      const signedMarks = await tx.officialContractReviewDraft.findUnique({
+        where: { contractId }, select: { damageIn: true },
+      });
+      const data = {
+        ...(input.mileageIn !== undefined ? { mileageIn: input.mileageIn } : {}),
+        ...(input.fuelIn !== undefined ? { fuelIn: input.fuelIn } : {}),
+        ...(input.damageIn !== undefined ? { damageIn: readDamageMarks(input.damageIn) as unknown as Prisma.InputJsonValue } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
+      };
+      await tx.contractCarInDraft.upsert({
+        where: { contractId },
+        create: {
+          contractId,
+          damageIn: readDamageMarks(signedMarks?.damageIn) as unknown as Prisma.InputJsonValue,
+          ...data,
+        },
+        update: data,
+      });
+    });
+    return (await get(contractId)).carInHandover;
+  }
+
+  async function uploadCarInPhoto(contractId: string, angle: z.infer<typeof CarInPhotoQuerySchema>["angle"], file: MultipartFile, actorUserId: number) {
+    await withTransaction(prisma, (tx) => assertCarInDraftEligible(tx, contractId));
+    const attachment = await files.save(file, actorUserId, { allowedMime: ["image/png", "image/jpeg"] });
+    try {
+      await withTransaction(prisma, async (tx) => {
+        await assertCarInDraftEligible(tx, contractId);
+        const draft = await tx.contractCarInDraft.upsert({
+          where: { contractId }, create: { contractId }, update: {},
+        });
+        await tx.contractCarInDraftPhoto.upsert({
+          where: { carInDraftId_angle: { carInDraftId: draft.id, angle } },
+          create: { carInDraftId: draft.id, attachmentId: attachment.id, angle },
+          update: { attachmentId: attachment.id },
+        });
+      });
+    } catch (error) {
+      await files.remove(attachment.id).catch(() => undefined);
+      throw error;
+    }
+    return (await get(contractId)).carInHandover;
+  }
+
+  async function uploadCarInSignature(contractId: string, file: MultipartFile, actorUserId: number) {
+    await withTransaction(prisma, (tx) => assertCarInDraftEligible(tx, contractId));
+    const attachment = await files.save(file, actorUserId, { allowedMime: SIGNATURE_UPLOAD_MIME });
+    try {
+      await withTransaction(prisma, async (tx) => {
+        await assertCarInDraftEligible(tx, contractId);
+        await tx.contractCarInDraft.upsert({
+          where: { contractId },
+          create: { contractId, hirerSignatureAttachmentId: attachment.id },
+          update: { hirerSignatureAttachmentId: attachment.id },
+        });
+      });
+    } catch (error) {
+      await files.remove(attachment.id).catch(() => undefined);
+      throw error;
+    }
+    return (await get(contractId)).carInHandover;
+  }
+
+  /**
+   * The draft row is never deleted on completion (same as Car-Out's draft), so
+   * this keeps working for the final, immutable signature too. `ContractCarIn`
+   * itself carries no signature column by design — see contracts.prisma.
+   */
+  async function openCarInSignatureStream(contractId: string) {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      select: { carInDraft: { select: { hirerSignatureAttachmentId: true } } },
+    });
+    if (!contract) throw contractError.notFound();
+    const id = contract.carInDraft?.hirerSignatureAttachmentId;
+    if (!id) throw AppError.notFound("Car-In signature not found");
+    return files.openDownload(id);
+  }
+
+  async function deleteCarInPhoto(contractId: string, photoId: string) {
+    await withTransaction(prisma, async (tx) => {
+      await assertCarInDraftEligible(tx, contractId);
+      const deleted = await tx.contractCarInDraftPhoto.deleteMany({
+        where: { id: photoId, carInDraft: { contractId } },
+      });
+      if (!deleted.count) throw AppError.notFound("Car-In photo not found");
+    });
+    return (await get(contractId)).carInHandover;
+  }
+
+  /**
+   * Completes the staged Car-In draft: RETOUT -> REVIEW, Vehicle RENTED -> AVAILABLE.
+   * Reads the persisted draft only — there is no body-supplied override, unlike
+   * `carOut()`. This is the one authoritative staff completion path; the legacy
+   * `POST /contracts/:id/car-in` route now delegates here too (see routes/admin).
+   */
+  async function completeCarInStaff(contractId: string, idempotencyKey?: string) {
+    const run = async () =>
+      withTransaction(prisma, async (tx) => {
+        const initial = await tx.contract.findUnique({ where: { id: contractId }, select: { vehicleId: true } });
+        if (!initial) throw contractError.notFound();
+        await acquireAdvisoryLock(tx, VEHICLE_RENTAL_LOCK_NS, initial.vehicleId);
+
+        const contract = await tx.contract.findUnique({
+          where: { id: contractId },
+          include: {
+            carIn: { select: { id: true } },
+            carOut: { select: { id: true } },
+            vehicle: { select: { operationalStatus: true } },
+            carInDraft: { include: { photos: true } },
+          },
+        });
+        if (!contract) throw contractError.notFound();
+        if (contract.status === "REVIEW" && contract.carIn) {
+          return decorateDetail(
+            await tx.contract.findUniqueOrThrow({ where: { id: contractId }, include: CONTRACT_DETAIL_INCLUDE }),
+            tx,
+          );
+        }
+        assertTransition(contract.status, "REVIEW");
+        if (!contract.carOut) throw contractError.carOutRequired();
+        if (contract.vehicle.operationalStatus !== "RENTED") throw contractError.vehicleNotRented();
+
+        const draft = contract.carInDraft;
+        const mileageIn = draft?.mileageIn ?? null;
+        const fuelIn = draft?.fuelIn ?? null;
+        const signatureId = draft?.hirerSignatureAttachmentId ?? null;
+        const photos = draft?.photos ?? [];
+        if (mileageIn === null || !Number.isInteger(mileageIn) || mileageIn < 0) {
+          throw AppError.validation("Valid IN mileage is required");
+        }
+        if (!fuelIn) throw AppError.validation("IN fuel is required");
+        if (!signatureId) throw AppError.validation("Hirer IN signature is required");
+        await validateInAttachment(tx, signatureId, true);
+        assertCarOutAngles(photos);
+        for (const photo of photos) await validateInAttachment(tx, photo.attachmentId);
+
+        const signedMarks = await tx.officialContractReviewDraft.findUnique({
+          where: { contractId }, select: { damageIn: true },
+        });
+        const damageIn = readDamageMarks(draft?.damageIn ?? signedMarks?.damageIn);
+
+        const now = new Date();
+        const carInRow = await tx.contractCarIn.create({
+          data: {
+            contractId,
+            occurredAt: now,
+            mileageIn,
+            fuelIn,
+            notes: draft?.notes ?? null,
+          },
+        });
+        await tx.contractCarInPhoto.createMany({
+          data: photos.map((p, i) => ({
+            carInId: carInRow.id,
+            attachmentId: p.attachmentId,
+            angle: p.angle,
+            sortOrder: i,
+          })),
+        });
+        await persistCustodyPaper(tx, contractId, "IN", {
+          damage: damageIn, hirerSignatureAttachmentId: signatureId,
+        });
+        await tx.contract.update({
+          where: { id: contractId },
+          data: { status: "REVIEW", revision: { increment: 1 } },
+        });
+        await tx.vehicle.update({
+          where: { id: contract.vehicleId },
+          data: { operationalStatus: "AVAILABLE" },
+        });
+        await completeReturnLinks(tx, contractId);
+        await emit(tx, "contract.return_submitted", contractId, { vehicleId: contract.vehicleId });
+        return decorateDetail(
+          await tx.contract.findUniqueOrThrow({ where: { id: contractId }, include: CONTRACT_DETAIL_INCLUDE }),
+          tx,
+        );
+      });
+
+    if (!idempotencyKey) return run();
+    const outcome = await runIdempotent(
+      prisma,
+      {
+        scope: `contract:car-in-complete:${contractId}`,
+        key: idempotencyKey,
+        fingerprint: fingerprintIdempotentPayload({ mode: "complete-from-draft" }),
+      },
+      run,
+    );
+    if (outcome.deduped) return get(contractId);
+    return outcome.result!;
+  }
+
   async function carOut(
     contractId: string,
     input: z.infer<typeof CarOutSchema> | undefined,
@@ -791,7 +1031,7 @@ export function createContractsService(fastify: FastifyInstance) {
       const link = await resolveContractLink(tx, token, "RENTAL");
       const contract = await tx.contract.findUnique({
         where: { id: link.contractId },
-        include: { vehicle: { include: { model: { select: { name: true } } } } },
+        include: { company: { select: { code: true, displayName: true, legalNameAr: true, legalNameEn: true } }, vehicle: { include: { model: { select: { name: true } } } } },
       });
       if (!contract) throw contractError.notFound();
       if (contract.status !== "AWAITING" && contract.status !== "FORM") {
@@ -996,7 +1236,7 @@ export function createContractsService(fastify: FastifyInstance) {
         return publicView(
           await tx.contract.findUniqueOrThrow({
             where: { id: contract.id },
-            include: { vehicle: { include: { model: { select: { name: true } } } } },
+            include: { company: { select: { code: true, displayName: true, legalNameAr: true, legalNameEn: true } }, vehicle: { include: { model: { select: { name: true } } } } },
           }),
         );
       });
@@ -1363,7 +1603,10 @@ export function createContractsService(fastify: FastifyInstance) {
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RETURN", { allowCompleted: true });
       await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, link.contractId);
-      const include = { vehicle: { include: { model: { select: { name: true } } } } };
+      const include = {
+        company: { select: { code: true, displayName: true, legalNameAr: true, legalNameEn: true } },
+        vehicle: { include: { model: { select: { name: true } } } },
+      };
       const contract = await tx.contract.findUnique({ where: { id: link.contractId }, include });
       if (!contract) throw contractError.notFound();
       if (contract.status === "RETOUT" || contract.status === "REVIEW" || contract.status === "CLOSED") {
@@ -1384,6 +1627,7 @@ export function createContractsService(fastify: FastifyInstance) {
   async function confirmRenewalPublic(token: string) {
     return withTransaction(prisma, async (tx) => {
       const include = {
+        company: { select: { code: true, displayName: true, legalNameAr: true, legalNameEn: true } },
         vehicle: { include: { model: { select: { name: true } } } },
         renewals: { orderBy: { createdAt: "desc" as const } },
       };
@@ -1446,6 +1690,12 @@ export function createContractsService(fastify: FastifyInstance) {
       startAt: Date | null;
       endAt: Date | null;
       termsVersion: string;
+      company: {
+        code: string;
+        displayName: string;
+        legalNameAr: string;
+        legalNameEn: string;
+      };
       vehicle: {
         vehicleName: string | null;
         plateNumber: string | null;
@@ -1457,7 +1707,11 @@ export function createContractsService(fastify: FastifyInstance) {
     renewal?: ReturnType<typeof toPublicRenewal> | null,
   ) {
     return {
-      office: { displayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT },
+      // Renting company, read from the Contract. The customer never selects it.
+      office: {
+        displayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT,
+        company: row.company,
+      },
       contractNumber: row.contractNumber,
       status: row.status,
       priceType: row.priceType,
@@ -2346,6 +2600,7 @@ export function createContractsService(fastify: FastifyInstance) {
       const contract = await tx.contract.findUnique({
         where: { id: link.contractId },
         include: {
+          company: { select: { code: true, displayName: true, legalNameAr: true, legalNameEn: true } },
           vehicle: { include: { model: { select: { name: true } } } },
           renewals: { orderBy: { createdAt: "desc" as const } },
         },
@@ -2378,8 +2633,12 @@ export function createContractsService(fastify: FastifyInstance) {
         ),
       };
     }
-    const photo = await prisma.contractCarInPhoto.findFirst({
+    const completedInPhoto = await prisma.contractCarInPhoto.findFirst({
       where: { id: photoId, carIn: { contractId } },
+      include: { attachment: true },
+    });
+    const photo = completedInPhoto ?? await prisma.contractCarInDraftPhoto.findFirst({
+      where: { id: photoId, carInDraft: { contractId } },
       include: { attachment: true },
     });
     if (!photo) throw AppError.notFound("Contract photo not found");
@@ -2408,6 +2667,12 @@ export function createContractsService(fastify: FastifyInstance) {
     acceptPublic,
     carIn,
     carInStaff,
+    saveCarInDraft,
+    uploadCarInPhoto,
+    uploadCarInSignature,
+    deleteCarInPhoto,
+    openCarInSignatureStream,
+    completeCarInStaff,
     reconcile,
     listReconciliationRoadLiabilities,
     confirmRoadLiabilityCharge,

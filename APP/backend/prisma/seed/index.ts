@@ -8,6 +8,7 @@ import { SYSTEM_ROLES } from "src/constants/roles";
 import { normalizeEmail } from "src/lib/security/normalize";
 import { hashPassword } from "src/lib/security/password";
 import { DEFAULT_SLA_POLICIES } from "src/modules/complaints/sla";
+import { runOperatingCompanySeed } from "prisma/seed/operating-companies";
 
 /**
  * Idempotent generic seed. Safe to re-run. Seeds only generic foundation:
@@ -81,6 +82,10 @@ export async function runBaseSeed() {
   const prisma = new PrismaClient({ adapter }).$extends(normalizedNameExtension);
 
   try {
+    // 0) Operating companies (UNIQUE / ELITE) — required master data: every
+    //    Vehicle and Contract references one.
+    await runOperatingCompanySeed(prisma as unknown as PrismaClient);
+
     // 1) Permissions
     for (const permission of PERMISSION_CATALOG) {
       await prisma.permission.upsert({

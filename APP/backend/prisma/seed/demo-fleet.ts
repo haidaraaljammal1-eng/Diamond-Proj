@@ -12,6 +12,8 @@
  * - update seed-controlled identity fields on existing demo rows
  * - never overwrite operationalStatus / isActive (deliberate local changes stay)
  * - never delete user-created vehicles
+ * - seeded rows are created explicitly under the UNIQUE company (never left to
+ *   a migration backfill), and an existing row's company is never re-assigned
  */
 import { PrismaClient } from "@prisma/client";
 import type { VehicleOperationalStatus } from "@prisma/client";
@@ -20,6 +22,11 @@ import { env } from "src/config/env";
 import { normalizedNameExtension } from "src/lib/db/prisma-extensions";
 import { assertDevelopmentDatabase } from "src/lib/dev/development-database";
 import { normalizePlateNumber } from "src/lib/master-data/code";
+import {
+  OPERATING_COMPANY_CODES,
+  resolveSeedCompanyId,
+  runOperatingCompanySeed,
+} from "prisma/seed/operating-companies";
 
 /** Stable prefix for all demo fleet rows — used for safe cleanup only. */
 export const DEMO_FLEET_EXTERNAL_ID_PREFIX = "DEMO-FLEET-";
@@ -287,10 +294,18 @@ export async function runDemoFleetSeed(): Promise<void> {
       console.log(`[seed:demo] removed ${stale.count} stale demo fleet vehicle(s).`);
     }
 
+    // The demo fleet belongs to UNIQUE. Seed the companies first so this script
+    // also works on a database where the base seed has not run yet.
+    await runOperatingCompanySeed(prisma as unknown as PrismaClient);
+    const companyId = await resolveSeedCompanyId(
+      prisma as unknown as PrismaClient,
+      OPERATING_COMPANY_CODES.UNIQUE,
+    );
+
     for (const car of DEMO_FLEET) {
       const plateNumber = normalizePlateNumber(car.plateNumber);
       const existing = await prisma.vehicle.findUnique({
-        where: { externalId: car.externalId },
+        where: { companyId_externalId: { companyId, externalId: car.externalId } },
         select: { id: true },
       });
 
@@ -312,6 +327,7 @@ export async function runDemoFleetSeed(): Promise<void> {
 
       await prisma.vehicle.create({
         data: {
+          companyId,
           externalId: car.externalId,
           vehicleName: car.vehicleName,
           modelYear: car.modelYear,

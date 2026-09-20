@@ -53,7 +53,7 @@ model FinancialLedgerEntry {
   manualExpenseId    String?
   createdAt          DateTime                  @default(now())
 
-  contractPayment  ContractPayment? @relation(fields: [contractPaymentId], references: [id], onDelete: Restrict)
+  contractPayment  ContractPayment?  @relation(fields: [contractPaymentId], references: [id], onDelete: Restrict)
   maintenanceOrder MaintenanceOrder? @relation(fields: [maintenanceOrderId], references: [id], onDelete: Restrict)
   manualExpense    ManualExpense?    @relation(fields: [manualExpenseId], references: [id], onDelete: Restrict)
 

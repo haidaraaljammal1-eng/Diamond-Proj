@@ -3,7 +3,8 @@ import { apiRequest } from "@/infrastructure/api/client";
 import { ApiRequestError } from "@/infrastructure/api/errors";
 import type { ApiErrorResponse, ApiResponse } from "@/infrastructure/api/types";
 import type {
-  CarInPayload,
+  CarInDraftPatch,
+  ContractCarInHandoverDto,
   CarOutPayload,
   CarOutDraftPatch,
   ContractCarOutHandoverDto,
@@ -159,16 +160,17 @@ export async function saveCarOutDraft(id: string, payload: CarOutDraftPatch): Pr
   return response.data;
 }
 
-async function uploadCarOutMultipart(
+async function uploadCustodyMultipart<T>(
   id: string,
+  stage: "car-out" | "car-in",
   path: string,
   file: File,
   query = "",
-): Promise<ContractCarOutHandoverDto> {
+): Promise<T> {
   const formData = new FormData();
   formData.append("file", file);
   const accessToken = await getAccessToken();
-  const send = (token?: string) => fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/car-out/${path}${query}`, {
+  const send = (token?: string) => fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/${stage}/${path}${query}`, {
     method: "POST", credentials: "include",
     headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: formData,
@@ -186,15 +188,15 @@ async function uploadCarOutMultipart(
   if (typeof payload !== "object" || payload === null || !("data" in payload)) {
     throw new ApiRequestError({ code: "INVALID_RESPONSE", message: "Invalid API response" }, response.status);
   }
-  return (payload as ApiResponse<ContractCarOutHandoverDto>).data;
+  return (payload as ApiResponse<T>).data;
 }
 
 export function uploadCarOutPhoto(id: string, angle: CarOutAngle, file: File): Promise<ContractCarOutHandoverDto> {
-  return uploadCarOutMultipart(id, "photos", file, `?angle=${encodeURIComponent(angle)}`);
+  return uploadCustodyMultipart<ContractCarOutHandoverDto>(id, "car-out", "photos", file, `?angle=${encodeURIComponent(angle)}`);
 }
 
 export function uploadCarOutSignature(id: string, file: File): Promise<ContractCarOutHandoverDto> {
-  return uploadCarOutMultipart(id, "signature", file);
+  return uploadCustodyMultipart<ContractCarOutHandoverDto>(id, "car-out", "signature", file);
 }
 
 export async function deleteCarOutPhoto(id: string, photoId: string): Promise<ContractCarOutHandoverDto> {
@@ -220,20 +222,38 @@ export async function generateReturnLink(
   return response.data;
 }
 
-/** `POST /contracts/:id/car-in` (`contracts.return`). */
-export async function submitCarIn(
-  id: string,
-  payload: CarInPayload,
-  idempotencyKey?: string,
-): Promise<ContractDetailDto> {
-  const response = await apiRequest<ContractDetailDto>(
-    `${CONTRACTS_PATH}/${id}/car-in`,
-    {
-      method: "POST",
-      body: payload,
-      headers: withIdempotency(idempotencyKey),
-    },
-  );
+/** `GET /contracts/:id/car-in` (`contracts.read`). */
+export async function getCarIn(id: string): Promise<ContractCarInHandoverDto> {
+  const response = await apiRequest<ContractCarInHandoverDto>(`${CONTRACTS_PATH}/${id}/car-in`);
+  return response.data;
+}
+
+/** `PATCH /contracts/:id/car-in` (`contracts.return`) — saves the draft, contract stays RETOUT. */
+export async function saveCarInDraft(id: string, payload: CarInDraftPatch): Promise<ContractCarInHandoverDto> {
+  const response = await apiRequest<ContractCarInHandoverDto>(`${CONTRACTS_PATH}/${id}/car-in`, {
+    method: "PATCH", body: payload,
+  });
+  return response.data;
+}
+
+export function uploadCarInPhoto(id: string, angle: CarOutAngle, file: File): Promise<ContractCarInHandoverDto> {
+  return uploadCustodyMultipart<ContractCarInHandoverDto>(id, "car-in", "photos", file, `?angle=${encodeURIComponent(angle)}`);
+}
+
+export function uploadCarInSignature(id: string, file: File): Promise<ContractCarInHandoverDto> {
+  return uploadCustodyMultipart<ContractCarInHandoverDto>(id, "car-in", "signature", file);
+}
+
+export async function deleteCarInPhoto(id: string, photoId: string): Promise<ContractCarInHandoverDto> {
+  const response = await apiRequest<ContractCarInHandoverDto>(`${CONTRACTS_PATH}/${id}/car-in/photos/${photoId}`, { method: "DELETE" });
+  return response.data;
+}
+
+/** `POST /contracts/:id/car-in/complete` (`contracts.return`) — RETOUT → REVIEW, vehicle RENTED → AVAILABLE. */
+export async function completeCarIn(id: string, idempotencyKey: string): Promise<ContractDetailDto> {
+  const response = await apiRequest<ContractDetailDto>(`${CONTRACTS_PATH}/${id}/car-in/complete`, {
+    method: "POST", headers: withIdempotency(idempotencyKey),
+  });
   return response.data;
 }
 

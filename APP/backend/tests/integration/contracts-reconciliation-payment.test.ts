@@ -15,6 +15,7 @@ import {
   startReconciliationPayment,
 } from "../helpers/payment-integration-helpers";
 import { sendTestStripeWebhook, TEST_STRIPE_WEBHOOK_SIGNATURE } from "../helpers/fake-payment-provider";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -88,7 +89,7 @@ if (!RUN) {
         method: "POST",
         url: "/vehicles",
         headers: auth(token),
-        payload: { vehicleName: `RCP ${run}`, plateNumber: `RCP ${run}`, dailyRate: 400 },
+        payload: { companyId: await testCompanyId(prisma), vehicleName: `RCP ${run}`, plateNumber: `RCP ${run}`, dailyRate: 400 },
       });
       assert.equal(vehicle.statusCode, 201, vehicle.body);
       vehicleId = vehicle.json().data.id as number;

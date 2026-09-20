@@ -9,6 +9,7 @@ import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
 } from "../helpers/fake-payment-provider";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
  * Contracts V1 integration. Requires RUN_INTEGRATION=true and TEST_DATABASE_URL
@@ -142,7 +143,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(),
-      payload: { vehicleName: `CT-AVAIL-${run}`, plateNumber: `CT A ${run}`, dailyRate: 400 },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-AVAIL-${run}`, plateNumber: `CT A ${run}`, dailyRate: 400 },
     });
     assert.equal(available.statusCode, 201, available.body);
     vehicleId = available.json().data.id;
@@ -151,7 +152,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(),
-      payload: { vehicleName: `CT-SVC-${run}`, plateNumber: `CT S ${run}` },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-SVC-${run}`, plateNumber: `CT S ${run}` },
     });
     assert.equal(service.statusCode, 201, service.body);
     serviceVehicleId = service.json().data.id;
@@ -189,7 +190,7 @@ if (!RUN) {
     const actor = await prisma.user.findUniqueOrThrow({ where: { email: (await import("src/lib/security/normalize")).normalizeEmail(admin.email) } });
     const vehicleResponse = await app.inject({
       method: "POST", url: "/vehicles", headers: auth(),
-      payload: { vehicleName: `CT-RSV-${run}`, plateNumber: `CT RSV ${run}` },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-RSV-${run}`, plateNumber: `CT RSV ${run}` },
     });
     assert.equal(vehicleResponse.statusCode, 201, vehicleResponse.body);
     const reservedVehicleId = vehicleResponse.json().data.id as number;
@@ -202,6 +203,7 @@ if (!RUN) {
     await prisma.contract.update({ where: { id: otherId }, data: { status: "SIGNED" } });
     const paidContract = await prisma.contract.create({
       data: {
+        companyId: await testCompanyId(prisma),
         contractNumber: `CT-RSV-PAID-${run}`, status: "PAID", vehicleId: reservedVehicleId,
         createdByUserId: actor.id, priceType: "DAILY", rentalDays: 2, agreedAmount: 800,
       },
@@ -254,7 +256,7 @@ if (!RUN) {
 
     await prisma.vehicle.update({ where: { id: reservedVehicleId }, data: { operationalStatus: "AVAILABLE" } });
     const conflict = await prisma.contract.create({
-      data: { contractNumber: `CT-RSV-CONFLICT-${run}`, status: "ACTIVE", vehicleId: reservedVehicleId,
+      data: { companyId: await testCompanyId(prisma), contractNumber: `CT-RSV-CONFLICT-${run}`, status: "ACTIVE", vehicleId: reservedVehicleId,
         createdByUserId: actor.id, priceType: "DAILY", rentalDays: 1, agreedAmount: 300 },
     });
     const contested = await app.inject({ method: "GET", url: `/contracts/${paidContract.id}`, headers: auth() });
@@ -276,7 +278,7 @@ if (!RUN) {
   test("PAID Car-Out draft saves evidence and completes one immutable handover", async () => {
     const actor = await prisma.user.findUniqueOrThrow({ where: { email: (await import("src/lib/security/normalize")).normalizeEmail(admin.email) } });
     const vehicle = await app.inject({ method: "POST", url: "/vehicles", headers: auth(),
-      payload: { vehicleName: `CT-OUT-${run}`, plateNumber: `CT OUT ${run}` } });
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-OUT-${run}`, plateNumber: `CT OUT ${run}` } });
     assert.equal(vehicle.statusCode, 201, vehicle.body);
     const vehicleOutId = vehicle.json().data.id as number;
     const signed = await app.inject({ method: "POST", url: "/contracts/offers", headers: auth(),
@@ -358,6 +360,7 @@ if (!RUN) {
     await prisma.vehicle.update({ where: { id: vehicleOutId }, data: { operationalStatus: "AVAILABLE" } });
     assert.equal((await prisma.contract.findUniqueOrThrow({ where: { id: contractId } })).status, "PAID");
     const conflict = await prisma.contract.create({ data: {
+      companyId: await testCompanyId(prisma),
       contractNumber: `CT-OUT-CONFLICT-${run}`, status: "ACTIVE", vehicleId: vehicleOutId,
       createdByUserId: actor.id, priceType: "DAILY", rentalDays: 1, agreedAmount: 100,
     } });
@@ -400,12 +403,153 @@ if (!RUN) {
     assert.equal(actor.id, saved.performedByUserId);
   });
 
+  test("RETOUT Car-In draft saves evidence and completes one immutable handover with a mandatory signature", async () => {
+    const actor = await prisma.user.findUniqueOrThrow({ where: { email: (await import("src/lib/security/normalize")).normalizeEmail(admin.email) } });
+    const vehicle = await app.inject({ method: "POST", url: "/vehicles", headers: auth(),
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-IN-${run}`, plateNumber: `CT IN ${run}` } });
+    assert.equal(vehicle.statusCode, 201, vehicle.body);
+    const vehicleInId = vehicle.json().data.id as number;
+    const signed = await app.inject({ method: "POST", url: "/contracts/offers", headers: auth(),
+      payload: { vehicleId: vehicleInId, priceType: "DAILY", rentalDays: 2, agreedAmount: 600 } });
+    assert.equal(signed.statusCode, 201, signed.body);
+    const contractId = signed.json().data.id as string;
+
+    const notRetoutDraft = await app.inject({ method: "PATCH", url: `/contracts/${contractId}/car-in`, headers: auth(), payload: { mileageIn: 10 } });
+    assert.equal(notRetoutDraft.statusCode, 409);
+    const notRetoutComplete = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/complete`, headers: auth() });
+    assert.equal(notRetoutComplete.statusCode, 409);
+
+    await prisma.contract.update({ where: { id: contractId }, data: { status: "RETOUT" } });
+    await prisma.vehicle.update({ where: { id: vehicleInId }, data: { operationalStatus: "RENTED" } });
+
+    const noCarOutDraft = await app.inject({ method: "PATCH", url: `/contracts/${contractId}/car-in`, headers: auth(), payload: { mileageIn: 10 } });
+    assert.equal(noCarOutDraft.statusCode, 409);
+    assert.equal(noCarOutDraft.json().error.context.reason, "CONTRACT_CAR_OUT_REQUIRED");
+
+    await prisma.contractCarOut.create({ data: {
+      contractId, performedByUserId: actor.id, occurredAt: new Date(), mileageOut: 10, fuelOut: "F",
+    } });
+
+    const invalidMileage = await app.inject({ method: "PATCH", url: `/contracts/${contractId}/car-in`, headers: auth(), payload: { mileageIn: "ten" } });
+    assert.equal(invalidMileage.statusCode, 422);
+    const invalidFuel = await app.inject({ method: "PATCH", url: `/contracts/${contractId}/car-in`, headers: auth(), payload: { fuelIn: "FULL" } });
+    assert.equal(invalidFuel.statusCode, 422);
+
+    const emptyState = await app.inject({ method: "GET", url: `/contracts/${contractId}/car-in`, headers: auth() });
+    assert.equal(emptyState.statusCode, 200, emptyState.body);
+    assert.equal(emptyState.json().data.status, "NOT_STARTED");
+    assert.equal(emptyState.json().data.mileageIn, null);
+    assert.equal(emptyState.json().data.signature.present, false);
+
+    const draft = await app.inject({ method: "PATCH", url: `/contracts/${contractId}/car-in`, headers: auth(),
+      payload: { mileageIn: 321, fuelIn: "1/4", damageIn: [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }] } });
+    assert.equal(draft.statusCode, 200, draft.body);
+    assert.equal(draft.json().data.status, "DRAFT");
+    assert.deepEqual(draft.json().data.damageIn, [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }]);
+    const notesLater = await app.inject({ method: "PATCH", url: `/contracts/${contractId}/car-in`, headers: auth(), payload: { notes: "customer late" } });
+    assert.equal(notesLater.statusCode, 200, notesLater.body);
+
+    const restored = await app.inject({ method: "GET", url: `/contracts/${contractId}/car-in`, headers: auth() });
+    assert.equal(restored.json().data.mileageIn, 321);
+    assert.equal(restored.json().data.fuelIn, "1/4");
+    assert.equal(restored.json().data.notes, "customer late");
+    assert.deepEqual(restored.json().data.damageIn, [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }]);
+
+    assert.equal((await prisma.contract.findUniqueOrThrow({ where: { id: contractId } })).status, "RETOUT");
+    assert.equal((await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicleInId } })).operationalStatus, "RENTED");
+
+    const missingSignatureAndPhotos = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/complete`, headers: auth() });
+    assert.equal(missingSignatureAndPhotos.statusCode, 422);
+    assert.equal((await prisma.contract.findUniqueOrThrow({ where: { id: contractId } })).status, "RETOUT");
+
+    // The old Car-In-only vocabulary (INSPECTION_ANGLES) is rejected on the new staged endpoint.
+    const oldAngle = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/photos?angle=TIRES`, ...multipart(png) });
+    assert.equal(oldAngle.statusCode, 422);
+
+    const invalidImage = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/photos?angle=FRONT`, ...multipart(Buffer.from("not an image")) });
+    assert.equal(invalidImage.statusCode, 422);
+    for (const angle of CAR_OUT_REQUIRED_ANGLES) {
+      const uploaded = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/photos?angle=${angle}`, ...multipart(png) });
+      assert.equal(uploaded.statusCode, 200, `${angle}: ${uploaded.body}`);
+    }
+    const progress = await app.inject({ method: "GET", url: `/contracts/${contractId}/car-in`, headers: auth() });
+    assert.equal(progress.json().data.photoEvidence.completed, 8);
+    assert.equal(progress.json().data.photoEvidence.complete, true);
+    assert.equal(progress.json().data.status, "DRAFT");
+    const oldFrontId = progress.json().data.photoEvidence.photos.find((p: { angle: string }) => p.angle === "FRONT").id as string;
+    const replaced = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/photos?angle=FRONT`, ...multipart(png) });
+    assert.equal(replaced.statusCode, 200, replaced.body);
+    const frontId = replaced.json().data.photoEvidence.photos.find((p: { angle: string }) => p.angle === "FRONT").id as string;
+    assert.equal(frontId, oldFrontId);
+
+    const optionalPhoto = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/photos?angle=LEFT`, ...multipart(png) });
+    assert.equal(optionalPhoto.statusCode, 200, optionalPhoto.body);
+    assert.equal(optionalPhoto.json().data.photoEvidence.completed, 8);
+    const leftId = optionalPhoto.json().data.photoEvidence.photos.find((p: { angle: string }) => p.angle === "LEFT").id as string;
+    const deletedOptional = await app.inject({ method: "DELETE", url: `/contracts/${contractId}/car-in/photos/${leftId}`, headers: auth() });
+    assert.equal(deletedOptional.statusCode, 200, deletedOptional.body);
+    assert.equal(deletedOptional.json().data.photoEvidence.completed, 8);
+
+    const stillMissingSignature = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/complete`, headers: auth() });
+    assert.equal(stillMissingSignature.statusCode, 422);
+
+    const wrongMimeSignature = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/signature`, ...multipart(png, "application/pdf") });
+    assert.equal(wrongMimeSignature.statusCode, 422);
+    const inSignature = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/signature`, ...multipart(png) });
+    assert.equal(inSignature.statusCode, 200, inSignature.body);
+    assert.equal(inSignature.json().data.status, "READY");
+    assert.equal(inSignature.json().data.signature.present, true);
+
+    const streamed = await app.inject({ method: "GET", url: `/contracts/${contractId}/car-in/signature/stream`, headers: auth() });
+    assert.equal(streamed.statusCode, 200);
+
+    await prisma.vehicle.update({ where: { id: vehicleInId }, data: { operationalStatus: "SERVICE" } });
+    const serviceBlocked = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/complete`, headers: auth() });
+    assert.equal(serviceBlocked.statusCode, 409);
+    assert.equal(serviceBlocked.json().error.context.reason, "VEHICLE_NOT_RENTED");
+    await prisma.vehicle.update({ where: { id: vehicleInId }, data: { operationalStatus: "RENTED" } });
+
+    const before = Date.now();
+    const [first, second] = await Promise.all([
+      app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/complete`, headers: auth() }),
+      app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/complete`, headers: auth() }),
+    ]);
+    assert.equal(first.statusCode, 200, first.body);
+    assert.equal(second.statusCode, 200, second.body);
+    assert.equal(first.json().data.carIn.id, second.json().data.carIn.id);
+    const completed = first.json().data;
+    assert.equal(completed.status, "REVIEW");
+    assert.equal(completed.carInHandover.status, "COMPLETED");
+    assert.ok(Date.parse(completed.carInHandover.actualReturnAt) >= before);
+    assert.equal(completed.carInHandover.photoEvidence.photos.length, 8);
+    assert.deepEqual(completed.carInHandover.damageIn, [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }]);
+    assert.equal(completed.carInHandover.signature.present, true);
+    assert.equal((await prisma.contractCarIn.count({ where: { contractId } })), 1);
+    const finalVehicle = await app.inject({ method: "GET", url: `/vehicles/${vehicleInId}`, headers: auth() });
+    assert.equal(finalVehicle.json().data.operationalStatus, "available");
+
+    const draftAfter = await app.inject({ method: "PATCH", url: `/contracts/${contractId}/car-in`, headers: auth(), payload: { mileageIn: 999 } });
+    assert.equal(draftAfter.statusCode, 409);
+    const photoAfter = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/photos?angle=FRONT`, ...multipart(png) });
+    assert.equal(photoAfter.statusCode, 409);
+    const deleteAfter = await app.inject({ method: "DELETE", url: `/contracts/${contractId}/car-in/photos/${frontId}`, headers: auth() });
+    assert.equal(deleteAfter.statusCode, 409);
+    const signatureAfter = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/signature`, ...multipart(png) });
+    assert.equal(signatureAfter.statusCode, 409);
+
+    const savedRow = await prisma.contractCarIn.findUniqueOrThrow({ where: { contractId } });
+    assert.equal(savedRow.mileageIn, 321);
+    assert.equal(savedRow.fuelIn, "1/4");
+    assert.equal(savedRow.notes, "customer late");
+    assert.equal(savedRow.occurredAt.getTime() >= before, true);
+  });
+
   test("full lifecycle: form → signed → paid → car-out → return → car-in → close", async () => {
     const vehicleRes = await app.inject({
       method: "POST",
       url: "/vehicles",
       headers: auth(),
-      payload: { vehicleName: `CT-LIFE-${run}`, plateNumber: `CT L ${run}`, dailyRate: 400 },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-LIFE-${run}`, plateNumber: `CT L ${run}`, dailyRate: 400 },
     });
     assert.equal(vehicleRes.statusCode, 201, vehicleRes.body);
     const lifeVehicleId = vehicleRes.json().data.id as number;
@@ -692,18 +836,27 @@ if (!RUN) {
     });
     assert.equal(staffCarInUnauth.statusCode, 401);
 
+    // `inPhotos` keeps the legacy INSPECTION_ANGLES shape only for the public
+    // return-token re-hit below, which still goes through the untouched
+    // legacy single-shot `persistCarIn` path.
     const inPhotos = await dummyPhotos();
-    const staffCarIn = await app.inject({
-      method: "POST",
+    const draftSaved = await app.inject({
+      method: "PATCH",
       url: `/contracts/${contractId}/car-in`,
       headers: auth(),
-      payload: {
-        mileageIn: 1400,
-        fuelIn: "1/2",
-        notes: "office return",
-        photos: inPhotos,
-        damage: [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }],
-      },
+      payload: { mileageIn: 1400, fuelIn: "1/2", notes: "office return", damageIn: [{ zone: "LEFT.FRONT_DOOR", type: "DENT" }] },
+    });
+    assert.equal(draftSaved.statusCode, 200, draftSaved.body);
+    for (const angle of CAR_OUT_REQUIRED_ANGLES) {
+      const uploaded = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/photos?angle=${angle}`, ...multipart(png) });
+      assert.equal(uploaded.statusCode, 200, `${angle}: ${uploaded.body}`);
+    }
+    const inSignatureUpload = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-in/signature`, ...multipart(png) });
+    assert.equal(inSignatureUpload.statusCode, 200, inSignatureUpload.body);
+    const staffCarIn = await app.inject({
+      method: "POST",
+      url: `/contracts/${contractId}/car-in/complete`,
+      headers: auth(),
     });
     assert.equal(staffCarIn.statusCode, 200, staffCarIn.body);
     const inDraft = await prisma.officialContractReviewDraft.findUniqueOrThrow({ where: { contractId } });
@@ -793,7 +946,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(),
-      payload: { vehicleName: `CT-DBL-${run}`, plateNumber: `CT D ${run}` },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-DBL-${run}`, plateNumber: `CT D ${run}` },
     });
     const vid = v.json().data.id as number;
     const a = await app.inject({
@@ -871,7 +1024,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(),
-      payload: { vehicleName: `CT-REV-${run}`, plateNumber: `CT R ${run}` },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-REV-${run}`, plateNumber: `CT R ${run}` },
     });
     const vid = v.json().data.id as number;
     const { normalizeEmail } = await import("src/lib/security/normalize");
@@ -881,6 +1034,7 @@ if (!RUN) {
     const customer = await prisma.customer.create({ data: { name: `CT Review ${run}` } });
     const old = await prisma.contract.create({
       data: {
+        companyId: await testCompanyId(prisma),
         contractNumber: `CT-OLD-${run}`,
         status: "REVIEW",
         vehicleId: vid,
@@ -923,6 +1077,7 @@ if (!RUN) {
 
     const next = await prisma.contract.create({
       data: {
+        companyId: await testCompanyId(prisma),
         contractNumber: `CT-NEW-${run}`,
         status: "PAID",
         vehicleId: vid,
@@ -1019,7 +1174,7 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(),
-      payload: { vehicleName: `CT-DEP-${run}`, plateNumber: `CT D ${run}` },
+      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-DEP-${run}`, plateNumber: `CT D ${run}` },
     });
     const vid = v.json().data.id as number;
     const actor = await prisma.user.findUniqueOrThrow({
@@ -1028,6 +1183,7 @@ if (!RUN) {
     const customer = await prisma.customer.create({ data: { name: `CT Dep ${run}` } });
     const legacy = await prisma.contract.create({
       data: {
+        companyId: await testCompanyId(prisma),
         contractNumber: `CT-DEP-${run}`,
         status: "REVIEW",
         vehicleId: vid,

@@ -22,6 +22,8 @@ export const contractError = {
     err(ErrorCode.CONFLICT, "Vehicle is not available for rental", "VEHICLE_NOT_AVAILABLE"),
   vehicleAlreadyRented: () =>
     err(ErrorCode.CONFLICT, "Vehicle is already reserved or rented", "VEHICLE_ALREADY_RENTED"),
+  vehicleNotRented: () =>
+    err(ErrorCode.CONFLICT, "Vehicle must be marked as rented for this action", "VEHICLE_NOT_RENTED"),
   linkInvalid: () =>
     err(ErrorCode.TOKEN_INVALID, "Contract link is invalid", "CONTRACT_LINK_INVALID"),
   linkExpired: () =>

@@ -77,6 +77,9 @@ export const INSPECTION_ANGLES = [
   "TIRES",
 ] as const;
 
+/// Shared walk-around vocabulary for both custody events: Car-Out (OUT) and the
+/// staged Car-In (IN) draft/complete workflow. Car-In has no angle set of its
+/// own — reusing these keeps the two evidence sets directly comparable.
 export const CAR_OUT_REQUIRED_ANGLES = [
   "FRONT", "REAR", "FRONT_RIGHT", "REAR_RIGHT", "FRONT_LEFT", "REAR_LEFT", "ODOMETER", "DASHBOARD_FUEL",
 ] as const;

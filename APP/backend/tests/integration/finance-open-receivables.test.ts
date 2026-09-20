@@ -14,6 +14,7 @@ import {
   settlePayment,
 } from "../helpers/payment-integration-helpers";
 import { sendTestStripeWebhook } from "../helpers/fake-payment-provider";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -53,6 +54,7 @@ if (!RUN) {
       seq += 1;
       const v = await prisma.vehicle.create({
         data: {
+          companyId: await testCompanyId(prisma),
           vehicleName: `OR-RN-V ${run}-${seq}`,
           plateNumber: `ORRN${run}${seq}`.slice(0, 20),
           operationalStatus: "RENTED",
@@ -61,6 +63,7 @@ if (!RUN) {
       });
       const contract = await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `OR-RN-${run}-${seq}`,
           status: "ACTIVE",
           vehicleId: v.id,
@@ -95,6 +98,7 @@ if (!RUN) {
       seq += 1;
       const contract = await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `OR-PC-${run}-${seq}`,
           status: "CLOSED",
           vehicleId,
@@ -182,6 +186,7 @@ if (!RUN) {
       });
       const vehicle = await prisma.vehicle.create({
         data: {
+          companyId: await testCompanyId(prisma),
           vehicleName: `OR Vehicle ${run}`,
           plateNumber: `OR ${run}`,
           operationalStatus: "AVAILABLE",
@@ -199,6 +204,7 @@ if (!RUN) {
     test("all four sources normalize, total invariant holds, and settlement removes each obligation", async () => {
       const rentalVehicle = await prisma.vehicle.create({
         data: {
+          companyId: await testCompanyId(prisma),
           vehicleName: `OR Rent ${run}`,
           plateNumber: `ORR ${run}`,
           operationalStatus: "AVAILABLE",
@@ -207,6 +213,7 @@ if (!RUN) {
       });
       const rentalContract = await prisma.contract.create({
         data: {
+          companyId: await testCompanyId(prisma),
           contractNumber: `OR-RENT-${run}`,
           status: "SIGNED",
           vehicleId: rentalVehicle.id,

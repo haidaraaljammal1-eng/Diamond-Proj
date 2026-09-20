@@ -6,9 +6,10 @@ import { useLocale } from "next-intl";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useContractsStore } from "../stores/contracts.store";
 import type {
-  CarInPayload,
+  CarInDraftPatch,
   CarOutPayload,
   CarOutDraftPatch,
+  ContractCarInHandoverDto,
   ContractCarOutHandoverDto,
   CarOutAngle,
   ConfirmContractPaymentPayload,
@@ -48,6 +49,7 @@ export interface UseContractResult {
   carOutHandover: ContractCarOutHandoverDto | null;
   carInPending: boolean;
   carInError: ApiRequestError | null;
+  carInHandover: ContractCarInHandoverDto | null;
   returnLinkPending: boolean;
   returnLinkError: ApiRequestError | null;
   renewPending: boolean;
@@ -84,14 +86,12 @@ export interface UseContractResult {
   uploadCarOutSignature: (id: string, file: File) => Promise<boolean>;
   deleteCarOutPhoto: (id: string, photoId: string) => Promise<boolean>;
   completeCarOut: (id: string, idempotencyKey: string) => Promise<boolean>;
-  submitCarIn: (
-    id: string,
-    payload: Omit<CarInPayload, "photos" | "hirerSignatureAttachmentId"> & {
-      photos: { angle: InspectionAngle; file: File }[];
-      hirerSignature?: Blob | null;
-    },
-    idempotencyKey: string,
-  ) => Promise<boolean>;
+  loadCarIn: (id: string) => Promise<void>;
+  saveCarInDraft: (id: string, payload: CarInDraftPatch) => Promise<boolean>;
+  uploadCarInPhoto: (id: string, angle: CarOutAngle, file: File) => Promise<boolean>;
+  uploadCarInSignature: (id: string, file: File) => Promise<boolean>;
+  deleteCarInPhoto: (id: string, photoId: string) => Promise<boolean>;
+  completeCarIn: (id: string, idempotencyKey: string) => Promise<boolean>;
   generateReturnLink: (id: string) => Promise<boolean>;
   generateRenewalLink: (id: string, payload: RenewPayload) => Promise<boolean>;
   renew: (id: string, payload: RenewPayload, idempotencyKey: string) => Promise<boolean>;
@@ -145,6 +145,7 @@ export function useContract(): UseContractResult {
     carOutHandover: store.carOutHandover,
     carInPending: store.carIn.pending,
     carInError: store.carIn.error,
+    carInHandover: store.carInHandover,
     returnLinkPending: store.returnLink.pending,
     returnLinkError: store.returnLink.error,
     renewPending: store.renewSlot.pending,
@@ -168,7 +169,12 @@ export function useContract(): UseContractResult {
     uploadCarOutSignature: store.uploadCarOutSignature,
     deleteCarOutPhoto: store.deleteCarOutPhoto,
     completeCarOut: store.completeCarOut,
-    submitCarIn: store.submitCarIn,
+    loadCarIn: store.loadCarIn,
+    saveCarInDraft: store.saveCarInDraft,
+    uploadCarInPhoto: store.uploadCarInPhoto,
+    uploadCarInSignature: store.uploadCarInSignature,
+    deleteCarInPhoto: store.deleteCarInPhoto,
+    completeCarIn: store.completeCarIn,
     generateReturnLink: (id) => store.generateReturnLink(id, locale),
     generateRenewalLink: (id, payload) => store.generateRenewalLink(id, locale, payload),
     renew: store.renew,

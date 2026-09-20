@@ -7,6 +7,7 @@ import { createFakeDocumentOcrProvider } from "../helpers/fake-document-ocr-prov
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import { createFakePaymentProvider } from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -71,6 +72,7 @@ if (!RUN) {
         url: "/vehicles",
         headers: auth(),
         payload: {
+          companyId: await testCompanyId(prisma),
           vehicleName,
           plateNumber: plate,
           dailyRate: 400,

@@ -13,6 +13,7 @@ import {
   startReconciliationPayment,
   settlePayment,
 } from "../helpers/payment-integration-helpers";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -70,6 +71,7 @@ if (!RUN) {
 
     const vehicle = await prisma.vehicle.create({
       data: {
+        companyId: await testCompanyId(prisma),
         vehicleName: `Finance Vehicle ${run}`,
         plateNumber: `FIN ${run}`,
         operationalStatus: "AVAILABLE",
@@ -105,6 +107,7 @@ if (!RUN) {
   test("legacy MANUAL and BANK_TRANSFER confirmed payments do not increase Collected", async () => {
     const manualContract = await prisma.contract.create({
       data: {
+        companyId: await testCompanyId(prisma),
         contractNumber: `FIN-MAN-${run}`,
         status: "PAID",
         vehicleId,
@@ -117,6 +120,7 @@ if (!RUN) {
     });
     const bankContract = await prisma.contract.create({
       data: {
+        companyId: await testCompanyId(prisma),
         contractNumber: `FIN-BNK-${run}`,
         status: "PAID",
         vehicleId,
@@ -168,6 +172,7 @@ if (!RUN) {
   test("confirmed Stripe rental creates one collected ledger movement", async () => {
     const rentalVehicle = await prisma.vehicle.create({
       data: {
+        companyId: await testCompanyId(prisma),
         vehicleName: `Rent Fin ${run}`,
         plateNumber: `RF ${run}`,
         operationalStatus: "AVAILABLE",
@@ -176,6 +181,7 @@ if (!RUN) {
     });
     const signed = await prisma.contract.create({
       data: {
+        companyId: await testCompanyId(prisma),
         contractNumber: `FIN-RENT-${run}`,
         status: "SIGNED",
         vehicleId: rentalVehicle.id,
@@ -241,6 +247,7 @@ if (!RUN) {
   test("maintenance expense is recognized only on completion with cost", async () => {
     const vehicle = await prisma.vehicle.create({
       data: {
+        companyId: await testCompanyId(prisma),
         vehicleName: `Maint Fin ${run}`,
         plateNumber: `MF ${run}`,
         operationalStatus: "SERVICE",

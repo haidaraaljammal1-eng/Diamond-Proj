@@ -12,6 +12,39 @@
 //     be referenced by future operational data.
 // ---------------------------------------------------------------------------
 
+/// Diamond operates two rental companies (UNIQUE, ELITE) over one fleet and one
+/// workflow. The company is a classification and routing dimension only: it never
+/// forks the Contract lifecycle, Car-Out/Car-In, payments or numbering.
+///
+/// It is a real entity rather than an enum because it carries the legal names and
+/// accent used by the official contract, and because future financial documents
+/// (invoices, statements) and the TARS provider resolver reference it by `code`.
+/// Financial documents must PERSIST the company they were issued for; they must
+/// never infer it later from the Vehicle's current owner.
+model OperatingCompany {
+  id          Int      @id @default(autoincrement())
+  /// Stable business key, stored NORMALIZED (trim + UPPERCASE): UNIQUE, ELITE.
+  code        String   @unique
+  /// Short operational label shown in fleet/contract lists and filters.
+  displayName String
+  /// Legal names printed on the official contract. Not UI copy — never translated
+  /// through next-intl.
+  legalNameAr String
+  legalNameEn String
+  /// Brand accent for company identity in documents and lists (hex, e.g. "#C9A15C").
+  /// Deliberately NOT an operational-status colour: status tones stay in the UI layer.
+  accentColor String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vehicles  Vehicle[]
+  contracts Contract[]
+
+  @@index([isActive])
+  @@map("operating_companies")
+}
+
 model Region {
   id        Int      @id @default(autoincrement())
   code      String   @unique
