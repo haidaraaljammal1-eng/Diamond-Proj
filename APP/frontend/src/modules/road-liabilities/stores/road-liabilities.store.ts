@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import {
   getRoadLiabilities,
   getRoadLiabilitiesSummary,
@@ -136,6 +137,28 @@ async function loadList(
   if (listInFlight === run) listInFlight = null;
 }
 
+function runSummary(set: (partial: Partial<RoadLiabilitiesState>) => void) {
+  return summaryInFlight ?? loadSummary(set);
+}
+
+function runList(
+  get: () => RoadLiabilitiesState,
+  set: (partial: Partial<RoadLiabilitiesState>) => void,
+) {
+  return listInFlight ?? loadList(get, set);
+}
+
+function refreshSummary(set: (partial: Partial<RoadLiabilitiesState>) => void) {
+  return refreshAfterPending(() => summaryInFlight, () => runSummary(set));
+}
+
+function refreshList(
+  get: () => RoadLiabilitiesState,
+  set: (partial: Partial<RoadLiabilitiesState>) => void,
+) {
+  return refreshAfterPending(() => listInFlight, () => runList(get, set));
+}
+
 async function loadDetail(
   id: string,
   set: (partial: Partial<RoadLiabilitiesState>) => void,
@@ -197,13 +220,13 @@ export const useRoadLiabilitiesStore = create<RoadLiabilitiesState>((set, get) =
   detailStatus: "idle",
 
   async load() {
-    await Promise.allSettled([loadSummary(set), loadList(get, set)]);
+    await Promise.allSettled([runSummary(set), runList(get, set)]);
   },
 
   async refresh() {
     const selectedId = get().selectedLiabilityId;
     const detailOpen = get().detailOpen;
-    await Promise.allSettled([loadSummary(set), loadList(get, set)]);
+    await Promise.allSettled([refreshSummary(set), refreshList(get, set)]);
     if (selectedId && detailOpen && !isSimulatedRoadLiabilityId(selectedId)) {
       await loadDetail(selectedId, set);
     }
@@ -228,7 +251,7 @@ export const useRoadLiabilitiesStore = create<RoadLiabilitiesState>((set, get) =
       collectionStatusFilter: nextQuery.collectionStatus,
       dateRange: { from: nextQuery.from, to: nextQuery.to },
     });
-    void loadList(get, set);
+    void refreshList(get, set);
   },
 
   setSearchDraft(value) {
@@ -249,7 +272,7 @@ export const useRoadLiabilitiesStore = create<RoadLiabilitiesState>((set, get) =
       collectionStatusFilter: "all",
       dateRange: { from: "", to: "" },
     });
-    void loadList(get, set);
+    void refreshList(get, set);
   },
 
   selectLiability(id) {

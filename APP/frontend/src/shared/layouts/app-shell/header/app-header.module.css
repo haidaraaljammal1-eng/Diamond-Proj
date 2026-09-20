@@ -9,10 +9,8 @@
    hardcode a side here, or the bar and the rail end up on opposite edges
    in RTL.
 
-   Search sits in a centered middle column: the start and end groups are two
-   equal `1fr` tracks either side of it, so it centers in the bar itself and
-   stays centered as the breadcrumb or the end group change length — see the
-   component doc comment for how the tracks stay balanced.
+   Navigation occupies logical start, account actions occupy logical end, and
+   search stays in the bounded middle track. This reverses naturally in RTL.
    ──────────────────────────────────────────────────────────────────────────── */
 .topbar {
   position: fixed;
@@ -21,10 +19,10 @@
   height: 54px;
   z-index: 70;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px) minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 0 12px;
+  gap: 14px;
+  padding: 0 14px;
   border-radius: 16px;
   border: 1px solid rgba(201, 161, 92, 0.26);
   background: var(--diamond-topbar-bg);
@@ -44,7 +42,7 @@
   grid-row: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
   min-width: 0;
 }
 
@@ -56,19 +54,6 @@
 .endGroup {
   grid-column: 3;
   justify-content: flex-end;
-}
-
-/* Keep the action cluster on the physical left in both reading directions;
-   the breadcrumb remains on the physical right while the search stays in the
-   centered middle track. */
-:global([dir="rtl"]) .startGroup {
-  grid-column: 3;
-  justify-content: flex-end;
-}
-
-:global([dir="rtl"]) .endGroup {
-  grid-column: 1;
-  justify-content: flex-start;
 }
 
 .topbar::before {
@@ -231,7 +216,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  width: min(360px, 30vw);
+  width: 100%;
+  max-width: 360px;
   height: 36px;
   border-radius: 12px;
   border: 1px solid rgba(201, 161, 92, 0.22);
@@ -289,8 +275,10 @@
   align-items: center;
   gap: 9px;
   flex: none;
-  padding-block: 4px;
-  padding-inline: 12px 5px;
+  height: 36px;
+  box-sizing: border-box;
+  padding-block: 3px;
+  padding-inline: 10px 5px;
   border-radius: 12px;
   border: 1px solid rgba(201, 161, 92, 0.2);
   background: rgba(255, 255, 255, 0.8);
@@ -420,13 +408,14 @@
   max-width: calc(100vw - 24px) !important;
   max-height: min(640px, calc(100vh - 24px));
   padding: 0;
+  overflow: hidden;
 }
 
 .notificationCenter {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: min(640px, calc(100vh - 24px));
+  max-height: inherit;
 }
 
 .notificationPopover .notifPanelHead {
@@ -657,6 +646,22 @@
 
 /* On a phone-width bar the panel anchors to the viewport edge rather than the
    bell, which can sit anywhere along the scrollable strip. */
+@media (max-width: 1180px) {
+  .topbar {
+    grid-template-columns: minmax(170px, 1fr) minmax(190px, 300px) minmax(170px, 1fr);
+    gap: 10px;
+  }
+
+  .startGroup,
+  .endGroup {
+    gap: 7px;
+  }
+
+  .meName {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .notifPanel {
     position: fixed;
@@ -701,32 +706,18 @@
 
 /* ─── Mobile ─── */
 @media (max-width: 900px) {
-  /* The 3-column centering grid only pays off at desktop widths; below the
-     drawer breakpoint the bar is a single scrollable row instead, in the same
-     start → search → end order. */
+  /* Keep the same three semantic zones without horizontal header scrolling. */
   .topbar {
-    display: flex;
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 220px) minmax(0, 1fr);
     top: 10px;
     padding: 0 10px;
-    gap: 10px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .topbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .topbar > *,
-  .startGroup,
-  .endGroup {
-    flex: 0 0 auto;
+    gap: 8px;
+    overflow: hidden;
   }
 
   .search {
-    width: 160px;
+    width: 100%;
+    max-width: 220px;
   }
 
   .burger {
@@ -739,7 +730,6 @@
 
   /* The drawer burger replaces the rail toggle below the drawer breakpoint. */
   .railToggle,
-  .separator,
   .meName {
     display: none;
   }
@@ -754,20 +744,33 @@
 
 @media (max-width: 560px) {
   .topbar {
-    overflow-x: hidden;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
   }
 
-  .startGroup {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  :global([dir="rtl"]) .startGroup {
+  .endGroup {
+    grid-column: 2;
     justify-content: flex-end;
   }
 
   .search,
+  .crumbs,
+  .separator {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .topbar {
+    padding-inline: 8px;
+  }
+
+  .startGroup,
   .endGroup {
+    gap: 6px;
+  }
+
+  .meChip {
     display: none;
   }
 }

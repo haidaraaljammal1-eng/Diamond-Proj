@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import { lookupRoles, type RoleLookupItem } from "../api/role-lookup.api";
 
 type RoleLookupStatus = "idle" | "loading" | "ready";
@@ -9,6 +10,7 @@ interface RoleLookupState {
   roles: RoleLookupItem[];
   status: RoleLookupStatus;
   load: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 let inFlight: Promise<void> | null = null;
@@ -34,5 +36,11 @@ export const useRoleLookupStore = create<RoleLookupState>((set, get) => ({
     }
 
     return inFlight;
+  },
+  refresh() {
+    return refreshAfterPending(() => inFlight, async () => {
+      set({ status: "idle" });
+      await useRoleLookupStore.getState().load();
+    });
   },
 }));

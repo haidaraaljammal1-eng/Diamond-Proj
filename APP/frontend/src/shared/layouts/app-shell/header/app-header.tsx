@@ -28,10 +28,9 @@ const GlobeIcon = (
  * AppHeader — the Demo `#topbar` floating glass capsule, sized to the content
  * area beside the rail rather than to the viewport.
  *
- * Three-column grid, not flex: the start group (rail controls, notifications,
- * user chip, locale select) and end group (breadcrumb) sit in two equal
- * `1fr` tracks, so search — the middle, `auto`-sized column — is centered in
- * the bar itself regardless of how long the breadcrumb or the end group get.
+ * Three-column grid, not flex: navigation and the breadcrumb sit at logical
+ * start, search stays centered, and notification/account controls sit at
+ * logical end. The composition mirrors naturally between LTR and RTL.
  * Both side groups carry `min-width: 0`, so they yield (the breadcrumb
  * truncates) instead of forcing the tracks uneven and pulling search off
  * center.
@@ -41,7 +40,7 @@ const GlobeIcon = (
  *
  * Search is shell-level UI: it has no backend endpoint yet, so submitting is
  * inert. The locale select swaps the `/[locale]` path segment on change.
- * The notification list is a design-only mock — see `notifications-bell.tsx`.
+ * Notification demo state stays isolated in `notifications-bell.tsx`.
  */
 export function AppHeader() {
   const t = useTranslations("Shell");
@@ -87,27 +86,7 @@ export function AppHeader() {
 
         <div className={styles.separator} aria-hidden="true" />
 
-        <NotificationsBell />
-
-        <div className={styles.meChip} title={t("avatarLabel")}>
-          <div className={styles.meName}>
-            <b>{displayName}</b>
-            <span>{isAdmin ? t("userRoleOwner") : t("userRoleEmployee")}</span>
-          </div>
-          <span className={styles.avatar} aria-hidden="true">
-            {initial}
-          </span>
-        </div>
-
-        <Select
-          variant="ghost"
-          size="sm"
-          icon={GlobeIcon}
-          options={LOCALES}
-          value={locale}
-          onChange={handleLocaleChange}
-          aria-label={t("langTitle")}
-        />
+        <AppBreadcrumb />
       </div>
 
       <form
@@ -134,7 +113,28 @@ export function AppHeader() {
       </form>
 
       <div className={styles.endGroup}>
-        <AppBreadcrumb />
+
+        <NotificationsBell />
+
+        <div className={styles.meChip} title={t("avatarLabel")}>
+          <div className={styles.meName}>
+            <b>{displayName}</b>
+            <span>{isAdmin ? t("userRoleOwner") : t("userRoleEmployee")}</span>
+          </div>
+          <span className={styles.avatar} aria-hidden="true">
+            {initial}
+          </span>
+        </div>
+
+        <Select
+          variant="ghost"
+          size="sm"
+          icon={GlobeIcon}
+          options={LOCALES}
+          value={locale}
+          onChange={handleLocaleChange}
+          aria-label={t("langTitle")}
+        />
       </div>
     </header>
   );

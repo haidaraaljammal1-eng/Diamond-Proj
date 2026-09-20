@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import { useVehiclesStore } from "@/modules/vehicles/stores/vehicles.store";
 import {
   closeContract as closeContractRequest,
@@ -203,10 +204,18 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     return listInFlight;
   }
 
+  function refreshList(): Promise<void> {
+    return refreshAfterPending(() => listInFlight, runList);
+  }
+
   async function refreshAll(): Promise<void> {
-    await Promise.all([runList(), refreshFleet()]);
+    await Promise.all([refreshList(), refreshFleet()]);
     const detailId = get().detailContractId;
     if (detailId) await get().fetchContract(detailId);
+  }
+
+  async function refreshCarOutState(id: string): Promise<void> {
+    await Promise.all([refreshList(), get().fetchContract(id)]);
   }
 
   return {
@@ -242,21 +251,21 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       return runList();
     },
     refresh() {
-      return runList();
+      return refreshList();
     },
     setQuery(partial) {
       set((state) => ({
         query: { ...state.query, ...partial },
         status: "idle",
       }));
-      void runList();
+      void refreshList();
     },
     resetFilters() {
       set((state) => ({
         query: { ...state.query, ...DEFAULT_CONTRACT_FILTERS, page: 1 },
         status: "idle",
       }));
-      void runList();
+      void refreshList();
     },
     async fetchContract(id) {
       if (detailInFlight) await detailInFlight;
@@ -384,7 +393,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await saveCarOutDraftRequest(id, payload);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await get().fetchContract(id);
+        await refreshCarOutState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -396,7 +405,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await uploadCarOutPhotoRequest(id, angle, file);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await get().fetchContract(id);
+        await refreshCarOutState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -408,7 +417,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await uploadCarOutSignatureRequest(id, file);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await get().fetchContract(id);
+        await refreshCarOutState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -420,7 +429,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const handover = await deleteCarOutPhotoRequest(id, photoId);
         set({ carOut: IDLE_SLOT, carOutHandover: handover });
-        await get().fetchContract(id);
+        await refreshCarOutState(id);
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });

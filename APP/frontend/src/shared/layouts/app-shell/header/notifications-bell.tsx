@@ -96,6 +96,7 @@ export function NotificationsBell() {
       onOpenChange={setOpen}
       align="end"
       maxHeight={640}
+      panelWidth={460}
       className={styles.notifications}
       panelClassName={styles.notificationPopover}
       trigger={({ ref, id, "aria-expanded": ariaExpanded, "aria-controls": ariaControls, onClick, onKeyDown }) => (

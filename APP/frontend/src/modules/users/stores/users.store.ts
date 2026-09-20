@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import {
   createUser as createUserRequest,
   deleteUser as deleteUserRequest,
@@ -91,6 +92,10 @@ export const useUsersStore = create<UsersState>((set, get) => {
     return inFlight;
   }
 
+  function refreshUsers(): Promise<void> {
+    return refreshAfterPending(() => inFlight, run);
+  }
+
   return {
     users: [],
     meta: null,
@@ -113,14 +118,14 @@ export const useUsersStore = create<UsersState>((set, get) => {
       return run();
     },
     refresh() {
-      return run();
+      return refreshUsers();
     },
     setQuery(partial) {
       set((state) => ({
         query: { ...state.query, ...partial },
         status: "idle",
       }));
-      void run();
+      void refreshUsers();
     },
     clearCreateError() {
       set({ createError: null });
@@ -135,7 +140,7 @@ export const useUsersStore = create<UsersState>((set, get) => {
       set({ isCreating: true, createError: null });
       try {
         await createUserRequest(payload);
-        await run();
+        await refreshUsers();
         set({ isCreating: false });
         return true;
       } catch (error) {
@@ -156,7 +161,7 @@ export const useUsersStore = create<UsersState>((set, get) => {
         if (payload.roleIds !== undefined) {
           await setUserRoles(id, payload.roleIds);
         }
-        await run();
+        await refreshUsers();
         set({ isUpdating: false });
         return true;
       } catch (error) {
@@ -168,7 +173,7 @@ export const useUsersStore = create<UsersState>((set, get) => {
       set({ isDeleting: true, deletingId: id, deleteError: null });
       try {
         await deleteUserRequest(id);
-        await run();
+        await refreshUsers();
         set({ isDeleting: false, deletingId: null });
         return true;
       } catch (error) {
@@ -189,9 +194,10 @@ export const useUsersStore = create<UsersState>((set, get) => {
         set((state) => ({
           users: state.users.map((user) => (user.id === id ? updated : user)),
         }));
+        await refreshUsers();
         return true;
       } catch {
-        await run();
+        await refreshUsers();
         return false;
       } finally {
         set((state) => {

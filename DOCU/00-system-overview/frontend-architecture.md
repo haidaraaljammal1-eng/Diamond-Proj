@@ -40,6 +40,12 @@ Each domain is self-contained and may expose `api/`, `stores/`, `hooks/`, `compo
 
 Use domain stores rather than one global store. Selectors keep subscriptions narrow. Keep transient UI state local to the component. Store normalized errors with `code`, `message`, `details`, `context`, `requestId`, and `status` where available. UI concerns such as toasts, translated copy, routing decisions, and JSX do not belong in stores.
 
+### Authoritative refresh after actions
+
+After a successful backend mutation, the owning domain store refreshes the affected list, summary, and open detail before the action resolves. The UI never requires a browser reload. A post-mutation refresh must not reuse a read that started before the write: it waits for that request to settle, then starts one new backend read. Concurrent refresh callers still share that new request.
+
+Cross-domain projections refresh with the owning mutation when they can remain mounted in Zustand. Contract actions refresh Contracts and Fleet; Maintenance actions refresh Maintenance and Fleet; role create/update refreshes both the permission matrix and the assignable-role lookup. Stores may apply the backend mutation response immediately for responsive UI, but the follow-up read remains authoritative.
+
 ## i18n
 
 Routes are locale-aware (`/ar/...` and `/en/...`). The default locale is Arabic. The locale layout sets `lang` and `dir` (`rtl` for Arabic, `ltr` for English), and user-facing strings belong in `messages/`.

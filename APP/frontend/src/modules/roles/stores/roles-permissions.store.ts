@@ -3,6 +3,8 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
+import { useRoleLookupStore } from "@/modules/users/stores/role-lookup.store";
 import {
   createRole,
   listAllRoles,
@@ -85,7 +87,10 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
       set({ isSubmitting: true, submitError: null });
       try {
         await action();
-        await fetchAll();
+        await Promise.allSettled([
+          refreshRoles(),
+          useRoleLookupStore.getState().refresh(),
+        ]);
         set({ isSubmitting: false });
         return true;
       } catch (error) {
@@ -102,6 +107,10 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
       return inFlight;
     }
 
+    function refreshRoles(): Promise<void> {
+      return refreshAfterPending(() => inFlight, run);
+    }
+
     return {
       roles: [],
       permissions: [],
@@ -115,7 +124,7 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
         return run();
       },
       refresh() {
-        return run();
+        return refreshRoles();
       },
       isSubmitting: false,
       submitError: null,
@@ -155,6 +164,7 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
               item.id === roleId ? updated : item,
             ),
           }));
+          await refreshRoles();
           return true;
         } catch (error) {
           // The Backend refused (a system role, a stale key, …): put the

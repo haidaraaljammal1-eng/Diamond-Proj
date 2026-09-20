@@ -17,6 +17,7 @@ export interface PopoverRect {
   top: number;
   insetInlineStart: number;
   minWidth: number;
+  maxHeight: number;
   flipped: boolean;
 }
 
@@ -39,6 +40,8 @@ export interface PopoverProps {
   align?: "start" | "end";
   /** Max panel height before flipping above the trigger. */
   maxHeight?: number;
+  /** Known panel width prevents a first-frame position correction. */
+  panelWidth?: number;
 }
 
 function measurePanel(
@@ -48,9 +51,10 @@ function measurePanel(
   panelWidth?: number,
 ): PopoverRect {
   const rect = trigger.getBoundingClientRect();
-  const below = window.innerHeight - rect.bottom;
-  const above = rect.top;
-  const flipped = below < maxHeight + PANEL_GAP && above > below;
+  const viewportPadding = 12;
+  const below = Math.max(0, window.innerHeight - rect.bottom - PANEL_GAP - viewportPadding);
+  const above = Math.max(0, rect.top - PANEL_GAP - viewportPadding);
+  const flipped = below < maxHeight && above > below;
   const dir = document.documentElement.getAttribute("dir") === "rtl" ? "rtl" : "ltr";
   const width = Math.min(
     panelWidth ?? (window.innerWidth <= 768 ? 420 : 760),
@@ -59,8 +63,8 @@ function measurePanel(
   const preferredLeft =
     dir === "rtl"
       ? align === "end"
-        ? window.innerWidth - rect.left - width
-        : window.innerWidth - rect.right
+        ? rect.left
+        : rect.right - width
       : align === "end"
         ? rect.right - width
         : rect.left;
@@ -71,6 +75,7 @@ function measurePanel(
     top: flipped ? rect.top - PANEL_GAP : rect.bottom + PANEL_GAP,
     insetInlineStart,
     minWidth: rect.width,
+    maxHeight: Math.max(120, Math.min(maxHeight, flipped ? above : below)),
     flipped,
   };
 }
@@ -89,6 +94,7 @@ export function Popover({
   disabled = false,
   align = "start",
   maxHeight = 520,
+  panelWidth,
 }: PopoverProps) {
   const reactId = useId();
   const controlId = `popover-${reactId}`;
@@ -113,15 +119,15 @@ export function Popover({
       return;
     }
     const el = triggerRef.current;
-    if (el) setRect(measurePanel(el, maxHeight, align, panelRef.current?.offsetWidth));
+    if (el) setRect(measurePanel(el, maxHeight, align, panelWidth ?? panelRef.current?.offsetWidth));
     onOpenChange(true);
-  }, [align, close, disabled, maxHeight, onOpenChange, open]);
+  }, [align, close, disabled, maxHeight, onOpenChange, open, panelWidth]);
 
   useEffect(() => {
     if (!open) return;
     const sync = () => {
       const el = triggerRef.current;
-      if (el) setRect(measurePanel(el, maxHeight, align, panelRef.current?.offsetWidth));
+      if (el) setRect(measurePanel(el, maxHeight, align, panelWidth ?? panelRef.current?.offsetWidth));
     };
     const frame = window.requestAnimationFrame(sync);
     window.addEventListener("scroll", sync, true);
@@ -131,7 +137,7 @@ export function Popover({
       window.removeEventListener("scroll", sync, true);
       window.removeEventListener("resize", sync);
     };
-  }, [align, maxHeight, open]);
+  }, [align, maxHeight, open, panelWidth]);
 
   useEffect(() => {
     if (!open) return;
@@ -184,6 +190,7 @@ export function Popover({
               top: rect.top,
               insetInlineStart: rect.insetInlineStart,
               minWidth: rect.minWidth,
+              maxHeight: rect.maxHeight,
               transform: rect.flipped ? "translateY(-100%)" : undefined,
             }}
           >

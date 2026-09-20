@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import { getFleetVehicleTypeOptions } from "../api/fleet-type-lookup.api";
 import type { FleetVehicleTypeOption } from "../api/fleet-type-lookup.api";
 
@@ -49,7 +50,7 @@ export const useFleetTypeLookupStore = create<FleetTypeLookupState>((set, get) =
       return runLoad();
     },
     refresh() {
-      return runLoad();
+      return refreshAfterPending(() => loadInFlight, runLoad);
     },
   };
 });

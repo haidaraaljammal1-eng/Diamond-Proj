@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import {
   createVehicle as createVehicleRequest,
   deactivateVehicle as deactivateVehicleRequest,
@@ -141,6 +142,10 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     return listInFlight;
   }
 
+  function refreshList(): Promise<void> {
+    return refreshAfterPending(() => listInFlight, runList);
+  }
+
   function refreshFleetTypeOptions(): Promise<void> {
     return useFleetTypeLookupStore.getState().refresh();
   }
@@ -175,21 +180,21 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
       return runList();
     },
     refresh() {
-      return runList();
+      return refreshList();
     },
     setQuery(partial) {
       set((state) => ({
         query: { ...state.query, ...partial },
         status: "idle",
       }));
-      void runList();
+      void refreshList();
     },
     resetFilters() {
       set((state) => ({
         query: { ...state.query, ...DEFAULT_VEHICLE_FILTERS, page: 1 },
         status: "idle",
       }));
-      void runList();
+      void refreshList();
     },
     async fetchVehicle(id) {
       if (detailInFlight) await detailInFlight;
@@ -241,7 +246,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
             photoUploadFailed = true;
           }
         }
-        await Promise.all([runList(), refreshFleetTypeOptions()]);
+        await Promise.all([refreshList(), refreshFleetTypeOptions()]);
         set({ isCreating: false });
         return photoUploadFailed
           ? { ok: true, photoUploadFailed: true }
@@ -259,7 +264,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         if (detailVehicleId === id) {
           await get().fetchVehicle(id);
         }
-        await runList();
+        await refreshList();
         set({ isUpdatingRates: false });
         return true;
       } catch (error) {
@@ -281,7 +286,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         if (detailVehicleId === id) {
           get().clearDetail();
         }
-        await runList();
+        await refreshList();
         await refreshFleetTypeOptions();
         set({ isDeactivating: false });
         return true;
@@ -304,7 +309,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
       try {
         await uploadVehiclePhoto(vehicleId, file);
         await get().fetchVehicle(vehicleId);
-        await runList();
+        await refreshList();
         set({ isPhotoActionPending: false });
         return { ok: true };
       } catch (error) {
@@ -331,7 +336,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         await deleteVehiclePhotoRequest(vehicleId, oldPhotoId);
       } catch (error) {
         await get().fetchVehicle(vehicleId);
-        await runList();
+        await refreshList();
         set({
           isPhotoActionPending: false,
           photoActionError: normalizeApiError(error),
@@ -340,7 +345,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
       }
 
       await get().fetchVehicle(vehicleId);
-      await runList();
+      await refreshList();
       set({ isPhotoActionPending: false });
       return { ok: true };
     },

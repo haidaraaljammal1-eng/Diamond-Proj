@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-20
+
+- Standardized automatic frontend data refresh after successful record actions. Contracts (including Car-Out drafts/evidence), Vehicles, Users, Roles, Maintenance, Finance, and Road Liabilities now wait out any older in-flight read and then fetch a new backend-authoritative snapshot, so row/card actions no longer require a browser refresh. Maintenance also refreshes Fleet vehicle projections, and role changes refresh the user-form role lookup. See `DOCU/00-system-overview/frontend-architecture.md`.
+
 ## 2026-09-19
 
 - Closed the renewal/return race: `applyRenewal` now re-checks the Contract under the `contract_lifecycle` lock and never extends a Contract that is no longer ACTIVE. A renewal payment captured after the return was confirmed stays CONFIRMED but is not applied, and `contract.renewal_not_applied` tells staff to settle it. Repaired the integration harness for the current lifecycle (card linking before rental payment, Car-Out angles and OUT signature). Return/renewal integration is green; the in-flight payment case is verified by integration only, because dev has no card provider. See `DOCU/05-pages/contracts-backend.md`.

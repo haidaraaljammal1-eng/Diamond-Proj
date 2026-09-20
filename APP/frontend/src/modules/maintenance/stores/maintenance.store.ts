@@ -3,6 +3,8 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
+import { useVehiclesStore } from "@/modules/vehicles/stores/vehicles.store";
 import {
   cancelMaintenance as cancelMaintenanceRequest,
   completeMaintenance as completeMaintenanceRequest,
@@ -264,8 +266,24 @@ export const useMaintenanceStore = create<MaintenanceState>((set, get) => {
     return summaryInFlight;
   }
 
+  function refreshList(): Promise<void> {
+    return refreshAfterPending(() => listInFlight, runList);
+  }
+
+  function refreshHistory(): Promise<void> {
+    return refreshAfterPending(() => historyInFlight, runHistory);
+  }
+
+  function refreshSummary(): Promise<void> {
+    return refreshAfterPending(() => summaryInFlight, runSummary);
+  }
+
   async function refreshAll(): Promise<void> {
-    await Promise.all([runList(), runHistory(), runSummary()]);
+    await Promise.all([refreshList(), refreshHistory(), refreshSummary()]);
+  }
+
+  async function refreshAfterMutation(): Promise<void> {
+    await Promise.all([refreshAll(), useVehiclesStore.getState().refresh()]);
   }
 
   return {
@@ -337,7 +355,7 @@ export const useMaintenanceStore = create<MaintenanceState>((set, get) => {
     },
     setHistoryPage(page) {
       set({ historyPage: page, historyStatus: "idle" });
-      void runHistory();
+      void refreshHistory();
     },
     async fetchDetail(id) {
       if (detailInFlight) await detailInFlight;
@@ -387,7 +405,7 @@ export const useMaintenanceStore = create<MaintenanceState>((set, get) => {
       set({ isCreating: true, createError: null });
       try {
         await createMaintenanceRequest(payload);
-        await refreshAll();
+        await refreshAfterMutation();
         set({ isCreating: false });
         return true;
       } catch (error) {
@@ -402,7 +420,7 @@ export const useMaintenanceStore = create<MaintenanceState>((set, get) => {
         if (get().detailId === id) {
           await get().fetchDetail(id);
         }
-        await refreshAll();
+        await refreshAfterMutation();
         set({ isUpdating: false });
         return true;
       } catch (error) {
@@ -433,7 +451,7 @@ export const useMaintenanceStore = create<MaintenanceState>((set, get) => {
             await get().fetchDetail(id);
           }
         }
-        await refreshAll();
+        await refreshAfterMutation();
         set({ mutatingId: null, mutatingAction: null });
         return true;
       } catch (error) {

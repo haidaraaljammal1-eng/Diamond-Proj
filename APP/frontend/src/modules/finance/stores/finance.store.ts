@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
 import { ApiRequestError, normalizeApiError } from "@/infrastructure/api/errors";
+import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import {
   correctManualExpense,
   createManualExpense,
@@ -98,7 +99,6 @@ function isFinanceSimulating(): boolean {
 let overviewInFlight: Promise<void> | null = null;
 let receivablesInFlight: Promise<void> | null = null;
 let ledgerInFlight: Promise<void> | null = null;
-let ledgerFetchQueued = false;
 let expenseDetailInFlight: Promise<void> | null = null;
 
 const DEFAULT_OVERVIEW_QUERY: FinanceOverviewQuery = {
@@ -238,19 +238,40 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     }
   }
 
-  function enqueueLedgerFetch(): Promise<void> {
-    if (ledgerInFlight) {
-      ledgerFetchQueued = true;
-      return ledgerInFlight;
-    }
+  function runOverview(): Promise<void> {
+    if (overviewInFlight) return overviewInFlight;
+    overviewInFlight = fetchOverview().finally(() => {
+      overviewInFlight = null;
+    });
+    return overviewInFlight;
+  }
+
+  function runReceivables(): Promise<void> {
+    if (receivablesInFlight) return receivablesInFlight;
+    receivablesInFlight = fetchReceivables().finally(() => {
+      receivablesInFlight = null;
+    });
+    return receivablesInFlight;
+  }
+
+  function runLedger(): Promise<void> {
+    if (ledgerInFlight) return ledgerInFlight;
     ledgerInFlight = fetchLedger().finally(() => {
       ledgerInFlight = null;
-      if (ledgerFetchQueued) {
-        ledgerFetchQueued = false;
-        void enqueueLedgerFetch();
-      }
     });
     return ledgerInFlight;
+  }
+
+  function refreshOverview(): Promise<void> {
+    return refreshAfterPending(() => overviewInFlight, runOverview);
+  }
+
+  function refreshReceivables(): Promise<void> {
+    return refreshAfterPending(() => receivablesInFlight, runReceivables);
+  }
+
+  function refreshLedger(): Promise<void> {
+    return refreshAfterPending(() => ledgerInFlight, runLedger);
   }
 
   return {
@@ -284,24 +305,14 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     correctExpenseError: null,
 
     loadOverview: async () => {
-      if (overviewInFlight) return overviewInFlight;
-      overviewInFlight = fetchOverview().finally(() => {
-        overviewInFlight = null;
-      });
-      return overviewInFlight;
+      return runOverview();
     },
 
     refreshAll: async () => {
       await Promise.all([
-        get().loadOverview(),
-        (async () => {
-          if (receivablesInFlight) return receivablesInFlight;
-          receivablesInFlight = fetchReceivables().finally(() => {
-            receivablesInFlight = null;
-          });
-          return receivablesInFlight;
-        })(),
-        enqueueLedgerFetch(),
+        refreshOverview(),
+        refreshReceivables(),
+        refreshLedger(),
       ]);
     },
 
@@ -322,35 +333,23 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
         page: 1,
       };
       set({ overviewQuery, ledgerQuery });
-      void get().loadOverview();
-      void enqueueLedgerFetch();
+      void refreshOverview();
+      void refreshLedger();
     },
 
     setReceivablesQuery: (partial) => {
       set({ receivablesQuery: { ...get().receivablesQuery, ...partial } });
-      void (async () => {
-        if (receivablesInFlight) return receivablesInFlight;
-        receivablesInFlight = fetchReceivables().finally(() => {
-          receivablesInFlight = null;
-        });
-        return receivablesInFlight;
-      })();
+      void refreshReceivables();
     },
 
     resetReceivablesFilters: () => {
       set({ receivablesQuery: { ...DEFAULT_RECEIVABLES_QUERY } });
-      void (async () => {
-        if (receivablesInFlight) return receivablesInFlight;
-        receivablesInFlight = fetchReceivables().finally(() => {
-          receivablesInFlight = null;
-        });
-        return receivablesInFlight;
-      })();
+      void refreshReceivables();
     },
 
     setLedgerQuery: (partial) => {
       set({ ledgerQuery: { ...get().ledgerQuery, ...partial } });
-      void enqueueLedgerFetch();
+      void refreshLedger();
     },
 
     resetLedgerFilters: () => {
@@ -363,7 +362,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
         direction: null,
       };
       set({ ledgerQuery });
-      void enqueueLedgerFetch();
+      void refreshLedger();
     },
 
     fetchExpenseDetail: async (id) => {
