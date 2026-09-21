@@ -60,6 +60,18 @@ export type RoadLiabilityChannelDto = z.infer<typeof RoadLiabilityChannelDtoSche
 export const RoadLiabilityConfidenceDtoSchema = z.enum(["high", "medium", "low"]);
 export type RoadLiabilityConfidenceDto = z.infer<typeof RoadLiabilityConfidenceDtoSchema>;
 
+/// Normalized owning company for a road liability. The Backend resolves the
+/// precedence (attributed Contract first, then the Vehicle) so no client has to
+/// reproduce it. A null company means the liability is still unmatched — it is
+/// never a silent default company.
+export const RoadLiabilityCompanyRefSchema = z.object({
+  id: z.number().int(),
+  code: z.string(),
+  displayName: z.string(),
+  accentColor: z.string(),
+});
+export type RoadLiabilityCompanyRef = z.infer<typeof RoadLiabilityCompanyRefSchema>;
+
 export const RoadLiabilityVehicleSchema = z.object({
   id: z.number().int(),
   displayName: z.string(),
@@ -101,6 +113,7 @@ export const RoadLiabilityListItemSchema = z.object({
   gate: RoadLiabilityGateSchema.nullable(),
   vehicle: RoadLiabilityVehicleSchema.nullable(),
   contract: RoadLiabilityContractSchema.nullable(),
+  company: RoadLiabilityCompanyRefSchema.nullable(),
   customer: RoadLiabilityCustomerSchema.nullable(),
   prediction: z.object({
     predictedByGps: z.boolean(),
@@ -173,6 +186,10 @@ export const ListRoadLiabilitiesQuerySchema = PaginationQuerySchema.extend({
   channel: RoadLiabilityChannelDtoSchema.optional(),
   vehicleId: z.coerce.number().int().positive().optional(),
   contractId: z.string().uuid().optional(),
+  /// Contract-first company scope: an attributed Contract's company wins, and a
+  /// liability with no Contract falls back to its Vehicle's company. Unmatched
+  /// rows (no Contract, no Vehicle) stay visible only under All Companies.
+  companyId: z.coerce.number().int().positive().optional(),
   occurredFrom: z.coerce.date().optional(),
   occurredTo: z.coerce.date().optional(),
   sort: z.string().optional(),

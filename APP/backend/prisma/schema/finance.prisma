@@ -51,11 +51,20 @@ model FinancialLedgerEntry {
   contractPaymentId  String?
   maintenanceOrderId Int?
   manualExpenseId    String?
+  /// Company classification PERSISTED AT WRITE TIME from the entry's authoritative
+  /// source (Contract.company, Vehicle.company, ManualExpense.company). A recognized
+  /// movement is history and must never be re-derived later.
+  ///
+  /// Nullable on purpose: a vehicle-less Manual Expense (office rent, marketing) is
+  /// GENERAL — it belongs to no operating company. GENERAL is `null`, never a third
+  /// OperatingCompany row and never a silent UNIQUE fallback.
+  companyId          Int?
   createdAt          DateTime                  @default(now())
 
   contractPayment  ContractPayment?  @relation(fields: [contractPaymentId], references: [id], onDelete: Restrict)
   maintenanceOrder MaintenanceOrder? @relation(fields: [maintenanceOrderId], references: [id], onDelete: Restrict)
   manualExpense    ManualExpense?    @relation(fields: [manualExpenseId], references: [id], onDelete: Restrict)
+  company          OperatingCompany? @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
   @@index([occurredAt])
   @@index([kind])
@@ -64,6 +73,9 @@ model FinancialLedgerEntry {
   @@index([customerId])
   @@index([vehicleId])
   @@index([manualExpenseId])
+  /// Company-scoped Finance aggregates always filter company + period together,
+  /// and the leading column also serves a plain `companyId` lookup.
+  @@index([companyId, occurredAt])
   @@map("financial_ledger_entries")
 }
 
@@ -76,6 +88,12 @@ model ManualExpense {
   description           String
   vehicleId             Int?
   vehicle               Vehicle?              @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  /// BACKEND-OWNED classification, never a client input and never a form field.
+  /// Derived from the optional Vehicle: a Vehicle makes the expense that Vehicle's
+  /// company (`Vehicle.companyId` is write-once, so it is permanently correct);
+  /// no Vehicle means GENERAL and stays `null`. There is no company selector.
+  companyId             Int?
+  company               OperatingCompany?     @relation(fields: [companyId], references: [id], onDelete: Restrict)
   vendorName            String?
   receiptNumber         String?
   attachmentId          String?
@@ -101,6 +119,7 @@ model ManualExpense {
   @@index([category])
   @@index([vehicleId])
   @@index([createdByUserId])
+  @@index([companyId])
   @@map("manual_expenses")
 }
 

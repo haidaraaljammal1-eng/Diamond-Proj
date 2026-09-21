@@ -51,6 +51,7 @@ export interface UseRoadLiabilitiesResult {
   refresh: () => Promise<void>;
   applySearch: (search: string) => void;
   clearSearch: () => void;
+  setCompanyFilter: (companyId: number | null) => void;
   setQueue: (queue: RoadLiabilityQueueFilter) => void;
   setChannelFilter: (channel: RoadLiabilityChannelFilter) => void;
   setTypeFilter: (type: RoadLiabilityTypeFilter) => void;
@@ -184,6 +185,9 @@ export function useRoadLiabilities(): UseRoadLiabilitiesResult {
       },
       clearSearch: () => {
         void setQuery({ search: "", page: 1 });
+      },
+      setCompanyFilter: (companyId: number | null) => {
+        void setQuery({ companyId, page: 1 });
       },
       setQueue: (queue: RoadLiabilityQueueFilter) => {
         void setQuery({ queue, page: 1 });

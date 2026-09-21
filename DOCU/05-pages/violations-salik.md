@@ -151,6 +151,40 @@ Finance is not built here. Confirmed amount, currency, contract attribution, and
 
 When a liability first becomes chargeable, one idempotent outbox event `road_liability.chargeable` is written (IDs and amount only — no PII, coordinates, or secrets).
 
+## Operating company (UNIQUE / ELITE)
+
+A road liability has **no company column**. Company is derived on read, by one
+precedence that lives only in the Backend
+(`resolveRoadLiabilityCompany` in `road-liability.mapper.ts`):
+
+| Case | Company |
+| ---- | ------- |
+| `attributedContractId` is set | `attributedContract.company` — **always wins** |
+| No Contract, `vehicleId` is set | `vehicle.company` |
+| Neither | `null` — unmatched |
+
+The Contract wins because it is frozen history: a Contract written under ELITE
+keeps its liabilities ELITE for ever. The Vehicle is a safe fallback only because
+`Vehicle.companyId` is write-once. An unmatched liability stays company-less —
+Diamond never guesses, never falls back to UNIQUE, and there is no
+`UNMATCHED` OperatingCompany row.
+
+Salik follows the identical rule. Company is a Diamond business-domain property
+and is never inferred from the Salik or RTA provider, the source account, the API
+endpoint or an external reference.
+
+- **DTO:** list and detail carry `company: { id, code, displayName, accentColor } | null`.
+- **Filter:** `GET /road-liabilities?companyId=` is contract-first —
+  `attributedContract.companyId = X` **OR** (`attributedContractId IS NULL` AND
+  `vehicle.companyId = X`). A liability on a UNIQUE vehicle under an ELITE
+  Contract answers to ELITE only. It composes with queue, channel, type, source,
+  the three status dimensions, vehicle, contract, date range and search.
+- **All Companies** (no `companyId`) includes unmatched liabilities. Omitting them
+  would hide exactly the rows that need attention.
+- **No duplicate columns.** `RoadLiabilityCustomerCharge` and
+  `ContractPostCloseReceivable` deliberately have no `companyId`: both reach it
+  through their Contract.
+
 ## No manual creation
 
 There are no staff routes to create or patch RTA violations, Salik tolls, or Salik violations.
@@ -167,7 +201,7 @@ Staff JWT. Permission: `violations.read`. No public or rental-token routes.
 | GET | `/road-liabilities/:id/customer-charge` | Unified Charge Review read (`violations.read`) |
 | POST | `/road-liabilities/:id/customer-charge/confirm` | Unified confirm (`violations.charge`); destination from Contract lifecycle |
 
-List search: vehicle name, plate, contract number, customer name, external reference, location. Filters: type, sourceKey, confirmation/attribution/collection status, vehicleId, contractId, date range.
+List search: vehicle name, plate, contract number, customer name, external reference, location. Filters: `companyId`, type, sourceKey, confirmation/attribution/collection status, vehicleId, contractId, date range.
 
 ## Statuses
 
@@ -193,13 +227,23 @@ Route: `/[locale]/violations` (`/ar/violations`, `/en/violations`). Module: `APP
 
 Page → `useRoadLiabilities` → Zustand store → `road-liabilities.api.ts` → central API client. Components do not call HTTP. No TanStack Query / SWR.
 
-Visual hierarchy: three compact KPIs (collectible amount, awaiting confirmation, unique needs-attention count) → work-queue tabs → one toolbar (search, RTA/Salik authority, date, Advanced Filters) → operational list. Settled is a queue, not a fourth equal KPI. Secondary unmatched/ambiguous/type breakdowns stay off the main surface.
+Visual hierarchy: three compact KPIs (collectible amount, awaiting confirmation, unique needs-attention count) → work-queue tabs → one toolbar (search, Company, RTA/Salik authority, date, Advanced Filters) → operational list. Settled is a queue, not a fourth equal KPI. Secondary unmatched/ambiguous/type breakdowns stay off the main surface.
 
 The main row shows one derived `workState` (server-authoritative, not persisted). Confirmation, attribution, and collection remain in Advanced Filters and the Detail Drawer. GPS is detection provenance, not an authority: a GPS Salik prediction appears under the Salik channel and reads as “GPS Detected / Awaiting Salik Confirmation”, never as confirmed debt. Amount `null` renders “Awaiting Official Amount” / “بانتظار المبلغ الرسمي”, never `AED 0`. Collectible amount is backend `confirmedOpenAmount` only. `needsAttentionCount` counts unique liabilities in the needs-attention queue.
 
 Work queues map to `queue=collectible|needs_attention|settled` (omit for All). Authority maps to `channel=RTA|SALIK` (GPS predictions of type `SALIK_TOLL` belong to Salik). Existing `type`, `sourceKey`, and status filters remain for Advanced Filters. Pagination is server-side.
 
 Row click fetches `GET /road-liabilities/:id` once and opens Shared Drawer (overview, event status dimensions, vehicle, contract/customer, provenance timeline). Matched contracts open existing `ContractDetailDrawer` with localized contract status. Vehicle GPS uses `/[locale]/gps?vehicleId=`. Search is explicit submit.
+
+Company renders through the shared `CompanyIdentity` under the vehicle plate in the
+row and card, and beside the overview chips in the Drawer — identity, never a
+lifecycle chip. An unmatched liability shows the neutral `OperatingCompanies.unmatched`
+label instead of a marker; it is never drawn as a company. The Company filter
+(All Companies / UNIQUE / ELITE) is built from the authoritative
+`modules/operating-companies` store, sends `companyId` to the Backend, and never
+reproduces the Contract-first precedence in the frontend. Simulated liabilities
+carry no company, so the overlay shows the unmatched treatment rather than a
+fabricated one.
 
 Customer Charge Review happens in the Liability Drawer, not the table row and not a separate page. One Dialog covers both destinations; frontend does not choose the destination.
 

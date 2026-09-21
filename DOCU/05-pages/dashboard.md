@@ -104,6 +104,22 @@ timezone. Pending hand-overs only — Car-Out already completed (`ACTIVE`,
 - EN: No deliveries scheduled today
 - AR: لا توجد تسليمات مجدولة اليوم
 
+## Operating company markers
+
+Today's Deliveries and Latest Contracts show the row's `Contract.company` through
+the shared `CompanyIdentity`, inline in the row meta line beside the contract
+number. It is metadata, not the row's primary content, and never occupies the
+trailing status slot.
+
+The company comes from the row payload; neither card fetches companies and there
+is no per-row lookup. The dashboard has **no company selector and no company
+filter** — the KPIs, weekly finance, weekly rental activity and fleet status are
+whole-business and unchanged. A dashboard company scope is deferred until the
+Finance company foundation (Phase C) exists.
+
+The field is optional on both row types, so a simulated or pre-multi-company
+payload simply renders no marker.
+
 ## Charts
 
 Existing Recharts infrastructure: `DonutChart` + `GroupedBarChart` (same tokens

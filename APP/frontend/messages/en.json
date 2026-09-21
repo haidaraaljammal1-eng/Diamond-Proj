@@ -517,7 +517,8 @@
     "all": "All Companies",
     "unique": "UNIQUE",
     "elite": "ELITE",
-    "loading": "Loading companies…"
+    "loading": "Loading companies…",
+    "unmatched": "No company"
   },
   "Vehicles": {
     "crumbs": "Fleet",

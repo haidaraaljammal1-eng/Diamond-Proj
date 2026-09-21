@@ -21,6 +21,26 @@ The historical Development/demo **Finance Simulation** overlay is currently disa
 
 Ledger and Open Receivables swapped positions only. KPIs, period control, and analytics keep their surrounding order.
 
+## Operating company (backend ready, frontend is Phase C2)
+
+The Backend classifies every ledger row, manual expense and receivable as UNIQUE,
+ELITE or **GENERAL** and exposes `company` (nullable) on each read model, plus
+`?companyId=` / `?companyScope=GENERAL` on summary, analytics, ledger and open
+receivables. Nothing of this is rendered yet — the page has no company column,
+marker or filter until Phase C2.
+
+Two rules the page must honour when it does:
+
+- **Add / Correct Expense gets no Company field.** The company comes from the
+  optional Vehicle; with no Vehicle the expense is GENERAL. The Vehicle picker's
+  existing company filter is search UX and never classifies the expense.
+- **`company: null` renders as عام / GENERAL**, from the shared i18n namespace.
+  It is not a company, so it gets no `CompanyIdentity` accent — and the frontend
+  never derives a company from the row's Vehicle.
+
+Rules: [operating-companies.md](../00-system-overview/operating-companies.md).
+Contracts: [finance-backend.md](./finance-backend.md).
+
 ## KPI semantics
 
 | KPI | Meaning | Period |

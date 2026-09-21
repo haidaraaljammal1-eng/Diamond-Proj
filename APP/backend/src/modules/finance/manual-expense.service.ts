@@ -15,6 +15,7 @@ import {
   reprojectManualExpenseLedger,
 } from "src/modules/finance/finance-ledger.service";
 import { toManualExpenseDetail } from "src/modules/finance/finance.mapper";
+import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
 
 const STAFF_SELECT = { id: true, name: true, email: true } as const;
 const VEHICLE_SELECT = { id: true, vehicleName: true, plateNumber: true } as const;
@@ -23,6 +24,7 @@ const EXPENSE_INCLUDE = {
   createdBy: { select: STAFF_SELECT },
   voidedBy: { select: STAFF_SELECT },
   vehicle: { select: VEHICLE_SELECT },
+  company: { select: COMPANY_REF_SELECT },
   attachment: {
     select: { id: true, originalName: true, mimeType: true, size: true, createdAt: true },
   },
@@ -74,10 +76,22 @@ function textOrNull(value: string | null | undefined): string | null {
 export function createManualExpenseService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
-  async function validateVehicle(vehicleId?: number | null) {
-    if (vehicleId == null) return;
-    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+  /**
+   * Validates the optional Vehicle and returns the company the expense inherits.
+   *
+   * This is the ONLY source of a Manual Expense's company: there is no company
+   * input, no company form field and no default. No Vehicle means GENERAL, which
+   * is `null` — never UNIQUE, never ELITE. `Vehicle.companyId` is write-once, so
+   * reading it once here is permanently correct.
+   */
+  async function resolveVehicleCompanyId(vehicleId?: number | null): Promise<number | null> {
+    if (vehicleId == null) return null;
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: { companyId: true },
+    });
     if (!vehicle) throw financeVehicleNotFoundError();
+    return vehicle.companyId;
   }
 
   async function validateAttachment(attachmentId?: string) {
@@ -97,7 +111,7 @@ export function createManualExpenseService(fastify: FastifyInstance) {
 
   return {
     async create(input: CreateManualExpenseInput, actor: AuthUser) {
-      await validateVehicle(input.vehicleId);
+      const companyId = await resolveVehicleCompanyId(input.vehicleId);
       await validateAttachment(input.attachmentId);
 
       const expense = await withTransaction(prisma, async (tx) => {
@@ -108,6 +122,7 @@ export function createManualExpenseService(fastify: FastifyInstance) {
             recognizedAt: input.recognizedAt,
             description: input.description,
             vehicleId: input.vehicleId ?? null,
+            companyId,
             vendorName: input.vendorName ?? null,
             receiptNumber: input.receiptNumber ?? null,
             attachmentId: input.attachmentId ?? null,
@@ -150,6 +165,7 @@ export function createManualExpenseService(fastify: FastifyInstance) {
           amount: updated.amount,
           voidedAt: now,
           vehicleId: updated.vehicleId,
+          companyId: updated.companyId,
         });
         return updated;
       });
@@ -158,7 +174,7 @@ export function createManualExpenseService(fastify: FastifyInstance) {
     },
 
     async correct(id: string, input: CorrectManualExpenseInput, actor: AuthUser) {
-      await validateVehicle(input.vehicleId);
+      await resolveVehicleCompanyId(input.vehicleId);
 
       const result = await withTransaction(prisma, async (tx) => {
         const existing = await tx.manualExpense.findUnique({
@@ -179,16 +195,28 @@ export function createManualExpenseService(fastify: FastifyInstance) {
         const nextReceiptNumber = nextOptional(textOrNull(input.receiptNumber), existing.receiptNumber);
         const nextNote = nextOptional(textOrNull(input.note), existing.note);
 
+        // The company follows the Vehicle and nothing else: a different Vehicle
+        // re-derives it, a removed Vehicle makes the expense GENERAL (null), and
+        // an unchanged Vehicle keeps what the expense already carries.
         let nextVehicle: VehicleSnap = existing.vehicle;
+        let nextCompanyId = existing.companyId;
         if (nextVehicleId !== existing.vehicleId) {
-          nextVehicle =
-            nextVehicleId == null
-              ? null
-              : await tx.vehicle.findUnique({
-                  where: { id: nextVehicleId },
-                  select: VEHICLE_SELECT,
-                });
-          if (nextVehicleId != null && !nextVehicle) throw financeVehicleNotFoundError();
+          if (nextVehicleId == null) {
+            nextVehicle = null;
+            nextCompanyId = null;
+          } else {
+            const vehicle = await tx.vehicle.findUnique({
+              where: { id: nextVehicleId },
+              select: { ...VEHICLE_SELECT, companyId: true },
+            });
+            if (!vehicle) throw financeVehicleNotFoundError();
+            nextVehicle = {
+              id: vehicle.id,
+              vehicleName: vehicle.vehicleName,
+              plateNumber: vehicle.plateNumber,
+            };
+            nextCompanyId = vehicle.companyId;
+          }
         }
 
         const changes: Record<string, { before: unknown; after: unknown }> = {};
@@ -231,6 +259,9 @@ export function createManualExpenseService(fastify: FastifyInstance) {
         if (changes.description) data.description = nextDescription;
         if (changes.vehicle) {
           data.vehicle = nextVehicleId == null ? { disconnect: true } : { connect: { id: nextVehicleId } };
+          // Backend-owned, written atomically with the Vehicle it is derived from.
+          data.company =
+            nextCompanyId == null ? { disconnect: true } : { connect: { id: nextCompanyId } };
         }
         if (changes.vendorName) data.vendorName = nextVendorName;
         if (changes.receiptNumber) data.receiptNumber = nextReceiptNumber;
@@ -248,6 +279,7 @@ export function createManualExpenseService(fastify: FastifyInstance) {
             amount: updated.amount,
             recognizedAt: updated.recognizedAt,
             vehicleId: updated.vehicleId,
+            companyId: updated.companyId,
           });
         }
 

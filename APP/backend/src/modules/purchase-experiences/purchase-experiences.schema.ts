@@ -62,10 +62,12 @@ export const ListPurchaseExperiencesQuerySchema = PaginationQuerySchema.extend({
 const ExternalSaleId = z.string().trim().min(1).max(100);
 const CxLabel = z.string().trim().min(1).max(100);
 
-// Inline vehicle details for the "record a purchase" flow: the client enters the
-// car the customer bought (model from master data + year + VIN) and the server
-// creates the Vehicle transactionally with the experience. `vin` is optional; when
-// present it must be unique (an existing VIN is rejected, never silently reused).
+// RETIRED inline vehicle details. This block once created a Vehicle alongside the
+// experience; Diamond now has exactly ONE Vehicle creation source (Fleet → Add
+// Vehicle, where the operating company is chosen), so the service refuses it with a
+// 422. It is kept in the schema rather than dropped because Zod strips unknown keys:
+// removing it would answer an old client's create attempt with a misleading 200 and
+// no vehicle. Same convention as immutable `companyId` on Vehicle update.
 const InlineVehicleSchema = z.object({
   modelId: z.number().int().positive(),
   modelYear: z.number().int().min(1900).max(2100).optional(),
@@ -73,10 +75,9 @@ const InlineVehicleSchema = z.object({
   color: z.string().trim().min(1).max(60).optional(),
 });
 
-// Exactly ONE vehicle source: either an existing `vehicleId` (import / back-compat)
-// or inline `vehicle` details (the Customer-360 "add purchase" flow). The XOR is
-// enforced in the service (NOT a schema `.refine`) — a top-level ZodEffects breaks
-// OpenAPI request-body generation, so the body must stay a plain object.
+// `vehicleId` must reference an existing fleet Vehicle; a supplied `vehicle` block
+// is refused. Both rules live in the service (NOT a schema `.refine`) — a top-level
+// ZodEffects breaks OpenAPI request-body generation, so the body stays a plain object.
 export const CreatePurchaseExperienceSchema = z.object({
   customerId: z.number().int().positive(),
   vehicleId: z.number().int().positive().optional(),

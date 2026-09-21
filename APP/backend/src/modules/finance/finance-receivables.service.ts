@@ -4,8 +4,16 @@ import { FINANCE_CURRENCY } from "src/modules/finance/finance.constants";
 import {
   type OpenReceivableRow,
   toCustomerSummary,
+  toFinanceCompanyRef,
   toVehicleSummary,
 } from "src/modules/finance/finance.mapper";
+import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
+import {
+  contractCompanyScopeWhere,
+  type FinanceCompanyScope,
+} from "src/modules/finance/finance-company-scope";
+
+const ALL_COMPANIES: FinanceCompanyScope = { kind: "ALL" };
 
 const TRUSTED_STRIPE_PAYMENT: Prisma.ContractPaymentWhereInput = {
   status: "CONFIRMED",
@@ -18,6 +26,9 @@ const CONTRACT_INCLUDE = {
   customer: { select: { id: true, name: true } },
   vehicle: { select: { id: true, vehicleName: true, plateNumber: true } },
   acceptance: { select: { acceptedAt: true } },
+  // A receivable carries no company column: it derives from the Contract, which
+  // already froze its company. Selected in the same query, so never an N+1.
+  company: { select: COMPANY_REF_SELECT },
 } as const;
 
 function latestPaymentState(
@@ -43,9 +54,12 @@ function matchesSearch(row: OpenReceivableRow, search?: string): boolean {
 }
 
 export function createFinanceReceivablesService(prisma: PrismaClient) {
-  async function fetchRentalOutstanding(): Promise<OpenReceivableRow[]> {
+  async function fetchRentalOutstanding(
+    contractWhere: Prisma.ContractWhereInput | undefined,
+  ): Promise<OpenReceivableRow[]> {
     const contracts = await prisma.contract.findMany({
       where: {
+        ...contractWhere,
         status: "SIGNED",
         NOT: {
           payments: {
@@ -77,6 +91,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         contractNumber: contract.contractNumber,
         customer: toCustomerSummary(contract.customer),
         vehicle: toVehicleSummary(contract.vehicle),
+        company: toFinanceCompanyRef(contract.company),
         amountDue,
         amountPaid: 0,
         outstandingAmount: amountDue,
@@ -89,9 +104,12 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
     });
   }
 
-  async function fetchRenewalOutstanding(): Promise<OpenReceivableRow[]> {
+  async function fetchRenewalOutstanding(
+    contractWhere: Prisma.ContractWhereInput | undefined,
+  ): Promise<OpenReceivableRow[]> {
     const renewals = await prisma.contractRenewal.findMany({
       where: {
+        ...(contractWhere ? { contract: contractWhere } : {}),
         approvedAt: { not: null },
         appliedAt: null,
         additionalAmount: { gt: 0 },
@@ -123,6 +141,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         contractNumber: contract.contractNumber,
         customer: toCustomerSummary(contract.customer),
         vehicle: toVehicleSummary(contract.vehicle),
+        company: toFinanceCompanyRef(contract.company),
         amountDue,
         amountPaid: 0,
         outstandingAmount: amountDue,
@@ -135,9 +154,12 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
     });
   }
 
-  async function fetchReconciliationOutstanding(): Promise<OpenReceivableRow[]> {
+  async function fetchReconciliationOutstanding(
+    contractWhere: Prisma.ContractWhereInput | undefined,
+  ): Promise<OpenReceivableRow[]> {
     const reconciliations = await prisma.contractReconciliation.findMany({
       where: {
+        ...(contractWhere ? { contract: contractWhere } : {}),
         approvedAt: { not: null },
         settledAt: null,
         finalAmount: { gt: 0 },
@@ -164,6 +186,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         contractNumber: contract.contractNumber,
         customer: toCustomerSummary(contract.customer),
         vehicle: toVehicleSummary(contract.vehicle),
+        company: toFinanceCompanyRef(contract.company),
         amountDue,
         amountPaid: 0,
         outstandingAmount: amountDue,
@@ -176,9 +199,12 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
     });
   }
 
-  async function fetchPostCloseOutstanding(): Promise<OpenReceivableRow[]> {
+  async function fetchPostCloseOutstanding(
+    contractWhere: Prisma.ContractWhereInput | undefined,
+  ): Promise<OpenReceivableRow[]> {
     const receivables = await prisma.contractPostCloseReceivable.findMany({
       where: {
+        ...(contractWhere ? { contract: contractWhere } : {}),
         status: "OPEN",
         amount: { gt: 0 },
       },
@@ -204,6 +230,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         contractNumber: contract.contractNumber,
         customer: toCustomerSummary(contract.customer),
         vehicle: toVehicleSummary(contract.vehicle),
+        company: toFinanceCompanyRef(contract.company),
         amountDue,
         amountPaid: 0,
         outstandingAmount: amountDue,
@@ -216,29 +243,42 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
     });
   }
 
-  async function listAll(sourceType?: OpenReceivableSourceType): Promise<OpenReceivableRow[]> {
+  async function listAll(
+    sourceType?: OpenReceivableSourceType,
+    scope: FinanceCompanyScope = ALL_COMPANIES,
+  ): Promise<OpenReceivableRow[]> {
+    // Every open receivable hangs off a Contract, and a Contract always carries a
+    // company. GENERAL therefore has no contract receivables — and Diamond has no
+    // non-contract general receivable concept to invent one from.
+    if (scope.kind === "GENERAL") return [];
+
+    const contractWhere = contractCompanyScopeWhere(scope);
     const rows: OpenReceivableRow[] = [];
-    if (!sourceType || sourceType === "RENTAL") rows.push(...(await fetchRentalOutstanding()));
-    if (!sourceType || sourceType === "RENEWAL") rows.push(...(await fetchRenewalOutstanding()));
+    if (!sourceType || sourceType === "RENTAL") {
+      rows.push(...(await fetchRentalOutstanding(contractWhere)));
+    }
+    if (!sourceType || sourceType === "RENEWAL") {
+      rows.push(...(await fetchRenewalOutstanding(contractWhere)));
+    }
     if (!sourceType || sourceType === "RECONCILIATION") {
-      rows.push(...(await fetchReconciliationOutstanding()));
+      rows.push(...(await fetchReconciliationOutstanding(contractWhere)));
     }
     if (!sourceType || sourceType === "POST_CLOSE_RECEIVABLE") {
-      rows.push(...(await fetchPostCloseOutstanding()));
+      rows.push(...(await fetchPostCloseOutstanding(contractWhere)));
     }
     return rows;
   }
 
   return {
-    async totalOutstanding(): Promise<number> {
-      const rows = await listAll();
+    async totalOutstanding(scope: FinanceCompanyScope = ALL_COMPANIES): Promise<number> {
+      const rows = await listAll(undefined, scope);
       return rows.reduce((sum, row) => sum + row.outstandingAmount, 0);
     },
 
-    async breakdownBySource(): Promise<
+    async breakdownBySource(scope: FinanceCompanyScope = ALL_COMPANIES): Promise<
       { sourceType: OpenReceivableSourceType; count: number; amount: number }[]
     > {
-      const rows = await listAll();
+      const rows = await listAll(undefined, scope);
       const map = new Map<OpenReceivableSourceType, { count: number; amount: number }>();
       for (const type of ["RENTAL", "RENEWAL", "RECONCILIATION", "POST_CLOSE_RECEIVABLE"] as const) {
         map.set(type, { count: 0, amount: 0 });
@@ -260,8 +300,9 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
       search?: string;
       sourceType?: OpenReceivableSourceType;
       sort?: string;
+      scope?: FinanceCompanyScope;
     }) {
-      let rows = await listAll(query.sourceType);
+      let rows = await listAll(query.sourceType, query.scope ?? ALL_COMPANIES);
       rows = rows.filter((row) => matchesSearch(row, query.search));
 
       const sort = query.sort ?? "obligationCreatedAt:asc";

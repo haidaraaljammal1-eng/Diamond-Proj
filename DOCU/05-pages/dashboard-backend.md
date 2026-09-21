@@ -16,14 +16,28 @@ composes existing Prisma counts and domain services. It does **not** call
   weeklyFinance: { from, to, collected, expenses, netMovement, currency, breakdown },
   weeklyRentalActivity: [{ date, rented, returned }],
   fleetStatus: { total, available, rented, service },
-  todayDeliveries: [{ id, contractNumber, customerName, vehicleName, startAt, status }],
-  recentContracts: [{ id, contractNumber, customerName, vehicleName, employeeName, status }],
+  todayDeliveries: [{ id, contractNumber, customerName, vehicleName, startAt, status, company }],
+  recentContracts: [{ id, contractNumber, customerName, vehicleName, employeeName, status, company }],
   gpsOnline
 }
 ```
 
 Every cross-domain field/section is **nullable** when the viewer lacks that
 domain read permission, or when the section failed. `null` never means zero.
+
+## Operating company — rows only
+
+`company` is `{ id, code, displayName, accentColor }`, selected on the Contract in
+the same query (`COMPANY_REF_SELECT`), so no row costs a company lookup. The source
+is **`Contract.companyId`** — the historical company the contract was written
+under — never the Vehicle's current company.
+
+The dashboard itself has **no company scope**. There is no `?companyId=` on
+`/dashboard/overview`, and `activeRentals`, `fleetTotal`, `fleetRented`,
+`fleetAvailable`, `fleetService`, `pendingLinks`, `deliveriesToday`,
+`readyForDelivery`, `contractsTotal`, `weeklyFinance`, `weeklyRentalActivity` and
+`fleetStatus` are unchanged and count both companies together. A company-scoped
+dashboard waits for the Finance company foundation (Phase C).
 
 ## Composition
 

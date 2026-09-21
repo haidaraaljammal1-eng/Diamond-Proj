@@ -9,6 +9,7 @@ export const FinanceErrorReason = {
   VEHICLE_NOT_FOUND: "FINANCE_VEHICLE_NOT_FOUND",
   ATTACHMENT_NOT_FOUND: "FINANCE_ATTACHMENT_NOT_FOUND",
   PERIOD_TOO_LONG: "FINANCE_PERIOD_TOO_LONG",
+  COMPANY_SCOPE_CONFLICT: "FINANCE_COMPANY_SCOPE_CONFLICT",
 } as const;
 
 const R = FinanceErrorReason;
@@ -50,6 +51,19 @@ export function financeAttachmentNotFoundError(): AppError {
     code: ErrorCode.NOT_FOUND,
     message: "Attachment not found",
     context: { reason: R.ATTACHMENT_NOT_FOUND },
+  });
+}
+
+/**
+ * GENERAL is `companyId IS NULL`, not an operating company, so it can never be
+ * combined with a real company id. The contradiction is refused instead of being
+ * silently resolved in favour of one of them.
+ */
+export function financeCompanyScopeConflictError(): AppError {
+  return new AppError({
+    code: ErrorCode.VALIDATION_ERROR,
+    message: "companyScope=GENERAL cannot be combined with companyId",
+    context: { reason: R.COMPANY_SCOPE_CONFLICT },
   });
 }
 

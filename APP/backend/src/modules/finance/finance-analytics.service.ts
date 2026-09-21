@@ -10,6 +10,17 @@ import {
   EXPENSE_LEDGER_KINDS,
   FINANCE_CURRENCY,
 } from "src/modules/finance/finance.constants";
+import {
+  companyScopeWhere,
+  type FinanceCompanyScope,
+} from "src/modules/finance/finance-company-scope";
+
+/**
+ * Every aggregate filters directly on the PERSISTED `FinancialLedgerEntry.companyId`
+ * — no join, no per-row company lookup. Omitting the scope is ALL, which adds no
+ * predicate and therefore still includes GENERAL (null) rows.
+ */
+const ALL_COMPANIES: FinanceCompanyScope = { kind: "ALL" };
 
 export const FINANCE_MOVEMENT_BREAKDOWN_KEYS = [
   "RENTAL_PAYMENT",
@@ -62,23 +73,32 @@ export function assembleFinanceMovementBreakdown(
 export function createFinanceAnalyticsService(prisma: PrismaClient) {
   const offsetMinutes = env.BUSINESS_TIMEZONE_OFFSET_MINUTES;
 
-  async function sumCollected(period: Period): Promise<number> {
+  async function sumCollected(
+    period: Period,
+    scope: FinanceCompanyScope = ALL_COMPANIES,
+  ): Promise<number> {
     const result = await prisma.financialLedgerEntry.aggregate({
       where: {
         kind: { in: COLLECTION_LEDGER_KINDS },
         occurredAt: { gte: period.from, lt: period.to },
+        ...companyScopeWhere(scope),
       },
       _sum: { amount: true },
     });
     return result._sum.amount ?? 0;
   }
 
-  async function sumExpenses(period: Period): Promise<number> {
+  async function sumExpenses(
+    period: Period,
+    scope: FinanceCompanyScope = ALL_COMPANIES,
+  ): Promise<number> {
+    const company = companyScopeWhere(scope);
     const [expenses, reversals] = await Promise.all([
       prisma.financialLedgerEntry.aggregate({
         where: {
           kind: { in: EXPENSE_LEDGER_KINDS },
           occurredAt: { gte: period.from, lt: period.to },
+          ...company,
         },
         _sum: { amount: true },
       }),
@@ -86,6 +106,7 @@ export function createFinanceAnalyticsService(prisma: PrismaClient) {
         where: {
           kind: "MANUAL_EXPENSE_REVERSAL",
           occurredAt: { gte: period.from, lt: period.to },
+          ...company,
         },
         _sum: { amount: true },
       }),
@@ -97,9 +118,12 @@ export function createFinanceAnalyticsService(prisma: PrismaClient) {
     sumCollected,
     sumExpenses,
 
-    async trend(period: Period) {
+    async trend(period: Period, scope: FinanceCompanyScope = ALL_COMPANIES) {
       const entries = await prisma.financialLedgerEntry.findMany({
-        where: { occurredAt: { gte: period.from, lt: period.to } },
+        where: {
+          occurredAt: { gte: period.from, lt: period.to },
+          ...companyScopeWhere(scope),
+        },
         select: { kind: true, amount: true, occurredAt: true },
       });
 
@@ -129,11 +153,13 @@ export function createFinanceAnalyticsService(prisma: PrismaClient) {
       }));
     },
 
-    async expenseBreakdown(period: Period) {
+    async expenseBreakdown(period: Period, scope: FinanceCompanyScope = ALL_COMPANIES) {
+      const company = companyScopeWhere(scope);
       const maintenance = await prisma.financialLedgerEntry.aggregate({
         where: {
           kind: "MAINTENANCE_EXPENSE",
           occurredAt: { gte: period.from, lt: period.to },
+          ...company,
         },
         _sum: { amount: true },
       });
@@ -143,6 +169,7 @@ export function createFinanceAnalyticsService(prisma: PrismaClient) {
           kind: { in: ["MANUAL_EXPENSE", "MANUAL_EXPENSE_REVERSAL"] },
           occurredAt: { gte: period.from, lt: period.to },
           manualExpenseId: { not: null },
+          ...company,
         },
         select: {
           kind: true,
@@ -174,10 +201,16 @@ export function createFinanceAnalyticsService(prisma: PrismaClient) {
       return rows;
     },
 
-    async movementBreakdown(period: Period): Promise<FinanceMovementSlice[]> {
+    async movementBreakdown(
+      period: Period,
+      scope: FinanceCompanyScope = ALL_COMPANIES,
+    ): Promise<FinanceMovementSlice[]> {
       const groups = await prisma.financialLedgerEntry.groupBy({
         by: ["kind"],
-        where: { occurredAt: { gte: period.from, lt: period.to } },
+        where: {
+          occurredAt: { gte: period.from, lt: period.to },
+          ...companyScopeWhere(scope),
+        },
         _sum: { amount: true },
       });
       const amountByKind = new Map<string, number>();

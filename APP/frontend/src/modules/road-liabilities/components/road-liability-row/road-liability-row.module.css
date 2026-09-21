@@ -258,3 +258,25 @@
 @media (prefers-reduced-motion: reduce) {
   .recordFocus { animation: none; }
 }
+
+/* The company marker sits under the plate. CompanyIdentity never yields width, so
+   the flexible vehicle name above it keeps min-width: 0 and an ellipsis — the
+   layout rule the Phase A QA pass established. The wrapper carries the layout; the
+   shared component is never re-styled from here. */
+.vehicleText {
+  min-width: 0;
+}
+
+.companyMark {
+  display: inline-flex;
+  margin-top: 4px;
+}
+
+/* Neutral unmatched treatment: a liability with no Contract and no Vehicle belongs
+   to no company and is never rendered as one. */
+.noCompany {
+  display: block;
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--diamond-muted);
+}

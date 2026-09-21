@@ -1,5 +1,23 @@
 import type { ManualExpense, ManualExpenseCategory, FinancialLedgerKind, Prisma } from "@prisma/client";
 import type { OpenReceivableSourceType } from "src/modules/finance/finance.constants";
+import type { CompanyRef } from "src/modules/operating-companies/company-ref";
+
+/**
+ * Resolved company classification for a financial record.
+ *
+ * `null` is GENERAL: the record has no authoritative company-bearing source
+ * behind it. The Backend resolves this — the frontend never infers a company
+ * from the Vehicle, and no synthetic `{ code: "GENERAL" }` object is returned.
+ */
+export function toFinanceCompanyRef(company: CompanyRef | null | undefined): CompanyRef | null {
+  if (!company) return null;
+  return {
+    id: company.id,
+    code: company.code,
+    displayName: company.displayName,
+    accentColor: company.accentColor,
+  };
+}
 
 export interface CustomerSummary {
   id: number;
@@ -24,6 +42,7 @@ export interface OpenReceivableRow {
   contractNumber: string;
   customer: CustomerSummary | null;
   vehicle: VehicleSummary | null;
+  company: CompanyRef | null;
   amountDue: number;
   amountPaid: number;
   outstandingAmount: number;
@@ -137,6 +156,7 @@ export function toManualExpenseDetail(
     createdBy: ExpenseStaff;
     voidedBy: ExpenseStaff | null;
     vehicle: { id: number; vehicleName: string | null; plateNumber: string | null } | null;
+    company: CompanyRef | null;
     attachment: {
       id: string;
       originalName: string;
@@ -161,6 +181,8 @@ export function toManualExpenseDetail(
     recognizedAt: expense.recognizedAt,
     description: expense.description,
     vehicle: toVehicleSummary(expense.vehicle),
+    /** Resolved by the Backend from the optional Vehicle. `null` = GENERAL. */
+    company: toFinanceCompanyRef(expense.company),
     vendorName: expense.vendorName,
     receiptNumber: expense.receiptNumber,
     attachment: expense.attachment

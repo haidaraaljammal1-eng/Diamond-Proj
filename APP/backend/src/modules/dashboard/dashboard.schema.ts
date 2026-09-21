@@ -65,6 +65,16 @@ const FleetStatusSchema = z.object({
   service: z.number().int(),
 });
 
+/// Row-level company identity only. The dashboard KPIs stay whole-business: there
+/// is no dashboard company scope, and this ref exists so a row can show which
+/// company a Contract belongs to without one lookup per row.
+const DashboardCompanyRefSchema = z.object({
+  id: z.number().int(),
+  code: z.string(),
+  displayName: z.string(),
+  accentColor: z.string(),
+});
+
 const TodayDeliverySchema = z.object({
   id: z.string(),
   contractNumber: z.string(),
@@ -72,6 +82,7 @@ const TodayDeliverySchema = z.object({
   vehicleName: z.string(),
   startAt: z.date(),
   status: ContractStatusSchema,
+  company: DashboardCompanyRefSchema,
 });
 
 const RecentContractSchema = z.object({
@@ -81,6 +92,7 @@ const RecentContractSchema = z.object({
   vehicleName: z.string(),
   employeeName: z.string().nullable(),
   status: ContractStatusSchema,
+  company: DashboardCompanyRefSchema,
 });
 
 export const DashboardOverviewSchema = z.object({

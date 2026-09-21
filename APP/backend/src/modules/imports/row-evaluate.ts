@@ -5,7 +5,6 @@ import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { normalizeName } from "src/lib/master-data/code";
 import { ImportErrorReason, rowIssue, type RowIssue } from "src/modules/imports/imports.errors";
 import type { ParsedRow } from "src/modules/imports/row-parse";
-import { resolveDefaultOperatingCompanyId } from "src/modules/operating-companies/default-company";
 
 /**
  * Read-only evaluation of a parsed row against the authoritative tables: resolves
@@ -57,10 +56,15 @@ export interface CustomerPlan {
   mode: "existing" | "create";
   id?: number;
 }
+/**
+ * Imports are MATCH-ONLY. A row can only ever point at a Vehicle that already
+ * exists in the fleet — there is no "create" mode, because Fleet → Add Vehicle is
+ * Diamond's single Vehicle creation source and the only place an operating
+ * company (UNIQUE / ELITE) is ever chosen.
+ */
 export interface VehiclePlan {
-  mode: "existing" | "create";
-  id?: number;
-  modelId: number;
+  mode: "existing";
+  id: number;
 }
 export interface ExperiencePlan {
   mode: "create" | "skip";
@@ -119,6 +123,29 @@ export function newEvalContext(): EvalContext {
 }
 
 const MASTER_SELECT = { id: true, isActive: true, name: true } as const;
+
+/**
+ * Resolve a supplied external vehicle id to exactly ONE fleet Vehicle.
+ *
+ * `externalId` is unique per company (`@@unique([companyId, externalId])`) and the
+ * sales file carries no company column, so the lookup spans every company and
+ * accepts a hit only when a single vehicle in the whole fleet holds that id.
+ * Choosing a company to force a match would attach the row to the wrong fleet —
+ * the same unambiguous rule road-liability matching already applies to
+ * `externalVehicleRef`. An ambiguous id falls through to VIN, then to
+ * `VEHICLE_NOT_FOUND`.
+ */
+async function matchVehicleByExternalId(
+  db: Db,
+  externalId: string,
+): Promise<{ id: number; vin: string | null } | null> {
+  const matches = await db.vehicle.findMany({
+    where: { externalId },
+    select: { id: true, vin: true },
+    take: 2,
+  });
+  return matches.length === 1 ? (matches[0] ?? null) : null;
+}
 
 async function lookupModelByCode(db: Db, ctx: EvalContext, code: string): Promise<MasterRef | null> {
   if (ctx.modelByCode.has(code)) return ctx.modelByCode.get(code) ?? null;
@@ -204,20 +231,17 @@ export async function evaluateRow(
   // is an exact override. An unmatched name/code is NOT an error: it is a candidate
   // to CREATE (or, for model/branch, link) at confirm, so the row still imports.
   // Only an inactive record is a real conflict a human must resolve. No fuzzy match.
-  let modelId = 0;
   let vehicleModel: MasterRefResult | null = null;
   if (parsed.vehicle.vehicleModelCode) {
     const code = parsed.vehicle.vehicleModelCode;
     const rec = await lookupModelByCode(db, ctx, code);
     const r = classifyMaster(rec, { by: "code", value: code, key: code }, "vehicleModelCode", "inactive_model", "Vehicle model is inactive", issues);
-    modelId = r.id;
     vehicleModel = r.ref;
   } else if (parsed.vehicle.vehicleModelName) {
     const value = parsed.vehicle.vehicleModelName;
     const nn = normalizeName(value);
     const rec = await lookupModelByName(db, ctx, nn);
     const r = classifyMaster(rec, { by: "name", value, key: `name:${nn}` }, "vehicleModelName", "inactive_model", "Vehicle model is inactive", issues);
-    modelId = r.id;
     vehicleModel = r.ref;
   }
 
@@ -310,47 +334,46 @@ export async function evaluateRow(
     customer = { mode: "create" };
   }
 
-  // --- Vehicle match (externalId, then VIN; VIN immutable — mismatch = conflict) ---
+  // --- Vehicle match (MATCH-ONLY: externalId, then VIN; VIN immutable = conflict) ---
+  // The importer never creates a Vehicle. A row that matches nothing is INVALID
+  // and the operator creates the vehicle through Fleet → Add Vehicle (choosing its
+  // company) before re-running the import.
   let vehicle: VehiclePlan | undefined;
   let vehicleConflict = false;
-  if (parsed.vehicle.externalId) {
-    const existing = await db.vehicle.findUnique({
-      where: {
-        companyId_externalId: {
-          companyId: await resolveDefaultOperatingCompanyId(db),
-          externalId: parsed.vehicle.externalId,
-        },
-      },
-      select: { id: true, vin: true },
-    });
-    if (existing) {
-      if (parsed.vehicle.vin && existing.vin !== parsed.vehicle.vin) {
-        vehicleConflict = true;
-        issues.push(rowIssue("vin", "vin_conflict", ImportErrorReason.DUPLICATE_RECORD, "VIN does not match the existing vehicle and cannot be changed"));
-      }
-      vehicle = { mode: "existing", id: existing.id, modelId };
-    } else if (parsed.vehicle.vin) {
-      // New externalVehicleId but the VIN may belong to another vehicle.
-      const byVin = await db.vehicle.findUnique({ where: { vin: parsed.vehicle.vin }, select: { id: true } });
-      if (byVin) {
-        vehicleConflict = true;
-        issues.push(rowIssue("vin", "duplicate_vin", ImportErrorReason.DUPLICATE_RECORD, "VIN already belongs to a different vehicle"));
-        vehicle = { mode: "existing", id: byVin.id, modelId };
-      } else {
-        vehicle = { mode: "create", modelId };
-      }
-    } else {
-      vehicle = { mode: "create", modelId };
+  const byExternalId = parsed.vehicle.externalId
+    ? await matchVehicleByExternalId(db, parsed.vehicle.externalId)
+    : null;
+  if (byExternalId) {
+    if (parsed.vehicle.vin && byExternalId.vin !== parsed.vehicle.vin) {
+      vehicleConflict = true;
+      issues.push(rowIssue("vin", "vin_conflict", ImportErrorReason.DUPLICATE_RECORD, "VIN does not match the existing vehicle and cannot be changed"));
     }
+    vehicle = { mode: "existing", id: byExternalId.id };
   } else if (parsed.vehicle.vin) {
-    const existing = await db.vehicle.findUnique({
+    const byVin = await db.vehicle.findUnique({
       where: { vin: parsed.vehicle.vin },
       select: { id: true },
     });
-    vehicle = existing ? { mode: "existing", id: existing.id, modelId } : { mode: "create", modelId };
-  } else {
-    // No externalId, no VIN — cannot dedup; always a new vehicle (documented risk).
-    vehicle = { mode: "create", modelId };
+    if (byVin) {
+      if (parsed.vehicle.externalId) {
+        // The externalId did not resolve but the VIN belongs to a known vehicle:
+        // the file and the fleet disagree about identity — a human decides.
+        vehicleConflict = true;
+        issues.push(rowIssue("vin", "duplicate_vin", ImportErrorReason.DUPLICATE_RECORD, "VIN already belongs to a different vehicle"));
+      }
+      vehicle = { mode: "existing", id: byVin.id };
+    }
+  }
+  if (!vehicle) {
+    issues.push(
+      rowIssue(
+        parsed.vehicle.vin ? "vin" : "externalVehicleId",
+        "vehicle_not_found",
+        ImportErrorReason.VEHICLE_NOT_FOUND,
+        "Vehicle is not in the fleet and the import cannot create it",
+        "Add the vehicle from the Vehicles page, then re-run this import",
+      ),
+    );
   }
 
   // --- Experience match (externalSaleId is the strong idempotency key) ---
@@ -432,7 +455,9 @@ export async function executeRow(
   evaluation: RowEvaluation,
 ): Promise<RowWriteResult> {
   const customerId = await getOrCreateCustomer(tx, parsed, evaluation.customer!);
-  const vehicleId = await getOrCreateVehicle(tx, parsed, evaluation.vehicle!);
+  // Never a create: evaluation only ever produces a matched fleet vehicle, and a
+  // row that matched nothing is INVALID and never reaches executeRow.
+  const vehicleId = evaluation.vehicle!.id;
   const plan = evaluation.experience!;
   // A name-matched salesperson with no existing record is created in its branch
   // now that the branchId is resolved (idempotent get-or-create).
@@ -485,53 +510,6 @@ function customerData(parsed: ParsedRow) {
     optOutWhatsApp: c.optOutWhatsApp,
     externalId: c.externalId,
   };
-}
-
-async function getOrCreateVehicle(tx: Db, parsed: ParsedRow, plan: VehiclePlan): Promise<number> {
-  if (plan.mode === "existing" && plan.id) return plan.id;
-  const v = parsed.vehicle;
-  // The sales import has no company column, so imported vehicles belong to the
-  // explicit default company. externalId is unique per company, so every lookup
-  // below is scoped to it too.
-  const companyId = await resolveDefaultOperatingCompanyId(tx);
-  const data = {
-    companyId,
-    vin: v.vin,
-    modelId: plan.modelId,
-    modelYear: v.modelYear,
-    color: v.color,
-    externalId: v.externalId,
-  };
-  if (v.externalId) {
-    await acquireAdvisoryLock(tx, "import_vehicle_ext", v.externalId);
-    const found = await tx.vehicle.findUnique({
-      where: { companyId_externalId: { companyId, externalId: v.externalId } },
-      select: { id: true },
-    });
-    if (found) return found.id;
-  }
-  if (v.vin) {
-    await acquireAdvisoryLock(tx, "import_vehicle_vin", v.vin);
-    const found = await tx.vehicle.findUnique({ where: { vin: v.vin }, select: { id: true } });
-    if (found) return found.id;
-  }
-  try {
-    const created = await tx.vehicle.create({ data, select: { id: true } });
-    return created.id;
-  } catch (err) {
-    if (isUniqueViolation(err)) {
-      const where = v.externalId
-        ? { companyId_externalId: { companyId, externalId: v.externalId } }
-        : v.vin
-          ? { vin: v.vin }
-          : null;
-      if (where) {
-        const again = await tx.vehicle.findUnique({ where, select: { id: true } });
-        if (again) return again.id;
-      }
-    }
-    throw err;
-  }
 }
 
 async function createExperienceIdempotent(

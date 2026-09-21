@@ -5,6 +5,7 @@ import { Card } from "@/shared/components/ui/card";
 import { Chip } from "@/shared/components/ui/chip";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListRow } from "@/shared/components/ui/list-row";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { NAVIGATION_ICONS } from "@/modules/navigation";
 import { ContractStatusChip } from "@/modules/contracts/components/contract-status/contract-status";
 import type { TodayDeliveryDto } from "../../types/dashboard.types";
@@ -63,6 +64,13 @@ export function TodayDeliveriesCard({
                     <span className={styles.contractId} dir="ltr">
                       {delivery.contractNumber}
                     </span>
+                    {/* Company is metadata beside the contract number, never the
+                        primary content of the row. It comes from Contract.company. */}
+                    {delivery.company ? (
+                      <span className={styles.company} data-testid="dashboard-delivery-company">
+                        <CompanyIdentity company={delivery.company} compact />
+                      </span>
+                    ) : null}
                   </>
                 }
                 trailing={<ContractStatusChip status={delivery.status} />}

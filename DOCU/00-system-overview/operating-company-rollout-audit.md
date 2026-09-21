@@ -4,7 +4,7 @@ Where UNIQUE / ELITE is visible today, where it is still missing, and which phas
 owns each gap. Read this with
 [operating-companies.md](./operating-companies.md), which defines the rules.
 
-Updated 2026-09-20, after **Phase A**.
+Updated 2026-09-21, after **Phase C1** (Finance backend).
 
 ## The two kinds of company
 
@@ -13,8 +13,12 @@ main risk this audit exists to prevent.
 
 | Kind | Rule | Examples |
 | ---- | ---- | -------- |
-| **Persisted** | The row stores `companyId` because it must survive later changes elsewhere | `Vehicle`, `Contract` |
-| **Derived** | The row reads the company from a relation whose company can never move | `MaintenanceOrder` → Vehicle, GPS state → Vehicle |
+| **Persisted** | The row stores `companyId` because it must survive later changes elsewhere | `Vehicle`, `Contract`, `FinancialLedgerEntry`, `ManualExpense` |
+| **Derived** | The row reads the company from a relation whose company can never move | `MaintenanceOrder` → Vehicle, GPS state → Vehicle, receivables → Contract |
+
+Phase C1 added a third answer that is neither: **GENERAL**, meaning `companyId IS
+NULL`. It is not a company and never becomes one — see
+[operating-companies.md](./operating-companies.md#general-is-a-classification-not-a-company).
 
 A record gets a persisted `companyId` only when its own company could otherwise
 be recomputed **wrongly** later. `Contract.companyId` is persisted because a
@@ -36,13 +40,92 @@ two answers to one question. That is a bug waiting for its first disagreement.
 | Maintenance | derived from `Vehicle.company` | yes | `?companyId=` (Vehicle relation) | **A** |
 | GPS | derived from `Vehicle.company` | yes | `?companyId=` (`Vehicle.companyId`) | **A** |
 | Vehicle pickers (Maintenance, Finance) | `Vehicle.company` on the existing card DTO | yes | `?companyId=` on `GET /vehicles` | **A** |
-| Road liabilities | none yet | no | no | B |
-| Imports | none — creators resolve the default company | no | no | B |
-| Dashboard | none yet | no | no | B |
-| Finance ledger (`FinancialLedgerEntry`) | none yet | no | no | C |
-| Manual expense (`ManualExpense`) | none yet | no | no | C |
+| Road liabilities / Salik | derived: attributed `Contract.company`, else `Vehicle.company`, else `null` | yes (nullable) | `?companyId=` (contract-first) | **B** |
+| Imports | none — imports are match-only and never create or assign a company | n/a | n/a | **B** |
+| Dashboard rows | `Contract.company` on `todayDeliveries` / `recentContracts` | yes | none — the dashboard has no company scope | **B** |
+| Finance ledger (`FinancialLedgerEntry`) | `companyId` (persisted at write time, nullable) | yes (nullable) | `?companyId=` / `?companyScope=GENERAL` | **C1** |
+| Manual expense (`ManualExpense`) | `companyId` derived from the optional Vehicle, persisted, nullable | yes (nullable) | through the ledger and its own column | **C1** |
+| Finance receivables | derived from `Contract.company` — no column | yes (nullable) | `?companyId=`, GENERAL returns none | **C1** |
+| Finance frontend + dashboard scope | — | — | — | C2 |
 | Invoices / daily statements | do not exist yet | — | — | later |
 | Company-scoped RBAC | does not exist — staff see every company | — | — | later |
+
+## Phase C1 — Finance database + backend (done, 2026-09-21)
+
+The first Finance database change since `finance_v1`. Migration
+`20260921090000_finance_company_classification` adds two **nullable** columns and
+backfills them from relations only. **No frontend change, no Invoice, no daily
+statement, and no third OperatingCompany.**
+
+- **Manual Expense company is backend-owned and derived from the optional
+  Vehicle.** A Vehicle makes the expense that Vehicle's company; no Vehicle makes
+  it GENERAL (`null`). The dialog gains **no** company field, the API accepts no
+  company input, and a client-sent `companyId` is dropped by Zod — so a request
+  claiming *Vehicle = ELITE, company = UNIQUE* still stores ELITE.
+- **The ledger persists its company at write time**, from each writer's own
+  authoritative source: Contract payments use `Contract.companyId` (frozen
+  history, never the Vehicle's current owner), maintenance uses
+  `MaintenanceOrder → Vehicle.companyId`, and the three Manual Expense writers
+  copy `ManualExpense.companyId` verbatim. All five funnel through the single
+  `insertLedgerEntry`, which now requires `companyId` explicitly, so a new writer
+  cannot forget it.
+- **Nothing falls back to UNIQUE.** No writer, no backfill step and no query
+  substitutes a default for a missing company. Unresolvable stays `null`.
+- **Filters:** no parameter = ALL (UNIQUE + ELITE + GENERAL), `?companyId=N` =
+  that company, `?companyScope=GENERAL` = `companyId IS NULL`. ALL is the
+  *absence* of a predicate — expressing it as `companyId IS NOT NULL` would drop
+  GENERAL. The two cannot be combined (422 `FINANCE_COMPANY_SCOPE_CONFLICT`).
+- **Receivables derive through the Contract** and gained no column. A Contract
+  always has a company, so GENERAL correctly returns no contract receivables, and
+  no general-receivable concept was invented to fill the gap.
+- **The dashboard is unchanged.** `sumCollected` / `sumExpenses` /
+  `movementBreakdown` take an optional scope that defaults to ALL, so
+  `weeklyFinance` behaves exactly as before while Phase C2 can pass a scope.
+
+Backfill, and what the numbers were: development `diamond` had 10 manual expenses
+(all vehicle-less → all GENERAL) and 12 ledger rows (all from those expenses →
+all null). `haidara_test` had 173 ledger rows: 165 resolved from their Contract,
+8 from maintenance → Vehicle, 0 unresolved. Both databases report zero
+ledger/contract and ledger/expense mismatches. Re-run the evidence any time with
+`npm run verify:finance-company`.
+
+## Phase B (done, 2026-09-21)
+
+Road liabilities / Salik, the single Vehicle creation source, and dashboard rows.
+
+**No database change.** No Prisma edit, no migration, no new `companyId` column,
+no Finance schema change.
+
+- **Road liabilities are the first *three-way* derived domain.** A liability may
+  have a Contract, a Vehicle, both, or neither, so precedence had to be written
+  down once and kept in the Backend: attributed `Contract.company` wins, the
+  Vehicle answers only when there is no Contract, and a liability with neither
+  stays `null`. The frontend consumes the resolved `company` and never rebuilds
+  that order. The filter uses the same precedence
+  (`attributedContract.companyId = X` OR `attributedContractId IS NULL AND
+  vehicle.companyId = X`), so a liability on a UNIQUE vehicle under an ELITE
+  Contract answers to ELITE only. All Companies keeps unmatched rows visible.
+  Salik follows the identical rule; no company is inferred from a provider,
+  account, endpoint or external reference. `RoadLiabilityCustomerCharge` and
+  `ContractPostCloseReceivable` gained no company column.
+- **Fleet → Add Vehicle became the sole Vehicle creation source.** The sales
+  import and purchase experiences both used to create a Vehicle under the default
+  company; both now reference an existing one or fail. `resolveDefaultOperatingCompanyId`
+  is deleted with them. Imports gained no Company selector on purpose — a module
+  that cannot create a Vehicle has no business choosing its company. An
+  ambiguous `externalId` (held by two companies) matches nothing rather than
+  guessing.
+- **Dashboard got rows, not a scope.** `todayDeliveries` and `recentContracts`
+  carry `Contract.company` in the same query and render it as row metadata. No
+  header selector, no `?companyId=`, no KPI change. That waits for Phase C.
+
+### The rule Phase B exists to protect
+
+A permanent, unchangeable field must have exactly one place that sets it. Before
+Phase B, `Vehicle.companyId` was immutable *and* three different code paths could
+write it, two of them silently defaulting to UNIQUE. A sales file could put an
+ELITE car in the UNIQUE fleet for ever, with no workflow to correct it. Closing
+the extra doors is what makes the write-once rule mean anything.
 
 ## Phase A (done, 2026-09-20)
 
@@ -77,12 +160,12 @@ relation.
 
 ### Deliberately deferred
 
-- Company on `FinancialLedgerEntry` and `ManualExpense` — **Phase C**. A
-  completed Maintenance order with a cost writes a `MAINTENANCE_EXPENSE` ledger
-  entry; that entry will persist its own `companyId` at write time, because a
-  ledger row is recognized history and must not be re-derived from the Vehicle
-  later. Until then, Maintenance derives its company and Finance stores none.
-- Road liabilities, imports and dashboard — **Phase B**.
+- Company on `FinancialLedgerEntry` and `ManualExpense` — done in **Phase C1**
+  (above), exactly as predicted here: the `MAINTENANCE_EXPENSE` entry persists its
+  own `companyId` at write time, because a ledger row is recognized history and
+  must not be re-derived from the Vehicle later. Maintenance still derives.
+- Road liabilities, imports and dashboard rows — done in **Phase B** (above).
+- Finance frontend and the dashboard company scope — **Phase C2**.
 - Invoices, daily statements and company-scoped RBAC — later.
 
 ### Two defects the QA pass caught

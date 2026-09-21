@@ -23,6 +23,7 @@
     "test:unit": "node --import tsx --test tests/unit/*.test.ts",
     "test:integration": "node --import tsx --test-concurrency=1 --test tests/integration/*.test.ts",
     "verify:reports": "tsx scripts/verify-reports.ts",
+    "verify:finance-company": "tsx scripts/verify-finance-company.ts",
     "db:seed:demo": "tsx prisma/seed/demo-fleet.ts",
     "db:cleanup:dev-fleet": "tsx scripts/cleanup-dev-fleet.ts",
     "db:cleanup:dev-users": "tsx scripts/cleanup-dev-users.ts",

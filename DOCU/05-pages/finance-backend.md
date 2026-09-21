@@ -27,6 +27,37 @@ Ledger kinds:
 
 Dedupe keys (DB unique): `payment:<id>`, `maintenance:<id>`, `manual-expense:<id>:create`, `manual-expense:<id>:void`.
 
+## Operating company classification
+
+Every ledger row and every manual expense carries a **nullable** `companyId`
+(migration `20260921090000_finance_company_classification`).
+
+`null` means **GENERAL**: a financial record with no authoritative company-bearing
+source, such as office rent booked without a Vehicle. GENERAL is *not* an
+`OperatingCompany` — Diamond still has exactly two, UNIQUE and ELITE.
+
+The ledger persists its company **at write time**, from the writer's own
+authoritative source, because a recognized movement is history and must never be
+re-derived later:
+
+| Writer | Source |
+| --- | --- |
+| Stripe contract payment | `Contract.companyId` (frozen — never the Vehicle's current company) |
+| Maintenance cost | `MaintenanceOrder → Vehicle.companyId` |
+| Manual expense create / correct / void | `ManualExpense.companyId`, `null` included |
+
+Nothing falls back to UNIQUE. An unresolvable company stays `null`.
+
+Company scope on every Finance read: no parameter = **ALL** (UNIQUE + ELITE +
+GENERAL), `?companyId=<id>` = that company, `?companyScope=GENERAL` =
+`companyId IS NULL`. The two together are 422 `FINANCE_COMPANY_SCOPE_CONFLICT`.
+ALL adds no predicate — as `companyId IS NOT NULL` it would hide GENERAL.
+
+Open receivables derive company through `Contract.company` and store no column, so
+GENERAL returns none.
+
+Full rules: [operating-companies.md](../00-system-overview/operating-companies.md).
+
 ## Stripe-only Collected rule
 
 Historical `MANUAL` / `BANK_TRANSFER` payments are preserved but **never** counted in V1 Collected totals.
@@ -61,6 +92,13 @@ Staff-recorded company expenses outside other Diamond modules.
 - Correction: in-place update of the same `ManualExpense` (status stays `ACTIVE`) + immutable `ManualExpenseRevision` history. No VOID, no `MANUAL_EXPENSE_REVERSAL`, no replacement row. The existing `manual-expense:<id>:create` ledger projection is updated in place when amount, date, or vehicle change.
 - Optional `attachmentId` (receipt evidence via shared Attachment model)
 - **No Manual Income**
+- **No Company field.** The company is derived from the optional Vehicle and owned
+  by the Backend: a Vehicle makes the expense that Vehicle's company, no Vehicle
+  makes it GENERAL (`null`). Changing the Vehicle re-derives it, removing the
+  Vehicle makes it GENERAL, adding one classifies it. The create/correct schemas
+  carry no `companyId`, so a client-sent one is stripped — *Vehicle = ELITE,
+  companyId = UNIQUE* still stores ELITE. The Vehicle picker's company filter is
+  search UX only and never classifies the expense.
 
 ## APIs
 
@@ -91,7 +129,14 @@ Seeded idempotently; `system_admin` receives both.
 1. Stripe payments: `CONFIRMED` + `CARD` + `provider = stripe` + `confirmedAt`
 2. Maintenance: `COMPLETED` + `cost IS NOT NULL` + `completedAt`
 
+`20260921090000_finance_company_classification` backfills company from relations
+only — manual expenses from their Vehicle, ledger rows by precedence (Contract →
+Manual Expense → Maintenance → Vehicle → null). No description parsing, no
+category guessing, no UNIQUE fallback. Guards abort on a mismatch or on any
+operating company other than UNIQUE / ELITE.
+
 ## Verification
 
-- Unit: `tests/unit/finance-ledger.test.ts`
-- Integration: `tests/integration/finance.test.ts` (requires `haidara_test`)
+- Unit: `tests/unit/finance-ledger.test.ts`, `tests/unit/finance-company-scope.test.ts`
+- Integration: `tests/integration/finance.test.ts`, `tests/integration/finance-company.test.ts` (both require `haidara_test`)
+- Database evidence: `npm run verify:finance-company` (read-only; works before and after the migration)

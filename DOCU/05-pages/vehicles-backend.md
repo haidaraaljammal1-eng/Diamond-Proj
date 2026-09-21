@@ -14,6 +14,28 @@ Every Vehicle belongs to exactly one operating company, and the backend is compa
 | `GET /vehicles?companyId=` | Server-side Prisma filter. One dimension only; there is no competing `companyCode` parameter. |
 | `GET /operating-companies` | Reference list for company pickers and filters (see below). |
 
+### Fleet → Add Vehicle is the only way a Vehicle is created
+
+`POST /vehicles`, invoked from Fleet → Add Vehicle, is the **single Vehicle
+creation source in Diamond**. Nothing else may create one, because that route is
+the only place staff choose the operating company, and the company can never be
+corrected afterwards.
+
+| Path | Behaviour |
+| ---- | --------- |
+| Sales import (`imports/`) | **Match-only.** A row resolves an existing Vehicle by `externalId` (accepted only when exactly one vehicle across all companies holds it) or by global `vin`. No match ⇒ the row is `INVALID` with reason `vehicle_not_found` and the suggested action *Add the vehicle from the Vehicles page, then re-run this import*. `executeRow` writes no Vehicle at all. There is no import Company selector — imports do not own Vehicle creation, so they never assign, change or default a company. |
+| Purchase experiences | `vehicleId` must reference an existing, active fleet Vehicle. The inline `vehicle` block that used to create one is refused with 422; it stays in the schema so an old client gets an explicit error instead of Zod silently stripping the key and returning a misleading 200. |
+| Anything else | No other module, provider or background job creates a Vehicle. |
+
+`resolveDefaultOperatingCompanyId` (the explicit UNIQUE fallback the two legacy
+creators used) is **deleted**: with no Vehicle-creation path left outside Fleet,
+nothing may resolve a default company, and keeping the helper would leave the door
+open. A missing Vehicle is now an operator task, not a silent insert.
+
+`tests/integration/imports.test.ts` holds the guard: fleet count N → unmatched
+import → still N → unmatched purchase experience → still N → `POST /vehicles` →
+N + 1, and the same import row then matches the new vehicle.
+
 **No transfer workflow exists.** The company is chosen once at Add Vehicle: a
 UNIQUE vehicle stays UNIQUE forever and an ELITE vehicle stays ELITE forever. The
 field is still declared in `UpdateVehicleSchema` so an old client that sends it

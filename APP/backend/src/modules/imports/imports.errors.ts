@@ -20,6 +20,13 @@ export const ImportErrorReason = {
   AMBIGUOUS_CUSTOMER_MATCH: "ambiguous_customer_match",
   MISSING_EXPERIENCE_IDENTITY: "missing_experience_identity",
   INVALID_PARENT: "invalid_parent",
+  /**
+   * The row references a Vehicle that is not in the fleet. Imports are
+   * match-only: Fleet → Add Vehicle is Diamond's single Vehicle creation source,
+   * so the operator creates the vehicle there (choosing UNIQUE or ELITE) and
+   * re-runs the import instead of the importer inventing one.
+   */
+  VEHICLE_NOT_FOUND: "vehicle_not_found",
   INACTIVE_REFERENCE: "inactive_reference",
   IMMUTABLE_FIELD: "immutable_field",
   IMPORT_NOT_READY: "import_not_ready",

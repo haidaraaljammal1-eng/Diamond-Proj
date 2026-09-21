@@ -1,6 +1,6 @@
 ﻿# Current implementation status
 
-Updated 2026-09-20.
+Updated 2026-09-21.
 
 Diamond has two separate development simulation categories. Rental provider substitutions are Driver License OCR, Passport OCR, and successful payment; they require a real Rental Link and update the real Contract. Browser-only UI demos are Dashboard, WhatsApp, and Road Liabilities; they use local fixtures and never write Contracts, Vehicles, Payments, or any backend data. The former general rental journey simulation remains disabled. Contract Review, legal signatures, lifecycle, PAID reservation, and Car-Out use the normal persisted workflow.
 
@@ -93,10 +93,7 @@ configuration, credentials and API — and both are still unconfigured and fail
 closed with `TARS_NOT_CONFIGURED`. No TARS endpoint, credential or payload shape
 was invented, and no execute/retry/test control was added.
 
-Finance stores no company yet: `FinancialLedgerEntry` and `ManualExpense` get
-`companyId` in **Phase C**, so a completed maintenance expense will persist its
-company at write time instead of being re-derived from the Vehicle. Road
-liabilities, imports and dashboard company scope are **Phase B**. Invoices, daily
+Finance gained its company columns in **Phase C1** (below). Invoices, daily
 statements and company-scoped RBAC come later.
 
 Verified on 2026-09-20 in the browser against real UNIQUE and ELITE data:
@@ -105,6 +102,97 @@ to All Companies; both Vehicle pickers before and after selection; the GPS fleet
 list, detail drawer and company filter; and the TARS section on both a UNIQUE and
 an ELITE contract. Arabic RTL and English LTR at 1440px and 390px, no horizontal
 overflow.
+
+### Phase B rollout — road liabilities / Salik, single Vehicle creation source, dashboard rows
+
+Again **no database change** (no Prisma edit, no migration, no new `companyId`
+column, nothing in Finance).
+
+**Fleet → Add Vehicle is now the only Vehicle creation source in Diamond.**
+`POST /vehicles` is the one place the operating company is chosen, and the choice
+is permanent, so every other creation path was a way into the wrong fleet. The
+sales import is now **match-only**: it resolves an existing Vehicle by
+`externalId` or global `vin`, and a row that matches nothing is `INVALID` with
+reason `vehicle_not_found` and guidance to add the vehicle from the Vehicles page
+first — `executeRow` writes no Vehicle. Purchase experiences require an existing
+`vehicleId` and refuse their old inline `vehicle` block with 422. With no caller
+left, `resolveDefaultOperatingCompanyId` is deleted. Imports deliberately gained
+**no Company selector**, a matched ELITE vehicle stays ELITE, and an `externalId`
+held by two companies matches nothing rather than guessing one.
+
+**Road liabilities and Salik derive company by a three-way precedence** that lives
+only in the Backend: the attributed `Contract.company` always wins, the Vehicle
+answers only when there is no Contract, and a liability with neither stays
+`company: null`. No guess, no UNIQUE fallback, no `UNMATCHED` company row, and no
+company inferred from a provider, account or endpoint.
+`GET /road-liabilities?companyId=` filters contract-first to match, and All
+Companies keeps unmatched rows visible. `RoadLiabilityCustomerCharge` and
+`ContractPostCloseReceivable` gained no company column. The UI shows
+`CompanyIdentity` in the row, card and drawer, and a neutral "No company" /
+"بدون شركة" label for unmatched.
+
+**The dashboard got rows, not a scope.** `todayDeliveries` and `recentContracts`
+carry `Contract.company` and display it as row metadata; there is no dashboard
+company selector, no `?companyId=` on the overview, and no KPI, weekly finance,
+weekly rental activity or fleet-status change. A company-scoped dashboard waits
+for Phase C2 — Phase C1 only made the backend analytics helpers accept an optional
+scope that defaults to ALL, so current dashboard behaviour is byte-for-byte
+unchanged.
+
+Verified on 2026-09-21 in the browser against real UNIQUE and ELITE data: all
+five liability cases (contract-UNIQUE, contract-ELITE, vehicle-only UNIQUE,
+vehicle-only ELITE, fully unmatched), the Company filter returning 5 / 2 / 2 for
+All / ELITE / UNIQUE with the crossed row following its Contract, the detail
+drawer on both a matched and an unmatched liability, and the dashboard showing
+ELITE on DE-2026-000018 beside UNIQUE rows with KPIs untouched. Arabic RTL and
+English LTR at 1440px and 390px. The verification liabilities were removed
+afterwards and the two temporarily shifted contract start dates restored exactly.
+
+### Phase C1 — Finance database + backend
+
+The first Finance database change since `finance_v1`, and the first phase since
+the foundation to touch Prisma. Migration
+`20260921090000_finance_company_classification` adds **nullable**
+`ManualExpense.companyId` and `FinancialLedgerEntry.companyId`. **No frontend
+change, no Invoice, no daily statement, no third operating company.**
+
+**GENERAL is `companyId IS NULL`, not a company.** A financial record with no
+authoritative company-bearing source behind it — office rent booked without a
+Vehicle — is GENERAL. The DTO returns `company: null`; it never returns a
+synthetic `{ code: "GENERAL" }` object, and the frontend never infers a company
+from the row's Vehicle.
+
+**Manual Expense gets no company selector.** The company is derived from the
+optional Vehicle and owned by the Backend: a Vehicle makes it that Vehicle's
+company, no Vehicle makes it GENERAL, changing the Vehicle re-derives it, and
+removing the Vehicle makes it GENERAL again. The create/correct schemas carry no
+`companyId`, so a client-sent one is stripped — a request claiming *Vehicle =
+ELITE, companyId = UNIQUE* stores ELITE. The Vehicle picker's company filter stays
+search UX and never classifies the expense.
+
+**The ledger persists its company at write time**, from each writer's own
+authoritative source: contract payments from the frozen `Contract.companyId`
+(never the Vehicle's current company), maintenance from
+`MaintenanceOrder → Vehicle`, the three Manual Expense writers from the expense
+itself. All five funnel through one `insertLedgerEntry`, which now requires
+`companyId` explicitly. **Nothing falls back to UNIQUE** — unresolvable stays
+null.
+
+**Scope on every Finance read:** nothing = ALL (UNIQUE + ELITE + GENERAL),
+`?companyId=` = that company, `?companyScope=GENERAL` = null only; the two
+together are 422 `FINANCE_COMPANY_SCOPE_CONFLICT`. ALL adds no predicate, because
+`companyId IS NOT NULL` would silently hide GENERAL. Receivables derive through
+`Contract.company` with no column added, so GENERAL correctly has none.
+
+Backfill was relation-only (Contract → Manual Expense → Maintenance → Vehicle →
+null), with migration guards that abort on a mismatch or an unexpected company.
+`diamond`: 10 manual expenses, all vehicle-less and therefore GENERAL, and 12
+ledger rows, all GENERAL. `haidara_test`: 173 ledger rows — 165 from their
+Contract, 8 from maintenance, 0 unresolved. Zero mismatches on both.
+`npm run verify:finance-company` reproduces this evidence on demand.
+
+Verified: `finance-company` integration 24/24, `finance-company-scope` unit 5/5,
+backend typecheck, build, touched lint and `git diff --check` all clean.
 
 ## RETOUT and Car-In
 

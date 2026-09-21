@@ -8,6 +8,7 @@ import type {
   RoadLiabilityType,
   VehicleOperationalStatus,
 } from "@prisma/client";
+import { COMPANY_REF_SELECT, type CompanyRef } from "src/modules/operating-companies/company-ref";
 import {
   operationalStatusToDto,
   resolvePrimaryImage,
@@ -278,6 +279,7 @@ export function normalizeWholeAedAmount(amount: number | null | undefined): numb
 
 export const ROAD_LIABILITY_VEHICLE_INCLUDE = {
   model: { select: { name: true } },
+  company: { select: COMPANY_REF_SELECT },
   photos: {
     orderBy: [
       { isPrimary: "desc" as const },
@@ -295,6 +297,7 @@ export const ROAD_LIABILITY_LIST_INCLUDE = {
       id: true,
       contractNumber: true,
       status: true,
+      company: { select: COMPANY_REF_SELECT },
       customer: { select: { name: true } },
     },
   },
@@ -379,6 +382,25 @@ function toContractProjection(
   };
 }
 
+/**
+ * The one place road-liability company precedence lives.
+ *
+ * An attributed Contract is frozen history and always wins: a Contract created
+ * under ELITE keeps its liabilities ELITE regardless of what the Vehicle reads
+ * later. With no Contract the Vehicle answers, which is safe because
+ * `Vehicle.companyId` is write-once. With neither, the liability is genuinely
+ * unmatched and stays company-less — Diamond never guesses and never falls back
+ * to UNIQUE. Salik and RTA share this function; no channel infers its own company.
+ */
+export function resolveRoadLiabilityCompany(row: {
+  attributedContract: { company: CompanyRef } | null;
+  vehicle: { company: CompanyRef } | null;
+}): CompanyRef | null {
+  if (row.attributedContract) return row.attributedContract.company;
+  if (row.vehicle) return row.vehicle.company;
+  return null;
+}
+
 export function toListItem(row: RoadLiabilityRow): RoadLiabilityListItem {
   const gpsObservation = row.observations.find((o) => o.sourceKey === "GPS_INFERENCE");
   return {
@@ -404,6 +426,7 @@ export function toListItem(row: RoadLiabilityRow): RoadLiabilityListItem {
     gate: row.gate,
     vehicle: toVehicleProjection(row.vehicle),
     contract: toContractProjection(row.attributedContract),
+    company: resolveRoadLiabilityCompany(row),
     customer: row.attributedContract?.customer
       ? { displayName: row.attributedContract.customer.name }
       : null,

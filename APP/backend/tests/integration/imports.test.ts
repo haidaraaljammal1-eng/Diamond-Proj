@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { companyId as testCompanyId } from "tests/helpers/operating-company";
+import { companyId as testCompanyId, type CompanyCode } from "tests/helpers/operating-company";
 
 /**
  * End-to-end import-pipeline tests (upload → map → validate → preview → confirm →
@@ -35,7 +35,32 @@ if (!RUN) {
   const SP = `SP1-${run}`;
   const EXIST_CUST = `CUST-EXIST-${run}`;
 
-  const ADMIN_PERMS = ["imports.read", "imports.manage"];
+  // vehicles.* is here for the single-creation-source regression test: the import
+  // admin must be able to prove that Fleet → Add Vehicle still creates a vehicle
+  // when an unmatched import refuses to.
+  const ADMIN_PERMS = ["imports.read", "imports.manage", "vehicles.read", "vehicles.manage"];
+
+  /** Model id of the fixture vehicle model, resolved once in before(). */
+  let fixtureModelId = 0;
+
+  /**
+   * Put a vehicle in the fleet so an import row can MATCH it.
+   *
+   * Imports are match-only — Fleet → Add Vehicle is Diamond's single Vehicle
+   * creation source — so every fixture row that is expected to import must have its
+   * vehicle created here first. That is the real operating workflow, not a shortcut.
+   */
+  async function ensureFleetVehicle(vin: string, code: CompanyCode = "UNIQUE") {
+    const existing = await prisma.vehicle.findUnique({ where: { vin }, select: { id: true } });
+    if (existing) return existing.id;
+    const created = await prisma.vehicle.create({
+      data: { companyId: await testCompanyId(prisma, code), vin, modelId: fixtureModelId },
+      select: { id: true },
+    });
+    return created.id;
+  }
+
+  const fleetCount = () => prisma.vehicle.count();
 
   async function seedUser(email: string, password: string, roleKey: string, perms: string[]) {
     const { hashPassword } = await import("src/lib/security/password");
@@ -169,6 +194,7 @@ if (!RUN) {
     // Names are run-suffixed: branch / vehicle-model / salesperson normalizedName is
     // now uniquely constrained, so fixtures must not collide across runs/files.
     const model = await prisma.vehicleModel.create({ data: { code: MODEL, name: `Attrage ${run}` } });
+    fixtureModelId = model.id;
     await prisma.vehicleModel.create({ data: { code: DEAD_MODEL, name: `Retired ${run}`, isActive: false } });
     await prisma.branch.create({ data: { code: BRANCH, name: `Riyadh 1 ${run}` } });
     await prisma.salesperson.create({ data: { code: SP, name: `Rep ${run}`, externalId: `SPX-${run}` } });
@@ -189,6 +215,12 @@ if (!RUN) {
         modelId: model.id,
       },
     });
+    // The main CSV's rows can only import if their vehicles are already in the
+    // fleet. The last row ("NoKeys") deliberately gets none: it is the
+    // VEHICLE_NOT_FOUND case.
+    for (const suffix of ["A", "B", "C", "D", "E", "F", "G", "H"]) {
+      await ensureFleetVehicle(`VIN-${suffix}-${run}`);
+    }
   });
 
   after(async () => {
@@ -271,14 +303,17 @@ if (!RUN) {
     const { counts, rows, masterData } = preview.json().data;
     assert.equal(counts.total, 9);
     // Smart resolution: unknown model/branch are creatable (NEW), not INVALID; a
-    // missing externalSaleId is optional (NEW). New = Ali, Existing Co, Bad Branch,
-    // Bad Model, NoKeys.
-    assert.equal(counts.newRows, 5);
+    // missing externalSaleId is optional. New = Ali, Existing Co, Bad Branch,
+    // Bad Model — each matched to a fleet vehicle by VIN. The "NoKeys" row carries
+    // no VIN and no externalVehicleId, so it matches nothing and is INVALID: the
+    // importer never creates a Vehicle.
+    assert.equal(counts.newRows, 4);
     assert.equal(counts.duplicates, 1); // second SALE-1
     assert.equal(counts.manualReview, 1); // ambiguous mobile
-    // job-level "invalid" = won't-import = 2 bad rows (dead model, missing name) + conflicts(0) + manualReview(1)
-    assert.equal(counts.invalid, 3);
-    assert.equal(counts.valid, 6); // 5 new + 1 duplicate (idempotent skip)
+    // job-level "invalid" = won't-import = 3 bad rows (dead model, missing name,
+    // unmatched vehicle) + conflicts(0) + manualReview(1)
+    assert.equal(counts.invalid, 4);
+    assert.equal(counts.valid, 5); // 4 new + 1 duplicate (idempotent skip)
     // The unknown model/branch are surfaced as creatable master data (not errors).
     assert.ok(
       masterData.vehicleModels.some((m: { code: string; status: string }) => m.code === `NOPE-${run}` && m.status === "will_create"),
@@ -294,10 +329,12 @@ if (!RUN) {
     const ambiguous = rows.find((r: { externalSaleId: string }) => r.externalSaleId === `SALE-7-${run}`);
     assert.equal(ambiguous.status, "MANUAL_REVIEW");
     assert.equal(ambiguous.issues[0].reason, "ambiguous_customer_match");
-    // Keyless experience (no externalSaleId) is now OPTIONAL → imports normally.
+    // Keyless experience (no externalSaleId) is still OPTIONAL — the row is only
+    // rejected because its vehicle is not in the fleet, never for a missing sale id.
     const keyless = rows.find((r: { externalSaleId: string | null }) => r.externalSaleId === null);
-    assert.equal(keyless.status, "NEW");
+    assert.equal(keyless.status, "INVALID");
     assert.ok(!keyless.issues.some((i: { reason: string }) => i.reason === "missing_experience_identity"));
+    assert.ok(keyless.issues.some((i: { reason: string }) => i.reason === "vehicle_not_found"));
 
     // Preview wrote nothing — none of this import's keyed rows exist yet.
     // (Key-specific checks stay correct even if other test files write concurrently.)
@@ -309,7 +346,6 @@ if (!RUN) {
       await prisma.purchaseExperience.findUnique({ where: { externalSaleId: `SALE-2-${run}` } }),
       null,
     );
-    assert.equal(await prisma.vehicle.findUnique({ where: { vin: `VIN-A-${run}` } }), null);
   });
 
   test("confirm imports valid rows, skips duplicates, records failures; counts accurate", async () => {
@@ -319,10 +355,11 @@ if (!RUN) {
     const job = res.json().data;
     assert.equal(job.status, "COMPLETED_WITH_ERRORS");
     // No-body confirm defaults unknown codes to "create": Bad Branch + Bad Model now
-    // import (their master data is created); keyless row imports (saleId optional).
-    assert.equal(job.importedRows, 5); // Ali, Existing Co, Bad Branch, Bad Model, NoKeys
+    // import (their master data is created). The keyless row fails: it matches no
+    // fleet vehicle and the importer may not create one.
+    assert.equal(job.importedRows, 4); // Ali, Existing Co, Bad Branch, Bad Model
     assert.equal(job.skippedRows, 1); // duplicate SALE-1 within file
-    assert.equal(job.failedRows, 2); // inactive (dead) model, missing name
+    assert.equal(job.failedRows, 3); // inactive (dead) model, missing name, unmatched vehicle
     assert.equal(job.manualReviewRows, 1); // ambiguous mobile
     // The unknown model/branch were created during confirm.
     assert.ok(await prisma.vehicleModel.findUnique({ where: { code: `NOPE-${run}` } }));
@@ -331,8 +368,10 @@ if (!RUN) {
     // Authoritative rows were written.
     const sale1 = await prisma.purchaseExperience.findUnique({ where: { externalSaleId: `SALE-1-${run}` } });
     assert.ok(sale1);
+    // The row reused the fleet vehicle that already existed; confirm created none.
     const veh = await prisma.vehicle.findUnique({ where: { vin: `VIN-A-${run}` } });
     assert.ok(veh);
+    assert.equal(sale1.vehicleId, veh.id);
 
     // Existing customer (by externalId) was reused, NOT duplicated.
     const existing = await prisma.customer.findMany({ where: { externalId: EXIST_CUST } });
@@ -373,10 +412,10 @@ if (!RUN) {
     const id2 = await fullyImport(adminToken);
     const res = await app.inject({ method: "POST", url: `/imports/${id2}/confirm`, headers: auth(adminToken), payload: {} });
     const job = res.json().data;
-    // The keyed sales (SALE-1..SALE-4) already exist → skipped. The keyless row has
-    // no idempotency key by design, so it re-imports (documented; externalSaleId is
-    // the only strong dedup key for experiences).
-    assert.equal(job.importedRows, 1);
+    // The keyed sales (SALE-1..SALE-4) already exist → skipped, and the keyless row
+    // (which would otherwise re-import, since externalSaleId is the only strong dedup
+    // key for experiences) now fails on its unmatched vehicle. Nothing imports twice.
+    assert.equal(job.importedRows, 0);
     // No duplicate experiences for the keyed sales.
     assert.equal(await prisma.purchaseExperience.count({ where: { externalSaleId: `SALE-1-${run}` } }), 1);
     assert.equal(await prisma.purchaseExperience.count({ where: { externalSaleId: `SALE-2-${run}` } }), 1);
@@ -482,12 +521,204 @@ if (!RUN) {
     assert.equal(experience.vehicleId, veh.id);
   });
 
+  // --- Single Vehicle creation source: Fleet -> Add Vehicle ---
+
+  /** Upload -> map -> validate a one-off CSV and return its job id. */
+  async function stageCsv(header: string, dataRow: string, filename: string) {
+    const up = await upload(adminToken, filename, "text/csv", `${header}\n${dataRow}\n`);
+    assert.equal(up.statusCode, 201, up.body);
+    const id = up.json().data.id as number;
+    await app.inject({
+      method: "PUT",
+      url: `/imports/${id}/mapping`,
+      headers: auth(adminToken),
+      payload: { mapping: Object.fromEntries(header.split(",").map((h) => [h, h])) },
+    });
+    await app.inject({ method: "POST", url: `/imports/${id}/validate`, headers: auth(adminToken) });
+    return id;
+  }
+
+  async function previewOf(id: number) {
+    const res = await app.inject({
+      method: "GET",
+      url: `/imports/${id}/preview`,
+      headers: auth(adminToken),
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    return res.json().data as {
+      counts: Record<string, number>;
+      rows: Array<{
+        status: string;
+        issues: Array<{ reason: string; code: string; suggestedAction?: string }>;
+      }>;
+    };
+  }
+
+  const confirmJob = async (id: number) => {
+    const res = await app.inject({
+      method: "POST",
+      url: `/imports/${id}/confirm`,
+      headers: auth(adminToken),
+      payload: {},
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    return res.json().data as { importedRows: number; failedRows: number };
+  };
+
+  test("a row whose vehicle is not in the fleet is INVALID and creates no Vehicle", async () => {
+    const header = "name,vehicleModelCode,branchCode,vin,externalSaleId";
+    const before = await fleetCount();
+    const id = await stageCsv(
+      header,
+      `Ghost Buyer,${MODEL},${BRANCH},VIN-GHOST-${run},SALE-GHOST-${run}`,
+      "ghost.csv",
+    );
+
+    const { counts, rows } = await previewOf(id);
+    assert.equal(counts.invalid, 1);
+    assert.equal(rows[0]!.status, "INVALID");
+    const issue = rows[0]!.issues.find((i) => i.reason === "vehicle_not_found");
+    assert.ok(issue, "expected a vehicle_not_found issue");
+    // The operator is told where to go: Fleet -> Add Vehicle.
+    assert.match(String(issue!.suggestedAction), /Vehicles page/i);
+
+    const job = await confirmJob(id);
+    assert.equal(job.importedRows, 0);
+    assert.equal(job.failedRows, 1);
+
+    // Nothing was written: no vehicle, no shadow UNIQUE vehicle, no experience.
+    assert.equal(await prisma.vehicle.findUnique({ where: { vin: `VIN-GHOST-${run}` } }), null);
+    assert.equal(await fleetCount(), before, "an unmatched import changed the fleet size");
+    assert.equal(
+      await prisma.purchaseExperience.findUnique({ where: { externalSaleId: `SALE-GHOST-${run}` } }),
+      null,
+    );
+  });
+
+  test("matching an existing UNIQUE vehicle imports and leaves its company alone", async () => {
+    const uniqueId = await testCompanyId(prisma);
+    const vehicleId = await ensureFleetVehicle(`VINUNIQUE-${run}`, "UNIQUE");
+    const before = await fleetCount();
+    const header = "name,vehicleModelCode,branchCode,vin,externalSaleId";
+    const id = await stageCsv(
+      header,
+      `Unique Buyer,${MODEL},${BRANCH},VINUNIQUE-${run},SALE-UNIQUE-${run}`,
+      "unique.csv",
+    );
+    assert.equal((await confirmJob(id)).importedRows, 1);
+
+    const experience = await prisma.purchaseExperience.findUniqueOrThrow({
+      where: { externalSaleId: `SALE-UNIQUE-${run}` },
+      select: { vehicleId: true },
+    });
+    assert.equal(experience.vehicleId, vehicleId);
+    const veh = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { companyId: true },
+    });
+    assert.equal(veh.companyId, uniqueId);
+    assert.equal(await fleetCount(), before, "matching created a vehicle");
+  });
+
+  test("an externalVehicleId held by two companies matches nothing rather than guessing one", async () => {
+    // externalId is unique PER COMPANY and the sales file carries no company. Two
+    // companies may legitimately hold the same id, so the importer refuses to pick
+    // one: it never silently defaults to UNIQUE.
+    const shared = `EXTDUP-${run}`;
+    await prisma.vehicle.create({
+      data: {
+        companyId: await testCompanyId(prisma, "UNIQUE"),
+        externalId: shared,
+        modelId: fixtureModelId,
+      },
+    });
+    await prisma.vehicle.create({
+      data: {
+        companyId: await testCompanyId(prisma, "ELITE"),
+        externalId: shared,
+        modelId: fixtureModelId,
+      },
+    });
+    const before = await fleetCount();
+
+    const header = "name,vehicleModelCode,branchCode,externalVehicleId,externalSaleId";
+    const id = await stageCsv(
+      header,
+      `Ambiguous Ext,${MODEL},${BRANCH},${shared},SALE-EXTDUP-${run}`,
+      "extdup.csv",
+    );
+    const { rows } = await previewOf(id);
+    assert.equal(rows[0]!.status, "INVALID");
+    assert.ok(rows[0]!.issues.some((i) => i.reason === "vehicle_not_found"));
+    assert.equal(await fleetCount(), before);
+  });
+
+  test("Fleet -> Add Vehicle is the only path that grows the fleet", async () => {
+    const before = await fleetCount();
+
+    // 1. An unmatched import leaves the fleet untouched.
+    const header = "name,vehicleModelCode,branchCode,vin,externalSaleId";
+    const importId = await stageCsv(
+      header,
+      `Source Guard,${MODEL},${BRANCH},VIN-GUARD-${run},SALE-GUARD-${run}`,
+      "guard.csv",
+    );
+    assert.equal((await confirmJob(importId)).importedRows, 0);
+    assert.equal(await fleetCount(), before, "the importer created a vehicle");
+
+    // 2. So does a purchase experience that tries to create its vehicle inline.
+    const { createPurchaseExperiencesService } = await import(
+      "src/modules/purchase-experiences/purchase-experiences.service"
+    );
+    const experiences = createPurchaseExperiencesService(app);
+    const customer = await prisma.customer.create({ data: { name: `CX Guard ${run}` } });
+    const branch = await prisma.branch.findUniqueOrThrow({ where: { code: BRANCH } });
+    await assert.rejects(
+      () =>
+        experiences.create({
+          customerId: customer.id,
+          branchId: branch.id,
+          vehicle: { modelId: fixtureModelId, vin: `VIN-CXGUARD-${run}` },
+        } as never),
+      /cannot create a vehicle/i,
+    );
+    assert.equal(await fleetCount(), before, "a purchase experience created a vehicle");
+    assert.equal(await prisma.vehicle.findUnique({ where: { vin: `VIN-CXGUARD-${run}` } }), null);
+
+    // 3. Fleet -> Add Vehicle still creates one, under the company staff chose.
+    const eliteId = await testCompanyId(prisma, "ELITE");
+    const created = await app.inject({
+      method: "POST",
+      url: "/vehicles",
+      headers: auth(adminToken),
+      payload: {
+        companyId: eliteId,
+        vehicleName: `Guard Vehicle ${run}`,
+        vin: `VIN-GUARD-${run}`,
+      },
+    });
+    assert.equal(created.statusCode, 201, created.body);
+    assert.equal(created.json().data.company.code, "ELITE");
+    assert.equal(created.json().data.operationalStatus, "available");
+    assert.equal(await fleetCount(), before + 1);
+
+    // 4. And the import row that failed a moment ago now matches it.
+    const rerunId = await stageCsv(
+      header,
+      `Source Guard,${MODEL},${BRANCH},VIN-GUARD-${run},SALE-GUARD2-${run}`,
+      "guard2.csv",
+    );
+    assert.equal((await confirmJob(rerunId)).importedRows, 1);
+    assert.equal(await fleetCount(), before + 1, "the re-run created a second vehicle");
+  });
+
   test("valid XLSX flows through the same pipeline and imports", async () => {
     const header = HEADER.split(",");
     const dataRow = [
       "Xlsx Buyer", "", "", "", "",
       `VIN-XLSX-${run}`, MODEL, "2023", BRANCH, "", `SALE-XLSX-${run}`,
     ];
+    await ensureFleetVehicle(`VIN-XLSX-${run}`);
     const buf = await xlsxBuffer([header, dataRow]);
     const up = await upload(
       adminToken,
@@ -662,7 +893,15 @@ if (!RUN) {
     return { csv: rows.join("\n") + "\n", email };
   }
 
+  /** The four same-email rows each carry a distinct VIN; put them in the fleet. */
+  async function ensureSameEmailFleet(uniq: string) {
+    for (const n of [1, 2, 3, 4]) {
+      await ensureFleetVehicle(`VIN-SE${n}-${run}-${uniq}`);
+    }
+  }
+
   async function confirmSameEmail(uniq: string) {
+    await ensureSameEmailFleet(uniq);
     const { csv, email } = sameEmailCsv(uniq);
     const up = await upload(adminToken, `same-email-${uniq}.csv`, "text/csv", csv);
     assert.equal(up.statusCode, 201);
@@ -735,6 +974,7 @@ if (!RUN) {
 
   test("confirm rowDecisions resolves review rows before execution", async () => {
     const uniq = nonce();
+    await ensureSameEmailFleet(uniq);
     const { csv, email } = sameEmailCsv(uniq);
     const up = await upload(adminToken, `pre-resolve-${uniq}.csv`, "text/csv", csv);
     assert.equal(up.statusCode, 201);
@@ -774,6 +1014,7 @@ if (!RUN) {
 
   test("confirm rowDecisions leaves undecided review rows for the results screen", async () => {
     const uniq = nonce();
+    await ensureSameEmailFleet(uniq);
     const { csv } = sameEmailCsv(uniq);
     const up = await upload(adminToken, `partial-${uniq}.csv`, "text/csv", csv);
     const id = up.json().data.id as number;

@@ -2,9 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { AppError } from "src/lib/errors/app-error";
-import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
-import { resolveDefaultOperatingCompanyId } from "src/modules/operating-companies/default-company";
-import type { Tx } from "src/lib/db/transaction";
 import { paginate, parseSort } from "src/lib/http/pagination";
 import {
   assertFieldUnchanged,
@@ -12,7 +9,6 @@ import {
   inactiveReferenceError,
   invalidParentError,
   normalizeExternalId,
-  normalizeVin,
 } from "src/lib/master-data/code";
 import type {
   CreatePurchaseExperienceSchema,
@@ -79,16 +75,6 @@ export function createPurchaseExperiencesService(fastify: FastifyInstance) {
     });
     if (!row) throw invalidParentError("vehicleId");
     if (!row.isActive) throw inactiveReferenceError("vehicleId");
-  }
-
-  // A NEW inline vehicle may only reference an EXISTING, ACTIVE vehicle model.
-  async function assertActiveVehicleModel(id: number) {
-    const row = await prisma.vehicleModel.findUnique({
-      where: { id },
-      select: { isActive: true },
-    });
-    if (!row) throw invalidParentError("modelId");
-    if (!row.isActive) throw inactiveReferenceError("modelId");
   }
 
   async function assertActiveBranch(id: number) {
@@ -190,10 +176,21 @@ export function createPurchaseExperiencesService(fastify: FastifyInstance) {
   }
 
   async function create(input: z.infer<typeof CreatePurchaseExperienceSchema>) {
-    // Exactly one vehicle source (see schema note — enforced here, not via refine).
-    if ((input.vehicleId != null) === (input.vehicle != null)) {
-      throw AppError.validation("Provide exactly one of vehicleId or vehicle", {
-        fields: ["vehicleId", "vehicle"],
+    // Diamond has exactly ONE Vehicle creation source: Fleet → Add Vehicle, where
+    // staff choose the operating company. A purchase experience therefore only ever
+    // REFERENCES a fleet vehicle. The inline `vehicle` block stays in the schema and
+    // is refused explicitly rather than dropped, so an old client gets a clear error
+    // instead of a misleading success — the same convention as immutable `companyId`
+    // on Vehicle update.
+    if (input.vehicle != null) {
+      throw AppError.validation(
+        "A purchase experience cannot create a vehicle. Add it from the Vehicles page first, then send vehicleId.",
+        { fields: ["vehicle"] },
+      );
+    }
+    if (input.vehicleId == null) {
+      throw AppError.validation("Provide the vehicleId of an existing fleet vehicle", {
+        fields: ["vehicleId"],
       });
     }
     await assertActiveCustomer(input.customerId);
@@ -204,51 +201,10 @@ export function createPurchaseExperiencesService(fastify: FastifyInstance) {
       : null;
     if (externalSaleId) await assertExternalSaleIdFree(externalSaleId);
 
-    // Path A — existing vehicle (import / back-compat): validate then insert the row.
-    if (input.vehicleId != null) {
-      await assertActiveVehicle(input.vehicleId);
-      try {
-        return await prisma.purchaseExperience.create({
-          data: experienceData(input, input.vehicleId, externalSaleId),
-        });
-      } catch (err) {
-        rethrowP2002(err);
-      }
-    }
-
-    // Path B — inline vehicle (Customer-360 "record a purchase"). Create the Vehicle
-    // and the PurchaseExperience in ONE transaction so a failure leaves no partial
-    // row. A VIN is unique: an advisory lock serializes concurrent same-VIN creates,
-    // and an already-existing VIN is REJECTED (never silently reused / cross-linked).
-    const vehicle = input.vehicle!;
-    await assertActiveVehicleModel(vehicle.modelId);
-    const vin = vehicle.vin ? normalizeVin(vehicle.vin) : null;
-
+    await assertActiveVehicle(input.vehicleId);
     try {
-      return await prisma.$transaction(async (tx: Tx) => {
-        if (vin) {
-          await acquireAdvisoryLock(tx, "vehicle_vin", vin);
-          const existing = await tx.vehicle.findUnique({
-            where: { vin },
-            select: { id: true },
-          });
-          if (existing) throw vinConflict();
-        }
-        const created = await tx.vehicle.create({
-          data: {
-            // CX purchase experiences carry no company: the vehicle belongs to
-            // the explicit default operating company.
-            companyId: await resolveDefaultOperatingCompanyId(tx),
-            vin,
-            modelId: vehicle.modelId,
-            modelYear: vehicle.modelYear ?? null,
-            color: vehicle.color ?? null,
-          },
-          select: { id: true },
-        });
-        return tx.purchaseExperience.create({
-          data: experienceData(input, created.id, externalSaleId),
-        });
+      return await prisma.purchaseExperience.create({
+        data: experienceData(input, input.vehicleId, externalSaleId),
       });
     } catch (err) {
       rethrowP2002(err);

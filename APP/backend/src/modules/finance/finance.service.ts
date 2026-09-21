@@ -10,7 +10,18 @@ import {
   FINANCE_CURRENCY,
   type OpenReceivableSourceType,
 } from "src/modules/finance/finance.constants";
-import { ledgerDirection, toCustomerSummary, toVehicleSummary } from "src/modules/finance/finance.mapper";
+import {
+  ledgerDirection,
+  toCustomerSummary,
+  toFinanceCompanyRef,
+  toVehicleSummary,
+} from "src/modules/finance/finance.mapper";
+import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
+import {
+  companyScopeWhere,
+  resolveFinanceCompanyScope,
+  type FinanceCompanyScopeQuery,
+} from "src/modules/finance/finance-company-scope";
 
 const LEDGER_SORT_FIELDS = ["occurredAt", "amount", "kind", "sourceType"];
 
@@ -20,13 +31,20 @@ export function createFinanceService(fastify: FastifyInstance) {
   const receivables = createFinanceReceivablesService(prisma);
 
   return {
-    async summary(query: { from?: Date; to?: Date; periodType?: "MONTH" | "QUARTER" | "YEAR" | "CUSTOM" }) {
+    async summary(
+      query: {
+        from?: Date;
+        to?: Date;
+        periodType?: "MONTH" | "QUARTER" | "YEAR" | "CUSTOM";
+      } & FinanceCompanyScopeQuery,
+    ) {
       const period = resolveFinancePeriod(query);
+      const scope = resolveFinanceCompanyScope(query);
       const [collected, expenses, outstanding, openReceivables] = await Promise.all([
-        analytics.sumCollected(period),
-        analytics.sumExpenses(period),
-        receivables.totalOutstanding(),
-        receivables.listOpenReceivables({ page: 1, pageSize: 1 }),
+        analytics.sumCollected(period, scope),
+        analytics.sumExpenses(period, scope),
+        receivables.totalOutstanding(scope),
+        receivables.listOpenReceivables({ page: 1, pageSize: 1, scope }),
       ]);
 
       return {
@@ -41,12 +59,19 @@ export function createFinanceService(fastify: FastifyInstance) {
       };
     },
 
-    async analytics(query: { from?: Date; to?: Date; periodType?: "MONTH" | "QUARTER" | "YEAR" | "CUSTOM" }) {
+    async analytics(
+      query: {
+        from?: Date;
+        to?: Date;
+        periodType?: "MONTH" | "QUARTER" | "YEAR" | "CUSTOM";
+      } & FinanceCompanyScopeQuery,
+    ) {
       const period = resolveFinancePeriod(query);
+      const scope = resolveFinanceCompanyScope(query);
       const [trend, outstandingBreakdown, expenseBreakdown] = await Promise.all([
-        analytics.trend(period),
-        receivables.breakdownBySource(),
-        analytics.expenseBreakdown(period),
+        analytics.trend(period, scope),
+        receivables.breakdownBySource(scope),
+        analytics.expenseBreakdown(period, scope),
       ]);
       return {
         period: { from: period.from, to: period.to },
@@ -68,10 +93,11 @@ export function createFinanceService(fastify: FastifyInstance) {
       sourceType?: FinancialLedgerSourceType;
       direction?: "COLLECTION" | "EXPENSE" | "EXPENSE_REVERSAL" | "VOIDED";
       sort?: string;
-    }) {
+    } & FinanceCompanyScopeQuery) {
       const period = query.from || query.to || query.periodType
         ? resolveFinancePeriod(query)
         : undefined;
+      const scope = resolveFinanceCompanyScope(query);
       const sort = parseSort(query.sort, LEDGER_SORT_FIELDS, {
         field: "occurredAt",
         direction: "desc",
@@ -104,6 +130,8 @@ export function createFinanceService(fastify: FastifyInstance) {
       const where = {
         ...(period ? { occurredAt: { gte: period.from, lt: period.to } } : {}),
         ...(query.sourceType ? { sourceType: query.sourceType } : {}),
+        // Filters directly on the persisted classification — no join, no N+1.
+        ...companyScopeWhere(scope),
         ...directionWhere,
         ...(query.search?.trim()
           ? {
@@ -152,6 +180,7 @@ export function createFinanceService(fastify: FastifyInstance) {
                   workshopName: true,
                 },
               },
+              company: { select: COMPANY_REF_SELECT },
             },
           });
 
@@ -188,6 +217,7 @@ export function createFinanceService(fastify: FastifyInstance) {
                 : null,
               customer: toCustomerSummary(contract?.customer),
               vehicle: toVehicleSummary(contract?.vehicle),
+              company: toFinanceCompanyRef(row.company),
               category:
                 row.manualExpense?.category ??
                 (row.kind === "MAINTENANCE_EXPENSE" ? "MAINTENANCE" : null),
@@ -214,8 +244,9 @@ export function createFinanceService(fastify: FastifyInstance) {
       search?: string;
       sourceType?: OpenReceivableSourceType;
       sort?: string;
-    }) {
-      return receivables.listOpenReceivables(query).then((result) => ({
+    } & FinanceCompanyScopeQuery) {
+      const scope = resolveFinanceCompanyScope(query);
+      return receivables.listOpenReceivables({ ...query, scope }).then((result) => ({
         data: result.data,
         meta: {
           page: query.page,

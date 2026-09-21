@@ -1,3 +1,5 @@
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
+
 export type RoadLiabilityType =
   | "rta_violation"
   | "salik_toll"
@@ -112,6 +114,14 @@ export interface RoadLiabilityContractDto {
   status: string;
 }
 
+/**
+ * The owning company the Backend resolved for this liability: the attributed
+ * Contract first, then the Vehicle. Optional and nullable on purpose — an
+ * unmatched liability has no company, and a stale or simulated payload that omits
+ * it must never break the row.
+ */
+export type RoadLiabilityCompanyDto = OperatingCompanyIdentity;
+
 export interface RoadLiabilityCustomerDto {
   displayName: string;
 }
@@ -140,6 +150,7 @@ export interface RoadLiabilityListItemDto {
   vehicle: RoadLiabilityVehicleDto | null;
   contract: RoadLiabilityContractDto | null;
   customer: RoadLiabilityCustomerDto | null;
+  company?: RoadLiabilityCompanyDto | null;
   prediction: {
     predictedByGps: boolean;
     confidence: RoadLiabilityConfidence | null;
@@ -206,6 +217,8 @@ export interface RoadLiabilityPageMeta {
 
 export interface RoadLiabilitiesListQuery {
   search: string;
+  /** Authoritative company id, or null for All Companies (unmatched rows included). */
+  companyId: number | null;
   queue: RoadLiabilityQueueFilter;
   channel: RoadLiabilityChannelFilter;
   type: RoadLiabilityTypeFilter;

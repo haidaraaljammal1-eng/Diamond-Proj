@@ -10,3 +10,11 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
 }
+
+/* Company is row metadata, so the wrapper carries the inline layout and the
+   shared CompanyIdentity is never re-styled from here. */
+.company {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: 8px;
+}

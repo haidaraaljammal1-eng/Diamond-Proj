@@ -318,6 +318,18 @@ export function createRoadLiabilityService(fastify: FastifyInstance) {
     }
     if (query.vehicleId) and.push({ vehicleId: query.vehicleId });
     if (query.contractId) and.push({ attributedContractId: query.contractId });
+    // Contract-first, exactly like `resolveRoadLiabilityCompany`: an attributed
+    // Contract decides the company, and the Vehicle only answers for liabilities
+    // that have no Contract. Filtering on the Vehicle unconditionally would show a
+    // UNIQUE-vehicle liability under UNIQUE even though its ELITE Contract owns it.
+    if (query.companyId) {
+      and.push({
+        OR: [
+          { attributedContract: { companyId: query.companyId } },
+          { attributedContractId: null, vehicle: { companyId: query.companyId } },
+        ],
+      });
+    }
     if (query.occurredFrom || query.occurredTo) {
       and.push({
         occurredAt: {

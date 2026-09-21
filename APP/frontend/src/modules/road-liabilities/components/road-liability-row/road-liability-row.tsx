@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { Chip } from "@/shared/components/ui/chip";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
 import type { RoadLiabilityListItemDto } from "../../types/road-liabilities.types";
 import { formatLiabilityAmount, toValidOccurredDate } from "../../utils/road-liability-format";
@@ -40,6 +41,26 @@ function AuthorityMark({ item }: { item: RoadLiabilityListItemDto }) {
         <span className={styles.gpsHint}>{t("prediction.detectedByGps")}</span>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Company identity, or the neutral unmatched treatment when the Backend resolved
+ * none. An unmatched liability belongs to no company; it is never shown as one.
+ */
+function CompanyMark({ item }: { item: RoadLiabilityListItemDto }) {
+  const tCompany = useTranslations("OperatingCompanies");
+  if (!item.company) {
+    return (
+      <span className={styles.noCompany} data-testid="road-liability-company-unmatched" dir="auto">
+        {tCompany("unmatched")}
+      </span>
+    );
+  }
+  return (
+    <span className={styles.companyMark} data-testid="road-liability-company">
+      <CompanyIdentity company={item.company} compact />
+    </span>
   );
 }
 
@@ -98,11 +119,12 @@ export function RoadLiabilityRow({ item, selected, onSelect }: RoadLiabilityRowP
       <td className={styles.cell}>
         <div className={styles.vehicle}>
           <VehicleImage path={item.vehicle?.primaryImageUrl} alt="" className={styles.photo} />
-          <div>
+          <div className={styles.vehicleText}>
             <p className={styles.name}>{item.vehicle?.displayName ?? t("noVehicle")}</p>
             <p className={styles.plate} dir="ltr">
               {plate}
             </p>
+            <CompanyMark item={item} />
           </div>
         </div>
       </td>
@@ -172,11 +194,12 @@ export function RoadLiabilityCard({ item, selected, onSelect }: RoadLiabilityRow
       </div>
       <div className={styles.vehicle}>
         <VehicleImage path={item.vehicle?.primaryImageUrl} alt="" className={styles.photo} />
-        <div>
+        <div className={styles.vehicleText}>
           <p className={styles.name}>{item.vehicle?.displayName ?? t("noVehicle")}</p>
           <p className={styles.plate} dir="ltr">
             {plate}
           </p>
+          <CompanyMark item={item} />
         </div>
       </div>
       <div className={styles.party}>

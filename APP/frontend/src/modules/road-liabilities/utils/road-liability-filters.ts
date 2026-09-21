@@ -11,6 +11,7 @@ import { authorityFromType } from "./road-liability-status.ts";
 
 export const DEFAULT_ROAD_LIABILITIES_QUERY: RoadLiabilitiesListQuery = {
   search: "",
+  companyId: null,
   queue: "all",
   channel: "all",
   type: "all",
@@ -43,6 +44,11 @@ export function buildRoadLiabilitiesQuery(params: RoadLiabilitiesListQuery): str
   const term = params.search?.trim();
   if (term) search.set("search", term);
 
+  // Company scope is resolved in the Backend (Contract first, then Vehicle), so the
+  // frontend sends an id and never reproduces the precedence.
+  if (params.companyId != null) {
+    search.set("companyId", String(params.companyId));
+  }
   if (params.queue && params.queue !== "all") {
     search.set("queue", params.queue);
   }
@@ -130,6 +136,9 @@ export function filterSimulatedLiabilities(
 ): RoadLiabilityListItemDto[] {
   const term = query.search.trim().toLowerCase();
   return items.filter((item) => {
+    // Simulated liabilities carry no company, so a company scope excludes them
+    // rather than inventing one for the overlay.
+    if (query.companyId != null && item.company?.id !== query.companyId) return false;
     if (!itemMatchesQueue(item, query.queue)) return false;
     if (query.channel !== "all" && authorityFromType(item.type) !== query.channel) {
       return false;

@@ -4,10 +4,34 @@ import { OPEN_RECEIVABLE_SOURCE_TYPES } from "src/modules/finance/finance.consta
 
 const wholeAed = z.number().int().positive();
 
+/**
+ * Company scope for every Finance read.
+ *
+ * - nothing        → ALL: UNIQUE + ELITE + GENERAL
+ * - `companyId=N`  → that operating company only
+ * - `companyScope=GENERAL` → `companyId IS NULL` only
+ *
+ * GENERAL is a classification, not a company, so it never travels as a real
+ * `companyId`. Sending both is a contradiction and is refused rather than
+ * silently resolved.
+ */
+export const FinanceCompanyScopeShape = {
+  companyId: z.coerce.number().int().positive().optional(),
+  companyScope: z.enum(["ALL", "GENERAL"]).optional(),
+} as const;
+
+export const FinanceCompanyRefSchema = z.object({
+  id: z.number().int(),
+  code: z.string(),
+  displayName: z.string(),
+  accentColor: z.string(),
+});
+
 export const FinancePeriodQuerySchema = z.object({
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   periodType: z.enum(["MONTH", "QUARTER", "YEAR", "CUSTOM"]).optional(),
+  ...FinanceCompanyScopeShape,
 });
 
 export const FinanceSummarySchema = z.object({
@@ -64,6 +88,7 @@ export const LedgerListQuerySchema = PaginationQuerySchema.extend({
   sourceType: z.enum(["CONTRACT_PAYMENT", "MAINTENANCE_ORDER", "MANUAL_EXPENSE"]).optional(),
   direction: z.enum(["COLLECTION", "EXPENSE", "EXPENSE_REVERSAL", "VOIDED"]).optional(),
   sort: z.string().optional(),
+  ...FinanceCompanyScopeShape,
 });
 
 export const LedgerEntrySchema = z.object({
@@ -94,6 +119,8 @@ export const LedgerEntrySchema = z.object({
       plateNumber: z.string().nullable(),
     })
     .nullable(),
+  /** Persisted at write time from the entry's authoritative source. `null` = GENERAL. */
+  company: FinanceCompanyRefSchema.nullable(),
   category: z.string().nullable(),
   description: z.string().nullable(),
   contractPaymentId: z.string().nullable(),
@@ -121,6 +148,8 @@ export const OpenReceivableSchema = z.object({
       plateNumber: z.string().nullable(),
     })
     .nullable(),
+  /** Derived from the owning Contract; receivables store no company column. */
+  company: FinanceCompanyRefSchema.nullable(),
   amountDue: z.number().int(),
   amountPaid: z.number().int(),
   outstandingAmount: z.number().int(),
@@ -135,6 +164,7 @@ export const OpenReceivablesQuerySchema = PaginationQuerySchema.extend({
   search: z.string().optional(),
   sourceType: z.enum(OPEN_RECEIVABLE_SOURCE_TYPES).optional(),
   sort: z.string().optional(),
+  ...FinanceCompanyScopeShape,
 });
 
 export const ManualExpenseCategorySchema = z.enum([
@@ -189,6 +219,12 @@ export const ManualExpenseDetailSchema = z.object({
       plateNumber: z.string().nullable(),
     })
     .nullable(),
+  /**
+   * Backend-resolved classification. A Vehicle makes it that Vehicle's company;
+   * no Vehicle makes it `null`, which the frontend renders as GENERAL / عام.
+   * There is no company input on create or correct.
+   */
+  company: FinanceCompanyRefSchema.nullable(),
   vendorName: z.string().nullable(),
   receiptNumber: z.string().nullable(),
   attachment: z

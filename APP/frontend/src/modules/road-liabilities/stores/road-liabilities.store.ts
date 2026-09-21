@@ -27,6 +27,7 @@ interface RoadLiabilitiesState {
   pagination: RoadLiabilityPageMeta | null;
   searchDraft: string;
   appliedSearch: string;
+  companyFilter: RoadLiabilitiesListQuery["companyId"];
   queueFilter: RoadLiabilitiesListQuery["queue"];
   channelFilter: RoadLiabilitiesListQuery["channel"];
   typeFilter: RoadLiabilitiesListQuery["type"];
@@ -67,6 +68,7 @@ let detailRequestId = 0;
 function queryFromState(state: RoadLiabilitiesState): RoadLiabilitiesListQuery {
   return {
     search: state.appliedSearch,
+    companyId: state.companyFilter,
     queue: state.queueFilter,
     channel: state.channelFilter,
     type: state.typeFilter,
@@ -197,6 +199,7 @@ export const useRoadLiabilitiesStore = create<RoadLiabilitiesState>((set, get) =
   pagination: null,
   searchDraft: "",
   appliedSearch: "",
+  companyFilter: null,
   queueFilter: "all",
   channelFilter: "all",
   typeFilter: "all",
@@ -242,6 +245,7 @@ export const useRoadLiabilitiesStore = create<RoadLiabilitiesState>((set, get) =
       query: nextQuery,
       appliedSearch: nextQuery.search,
       searchDraft: partial.search === undefined ? current.searchDraft : nextQuery.search,
+      companyFilter: nextQuery.companyId,
       queueFilter: nextQuery.queue,
       channelFilter: nextQuery.channel,
       typeFilter: nextQuery.type,
@@ -263,6 +267,7 @@ export const useRoadLiabilitiesStore = create<RoadLiabilitiesState>((set, get) =
       query: DEFAULT_ROAD_LIABILITIES_QUERY,
       appliedSearch: "",
       searchDraft: "",
+      companyFilter: null,
       queueFilter: "all",
       channelFilter: "all",
       typeFilter: "all",

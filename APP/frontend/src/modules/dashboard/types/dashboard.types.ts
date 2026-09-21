@@ -1,3 +1,4 @@
+import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
 import type { ContractStatus } from "@/modules/contracts/types/contract.types";
 
 export type DashboardFinanceBreakdownKey =
@@ -49,6 +50,13 @@ export interface FleetStatusDto {
   service: number;
 }
 
+/**
+ * Row-level company identity from `Contract.company`. Optional and nullable so a
+ * simulated or pre-multi-company payload simply renders no marker instead of
+ * breaking the row — the lesson Phase A learned from the TARS projection.
+ */
+export type DashboardCompanyDto = OperatingCompanyIdentity;
+
 export interface TodayDeliveryDto {
   id: string;
   contractNumber: string;
@@ -56,6 +64,7 @@ export interface TodayDeliveryDto {
   vehicleName: string;
   startAt: string;
   status: ContractStatus;
+  company?: DashboardCompanyDto | null;
 }
 
 export interface RecentContractDto {
@@ -65,6 +74,7 @@ export interface RecentContractDto {
   vehicleName: string;
   employeeName: string | null;
   status: ContractStatus;
+  company?: DashboardCompanyDto | null;
 }
 
 export interface DashboardOverviewDto {

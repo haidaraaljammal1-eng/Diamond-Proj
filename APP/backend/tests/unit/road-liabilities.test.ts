@@ -8,6 +8,7 @@ import {
   deriveCollectionStatus,
   deriveWorkState,
   isChargeableRoadLiability,
+  resolveRoadLiabilityCompany,
 } from "src/modules/road-liabilities/road-liability.mapper";
 import { attributeCustodyWindows } from "src/modules/road-liabilities/matching/contract-attribution.service";
 import {
@@ -344,5 +345,55 @@ describe("salik crossing detector", () => {
     );
     assert.ok(east);
     assert.equal(west, null);
+  });
+});
+
+describe("road liability operating company", () => {
+  const UNIQUE = { id: 1, code: "UNIQUE", displayName: "UNIQUE", accentColor: "#C9A15C" };
+  const ELITE = { id: 2, code: "ELITE", displayName: "ELITE", accentColor: "#3E5C76" };
+
+  it("reads the attributed Contract company when there is one", () => {
+    assert.equal(
+      resolveRoadLiabilityCompany({
+        attributedContract: { company: UNIQUE },
+        vehicle: { company: UNIQUE },
+      }),
+      UNIQUE,
+    );
+    assert.equal(
+      resolveRoadLiabilityCompany({
+        attributedContract: { company: ELITE },
+        vehicle: { company: ELITE },
+      }),
+      ELITE,
+    );
+  });
+
+  it("falls back to the Vehicle company only when there is no Contract", () => {
+    assert.equal(
+      resolveRoadLiabilityCompany({ attributedContract: null, vehicle: { company: UNIQUE } }),
+      UNIQUE,
+    );
+    assert.equal(
+      resolveRoadLiabilityCompany({ attributedContract: null, vehicle: { company: ELITE } }),
+      ELITE,
+    );
+  });
+
+  it("lets the Contract win when the Contract and the Vehicle disagree", () => {
+    assert.equal(
+      resolveRoadLiabilityCompany({
+        attributedContract: { company: ELITE },
+        vehicle: { company: UNIQUE },
+      }),
+      ELITE,
+    );
+  });
+
+  it("leaves an unmatched liability company-less instead of defaulting to UNIQUE", () => {
+    assert.equal(
+      resolveRoadLiabilityCompany({ attributedContract: null, vehicle: null }),
+      null,
+    );
   });
 });

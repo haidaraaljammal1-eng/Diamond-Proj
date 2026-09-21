@@ -7,6 +7,7 @@ import { createFinanceAnalyticsService } from "src/modules/finance/finance-analy
 import { createGpsService } from "src/modules/gps/gps.service";
 import { createVehiclesService } from "src/modules/vehicles/vehicles.service";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
+import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
 import {
   resolveBusinessDay,
   resolveLastNCalendarDays,
@@ -126,6 +127,9 @@ export function createDashboardService(fastify: FastifyInstance) {
               contractNumber: true,
               status: true,
               startAt: true,
+              // Contract.company, never the Vehicle's current one: the Contract is
+              // the authoritative historical company for everything it produces.
+              company: { select: COMPANY_REF_SELECT },
               customer: { select: { name: true } },
               vehicle: { select: VEHICLE_NAME_SELECT },
             },
@@ -142,6 +146,7 @@ export function createDashboardService(fastify: FastifyInstance) {
             }),
             startAt: row.startAt!,
             status: row.status,
+            company: row.company,
           }));
         }),
         runSection("recentContracts", P.CONTRACTS_READ, async () => {
@@ -152,6 +157,7 @@ export function createDashboardService(fastify: FastifyInstance) {
               id: true,
               contractNumber: true,
               status: true,
+              company: { select: COMPANY_REF_SELECT },
               customer: { select: { name: true } },
               createdBy: { select: { name: true } },
               vehicle: { select: VEHICLE_NAME_SELECT },
@@ -169,6 +175,7 @@ export function createDashboardService(fastify: FastifyInstance) {
             }),
             employeeName: row.createdBy.name ?? null,
             status: row.status,
+            company: row.company,
           }));
         }),
         runSection("gpsOnline", P.GPS_READ, async () => {

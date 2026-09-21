@@ -38,8 +38,10 @@ model OperatingCompany {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  vehicles  Vehicle[]
-  contracts Contract[]
+  vehicles        Vehicle[]
+  contracts       Contract[]
+  manualExpenses  ManualExpense[]
+  ledgerEntries   FinancialLedgerEntry[]
 
   @@index([isActive])
   @@map("operating_companies")

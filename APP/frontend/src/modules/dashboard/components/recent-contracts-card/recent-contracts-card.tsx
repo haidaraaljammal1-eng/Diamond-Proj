@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListRow } from "@/shared/components/ui/list-row";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { ContractStatusChip } from "@/modules/contracts/components/contract-status/contract-status";
 import { ContractFileIcon } from "../../dashboard.icons";
 import type { RecentContractDto } from "../../types/dashboard.types";
@@ -56,6 +57,13 @@ export function RecentContractsCard({
                     <span className={styles.contractId} dir="ltr">
                       {contract.contractNumber}
                     </span>
+                    {/* Contract.company — the historical owner of this contract,
+                        not the vehicle's current one. */}
+                    {contract.company ? (
+                      <span className={styles.company} data-testid="dashboard-contract-company">
+                        <CompanyIdentity company={contract.company} compact />
+                      </span>
+                    ) : null}
                     {contract.employeeName
                       ? ` · ${t("issuedBy", { name: contract.employeeName })}`
                       : null}

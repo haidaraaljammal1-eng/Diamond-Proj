@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { PageHeader } from "@/shared/components/ui/page-header";
 import { SimulationButton, useDemoSimulation } from "@/modules/demo-simulation";
+import { useOperatingCompanies } from "@/modules/operating-companies";
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
 import { useRoadLiabilities } from "../../hooks/use-road-liabilities";
 import { buildRoadLiabilitiesSimulationOverlay } from "../../utils/road-liability-simulation";
@@ -26,6 +27,9 @@ export function RoadLiabilitiesScreen() {
   const router = useRouter();
   const simulation = useDemoSimulation("violations");
   const page = useRoadLiabilities();
+  // Authoritative company list for the filter: the store owns the fetch, the
+  // component never calls the API.
+  const { companies, isLoading: companiesLoading } = useOperatingCompanies(page.isAllowed);
   const registerNotificationTargets = useNotificationRecordTargets();
   const [contractId, setContractId] = useState<string | null>(null);
 
@@ -126,8 +130,11 @@ export function RoadLiabilitiesScreen() {
           onRetry={() => void page.refresh()}
           onPage={page.setPage}
           toolbar={{
+            companies,
+            companiesLoading,
             onSearch: page.applySearch,
             onClearSearch: page.clearSearch,
+            onCompanyFilter: page.setCompanyFilter,
             onChannelFilter: page.setChannelFilter,
             onTypeFilter: page.setTypeFilter,
             onSourceFilter: page.setSourceFilter,

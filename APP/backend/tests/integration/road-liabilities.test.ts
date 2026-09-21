@@ -941,5 +941,252 @@ if (!RUN) {
       });
       assert.ok(post.statusCode === 404 || post.statusCode === 405);
     });
+
+    // --- Operating company (Phase B) ---
+    //
+    // Company on a road liability is DERIVED, never stored: the attributed
+    // Contract answers first (it is frozen history), the Vehicle answers when there
+    // is no Contract (its company is write-once), and a liability with neither stays
+    // company-less. No RoadLiability, charge or receivable row gained a companyId.
+    describe("operating company", () => {
+      const scope = `CO-${run}`;
+      let uniqueCompanyId = 0;
+      let eliteCompanyId = 0;
+      let uniqueVehicleId = 0;
+      let eliteVehicleId = 0;
+      let uniqueContractId = "";
+      let eliteContractId = "";
+      let crossContractId = "";
+
+      /** A liability written straight to the table so each company case is exact. */
+      async function seedLiability(input: {
+        reference: string;
+        vehicleId?: number | null;
+        contractId?: string | null;
+        type?: "RTA_VIOLATION" | "SALIK_TOLL";
+        collectionStatus?: "OPEN" | "NOT_READY";
+      }) {
+        const row = await prisma.roadLiability.create({
+          data: {
+            type: input.type ?? "RTA_VIOLATION",
+            vehicleId: input.vehicleId ?? null,
+            attributedContractId: input.contractId ?? null,
+            occurredAt: new Date("2026-09-01T09:00:00.000Z"),
+            amount: 150,
+            currency: "AED",
+            authoritativeSourceKey: scope,
+            authoritativeExternalReference: input.reference,
+            confirmationStatus: "CONFIRMED",
+            attributionStatus: input.contractId ? "MATCHED" : "UNMATCHED",
+            collectionStatus: input.collectionStatus ?? "OPEN",
+            confirmedAt: new Date("2026-09-01T10:00:00.000Z"),
+          },
+          select: { id: true },
+        });
+        return row.id;
+      }
+
+      async function listScoped(query = "") {
+        const res = await app.inject({
+          method: "GET",
+          url: `/road-liabilities?sourceKey=${scope}&pageSize=50${query}`,
+          headers: auth(readerToken),
+        });
+        assert.equal(res.statusCode, 200, res.body);
+        return res.json().data as Array<{
+          id: string;
+          authoritative: { externalReference: string | null };
+          company: { id: number; code: string; displayName: string; accentColor: string } | null;
+        }>;
+      }
+
+      const codeOf = async (id: string) => {
+        const res = await app.inject({
+          method: "GET",
+          url: `/road-liabilities/${id}`,
+          headers: auth(readerToken),
+        });
+        assert.equal(res.statusCode, 200, res.body);
+        return res.json().data.company as { code: string; accentColor: string } | null;
+      };
+
+      before(async () => {
+        uniqueCompanyId = await testCompanyId(prisma, "UNIQUE");
+        eliteCompanyId = await testCompanyId(prisma, "ELITE");
+
+        uniqueVehicleId = (
+          await createVehicle({
+            vehicleName: `RL Unique ${run}`,
+            plateNumber: `RL ${run} U`,
+          })
+        ).id;
+        eliteVehicleId = (
+          await createVehicle({
+            companyId: eliteCompanyId,
+            vehicleName: `RL Elite ${run}`,
+            plateNumber: `RL ${run} E`,
+          })
+        ).id;
+
+        const baseContract = {
+          status: "ACTIVE" as const,
+          customerId,
+          createdByUserId: adminUserId,
+          priceType: "DAILY" as const,
+          rentalDays: 3,
+          agreedAmount: 300,
+        };
+        uniqueContractId = (
+          await prisma.contract.create({
+            data: {
+              ...baseContract,
+              companyId: uniqueCompanyId,
+              contractNumber: `RLCO-U-${run}`,
+              vehicleId: uniqueVehicleId,
+            },
+            select: { id: true },
+          })
+        ).id;
+        eliteContractId = (
+          await prisma.contract.create({
+            data: {
+              ...baseContract,
+              companyId: eliteCompanyId,
+              contractNumber: `RLCO-E-${run}`,
+              vehicleId: eliteVehicleId,
+            },
+            select: { id: true },
+          })
+        ).id;
+        // Deliberately divergent: an ELITE Contract over a UNIQUE Vehicle. Diamond
+        // cannot produce this through the API (Contract.companyId is derived from the
+        // Vehicle and the Vehicle can never move), and it exists only to prove that
+        // the Contract, not the Vehicle, decides.
+        crossContractId = (
+          await prisma.contract.create({
+            data: {
+              ...baseContract,
+              companyId: eliteCompanyId,
+              contractNumber: `RLCO-X-${run}`,
+              vehicleId: uniqueVehicleId,
+            },
+            select: { id: true },
+          })
+        ).id;
+      });
+
+      test("a contract-attributed liability reads the Contract company", async () => {
+        const uniqueRef = `${scope}-CU`;
+        const eliteRef = `${scope}-CE`;
+        const uniqueLiability = await seedLiability({
+          reference: uniqueRef,
+          vehicleId: uniqueVehicleId,
+          contractId: uniqueContractId,
+        });
+        const eliteLiability = await seedLiability({
+          reference: eliteRef,
+          vehicleId: eliteVehicleId,
+          contractId: eliteContractId,
+        });
+
+        assert.equal((await codeOf(uniqueLiability))?.code, "UNIQUE");
+        assert.equal((await codeOf(eliteLiability))?.code, "ELITE");
+        // The marker renders from the backend accent colour, never a hardcoded one.
+        assert.ok(String((await codeOf(eliteLiability))?.accentColor).startsWith("#"));
+      });
+
+      test("a vehicle-only liability falls back to the Vehicle company", async () => {
+        const unique = await seedLiability({ reference: `${scope}-VU`, vehicleId: uniqueVehicleId });
+        const elite = await seedLiability({ reference: `${scope}-VE`, vehicleId: eliteVehicleId });
+        assert.equal((await codeOf(unique))?.code, "UNIQUE");
+        assert.equal((await codeOf(elite))?.code, "ELITE");
+      });
+
+      test("a liability with no Contract and no Vehicle stays company-less", async () => {
+        const orphan = await seedLiability({ reference: `${scope}-ORPHAN` });
+        assert.equal(await codeOf(orphan), null, "unmatched liability was given a company");
+      });
+
+      test("the Contract company wins when the Vehicle disagrees", async () => {
+        const crossed = await seedLiability({
+          reference: `${scope}-CROSS`,
+          vehicleId: uniqueVehicleId,
+          contractId: crossContractId,
+        });
+        assert.equal((await codeOf(crossed))?.code, "ELITE");
+      });
+
+      test("Salik follows exactly the same company rules as RTA", async () => {
+        const tollOnContract = await seedLiability({
+          reference: `${scope}-SALIK-C`,
+          type: "SALIK_TOLL",
+          vehicleId: uniqueVehicleId,
+          contractId: crossContractId,
+        });
+        const tollOnVehicle = await seedLiability({
+          reference: `${scope}-SALIK-V`,
+          type: "SALIK_TOLL",
+          vehicleId: eliteVehicleId,
+        });
+        const tollOrphan = await seedLiability({
+          reference: `${scope}-SALIK-O`,
+          type: "SALIK_TOLL",
+        });
+        // Company never comes from the Salik provider, account or endpoint.
+        assert.equal((await codeOf(tollOnContract))?.code, "ELITE");
+        assert.equal((await codeOf(tollOnVehicle))?.code, "ELITE");
+        assert.equal(await codeOf(tollOrphan), null);
+      });
+
+      test("companyId filters contract-first and All Companies keeps unmatched rows", async () => {
+        const all = await listScoped();
+        const refs = all.map((row) => row.authoritative.externalReference);
+        assert.ok(refs.includes(`${scope}-ORPHAN`), "All Companies hid an unmatched liability");
+        assert.ok(refs.includes(`${scope}-CU`));
+        assert.ok(refs.includes(`${scope}-CE`));
+
+        const unique = await listScoped(`&companyId=${uniqueCompanyId}`);
+        const uniqueRefs = unique.map((row) => row.authoritative.externalReference);
+        assert.ok(unique.every((row) => row.company?.code === "UNIQUE"));
+        assert.ok(uniqueRefs.includes(`${scope}-CU`));
+        assert.ok(uniqueRefs.includes(`${scope}-VU`));
+        // The crossed row sits on a UNIQUE vehicle but an ELITE contract.
+        assert.ok(!uniqueRefs.includes(`${scope}-CROSS`), "vehicle company overrode the contract");
+        assert.ok(!uniqueRefs.includes(`${scope}-ORPHAN`));
+
+        const elite = await listScoped(`&companyId=${eliteCompanyId}`);
+        const eliteRefs = elite.map((row) => row.authoritative.externalReference);
+        assert.ok(elite.every((row) => row.company?.code === "ELITE"));
+        assert.ok(eliteRefs.includes(`${scope}-CE`));
+        assert.ok(eliteRefs.includes(`${scope}-VE`));
+        assert.ok(eliteRefs.includes(`${scope}-CROSS`));
+        assert.ok(!eliteRefs.includes(`${scope}-ORPHAN`));
+      });
+
+      test("company composes with the status and search filters", async () => {
+        await seedLiability({
+          reference: `${scope}-NOTREADY`,
+          vehicleId: eliteVehicleId,
+          collectionStatus: "NOT_READY",
+        });
+
+        const open = await listScoped(`&companyId=${eliteCompanyId}&collectionStatus=open`);
+        const openRefs = open.map((row) => row.authoritative.externalReference);
+        assert.ok(open.every((row) => row.company?.code === "ELITE"));
+        assert.ok(openRefs.includes(`${scope}-VE`));
+        assert.ok(!openRefs.includes(`${scope}-NOTREADY`));
+
+        const searched = await listScoped(
+          `&companyId=${eliteCompanyId}&search=${scope}-CROSS`,
+        );
+        assert.equal(searched.length, 1, JSON.stringify(searched));
+        assert.equal(searched[0]!.authoritative.externalReference, `${scope}-CROSS`);
+        assert.equal(searched[0]!.company?.code, "ELITE");
+
+        // The same search under UNIQUE finds nothing: the Contract decides.
+        const missed = await listScoped(`&companyId=${uniqueCompanyId}&search=${scope}-CROSS`);
+        assert.equal(missed.length, 0);
+      });
+    });
   });
 }

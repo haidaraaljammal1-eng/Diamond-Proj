@@ -4,6 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
 import { Drawer } from "@/shared/components/ui/drawer";
+import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
 import { VehicleStatus } from "@/modules/vehicles/components/vehicle-status/vehicle-status";
 import { ContractStatusChip } from "@/modules/contracts/components/contract-status/contract-status";
@@ -75,6 +76,7 @@ export function RoadLiabilityDetailDrawer({
   onChargeConfirmed,
 }: RoadLiabilityDetailDrawerProps) {
   const t = useTranslations("RoadLiabilities");
+  const tCompany = useTranslations("OperatingCompanies");
   const format = useFormatter();
   const charge = useRoadLiabilityChargeReview(detail, open, () => {
     onChargeConfirmed?.();
@@ -121,7 +123,19 @@ export function RoadLiabilityDetailDrawer({
                 <Chip tone={workStateChipTone(detail.workState)} dot>
                   {t(workStateTranslationKey(detail.workState, detail))}
                 </Chip>
+                {/* Company is identity, never a lifecycle chip — the Backend already
+                    resolved it from the Contract, else the Vehicle. */}
+                {detail.company ? (
+                  <span data-testid="road-liability-detail-company">
+                    <CompanyIdentity company={detail.company} compact />
+                  </span>
+                ) : null}
               </div>
+              {detail.company ? null : (
+                <p className={styles.note} data-testid="road-liability-detail-company-unmatched">
+                  {tCompany("unmatched")}
+                </p>
+              )}
               {gpsOnly ? <p className={styles.note}>{t("prediction.detectedByGps")}</p> : null}
               {dual ? <p className={styles.note}>{t("prediction.confirmedAfterGps")}</p> : null}
               {amount?.kind === "awaiting" ? (
