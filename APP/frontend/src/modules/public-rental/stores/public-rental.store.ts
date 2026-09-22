@@ -1,8 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { normalizeApiError } from "@/infrastructure/api/errors";
-import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { ApiRequestError, normalizeApiError } from "@/infrastructure/api/errors";
+import type { ApiRequestError as ApiRequestErrorType } from "@/infrastructure/api/errors";
 import {
   acceptPublicRental,
   getPublicPaymentStatus,
@@ -34,7 +34,7 @@ interface PublicRentalState {
   token: string | null;
   context: PublicRentalContext | null;
   status: PublicRentalLoadStatus;
-  error: ApiRequestError | null;
+  error: ApiRequestErrorType | null;
   uploadPending: boolean;
   /** Passport capture request lifecycle; backend status stays in `context.identity`. */
   passportPhase: DocumentCapturePhase;
@@ -245,18 +245,28 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
       });
       const checkoutUrl = attempt.checkoutUrl ?? null;
       set({
-        payPending: false,
         statusToken: attempt.statusToken ?? get().statusToken,
       });
       if (checkoutUrl && typeof window !== "undefined") {
-        window.location.assign(checkoutUrl);
+        window.location.href = checkoutUrl;
         return true;
       }
+      set({
+        error: new ApiRequestError(
+          {
+            code: "PAYMENT_CHECKOUT_UNAVAILABLE",
+            message: "Payment checkout URL was not returned.",
+          },
+          502,
+        ),
+      });
       await get().load(token);
-      return true;
-    } catch (error) {
-      set({ payPending: false, error: normalizeApiError(error) });
       return false;
+    } catch (error) {
+      set({ error: normalizeApiError(error) });
+      return false;
+    } finally {
+      set({ payPending: false });
     }
   },
 

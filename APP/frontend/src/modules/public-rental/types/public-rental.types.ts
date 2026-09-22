@@ -170,6 +170,7 @@ export interface PublicRentalContext {
     cardLast4: string | null;
     cardBrand?: string | null;
     cardReady: boolean;
+    futureUseConsentAvailable: boolean;
   };
   tarsOtp: TarsOtpPublicState;
 }

@@ -670,6 +670,7 @@ export const PublicRentalContextSchema = z.object({
     cardLast4: z.string().nullable().optional(),
     cardBrand: z.string().nullable().optional(),
     cardReady: z.boolean(),
+    futureUseConsentAvailable: z.boolean(),
   }),
   tarsOtp: TarsOtpPublicStateSchema,
 });

@@ -249,6 +249,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 statusPending={rental.statusPending}
                 linkExpiredDuringPayment={rental.linkExpiredDuringPayment}
                 paymentNotice={paymentCancelNotice}
+                paymentError={inlineError}
                 onPay={(savePaymentMethodForFutureUse) => {
                   void rental.startPayment(savePaymentMethodForFutureUse);
                 }}

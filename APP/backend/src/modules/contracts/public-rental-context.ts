@@ -12,6 +12,7 @@ import {
   formatStoredExpiry,
   maskLicenseNumber,
 } from "src/modules/contracts/driving-license-policy";
+import { canMaterializeContractCustomer } from "src/modules/contracts/contract-customer-materialization";
 import { fleetVehicleTypeLabel, vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import type { PublicRentalContextSchema } from "src/modules/contracts/contracts.schema";
@@ -149,6 +150,10 @@ export function toPublicRentalContext(
         row.cardPaymentMethod.stripeCustomerId && row.cardPaymentMethod.stripePaymentMethodId &&
         /^\d{4}$/.test(row.cardPaymentMethod.cardLast4),
       ),
+      futureUseConsentAvailable: canMaterializeContractCustomer({
+        customerId: row.customerId,
+        snapshot: row.snapshot,
+      }),
     },
     // Overwritten by loadPublicRental with provider-aware state from TarsWorkflowOrchestrator.
     tarsOtp: {

@@ -116,4 +116,29 @@ describe("canStartCardPayment", () => {
       false,
     );
   });
+
+  it("does not offer Pay on ACTIVE contracts", () => {
+    assert.equal(
+      canStartCardPayment({
+        providerAvailable: true,
+        paymentStatus: null,
+        payPending: false,
+        contractStatus: "ACTIVE",
+      }),
+      false,
+    );
+  });
+
+  it("allows retry after CANCELLED attempts", () => {
+    assert.equal(
+      canStartCardPayment({
+        providerAvailable: true,
+        paymentStatus: "CANCELLED",
+        payPending: false,
+        contractStatus: "SIGNED",
+      }),
+      true,
+    );
+    assert.equal(canRetryPayment("CANCELLED"), true);
+  });
 });

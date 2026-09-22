@@ -1431,6 +1431,7 @@
       "PAYMENT_NOT_ALLOWED": "Payment is not available at this step.",
       "PAYMENT_IDEMPOTENCY_REQUIRED": "Please try starting the payment again.",
       "PAYMENT_ALREADY_PROCESSING": "A payment is already being processed. Please wait.",
+      "PAYMENT_CHECKOUT_UNAVAILABLE": "Unable to prepare the payment. Please try again.",
       "PAYMENT_ATTEMPT_NOT_FOUND": "The payment attempt could not be found.",
       "PAYMENT_STATUS_TOKEN_INVALID": "Payment status could not be verified.",
       "PAYMENT_STATUS_TOKEN_EXPIRED": "Payment status verification has expired.",

@@ -28,6 +28,29 @@ export async function resolveStripeCustomerId(
   return stripeCustomer.id;
 }
 
+/**
+ * Resolves or creates a Stripe Customer outside a payment transaction.
+ * `knownId` may already be loaded from the DB inside the claim transaction.
+ */
+export async function resolveStripeCustomerForPayment(
+  stripe: Stripe,
+  prisma: PrismaClient,
+  diamondCustomerId: number,
+  knownId?: string | null,
+): Promise<string> {
+  if (knownId) return knownId;
+  const existing = await findStripeCustomerId(prisma, diamondCustomerId);
+  if (existing) return existing;
+  const stripeCustomer = await stripe.customers.create({
+    metadata: { diamondCustomerId: String(diamondCustomerId) },
+  });
+  await prisma.customer.update({
+    where: { id: diamondCustomerId },
+    data: { stripeCustomerId: stripeCustomer.id },
+  });
+  return stripeCustomer.id;
+}
+
 /** Read-only lookup without creating a Stripe Customer. */
 export async function findStripeCustomerId(
   prisma: PrismaClient | Tx,

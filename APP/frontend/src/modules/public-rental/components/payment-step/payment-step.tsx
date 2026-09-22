@@ -27,6 +27,7 @@ interface PaymentStepProps {
   statusPending: boolean;
   linkExpiredDuringPayment: boolean;
   paymentNotice: string | null;
+  paymentError: string | null;
   onPay: (savePaymentMethodForFutureUse: boolean) => void;
   onRefreshStatus: () => void;
 }
@@ -53,6 +54,7 @@ export function PaymentStep({
   statusPending,
   linkExpiredDuringPayment,
   paymentNotice,
+  paymentError,
   onPay,
   onRefreshStatus,
 }: PaymentStepProps) {
@@ -68,6 +70,7 @@ export function PaymentStep({
     payPending,
     contractStatus: context.contract.status,
   });
+  const futureUseConsentAvailable = context.payment.futureUseConsentAvailable;
   const isDev = process.env.NODE_ENV === "development";
   const inFlight = panel === "processing" || panel === "pending" || payPending;
   const stripeCheckoutAvailable = context.payment.providerAvailable;
@@ -88,6 +91,11 @@ export function PaymentStep({
       {paymentNotice ? (
         <p className={styles.notice} role="status" data-testid="payment-notice">
           {paymentNotice}
+        </p>
+      ) : null}
+      {paymentError ? (
+        <p className={styles.unavailable} role="alert" data-testid="payment-error">
+          {paymentError}
         </p>
       ) : null}
 
@@ -175,7 +183,7 @@ export function PaymentStep({
             <Checkbox
               checked={saveForFutureUse}
               onChange={(event) => setSaveForFutureUse(event.target.checked)}
-              disabled={inFlight || linkExpiredDuringPayment}
+              disabled={inFlight || linkExpiredDuringPayment || !futureUseConsentAvailable}
               aria-label={t("futureUseConsentTitle")}
             />
             <span>
@@ -207,7 +215,7 @@ export function PaymentStep({
           disabled={!canPay || linkExpiredDuringPayment}
           loading={payPending}
           data-testid="payment-pay-stripe"
-          onClick={() => onPay(saveForFutureUse)}
+          onClick={() => onPay(futureUseConsentAvailable && saveForFutureUse)}
         >
           {payPending
             ? t("preparing")

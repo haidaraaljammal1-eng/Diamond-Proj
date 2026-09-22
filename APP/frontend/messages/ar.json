@@ -1431,6 +1431,7 @@
       "PAYMENT_NOT_ALLOWED": "الدفع غير متاح في هذه المرحلة.",
       "PAYMENT_IDEMPOTENCY_REQUIRED": "يرجى محاولة بدء الدفع مرة أخرى.",
       "PAYMENT_ALREADY_PROCESSING": "توجد عملية دفع قيد المعالجة. يرجى الانتظار.",
+      "PAYMENT_CHECKOUT_UNAVAILABLE": "تعذر تجهيز عملية الدفع. يرجى المحاولة مرة أخرى.",
       "PAYMENT_ATTEMPT_NOT_FOUND": "تعذر العثور على محاولة الدفع.",
       "PAYMENT_STATUS_TOKEN_INVALID": "تعذر التحقق من حالة الدفع.",
       "PAYMENT_STATUS_TOKEN_EXPIRED": "انتهت صلاحية التحقق من حالة الدفع.",
