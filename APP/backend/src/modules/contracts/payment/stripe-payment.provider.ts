@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { env } from "src/config/env";
 import { aedToStripeMinorUnits, assertAedCurrency } from "src/modules/contracts/payment/money";
+import { stripeCheckoutIdempotencyKey } from "src/modules/contracts/payment/stripe-payment-profile.service";
 import type {
   CreateCheckoutInput,
   CreateCheckoutResult,
@@ -85,11 +86,16 @@ export function buildStripePaymentCheckoutParams(
     params.customer = customerId;
     params.payment_method_collection = "if_required";
   }
-  if (input.savePaymentMethodForFutureUse) {
-    params.payment_intent_data = {
-      setup_future_usage: "off_session",
-    };
-  }
+  params.payment_intent_data = {
+    metadata: {
+      paymentId: input.paymentId,
+      contractId: input.contractId,
+      purpose: input.purpose,
+      targetId: input.targetId,
+      ...(input.companyCode ? { companyCode: input.companyCode } : {}),
+    },
+    ...(input.savePaymentMethodForFutureUse ? { setup_future_usage: "off_session" as const } : {}),
+  };
   return params;
 }
 
@@ -112,7 +118,9 @@ export class StripePaymentProvider implements PaymentProvider {
     assertAedCurrency(input.currency);
     const unitAmount = aedToStripeMinorUnits(input.amount);
     const params = buildStripePaymentCheckoutParams(input, unitAmount);
-    const session = await this.client().checkout.sessions.create(params);
+    const session = await this.client().checkout.sessions.create(params, {
+      idempotencyKey: stripeCheckoutIdempotencyKey(input.paymentId),
+    });
     if (!session.url || !session.id) {
       return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
     }
@@ -267,12 +275,16 @@ export class StripePaymentProvider implements PaymentProvider {
       if (session.metadata?.kind === "CARD_SETUP") {
         const contractId = session.metadata.contractId;
         const setupIntentId = typeof session.setup_intent === "string" ? session.setup_intent : null;
-        if (!contractId || !setupIntentId) return { ok: false, reason: "IGNORED" };
+        if (!contractId || !setupIntentId) {
+          return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
+        }
         const setupIntent = await this.client().setupIntents.retrieve(setupIntentId, { expand: ["payment_method"] });
         const method = typeof setupIntent.payment_method === "object" && setupIntent.payment_method?.type === "card"
           ? setupIntent.payment_method.card
           : null;
-        if (!method || !setupIntent.payment_method || typeof setupIntent.payment_method === "string") return { ok: false, reason: "IGNORED" };
+        if (!method || !setupIntent.payment_method || typeof setupIntent.payment_method === "string") {
+          return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
+        }
         return { ok: true, event: {
           kind: "CARD_SETUP",
           stripeEventId: event.id,
@@ -286,8 +298,12 @@ export class StripePaymentProvider implements PaymentProvider {
         }};
       }
       const paymentId = session.metadata?.paymentId;
-      if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
-      if (session.payment_status !== "paid") return { ok: false, reason: "IGNORED" };
+      if (!paymentId || !session.id) {
+        return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
+      }
+      if (session.payment_status !== "paid") {
+        return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
+      }
       return {
         ok: true,
         event: {
@@ -306,7 +322,9 @@ export class StripePaymentProvider implements PaymentProvider {
     if (event.type === "checkout.session.expired") {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentId = session.metadata?.paymentId;
-      if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
+      if (!paymentId || !session.id) {
+        return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
+      }
       return {
         ok: true,
         event: {
@@ -326,11 +344,13 @@ export class StripePaymentProvider implements PaymentProvider {
     ) {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentId = session.metadata?.paymentId;
-      if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
+      if (!paymentId || !session.id) {
+        return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
+      }
       const status =
         event.type === "checkout.session.async_payment_succeeded" ? "CONFIRMED" : "FAILED";
       if (status === "CONFIRMED" && session.payment_status !== "paid") {
-        return { ok: false, reason: "IGNORED" };
+        return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
       }
       return {
         ok: true,
@@ -347,6 +367,7 @@ export class StripePaymentProvider implements PaymentProvider {
       };
     }
 
-    return { ok: false, reason: "IGNORED" };
+    // Valid Stripe events Diamond does not consume are acknowledged at the HTTP layer.
+    return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
   }
 }

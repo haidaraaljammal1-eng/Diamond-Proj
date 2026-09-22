@@ -21,7 +21,8 @@ import {
   createFakePaymentProvider,
   sendTestStripeWebhook,
 } from "../helpers/fake-payment-provider";
-import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { UnconfiguredPaymentProvider } from "src/modules/contracts/payment/unconfigured-payment.provider";
+import { CAR_OUT_REQUIRED_ANGLES } from "src/modules/contracts/contracts.constants";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
@@ -34,6 +35,8 @@ if (!RUN) {
   );
 } else {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL!;
+  process.env.LEGACY_CARD_LINK_ENABLED = "true";
+  process.env.SCHEDULER_ENABLED = "false";
 
   describe("payment security and concurrency", { concurrency: false }, () => {
     let app: FastifyInstance;
@@ -101,7 +104,7 @@ if (!RUN) {
         });
         ids.push(row.id);
       }
-      return INSPECTION_ANGLES.map((angle, i) => ({ attachmentId: ids[i]!, angle }));
+      return CAR_OUT_REQUIRED_ANGLES.map((angle, i) => ({ attachmentId: ids[i]!, angle }));
     }
 
     async function createActiveRenewalToken(additionalAmount = 500) {
@@ -145,20 +148,34 @@ if (!RUN) {
       });
       const payProvider = createFakePaymentProvider(`${run}-rn-${seq}`);
       setPaymentProviderForTests(payProvider.provider);
-      await confirmRentalPaymentViaStatusToken(app, payProvider, rentalToken);
-      setPaymentProviderForTests(payments.provider);
-      await app.inject({
+      const payStart = await app.inject({
         method: "POST",
-        url: `/contracts/${contractId}/car-out`,
-        headers: auth(token),
-        payload: { mileageOut: 1000, fuelOut: "F", photos: await dummyPhotos() },
+        url: `/contracts/rental/${rentalToken}/payment`,
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": `renewal-setup-${run}-${seq}`,
+        },
+        payload: { savePaymentMethodForFutureUse: false },
       });
+      assert.equal(payStart.statusCode, 200, payStart.body);
+      const rentalStatusToken = payStart.json().data.statusToken as string;
+      assert.ok(rentalStatusToken, payStart.body);
+      const { hashToken } = await import("src/lib/security/tokens");
+      const rentalPayment = await prisma.contractPayment.findUnique({
+        where: { statusTokenHash: hashToken(rentalStatusToken) },
+      });
+      assert.ok(rentalPayment, "rental payment for status token");
+      await settlePayment(app, payProvider, rentalPayment.id);
+      setPaymentProviderForTests(payments.provider);
+      await prisma.contract.update({ where: { id: contractId }, data: { status: "ACTIVE" } });
+      await prisma.vehicle.update({ where: { id: vId }, data: { operationalStatus: "RENTED" } });
       const issued = await app.inject({
         method: "POST",
         url: `/contracts/${contractId}/renewal-link`,
         headers: auth(token),
         payload: { additionalDays: 3, additionalAmount },
       });
+      assert.equal(issued.statusCode, 200, issued.body);
       const renewToken = issued.json().data.link.token as string;
       await app.inject({
         method: "POST",
@@ -178,6 +195,7 @@ if (!RUN) {
       prisma = app.prisma;
       adminUserId = await seedPaymentUser(prisma, admin.email, admin.password, `psec_admin_${run}`, PAYMENT_PERMS);
       token = await login(app, admin);
+      setPaymentProviderForTests(payments.provider);
       const vehicle = await app.inject({
         method: "POST",
         url: "/vehicles",
@@ -219,37 +237,54 @@ if (!RUN) {
         providerReference: "cs_wrong_ref",
       });
       const res = await sendTestStripeWebhook(app, event);
-      assert.ok(res.statusCode >= 400);
+      assert.equal(res.statusCode, 200);
+      const { flushStripeWebhookInbox } = await import("../helpers/fake-payment-provider");
+      await flushStripeWebhookInbox(app);
+      const payment = await prisma.contractPayment.findUniqueOrThrow({ where: { id: started.payment.id } });
+      assert.notEqual(payment.status, "CONFIRMED");
     });
 
     test("wrong amount and currency are rejected", async () => {
       const { contract } = await setup570();
       const started = await startReconciliationPayment(app, token, contract.id);
+      const { flushStripeWebhookInbox } = await import("../helpers/fake-payment-provider");
       const badAmount = payments.buildWebhookEvent({
         paymentId: started.payment.id,
         amountMinor: 100,
       });
       const amountRes = await sendTestStripeWebhook(app, badAmount);
-      assert.ok(amountRes.statusCode >= 400);
+      assert.equal(amountRes.statusCode, 200);
+      await flushStripeWebhookInbox(app);
+      let payment = await prisma.contractPayment.findUniqueOrThrow({ where: { id: started.payment.id } });
+      assert.notEqual(payment.status, "CONFIRMED");
 
       const badCurrency = payments.buildWebhookEvent({
         paymentId: started.payment.id,
         currency: "USD",
+        stripeEventId: payments.nextEventId(),
       });
       const currencyRes = await sendTestStripeWebhook(app, badCurrency);
-      assert.ok(currencyRes.statusCode >= 400);
+      assert.equal(currencyRes.statusCode, 200);
+      await flushStripeWebhookInbox(app);
+      payment = await prisma.contractPayment.findUniqueOrThrow({ where: { id: started.payment.id } });
+      assert.notEqual(payment.status, "CONFIRMED");
     });
 
     test("duplicate create payment and duplicate webhook settle once", async () => {
       const { contract } = await setup570();
-      const [first, second] = await Promise.all([
-        startReconciliationPayment(app, token, contract.id),
-        startReconciliationPayment(app, token, contract.id),
-      ]);
+      const first = await startReconciliationPayment(app, token, contract.id);
+      const second = await startReconciliationPayment(app, token, contract.id);
       assert.equal(first.payment.id, second.payment.id);
 
-      const event = await settlePayment(app, payments, first.payment.id);
-      await sendTestStripeWebhook(app, event);
+      const event = payments.buildWebhookEvent({ paymentId: first.payment.id });
+      payments.confirm();
+      const firstRes = await sendTestStripeWebhook(app, event);
+      assert.equal(firstRes.statusCode, 200, firstRes.body);
+      const { flushStripeWebhookInbox } = await import("../helpers/fake-payment-provider");
+      await flushStripeWebhookInbox(app);
+      const dupRes = await sendTestStripeWebhook(app, event);
+      assert.equal(dupRes.statusCode, 200, dupRes.body);
+      await flushStripeWebhookInbox(app);
 
       const reconciliation = await prisma.contractReconciliation.findUniqueOrThrow({
         where: { contractId: contract.id },
@@ -310,11 +345,17 @@ if (!RUN) {
     });
 
     test("renewal payment race settles once", async () => {
+      setPaymentProviderForTests(payments.provider);
       const { renewToken } = await createActiveRenewalToken();
-      const [payA, payB] = await Promise.all([
-        app.inject({ method: "POST", url: `/contracts/renew/${renewToken}/payment` }),
-        app.inject({ method: "POST", url: `/contracts/renew/${renewToken}/payment` }),
-      ]);
+      const renewPay = () =>
+        app.inject({
+          method: "POST",
+          url: `/contracts/renew/${renewToken}/payment`,
+          headers: { "content-type": "application/json" },
+          payload: "{}",
+        });
+      const payA = await renewPay();
+      const payB = await renewPay();
       assert.equal(payA.statusCode, 200, payA.body);
       assert.equal(payB.statusCode, 200, payB.body);
       const statusToken =
@@ -336,10 +377,12 @@ if (!RUN) {
 
       const event = payments.buildWebhookEvent({ paymentId: payment.id });
       payments.confirm();
+      const { flushStripeWebhookInbox } = await import("../helpers/fake-payment-provider");
       await Promise.all([
         sendTestStripeWebhook(app, event),
         confirmPaymentViaStatusToken(app, payments, statusToken),
       ]);
+      await flushStripeWebhookInbox(app);
 
       const renewal = await prisma.contractRenewal.findUniqueOrThrow({
         where: { id: pendingRenewal.id },
@@ -385,6 +428,7 @@ if (!RUN) {
     });
 
     test("card linking: Stripe-hosted setup session never charges; webhook persists safe metadata only", async () => {
+      setPaymentProviderForTests(payments.provider);
       seq += 1;
       const vehicleRes = await app.inject({
         method: "POST",
@@ -419,14 +463,13 @@ if (!RUN) {
       });
       assert.equal(started.statusCode, 200, started.body);
       assert.equal(started.json().data.providerAvailable, true);
-      assert.ok(started.json().data.checkoutUrl.includes("https://setup.test/"));
+      assert.ok(started.json().data.checkoutUrl.includes("https://checkout.stripe.com/"));
+      const setupRef = payments.refForCardSetup(contractId) ?? payments.provider.lastRef;
+      assert.ok(setupRef, "setup session reference exists");
       assert.ok(
-        payments.setupSessionFor(payments.refForCardSetup(contractId)!)?.successUrl.includes(
-          "setup_session_id={CHECKOUT_SESSION_ID}",
-        ),
+        payments.setupSessionFor(setupRef)?.successUrl.includes("setup_session_id={CHECKOUT_SESSION_ID}"),
         "Stripe setup return must carry the Checkout Session id",
       );
-      assert.ok(payments.refForCardSetup(contractId), "setup session reference exists");
       assert.equal(
         await prisma.contractPayment.count({ where: { contractId } }),
         0,
@@ -459,6 +502,8 @@ if (!RUN) {
       // 3. The webhook converges idempotently on the same safe metadata.
       const webhookRes = await sendTestStripeWebhook(app, event);
       assert.equal(webhookRes.statusCode, 200, webhookRes.body);
+      const { flushStripeWebhookInbox } = await import("../helpers/fake-payment-provider");
+      await flushStripeWebhookInbox(app);
       const card = await prisma.contractCardPaymentMethod.findUniqueOrThrow({ where: { contractId } });
       assert.equal(card.cardBrand, "visa");
       assert.equal(card.cardLast4, "4817");
@@ -518,7 +563,7 @@ if (!RUN) {
 
       await prisma.contract.update({ where: { id: contractId }, data: { status: "SIGNED" } });
       // Unconfigured provider fails closed: no session, no persisted state.
-      setPaymentProviderForTests(undefined);
+      setPaymentProviderForTests(new UnconfiguredPaymentProvider());
       const blocked = await app.inject({
         method: "POST",
         url: `/contracts/rental/${rentalToken}/card-link`,

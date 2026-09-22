@@ -101,6 +101,8 @@ const EnvSchema = z
     STRIPE_SECRET_KEY: z.string().optional().default(""),
     STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
     STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
+    // Pre-STRIPE-4 hosted card-setup flow. Normal Public Rental uses pay-time consent instead.
+    LEGACY_CARD_LINK_ENABLED: envBool(false),
 
     // TARS integration — global intent flag. Per-company namespaces are
     // TARS_UNIQUE_* and TARS_ELITE_* (separate credentials, no fallback).
@@ -259,3 +261,12 @@ export type Env = typeof env;
 export const isProduction = env.NODE_ENV === "production";
 export const isDevelopment = env.NODE_ENV === "development";
 export const isTest = env.NODE_ENV === "test";
+
+/** Runtime gate for legacy card-link routes (tests may set env after module load). */
+export function legacyCardLinkEnabled(): boolean {
+  const raw = process.env.LEGACY_CARD_LINK_ENABLED;
+  if (raw !== undefined && raw !== "") {
+    return raw === "true" || raw === "1";
+  }
+  return env.LEGACY_CARD_LINK_ENABLED;
+}

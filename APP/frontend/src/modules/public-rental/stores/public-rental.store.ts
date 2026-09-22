@@ -240,8 +240,11 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
     if (get().context?.payment.providerAvailable !== true) return false;
     set({ payPending: true, error: null });
     try {
+      const consent = get().context?.payment.futureUseConsent;
       const attempt = await startPublicRentalPayment(token, crypto.randomUUID(), {
         savePaymentMethodForFutureUse,
+        consentVersion:
+          savePaymentMethodForFutureUse && consent ? consent.version : undefined,
       });
       const checkoutUrl = attempt.checkoutUrl ?? null;
       set({

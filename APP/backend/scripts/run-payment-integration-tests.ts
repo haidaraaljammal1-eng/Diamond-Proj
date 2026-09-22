@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { env } from "src/config/env";
 
 const explicit = process.env.TEST_DATABASE_URL?.trim();
-const derived = env.DATABASE_URL.replace(/\/haidara(\?|$)/, "/haidara_test$1");
+const derived = env.DATABASE_URL.replace(/\/diamond(\?|$)/, "/haidara_test$1");
 const testUrl = explicit || derived;
 
 if (!/\/haidara_test(?:\?|$)/.test(testUrl)) {

@@ -13,7 +13,7 @@ import { paginate, parseSort } from "src/lib/http/pagination";
 import { normalizeEmail, normalizePhone } from "src/lib/security/normalize";
 import { resolveStoragePath } from "src/lib/files/storage-key";
 import { generateStorageKey } from "src/lib/files/storage-key";
-import { env } from "src/config/env";
+import { env, legacyCardLinkEnabled } from "src/config/env";
 import { hashToken } from "src/lib/security/tokens";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import {
@@ -83,6 +83,7 @@ import {
   readDamageMarks,
   SIGNATURE_UPLOAD_MIME,
 } from "src/modules/contracts/official-contract-interactive";
+import { resolveContractCustomerFromSnapshot } from "src/modules/contracts/contract-customer-materialization";
 import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
 import { createFilesService } from "src/modules/files/files.service";
@@ -243,13 +244,17 @@ export function createContractsService(fastify: FastifyInstance) {
     throw contractError.drivingLicenseRequired();
   }
 
-  async function loadPublicRental(tx: Parameters<Parameters<typeof withTransaction>[1]>[0], id: string) {
+  async function loadPublicRental(
+    tx: Parameters<Parameters<typeof withTransaction>[1]>[0],
+    id: string,
+    locale: PublicFrontendLocale = "en",
+  ) {
     const row = await tx.contract.findUnique({
       where: { id },
       include: PUBLIC_RENTAL_INCLUDE,
     });
     if (!row) throw contractError.notFound();
-    const base = toPublicRentalContext(row);
+    const base = toPublicRentalContext(row, new Date(), locale);
     const tarsOtpState = await tars.getOtpPublicState(id);
     return { ...base, tarsOtp: tarsOtpState };
   }
@@ -1057,7 +1062,11 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
-  async function submitPublicForm(token: string, input: z.infer<typeof PublicFormSchema>) {
+  async function submitPublicForm(
+    token: string,
+    input: z.infer<typeof PublicFormSchema>,
+    locale: PublicFrontendLocale = "en",
+  ) {
     if (!input.identityNumber && !input.passportNumber) {
       throw contractError.publicFormIncomplete();
     }
@@ -1126,7 +1135,7 @@ export function createContractsService(fastify: FastifyInstance) {
       if (contract.status === "AWAITING") {
         await emit(tx, "contract.form_completed", contract.id);
       }
-      return loadPublicRental(tx, contract.id);
+      return loadPublicRental(tx, contract.id, locale);
     });
   }
 
@@ -1134,6 +1143,7 @@ export function createContractsService(fastify: FastifyInstance) {
     token: string,
     input: z.infer<typeof PublicAcceptSchema>,
     meta: { ip?: string; userAgent?: string },
+    locale: PublicFrontendLocale = "en",
   ) {
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RENTAL");
@@ -1196,7 +1206,7 @@ export function createContractsService(fastify: FastifyInstance) {
         },
       });
       await emit(tx, "contract.signed", contract.id);
-      return loadPublicRental(tx, contract.id);
+      return loadPublicRental(tx, contract.id, locale);
     });
   }
 
@@ -2293,6 +2303,8 @@ export function createContractsService(fastify: FastifyInstance) {
         officialContract: legalView,
       };
 
+      const customerId = await resolveContractCustomerFromSnapshot(tx, contract.id, snapshot);
+
       const hirerSignature = row.officialSignatures.find((s) => s.slot === "HIRER");
       await tx.contractAcceptance.create({
         data: {
@@ -2308,6 +2320,7 @@ export function createContractsService(fastify: FastifyInstance) {
         where: { id: contract.id },
         data: {
           status: "SIGNED",
+          customerId,
           snapshot: snapshot as unknown as Prisma.InputJsonValue,
           revision: { increment: 1 },
         },
@@ -2353,7 +2366,7 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
-  async function getPublicRental(token: string) {
+  async function getPublicRental(token: string, locale: PublicFrontendLocale = "en") {
     try {
       await withTransaction(prisma, async (tx) => {
         const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
@@ -2369,14 +2382,14 @@ export function createContractsService(fastify: FastifyInstance) {
     }
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
-      return loadPublicRental(tx, link.contractId);
+      return loadPublicRental(tx, link.contractId, locale);
     });
   }
 
-  async function getPaymentContext(token: string) {
+  async function getPaymentContext(token: string, locale: PublicFrontendLocale = "en") {
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
-      const ctx = await loadPublicRental(tx, link.contractId);
+      const ctx = await loadPublicRental(tx, link.contractId, locale);
       if (ctx.contract.status !== "SIGNED" && ctx.flow.step !== "PAYMENT" && ctx.flow.step !== "READY_FOR_HANDOVER") {
         throw contractError.paymentNotAllowed();
       }
@@ -2406,6 +2419,8 @@ export function createContractsService(fastify: FastifyInstance) {
     idempotencyKey?: string,
     locale: PublicFrontendLocale = "en",
     savePaymentMethodForFutureUse = false,
+    consentVersion?: string,
+    audit?: { ip?: string | null; userAgent?: string | null },
   ) {
     if (!idempotencyKey?.trim()) throw contractError.paymentIdempotencyRequired();
     const run = async () => {
@@ -2422,7 +2437,9 @@ export function createContractsService(fastify: FastifyInstance) {
         targetId: contract.id,
         locale,
         savePaymentMethodForFutureUse,
+        consentVersion,
         cancelUrl: buildPublicFrontendUrl(locale, `/rental/${token}`, { payment: "cancelled" }),
+        audit,
         validate: async (_tx, obligation) => {
           if (obligation.amount <= 0) throw contractError.paymentNotAllowed();
         },
@@ -2472,10 +2489,11 @@ export function createContractsService(fastify: FastifyInstance) {
   }
 
   async function startCardLink(token: string, locale: PublicFrontendLocale = "en") {
+    if (!legacyCardLinkEnabled()) throw contractError.legacyCardLinkDisabled();
     const link = await resolveContractLink(prisma, token, "RENTAL");
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
-    if (!["AWAITING", "FORM", "SIGNED"].includes(contract.status)) throw contractError.paymentNotAllowed();
+    if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
     const saved = await prisma.contractCardPaymentMethod.findUnique({
       where: { contractId: contract.id },
     });
@@ -2491,10 +2509,11 @@ export function createContractsService(fastify: FastifyInstance) {
   }
 
   async function completeCardLink(token: string, setupSessionId: string) {
+    if (!legacyCardLinkEnabled()) throw contractError.legacyCardLinkDisabled();
     const link = await resolveContractLink(prisma, token, "RENTAL");
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
-    if (!["AWAITING", "FORM", "SIGNED"].includes(contract.status)) throw contractError.paymentNotAllowed();
+    if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
     const result = await paymentService.processCardSetupReturn({
       contractId: contract.id,
       providerReference: setupSessionId,

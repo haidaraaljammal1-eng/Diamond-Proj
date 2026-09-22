@@ -140,6 +140,24 @@ export const contractError = {
     ),
   paymentNotAllowed: () =>
     err(ErrorCode.CONFLICT, "Electronic payment is not allowed", "PAYMENT_NOT_ALLOWED"),
+  legacyCardLinkDisabled: () =>
+    err(
+      ErrorCode.NOT_FOUND,
+      "Legacy card setup is not available",
+      "LEGACY_CARD_LINK_DISABLED",
+    ),
+  customerIdentityAmbiguous: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Customer identity could not be resolved safely",
+      "CUSTOMER_IDENTITY_AMBIGUOUS",
+    ),
+  paymentConsentInvalid: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Payment consent version is invalid or inactive",
+      "PAYMENT_CONSENT_INVALID",
+    ),
   paymentIdempotencyRequired: () =>
     err(ErrorCode.VALIDATION_ERROR, "Idempotency-Key is required", "PAYMENT_IDEMPOTENCY_REQUIRED"),
   paymentAlreadyProcessing: () =>

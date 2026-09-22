@@ -52,7 +52,7 @@ model Customer {
   drivingLicenseExpiry DateTime?
   address              String?
   /// One Stripe Customer per Diamond customer for the current Stripe account (UNIQUE/ELITE share one account).
-  stripeCustomerId     String?              @unique
+  stripeCustomerId     String?   @unique
 
   experiences           PurchaseExperience[]
   callQueueItems        CallCenterQueueItem[]
@@ -60,9 +60,14 @@ model Customer {
   contracts             Contract[]
   documents             CustomerDocument[]
   whatsAppConversations WhatsAppConversation[]
+  paymentProfiles       CustomerPaymentProfile[]
+  paymentAuthorizations ContractPaymentAuthorization[]
 
   @@index([mobile])
   @@index([email])
+  @@index([identityNumber])
+  @@index([passportNumber])
+  @@index([drivingLicenseNumber])
   @@index([isActive])
   @@map("customers")
 }
@@ -173,4 +178,54 @@ model PurchaseExperience {
   @@index([purchaseDate])
   @@index([deliveryDate])
   @@map("purchase_experiences")
+}
+
+enum PaymentProviderKind {
+  STRIPE
+}
+
+enum CustomerPaymentMethodStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// One Stripe Customer per Diamond Customer, account, and livemode.
+model CustomerPaymentProfile {
+  id                 String                  @id @default(uuid())
+  customerId         Int
+  customer           Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  provider           PaymentProviderKind     @default(STRIPE)
+  /// Deterministic Stripe account discriminator (never a secret).
+  providerAccountKey String
+  livemode           Boolean
+  providerCustomerId String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  paymentMethods     CustomerPaymentMethod[]
+
+  @@unique([customerId, provider, providerAccountKey, livemode])
+  @@unique([provider, providerAccountKey, livemode, providerCustomerId])
+  @@index([providerCustomerId])
+  @@map("customer_payment_profiles")
+}
+
+/// Customer-owned saved card reference (Stripe vault id + safe metadata only).
+model CustomerPaymentMethod {
+  id                      String                         @id @default(uuid())
+  profileId               String
+  profile                 CustomerPaymentProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  providerPaymentMethodId String
+  type                    String                         @default("CARD")
+  cardBrand               String
+  cardLast4               String
+  expMonth                Int?
+  expYear                 Int?
+  status                  CustomerPaymentMethodStatus    @default(ACTIVE)
+  lastUsedAt              DateTime?
+  createdAt               DateTime                       @default(now())
+  updatedAt               DateTime                       @updatedAt
+  authorizations          ContractPaymentAuthorization[]
+
+  @@unique([profileId, providerPaymentMethodId])
+  @@map("customer_payment_methods")
 }

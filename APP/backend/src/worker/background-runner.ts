@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { createCallCenterService } from "src/modules/call-center/call-center.service";
 import { createComplaintsService } from "src/modules/complaints/complaints.service";
+import { createStripeWebhookWorker } from "src/modules/contracts/payment/stripe-webhook-worker.service";
 import { createReportExecService } from "src/modules/reports/report-exec.service";
 
 /**
@@ -17,6 +18,7 @@ export function createBackgroundRunner(app: FastifyInstance) {
   const callCenter = createCallCenterService(app);
   const complaints = createComplaintsService(app);
   const reportExec = createReportExecService(app);
+  const stripeWebhooks = createStripeWebhookWorker(app);
 
   async function runAllCycles(): Promise<void> {
     try {
@@ -42,6 +44,14 @@ export function createBackgroundRunner(app: FastifyInstance) {
       }
     } catch (err) {
       app.log.error({ err }, "report: cycle failed");
+    }
+    try {
+      const sw = await stripeWebhooks.runStripeWebhookCycle();
+      if (sw.processed) {
+        app.log.info(sw, "stripe-webhook: cycle");
+      }
+    } catch (err) {
+      app.log.error({ err }, "stripe-webhook: cycle failed");
     }
   }
 

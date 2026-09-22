@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
+import { hashToken } from "src/lib/security/tokens";
+import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
+import { createStripeWebhookWorker } from "src/modules/contracts/payment/stripe-webhook-worker.service";
 import type {
   CardSetupSessionResult,
   CreateCardSetupInput,
@@ -60,7 +63,7 @@ export function createFakePaymentProvider(run: string) {
         provider: "stripe",
         providerReference: ref,
         providerStatus: "open",
-        checkoutUrl: `https://checkout.test/${ref}`,
+        checkoutUrl: `https://checkout.stripe.com/c/pay/${ref}`,
         checkoutExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
       };
     },
@@ -82,7 +85,7 @@ export function createFakePaymentProvider(run: string) {
         provider: "stripe",
         providerReference: ref,
         providerStatus: "open",
-        checkoutUrl: `https://setup.test/${ref}`,
+        checkoutUrl: `https://checkout.stripe.com/c/pay/${ref}`,
         checkoutExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
       };
     },
@@ -257,6 +260,21 @@ export async function sendTestStripeWebhook(
   });
 }
 
+/** Processes durable Stripe webhook inbox rows (async worker path). */
+export async function flushStripeWebhookInbox(app: FastifyInstance): Promise<void> {
+  await createStripeWebhookWorker(app).runStripeWebhookCycle();
+}
+
+export async function reconcileFakeProviderPayment(
+  app: FastifyInstance,
+  payments: ReturnType<typeof createFakePaymentProvider>,
+  paymentId: string,
+): Promise<void> {
+  payments.confirm();
+  const service = createContractPaymentService(app.prisma);
+  await service.reconcilePaymentWithProvider(paymentId);
+}
+
 /**
  * Links a card through the real public card-link flow (setup session, then the
  * browser return validated server-side), backed by the fake provider. Rental
@@ -289,16 +307,26 @@ export async function confirmRentalPaymentViaStatusToken(
   app: FastifyInstance,
   payments: ReturnType<typeof createFakePaymentProvider>,
   rentalToken: string,
-  idempotencyKey?: string,
+  idempotencyKey = `test-pay-${rentalToken.slice(0, 12)}`,
 ) {
   const payStart = await app.inject({
     method: "POST",
     url: `/contracts/rental/${rentalToken}/payment`,
-    headers: idempotencyKey ? { "idempotency-key": idempotencyKey } : {},
+    headers: {
+      "content-type": "application/json",
+      "idempotency-key": idempotencyKey,
+    },
+    payload: { savePaymentMethodForFutureUse: false },
   });
   assert.equal(payStart.statusCode, 200, payStart.body);
   const statusToken = payStart.json().data.statusToken as string;
+  assert.ok(statusToken, payStart.body);
+  const payment = await app.prisma.contractPayment.findUnique({
+    where: { statusTokenHash: hashToken(statusToken) },
+  });
+  assert.ok(payment, "payment for status token");
   payments.confirm();
+  await reconcileFakeProviderPayment(app, payments, payment.id);
   const payStatus = await app.inject({
     method: "GET",
     url: `/contracts/payments/status/${statusToken}`,
@@ -317,6 +345,7 @@ export async function confirmPaymentViaWebhook(
   const event = payments.buildWebhookEvent({ paymentId, ...overrides });
   const res = await sendTestStripeWebhook(app, event);
   assert.equal(res.statusCode, 200, res.body);
+  await flushStripeWebhookInbox(app);
   return event;
 }
 
@@ -325,7 +354,11 @@ export async function confirmPaymentViaStatusToken(
   payments: ReturnType<typeof createFakePaymentProvider>,
   statusToken: string,
 ) {
-  payments.confirm();
+  const payment = await app.prisma.contractPayment.findUnique({
+    where: { statusTokenHash: hashToken(statusToken) },
+  });
+  assert.ok(payment, "payment for status token");
+  await reconcileFakeProviderPayment(app, payments, payment.id);
   const res = await app.inject({
     method: "GET",
     url: `/contracts/payments/status/${statusToken}`,

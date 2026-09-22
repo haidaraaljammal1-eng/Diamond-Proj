@@ -40,9 +40,9 @@ No public tunnel is required when using CLI forwarding.
 2. Backend creates `ContractPayment` (+ consent fields when authorized) and a Stripe Checkout Session (`price_data` from authoritative contract amount; `setup_future_usage=off_session` only when consented).
 3. Browser redirects to `checkoutUrl`.
 4. Customer pays on Stripe.
-5. Stripe webhook → `POST /payments/webhooks/stripe` (raw body + signature).
-6. Verified event → existing payment settlement (`SIGNED` → `PAID` for rental).
-7. Success/cancel redirect hits `/[locale]/payment/callback?statusToken=...` — **poll only**; redirect does not settle.
+5. Stripe webhook → `POST /payments/webhooks/stripe` (raw body + signature) → durable inbox row → **fast 200**.
+6. Background worker processes the inbox row → payment settlement (`SIGNED` → `PAID` for rental). `SCHEDULER_ENABLED` must be true on the process that runs `background-runner`.
+7. Success/cancel redirect hits `/[locale]/payment/callback?statusToken=...` — **DB-first poll**; redirect query params alone do not settle. Stripe status polling is recovery-only.
 
 ## Test cards (manual QA only)
 

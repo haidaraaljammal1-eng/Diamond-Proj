@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { getPaymentConsent } from "src/modules/contracts/payment/payment-consent.catalog";
 import { PAYMENT_METHOD_AUTHORIZATION_VERSION } from "src/modules/contracts/payment/payment-consent.constants";
 import { buildStripePaymentCheckoutParams } from "src/modules/contracts/payment/stripe-payment.provider";
 
@@ -20,7 +21,8 @@ test("payment method authorization consent uses a stable version key", () => {
 
 test("stripe checkout omits setup_future_usage without customer consent", () => {
   const params = buildStripePaymentCheckoutParams(baseInput, 10000);
-  assert.equal(params.payment_intent_data, undefined);
+  assert.equal(params.payment_intent_data?.setup_future_usage, undefined);
+  assert.equal(params.payment_intent_data?.metadata?.paymentId, "pay_1");
   assert.equal(params.metadata?.savePaymentMethodForFutureUse, "false");
 });
 
@@ -33,7 +35,18 @@ test("stripe checkout enables off_session future use only when consented", () =>
     },
     10000,
   );
-  assert.deepEqual(params.payment_intent_data, { setup_future_usage: "off_session" });
+  assert.equal(params.payment_intent_data?.setup_future_usage, "off_session");
+  assert.equal(params.payment_intent_data?.metadata?.paymentId, "pay_1");
   assert.equal(params.customer, "cus_test_123");
   assert.equal(params.metadata?.savePaymentMethodForFutureUse, "true");
+});
+
+test("payment consent catalog serves locale-specific authoritative copy", () => {
+  const ar = getPaymentConsent(PAYMENT_METHOD_AUTHORIZATION_VERSION, "ar");
+  const en = getPaymentConsent(PAYMENT_METHOD_AUTHORIZATION_VERSION, "en");
+  assert.ok(ar?.text.includes("أوافق"));
+  assert.ok(en?.text.toLowerCase().includes("authorize"));
+  assert.notEqual(ar?.text, en?.text);
+  assert.equal(ar?.locale, "ar");
+  assert.equal(en?.locale, "en");
 });

@@ -27,17 +27,31 @@ import { contractError } from "src/modules/contracts/contracts.errors";
 import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental-guard";
 import { assertPositiveAedAmount, assertAedCurrency, aedToStripeMinorUnits } from "src/modules/contracts/payment/money";
 import { createPaymentProvider, devPaymentSimulationEnabled } from "src/modules/contracts/payment/payment-provider.factory";
-import { PAYMENT_METHOD_AUTHORIZATION_VERSION } from "src/modules/contracts/payment/payment-consent.constants";
+import {
+  getPaymentConsent,
+  PAYMENT_METHOD_AUTHORIZATION_VERSION,
+} from "src/modules/contracts/payment/payment-consent.constants";
 import type { ProviderPaymentStatus } from "src/modules/contracts/payment/payment-provider.types";
 import { ensureContractCustomerForPayment } from "src/modules/contracts/contract-customer-materialization";
 import {
-  findStripeCustomerId,
+  createContractPaymentAuthorization,
+  findProfileIdForCustomer,
+  persistContractCardSnapshot,
+  upsertCustomerPaymentMethod,
+} from "src/modules/contracts/payment/customer-payment-method.service";
+import {
+  claimCustomerPaymentProfile,
   resolveStripeCustomerForPayment,
-} from "src/modules/contracts/payment/stripe-customer.service";
+} from "src/modules/contracts/payment/stripe-payment-profile.service";
+import {
+  resolveStripeProviderAccountKey,
+  stripeLivemodeConfigured,
+} from "src/modules/contracts/payment/stripe-account-identity";
 import { recordStripePaymentLedger } from "src/modules/finance/finance-ledger.service";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import Stripe from "stripe";
 import { env } from "src/config/env";
+import type { StripeWebhookEvent } from "@prisma/client";
 
 export interface PaymentObligation {
   contractId: string;
@@ -390,76 +404,81 @@ async function markPaymentTerminal(
   return tx.contractPayment.update({ where: { id: payment.id }, data });
 }
 
-async function persistCardPaymentMethod(
-  tx: Tx,
-  input: {
-    contractId: string;
-    stripeCustomerId?: string | null;
-    stripePaymentMethodId: string;
-    cardBrand: string;
-    cardLast4: string;
-    futureUseConsentPaymentId?: string | null;
-  },
-): Promise<void> {
-  const contract = await tx.contract.findUnique({ where: { id: input.contractId } });
-  if (!contract) throw contractError.notFound();
-  await tx.contractCardPaymentMethod.upsert({
-    where: { contractId: input.contractId },
-    create: {
-      contractId: input.contractId,
-      provider: "stripe",
-      stripeCustomerId: input.stripeCustomerId ?? null,
-      stripePaymentMethodId: input.stripePaymentMethodId,
-      cardBrand: input.cardBrand,
-      cardLast4: input.cardLast4,
-    },
-    update: {
-      provider: "stripe",
-      stripeCustomerId: input.stripeCustomerId ?? null,
-      stripePaymentMethodId: input.stripePaymentMethodId,
-      cardBrand: input.cardBrand,
-      cardLast4: input.cardLast4,
-      ...(input.futureUseConsentPaymentId
-        ? {
-            futureUseConsentPaymentId: input.futureUseConsentPaymentId,
-            futureUseAuthorizedAt: new Date(),
-          }
-        : {}),
-    },
-  });
-  await tx.officialContractReviewDraft.upsert({
-    where: { contractId: input.contractId },
-    create: { contractId: input.contractId, cardNumberLast4: input.cardLast4, reviewedAt: new Date() },
-    update: { cardNumberLast4: input.cardLast4, reviewedAt: new Date(), revision: { increment: 1 } },
-  });
+const STRIPE_CHECKOUT_HOSTS = new Set(["checkout.stripe.com", "checkout.stripe.dev"]);
+
+function assertTrustedCheckoutUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw contractError.paymentProviderNotConfigured();
+  }
+  if (parsed.protocol !== "https:" || !STRIPE_CHECKOUT_HOSTS.has(parsed.hostname)) {
+    throw contractError.paymentProviderNotConfigured();
+  }
 }
 
 export function createContractPaymentService(prisma: PrismaClient) {
   const provider = () => createPaymentProvider();
 
   async function reconcileSavedPaymentMethodAfterPayment(
-    tx: Tx,
     payment: ContractPayment,
+    audit?: { ip?: string | null; userAgent?: string | null },
   ): Promise<void> {
     if (!payment.savePaymentMethodForFutureUse || !payment.providerReference) return;
-    const existing = await tx.contractCardPaymentMethod.findUnique({
-      where: { contractId: payment.contractId },
+
+    const already = await prisma.contractPaymentAuthorization.findUnique({
+      where: { sourcePaymentId: payment.id },
     });
-    if (
-      existing?.futureUseConsentPaymentId === payment.id &&
-      existing.stripePaymentMethodId
-    ) {
-      return;
-    }
+    if (already) return;
+
     const pm = await provider().getPaymentSessionPaymentMethod(payment.providerReference);
-    if (!pm) return;
-    await persistCardPaymentMethod(tx, {
-      contractId: payment.contractId,
-      stripeCustomerId: pm.stripeCustomerId ?? null,
-      stripePaymentMethodId: pm.stripePaymentMethodId,
-      cardBrand: pm.cardBrand,
-      cardLast4: pm.cardLast4,
-      futureUseConsentPaymentId: payment.id,
+    if (!pm?.stripeCustomerId) return;
+
+    const contract = await prisma.contract.findUnique({
+      where: { id: payment.contractId },
+      select: { customerId: true },
+    });
+    if (!contract?.customerId) return;
+
+    const consentVersion = payment.futureUseConsentVersion;
+    const consentLocale = payment.futureUseConsentLocale;
+    if (!consentVersion || !consentLocale) return;
+    const consent = getPaymentConsent(consentVersion, consentLocale as PublicFrontendLocale);
+    if (!consent) return;
+
+    if (!env.STRIPE_SECRET_KEY) return;
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+    const providerAccountKey = await resolveStripeProviderAccountKey(stripe);
+    const livemode = stripeLivemodeConfigured();
+    const profileId =
+      (await findProfileIdForCustomer(prisma, contract.customerId, providerAccountKey, livemode)) ??
+      (await claimCustomerPaymentProfile(prisma, contract.customerId, stripe)).profileId;
+
+    await withTransaction(prisma, async (tx) => {
+      const methodId = await upsertCustomerPaymentMethod(tx, profileId, {
+        stripeCustomerId: pm.stripeCustomerId!,
+        stripePaymentMethodId: pm.stripePaymentMethodId,
+        cardBrand: pm.cardBrand,
+        cardLast4: pm.cardLast4,
+      });
+      await createContractPaymentAuthorization(tx, {
+        contractId: payment.contractId,
+        customerId: contract.customerId!,
+        customerPaymentMethodId: methodId,
+        sourcePaymentId: payment.id,
+        consent,
+        ip: audit?.ip,
+        userAgent: audit?.userAgent,
+      });
+      await persistContractCardSnapshot(tx, {
+        contractId: payment.contractId,
+        stripeCustomerId: pm.stripeCustomerId,
+        stripePaymentMethodId: pm.stripePaymentMethodId,
+        cardBrand: pm.cardBrand,
+        cardLast4: pm.cardLast4,
+        futureUseConsentPaymentId: payment.id,
+      });
     });
   }
 
@@ -478,7 +497,6 @@ export function createContractPaymentService(prisma: PrismaClient) {
       const updated = await markPaymentTerminal(tx, payment, "CONFIRMED", providerStatus);
       await applyDomainSettlement(tx, updated);
       await recordStripePaymentLedger(tx, updated);
-      await reconcileSavedPaymentMethodAfterPayment(tx, updated);
       await emitPayment(tx, "payment.confirmed", payment.contractId, {
         paymentId: payment.id,
         purpose: payment.purpose,
@@ -500,14 +518,12 @@ export function createContractPaymentService(prisma: PrismaClient) {
     }
   }
 
-  async function applyProviderPaymentStatus(tx: Tx, paymentId: string): Promise<ContractPayment | null> {
-    const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
-    if (!payment?.providerReference) return payment;
-    if (payment.status !== "PENDING" && payment.status !== "PROCESSING") return payment;
-
-    const result = await provider().getPaymentStatus(payment.providerReference);
-    if (result.status === "UNKNOWN") return payment;
-
+  async function applyProviderStatusInTransaction(
+    tx: Tx,
+    payment: ContractPayment,
+    result: { status: ProviderPaymentStatus; providerStatus?: string; amountMinor?: number; currency?: string },
+  ): Promise<ContractPayment> {
+    if (payment.status === "CONFIRMED") return payment;
     if (result.status === "CONFIRMED") {
       return confirmPaymentAttempt(
         tx,
@@ -517,8 +533,8 @@ export function createContractPaymentService(prisma: PrismaClient) {
         result.currency,
       );
     }
-
     if (result.status === "FAILED" || result.status === "CANCELLED" || result.status === "EXPIRED") {
+      if (payment.status !== "PENDING" && payment.status !== "PROCESSING") return payment;
       const terminalStatus: ContractPaymentStatus =
         result.status === "EXPIRED" ? "CANCELLED" : result.status;
       const updated = await markPaymentTerminal(tx, payment, terminalStatus, result.providerStatus);
@@ -529,7 +545,44 @@ export function createContractPaymentService(prisma: PrismaClient) {
       });
       return updated;
     }
+    return payment;
+  }
 
+  /** Provider reconciliation outside any DB transaction. */
+  async function reconcilePaymentWithProvider(
+    paymentId: string,
+    audit?: { ip?: string | null; userAgent?: string | null },
+  ): Promise<ContractPayment | null> {
+    const payment = await prisma.contractPayment.findUnique({ where: { id: paymentId } });
+    if (!payment?.providerReference) return payment;
+    if (payment.status !== "PENDING" && payment.status !== "PROCESSING") return payment;
+
+    const result = await provider().getPaymentStatus(payment.providerReference);
+    if (result.status === "UNKNOWN") return payment;
+
+    let updated: ContractPayment = payment;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        updated = await withTransaction(prisma, async (tx) => {
+          const current = await tx.contractPayment.findUnique({ where: { id: paymentId } });
+          if (!current) throw contractError.paymentAttemptNotFound();
+          return applyProviderStatusInTransaction(tx, current, result);
+        });
+        break;
+      } catch (error) {
+        if (attempt === 0 && isUniqueViolation(error)) continue;
+        throw error;
+      }
+    }
+
+    if (updated.status === "CONFIRMED" && updated.savePaymentMethodForFutureUse) {
+      await reconcileSavedPaymentMethodAfterPayment(updated, audit);
+    }
+    return updated;
+  }
+
+  async function applyProviderPaymentStatus(tx: Tx, paymentId: string): Promise<ContractPayment | null> {
+    const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
     return payment;
   }
 
@@ -596,9 +649,11 @@ export function createContractPaymentService(prisma: PrismaClient) {
     createdByUserId?: number | null;
     locale?: PublicFrontendLocale;
     savePaymentMethodForFutureUse?: boolean;
+    consentVersion?: string;
     /** Overrides the default payment-callback cancel URL (e.g. public rental payment step). */
     cancelUrl?: string;
     validate?: (tx: Tx, obligation: PaymentObligation) => Promise<void>;
+    audit?: { ip?: string | null; userAgent?: string | null };
   }): Promise<StartPaymentResult> {
     const payProvider = provider();
     if (!payProvider.configured) throw contractError.paymentProviderNotConfigured();
@@ -655,12 +710,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
         },
         orderBy: { createdAt: "desc" },
       });
-      // Reuse a still-valid Checkout URL without a provider round-trip.
-      const current = active
-        ? isCheckoutUsable(active)
-          ? active
-          : (await applyProviderPaymentStatus(tx, active.id)) ?? active
-        : null;
+      const current = active ?? null;
       if (current?.status === "CONFIRMED") {
         return {
           kind: "done" as const,
@@ -678,9 +728,6 @@ export function createContractPaymentService(prisma: PrismaClient) {
             providerAvailable: true,
           },
         };
-      }
-      if (current && (current.status === "PENDING" || current.status === "PROCESSING") && !isCheckoutUsable(current)) {
-        throw contractError.paymentAlreadyProcessing();
       }
       if (current && isCheckoutUsable(current)) {
         return {
@@ -700,6 +747,14 @@ export function createContractPaymentService(prisma: PrismaClient) {
           },
         };
       }
+      if (
+        current &&
+        (current.status === "PENDING" || current.status === "PROCESSING") &&
+        !isCheckoutUsable(current) &&
+        current.providerReference
+      ) {
+        return { kind: "reconcile" as const, paymentId: current.id };
+      }
 
       const statusToken = generateOpaqueToken(32);
       const savedPaymentMethod =
@@ -708,43 +763,61 @@ export function createContractPaymentService(prisma: PrismaClient) {
           : null;
       const consentLocale = normalizePublicLocale(input.locale);
       const saveForFutureUse = Boolean(input.savePaymentMethodForFutureUse);
-      let diamondCustomerId: number | null = null;
-      let stripeCustomerId: string | null = null;
-      if (obligation.purpose === "RENTAL") {
-        const contractRow = await tx.contract.findUnique({
-          where: { id: obligation.contractId },
-          select: { customerId: true },
-        });
-        diamondCustomerId = contractRow?.customerId ?? null;
-        if (saveForFutureUse) {
-          diamondCustomerId = await ensureContractCustomerForPayment(tx, obligation.contractId);
-          stripeCustomerId = await findStripeCustomerId(tx, diamondCustomerId);
-        } else if (diamondCustomerId) {
-          stripeCustomerId =
-            (await findStripeCustomerId(tx, diamondCustomerId)) ??
-            savedPaymentMethod?.stripeCustomerId ??
-            null;
+      if (saveForFutureUse) {
+        const version = input.consentVersion ?? PAYMENT_METHOD_AUTHORIZATION_VERSION;
+        if (!getPaymentConsent(version, consentLocale)) {
+          throw contractError.paymentConsentInvalid();
         }
       }
 
-      const payment = await tx.contractPayment.create({
-        data: {
-          contractId: obligation.contractId,
-          purpose: obligation.purpose,
-          targetId: obligation.targetId,
-          amount: obligation.amount,
-          currency: obligation.currency,
-          method: "CARD",
-          status: "PROCESSING",
-          createdByUserId: input.createdByUserId ?? null,
-          statusTokenHash: hashToken(statusToken),
-          statusTokenExpiresAt: expiryFromNow(PAYMENT_STATUS_TOKEN_TTL_SECONDS),
-          savePaymentMethodForFutureUse: saveForFutureUse,
-          futureUseConsentAt: saveForFutureUse ? new Date() : null,
-          futureUseConsentVersion: saveForFutureUse ? PAYMENT_METHOD_AUTHORIZATION_VERSION : null,
-          futureUseConsentLocale: saveForFutureUse ? consentLocale : null,
-        },
-      });
+      let diamondCustomerId: number | null = null;
+      if (obligation.purpose === "RENTAL") {
+        diamondCustomerId = await ensureContractCustomerForPayment(tx, obligation.contractId);
+      }
+
+      const consentVersion = saveForFutureUse
+        ? (input.consentVersion ?? PAYMENT_METHOD_AUTHORIZATION_VERSION)
+        : null;
+
+      const reclaim =
+        current &&
+        (current.status === "PENDING" || current.status === "PROCESSING") &&
+        !isCheckoutUsable(current) &&
+        !current.providerReference
+          ? current
+          : null;
+
+      const payment = reclaim
+        ? await tx.contractPayment.update({
+            where: { id: reclaim.id },
+            data: {
+              status: "PROCESSING",
+              statusTokenHash: hashToken(statusToken),
+              statusTokenExpiresAt: expiryFromNow(PAYMENT_STATUS_TOKEN_TTL_SECONDS),
+              savePaymentMethodForFutureUse: saveForFutureUse,
+              futureUseConsentAt: saveForFutureUse ? new Date() : null,
+              futureUseConsentVersion: consentVersion,
+              futureUseConsentLocale: saveForFutureUse ? consentLocale : null,
+            },
+          })
+        : await tx.contractPayment.create({
+            data: {
+              contractId: obligation.contractId,
+              purpose: obligation.purpose,
+              targetId: obligation.targetId,
+              amount: obligation.amount,
+              currency: obligation.currency,
+              method: "CARD",
+              status: "PROCESSING",
+              createdByUserId: input.createdByUserId ?? null,
+              statusTokenHash: hashToken(statusToken),
+              statusTokenExpiresAt: expiryFromNow(PAYMENT_STATUS_TOKEN_TTL_SECONDS),
+              savePaymentMethodForFutureUse: saveForFutureUse,
+              futureUseConsentAt: saveForFutureUse ? new Date() : null,
+              futureUseConsentVersion: consentVersion,
+              futureUseConsentLocale: saveForFutureUse ? consentLocale : null,
+            },
+          });
 
       const contractCompany = await tx.contract.findUnique({
         where: { id: obligation.contractId },
@@ -757,7 +830,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
         statusToken,
         saveForFutureUse,
         diamondCustomerId,
-        stripeCustomerId,
+        stripeCustomerId: null,
         savedPaymentMethod:
           savedPaymentMethod && savedPaymentMethod.stripePaymentMethodId
             ? {
@@ -772,8 +845,43 @@ export function createContractPaymentService(prisma: PrismaClient) {
     });
 
     if (phase.kind === "done") return phase.result;
+    if (phase.kind === "reconcile") {
+      const reconciled = await reconcilePaymentWithProvider(phase.paymentId, input.audit);
+      if (reconciled?.status === "CONFIRMED") {
+        return {
+          payment: {
+            id: reconciled.id,
+            status: reconciled.status,
+            amount: reconciled.amount,
+            currency: reconciled.currency,
+            purpose: reconciled.purpose,
+            checkoutUrl: null,
+            checkoutExpiresAt: null,
+          },
+          statusToken: null,
+          providerAvailable: true,
+          alreadySettled: true,
+        };
+      }
+      if (reconciled && isCheckoutUsable(reconciled)) {
+        return {
+          payment: {
+            id: reconciled.id,
+            status: reconciled.status,
+            amount: reconciled.amount,
+            currency: reconciled.currency,
+            purpose: reconciled.purpose,
+            checkoutUrl: reconciled.checkoutUrl,
+            checkoutExpiresAt: reconciled.checkoutExpiresAt,
+          },
+          statusToken: null,
+          providerAvailable: true,
+        };
+      }
+      throw contractError.paymentAlreadyProcessing();
+    }
 
-    let stripeCustomerId = phase.claim.stripeCustomerId;
+    let stripeCustomerId: string | null = null;
     if (phase.claim.saveForFutureUse && phase.claim.diamondCustomerId) {
       if (!env.STRIPE_SECRET_KEY) throw contractError.paymentProviderNotConfigured();
       const stripe = new Stripe(env.STRIPE_SECRET_KEY);
@@ -781,7 +889,6 @@ export function createContractPaymentService(prisma: PrismaClient) {
         stripe,
         prisma,
         phase.claim.diamondCustomerId,
-        stripeCustomerId,
       );
     }
 
@@ -802,6 +909,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
       savePaymentMethodForFutureUse: phase.claim.saveForFutureUse,
     });
     if (!created.ok) throw contractError.paymentProviderNotConfigured();
+    assertTrustedCheckoutUrl(created.checkoutUrl);
 
     return withTransaction(prisma, async (tx) => {
       const updated = await tx.contractPayment.update({
@@ -841,108 +949,66 @@ export function createContractPaymentService(prisma: PrismaClient) {
     });
   }
 
-  async function processWebhookEvent(
-    stripeEventId: string,
-    eventType: string,
-    paymentId: string,
-    providerReference: string,
-    status: ProviderPaymentStatus,
-    amountMinor?: number,
-    currency?: string,
-  ): Promise<"processed" | "duplicate" | "ignored"> {
-    try {
-      await prisma.stripeWebhookEvent.create({
-        data: { stripeEventId, eventType, outcome: "received" },
-      });
-    } catch (error) {
-      if (isUniqueViolation(error)) return "duplicate";
-      throw error;
+  async function applyInboxPaymentEvent(row: StripeWebhookEvent): Promise<void> {
+    if (!row.paymentId || !row.providerReference || !row.normalizedStatus) {
+      throw new Error("INBOX_PAYMENT_INCOMPLETE");
     }
-
-    try {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          await withTransaction(prisma, async (tx) => {
-            const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
-            if (!payment) throw contractError.paymentAttemptNotFound();
-            if (payment.providerReference && payment.providerReference !== providerReference) {
-              throw contractError.paymentProviderReferenceMismatch();
-            }
-
-            if (status === "CONFIRMED") {
-              await confirmPaymentAttempt(tx, payment, "CONFIRMED", amountMinor, currency);
-            } else if (status === "FAILED" || status === "CANCELLED" || status === "EXPIRED") {
-              if (payment.status === "PENDING" || payment.status === "PROCESSING") {
-                const terminalStatus: ContractPaymentStatus =
-                  status === "EXPIRED" ? "CANCELLED" : status;
-                await markPaymentTerminal(tx, payment, terminalStatus, status);
-                await emitPayment(tx, "payment.failed", payment.contractId, {
-                  paymentId: payment.id,
-                  status: terminalStatus,
-                  dedupe: payment.id,
-                });
-              }
-            }
-
-            await tx.stripeWebhookEvent.update({
-              where: { stripeEventId },
-              data: { processedAt: new Date(), outcome: "processed" },
+    const status = row.normalizedStatus as ProviderPaymentStatus;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const updated = await withTransaction(prisma, async (tx) => {
+          const payment = await tx.contractPayment.findUnique({ where: { id: row.paymentId! } });
+          if (!payment) throw contractError.paymentAttemptNotFound();
+          if (payment.providerReference && payment.providerReference !== row.providerReference) {
+            throw contractError.paymentProviderReferenceMismatch();
+          }
+          if (!payment.providerReference) {
+            await tx.contractPayment.update({
+              where: { id: payment.id },
+              data: { providerReference: row.providerReference },
             });
+          }
+          return applyProviderStatusInTransaction(tx, payment, {
+            status,
+            providerStatus: status,
+            amountMinor: row.amountMinor ?? undefined,
+            currency: row.currency ?? undefined,
           });
-          return "processed";
-        } catch (error) {
-          if (attempt === 0 && isUniqueViolation(error)) continue;
-          throw error;
-        }
-      }
-      return "processed";
-    } catch (error) {
-      const settled = await prisma.contractPayment.findUnique({ where: { id: paymentId } });
-      if (settled?.status === "CONFIRMED" || isUniqueViolation(error)) {
-        await prisma.stripeWebhookEvent.update({
-          where: { stripeEventId },
-          data: { processedAt: new Date(), outcome: "duplicate" },
         });
-        return "duplicate";
+        if (updated.status === "CONFIRMED" && updated.savePaymentMethodForFutureUse) {
+          await reconcileSavedPaymentMethodAfterPayment(updated);
+        }
+        return;
+      } catch (error) {
+        if (attempt === 0 && isUniqueViolation(error)) continue;
+        const settled = await prisma.contractPayment.findUnique({ where: { id: row.paymentId } });
+        if (settled?.status === "CONFIRMED") return;
+        throw error;
       }
-      await prisma.stripeWebhookEvent.update({
-        where: { stripeEventId },
-        data: {
-          processedAt: new Date(),
-          outcome: "error",
-          error: error instanceof Error ? error.message : "unknown",
-        },
-      });
-      throw error;
     }
   }
 
-  async function processCardSetupWebhook(input: {
-    stripeEventId: string;
-    eventType: string;
-    providerReference: string;
-    contractId: string;
-    stripeCustomerId?: string;
-    stripePaymentMethodId: string;
-    cardBrand: string;
-    cardLast4: string;
-  }): Promise<"processed" | "duplicate"> {
-    try {
-      await prisma.stripeWebhookEvent.create({
-        data: { stripeEventId: input.stripeEventId, eventType: input.eventType, outcome: "received" },
-      });
-    } catch (error) {
-      if (isUniqueViolation(error)) return "duplicate";
-      throw error;
+  async function applyInboxCardSetupEvent(row: StripeWebhookEvent): Promise<void> {
+    if (!row.providerReference) throw new Error("INBOX_CARD_SETUP_INCOMPLETE");
+    const result = await provider().getCardSetupSession(row.providerReference);
+    if (result.status !== "CONFIRMED" || !result.contractId) return;
+    if (
+      !result.stripePaymentMethodId ||
+      !result.cardBrand ||
+      !result.cardLast4 ||
+      !/^\d{4}$/.test(result.cardLast4)
+    ) {
+      return;
     }
     await withTransaction(prisma, async (tx) => {
-      await persistCardPaymentMethod(tx, input);
-      await tx.stripeWebhookEvent.update({
-        where: { stripeEventId: input.stripeEventId },
-        data: { processedAt: new Date(), outcome: "processed" },
+      await persistContractCardSnapshot(tx, {
+        contractId: result.contractId!,
+        stripeCustomerId: result.stripeCustomerId ?? null,
+        stripePaymentMethodId: result.stripePaymentMethodId!,
+        cardBrand: result.cardBrand!,
+        cardLast4: result.cardLast4!,
       });
     });
-    return "processed";
   }
 
   async function processCardSetupReturn(input: {
@@ -976,7 +1042,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
     const cardBrand = result.cardBrand;
     const cardLast4 = result.cardLast4;
     await withTransaction(prisma, async (tx) => {
-      await persistCardPaymentMethod(tx, {
+      await persistContractCardSnapshot(tx, {
         contractId: input.contractId,
         stripeCustomerId: result.stripeCustomerId ?? null,
         stripePaymentMethodId,
@@ -999,19 +1065,25 @@ export function createContractPaymentService(prisma: PrismaClient) {
           if (!payment.statusTokenExpiresAt || payment.statusTokenExpiresAt.getTime() <= Date.now()) {
             throw contractError.paymentStatusTokenExpired();
           }
-          const updated = (await applyProviderPaymentStatus(tx, payment.id)) ?? payment;
           const contract = await tx.contract.findUnique({
-            where: { id: updated.contractId },
+            where: { id: payment.contractId },
             include: {
               vehicle: { include: { model: { select: { name: true } } } },
               cardPaymentMethod: true,
+              paymentAuthorization: true,
             },
           });
+          const authorization =
+            payment.status === "CONFIRMED"
+              ? await tx.contractPaymentAuthorization.findUnique({
+                  where: { sourcePaymentId: payment.id },
+                })
+              : null;
           return {
-            status: updated.status,
+            status: payment.status,
             contractStatus: contract?.status ?? null,
-            purpose: updated.purpose,
-            checkoutUrl: updated.checkoutUrl,
+            purpose: payment.purpose,
+            checkoutUrl: payment.checkoutUrl,
             summary: contract
               ? {
                   contractNumber: contract.contractNumber,
@@ -1024,15 +1096,11 @@ export function createContractPaymentService(prisma: PrismaClient) {
                     }),
                     plateNumber: contract.vehicle.plateNumber,
                   },
-                  amount: updated.amount,
-                  currency: updated.currency,
+                  amount: payment.amount,
+                  currency: payment.currency,
                   cardLast4: contract.cardPaymentMethod?.cardLast4 ?? null,
                   cardBrand: contract.cardPaymentMethod?.cardBrand ?? null,
-                  paymentMethodSavedForFutureUse: Boolean(
-                    updated.savePaymentMethodForFutureUse &&
-                    updated.status === "CONFIRMED" &&
-                    contract.cardPaymentMethod?.futureUseConsentPaymentId === updated.id,
-                  ),
+                  paymentMethodSavedForFutureUse: Boolean(authorization),
                 }
               : undefined,
           };
@@ -1070,9 +1138,10 @@ export function createContractPaymentService(prisma: PrismaClient) {
   return {
     startPayment,
     applyProviderPaymentStatus,
+    reconcilePaymentWithProvider,
     simulateSuccessfulPayment,
-    processWebhookEvent,
-    processCardSetupWebhook,
+    applyInboxPaymentEvent,
+    applyInboxCardSetupEvent,
     processCardSetupReturn,
     getPaymentStatusByToken,
     loadObligation,

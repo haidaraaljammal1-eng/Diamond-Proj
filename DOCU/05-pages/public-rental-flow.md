@@ -110,7 +110,7 @@ A success URL / redirect is **not** payment proof. Public clients cannot set `CO
 
 **Rental payment (STRIPE-3):** One Stripe Hosted Checkout trip pays the current rental. The customer may optionally authorize saving the payment method for future contract-related charges (`savePaymentMethodForFutureUse` on `POST /contracts/rental/:token/payment`). When authorized, Checkout uses `payment_intent_data.setup_future_usage = off_session`, resolves or creates one Stripe Customer per Diamond Customer, and records consent version `payment_method_authorization_v1` on `ContractPayment`. Webhook confirmation reconciles safe card metadata (`stripeCustomerId`, `stripePaymentMethodId`, brand, last4) only when consent was granted. Unchecked consent still pays normally without future-use setup.
 
-Legacy card-link routes (`POST /card-link`, `GET /card-link/return`) remain for migration compatibility but are **not** part of the normal rental payment journey. The browser never supplies a PaymentMethod id directly.
+Legacy card-link routes (`POST /card-link`, `GET /card-link/return`) are gated off by default (`LEGACY_CARD_LINK_ENABLED=false`) and are **not** part of the normal rental payment journey. The browser never supplies a PaymentMethod id directly.
 
 If the Rental link expires while an attempt is PROCESSING/PENDING, `GET /contracts/payments/status/:statusToken` still resolves it. The status token is random, returned once, stored hashed, read-only, scoped to one `ContractPayment`, TTL 7 days, and cannot create payments or expose PII beyond `{ status, contractStatus }`.
 

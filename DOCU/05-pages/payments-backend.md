@@ -4,7 +4,7 @@ Diamond V1 customer payments use **Stripe Checkout only**. Money is collected on
 
 Rental payment uses a server-derived amount/currency and a single Stripe Hosted Checkout (`price_data`). The normal customer journey does **not** require a separate card-link trip before payment. Optional future-use authorization is consent-based on `POST /contracts/rental/:token/payment` (`savePaymentMethodForFutureUse`). When true, Checkout sets `payment_intent_data.setup_future_usage = off_session`, resolves one Stripe Customer per Diamond Customer, and records consent version `payment_method_authorization_v1` on `ContractPayment`. Webhook confirmation reconciles safe card metadata only when consent was granted. Off-session charging is not implemented yet.
 
-Legacy card-link routes (`POST /card-link`, `GET /card-link/return`) remain for compatibility; they are not part of the normal rental UX. A completed Checkout event confirms money only when Stripe reports `payment_status=paid`; a return URL alone never settles the Contract. An open Checkout remains in flight through a card decline or customer authentication request. Before another attempt, the backend reconciles any prior active session with Stripe and blocks an unresolved attempt, including one whose Checkout URL has expired locally. The public return page polls the status token and offers the existing Checkout URL while the attempt remains in flight.
+Legacy card-link routes (`POST /card-link`, `GET /card-link/return`) are **disabled by default** (`LEGACY_CARD_LINK_ENABLED=false`). They are not part of the normal rental UX and return `LEGACY_CARD_LINK_DISABLED` when off. A completed Checkout event confirms money only when Stripe reports `payment_status=paid`; a return URL alone never settles the Contract. An open Checkout remains in flight through a card decline or customer authentication request. Before another attempt, the backend reconciles any prior active session with Stripe and blocks an unresolved attempt, including one whose Checkout URL has expired locally. The public return page polls the status token and offers the existing Checkout URL while the attempt remains in flight.
 
 Public rental payment POST requires `Idempotency-Key`; missing keys are rejected before creating an attempt. The browser generates one key per user action and never retries this POST automatically.
 
@@ -26,7 +26,7 @@ Settlement linkage:
 - `ContractPostCloseReceivable.settledAt` / `settledPaymentId` + `status = SETTLED`
 - `ContractRenewal.appliedAt` / `settledPaymentId`
 
-`StripeWebhookEvent` stores processed Stripe event ids for idempotency.
+`StripeWebhookEvent` is a **durable webhook inbox**. HTTP verifies the signature, inserts a row (`processingStatus=PENDING`), and returns **200 immediately**. The in-process worker (`background-runner` → `runStripeWebhookCycle`) claims rows with `FOR UPDATE SKIP LOCKED`, reads Stripe **outside** DB transactions, then applies settlement in a short transaction. Duplicate `stripeEventId` → 200 without re-settlement. Valid ignored events → 200 (`IGNORED`).
 
 ## Routes
 

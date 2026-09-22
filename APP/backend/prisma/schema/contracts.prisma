@@ -188,6 +188,7 @@ model Contract {
   roadLiabilities      RoadLiability[]
   customerCharges      RoadLiabilityCustomerCharge[]
   postCloseReceivables ContractPostCloseReceivable[]
+  paymentAuthorization ContractPaymentAuthorization?
 
   @@index([vehicleId, status])
   @@index([companyId])
@@ -198,20 +199,20 @@ model Contract {
 }
 
 model ContractCardPaymentMethod {
-  id                    String   @id @default(uuid())
-  contractId            String   @unique
-  contract              Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  provider              String   @default("stripe")
-  stripeCustomerId      String?
+  id                        String    @id @default(uuid())
+  contractId                String    @unique
+  contract                  Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  provider                  String    @default("stripe")
+  stripeCustomerId          String?
   /// Null for the explicit DEV_SIMULATION source; real Stripe ids are never faked.
-  stripePaymentMethodId String?  @unique
-  cardBrand             String
-  cardLast4             String
+  stripePaymentMethodId     String?   @unique
+  cardBrand                 String
+  cardLast4                 String
   /// Rental payment that recorded explicit future-use authorization (if any).
-  futureUseConsentPaymentId String?  @unique
+  futureUseConsentPaymentId String?   @unique
   futureUseAuthorizedAt     DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
   @@map("contract_card_payment_methods")
 }
@@ -251,59 +252,106 @@ model ContractAcceptance {
 }
 
 model ContractPayment {
-  id                   String                 @id @default(uuid())
-  contractId           String
-  contract             Contract               @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  purpose              ContractPaymentPurpose @default(RENTAL)
+  id                            String                 @id @default(uuid())
+  contractId                    String
+  contract                      Contract               @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  purpose                       ContractPaymentPurpose @default(RENTAL)
   /// Obligation target: contractId (RENTAL), renewalId, reconciliationId, or receivableId.
-  targetId             String
-  amount               Int
-  currency             String                 @default("AED")
-  method               ContractPaymentMethod
-  status               ContractPaymentStatus  @default(PENDING)
-  externalReference    String?
-  provider             String?
-  providerReference    String?
-  providerStatus       String?
-  checkoutUrl          String?
-  checkoutExpiresAt    DateTime?
-  processingStartedAt  DateTime?
-  confirmedAt          DateTime?
-  failedAt             DateTime?
+  targetId                      String
+  amount                        Int
+  currency                      String                 @default("AED")
+  method                        ContractPaymentMethod
+  status                        ContractPaymentStatus  @default(PENDING)
+  externalReference             String?
+  provider                      String?
+  providerReference             String?
+  providerStatus                String?
+  checkoutUrl                   String?
+  checkoutExpiresAt             DateTime?
+  processingStartedAt           DateTime?
+  confirmedAt                   DateTime?
+  failedAt                      DateTime?
   /// SHA-256 of the one-time payment-status token. Raw value is never stored.
-  statusTokenHash      String?                @unique
-  statusTokenExpiresAt DateTime?
+  statusTokenHash               String?                @unique
+  statusTokenExpiresAt          DateTime?
   /// Customer opted in to save the payment method for authorized future contract charges.
-  savePaymentMethodForFutureUse Boolean         @default(false)
+  savePaymentMethodForFutureUse Boolean                @default(false)
   futureUseConsentAt            DateTime?
   futureUseConsentVersion       String?
-  futureUseConsentLocale          String?
-  createdAt            DateTime               @default(now())
-  createdByUserId      Int?
-  createdBy            User?                  @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  futureUseConsentLocale        String?
+  createdAt                     DateTime               @default(now())
+  createdByUserId               Int?
+  createdBy                     User?                  @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
-  reconciliationSettlement ContractReconciliation?      @relation("ReconciliationSettlement")
-  postCloseSettlement      ContractPostCloseReceivable? @relation("PostCloseSettlement")
-  renewalSettlement        ContractRenewal?             @relation("RenewalSettlement")
+  reconciliationSettlement ContractReconciliation?       @relation("ReconciliationSettlement")
+  postCloseSettlement      ContractPostCloseReceivable?  @relation("PostCloseSettlement")
+  renewalSettlement        ContractRenewal?              @relation("RenewalSettlement")
   ledgerEntries            FinancialLedgerEntry[]
+  paymentAuthorization     ContractPaymentAuthorization?
 
   @@index([contractId, status])
   @@index([purpose, targetId, status])
   @@map("contract_payments")
 }
 
-/// DB-backed Stripe webhook idempotency. Same event must not apply business effects twice.
+enum StripeWebhookProcessingStatus {
+  RECEIVED
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+/// Durable Stripe webhook inbox. HTTP ACK is fast; business work runs in the worker.
 model StripeWebhookEvent {
-  id            String    @id @default(uuid())
-  stripeEventId String    @unique
-  eventType     String
-  receivedAt    DateTime  @default(now())
-  processedAt   DateTime?
-  outcome       String?
-  error         String?
+  id                String                        @id @default(uuid())
+  stripeEventId     String                        @unique
+  eventType         String
+  eventKind         String?
+  receivedAt        DateTime                      @default(now())
+  processingStatus  StripeWebhookProcessingStatus @default(RECEIVED)
+  paymentId         String?
+  providerReference String?
+  normalizedStatus  String?
+  amountMinor       Int?
+  currency          String?
+  attemptCount      Int                           @default(0)
+  availableAt       DateTime                      @default(now())
+  processedAt       DateTime?
+  outcome           String?
+  error             String?
+  lastErrorCode     String?
 
   @@index([receivedAt])
+  @@index([processingStatus, availableAt])
   @@map("stripe_webhook_events")
+}
+
+/// Per-contract future-use authorization to charge a saved CustomerPaymentMethod.
+model ContractPaymentAuthorization {
+  id                      String                @id @default(uuid())
+  contractId              String                @unique
+  contract                Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  customerId              Int
+  customer                Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customerPaymentMethodId String
+  customerPaymentMethod   CustomerPaymentMethod @relation(fields: [customerPaymentMethodId], references: [id], onDelete: Restrict)
+  sourcePaymentId         String                @unique
+  sourcePayment           ContractPayment       @relation(fields: [sourcePaymentId], references: [id], onDelete: Restrict)
+  consentVersion          String
+  consentLocale           String
+  consentTextHash         String
+  scope                   String
+  authorizedAt            DateTime
+  ip                      String?
+  userAgent               String?
+  revokedAt               DateTime?
+  createdAt               DateTime              @default(now())
+
+  @@index([customerId])
+  @@index([customerPaymentMethodId])
+  @@map("contract_payment_authorizations")
 }
 
 /// Contract-scoped file (customer may not exist yet). One active driving license

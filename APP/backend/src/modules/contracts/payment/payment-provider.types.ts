@@ -113,9 +113,15 @@ export interface ParsedWebhookCardSetupEvent {
   cardLast4: string;
 }
 
+export interface ParsedWebhookIgnoredEvent {
+  kind: "IGNORED";
+  stripeEventId: string;
+  eventType: string;
+}
+
 export interface WebhookVerifySuccess {
   ok: true;
-  event: ParsedWebhookPaymentEvent | ParsedWebhookCardSetupEvent;
+  event: ParsedWebhookPaymentEvent | ParsedWebhookCardSetupEvent | ParsedWebhookIgnoredEvent;
 }
 
 export interface WebhookVerifyFailure {

@@ -17,7 +17,10 @@ import type {
   OfficialContractReviewPatch,
   OfficialContractView,
 } from "../types/official-contract.types";
-import { publicRequestLocaleHeaders } from "../utils/public-request-locale";
+import {
+  publicRentalRequestOptions,
+  publicRequestLocaleHeaders,
+} from "../utils/public-request-locale";
 
 const CONTRACTS_PATH = "/contracts";
 
@@ -49,7 +52,7 @@ export async function getPublicRental(
 ): Promise<PublicRentalContext> {
   const response = await apiRequest<PublicRentalContext>(
     `${CONTRACTS_PATH}/rental/${token}`,
-    { publicRequest: true },
+    publicRentalRequestOptions(),
   );
   return response.data;
 }
@@ -59,7 +62,7 @@ export async function getPublicRentalLicense(
 ): Promise<PublicRentalContext> {
   const response = await apiRequest<PublicRentalContext>(
     `${CONTRACTS_PATH}/rental/${token}/driving-license`,
-    { publicRequest: true },
+    publicRentalRequestOptions(),
   );
   return response.data;
 }
@@ -313,7 +316,7 @@ export async function getPublicRentalPayment(
 ): Promise<PublicPaymentContext> {
   const response = await apiRequest<PublicPaymentContext>(
     `${CONTRACTS_PATH}/rental/${token}/payment`,
-    { publicRequest: true },
+    publicRentalRequestOptions(),
   );
   return response.data;
 }
@@ -321,7 +324,7 @@ export async function getPublicRentalPayment(
 export async function startPublicRentalPayment(
   token: string,
   idempotencyKey: string,
-  options?: { savePaymentMethodForFutureUse?: boolean },
+  options?: { savePaymentMethodForFutureUse?: boolean; consentVersion?: string },
 ): Promise<PublicPaymentAttempt> {
   const response = await apiRequest<PublicPaymentAttempt>(
     `${CONTRACTS_PATH}/rental/${token}/payment`,
@@ -333,6 +336,7 @@ export async function startPublicRentalPayment(
       },
       body: {
         savePaymentMethodForFutureUse: Boolean(options?.savePaymentMethodForFutureUse),
+        ...(options?.consentVersion ? { consentVersion: options.consentVersion } : {}),
       },
       publicRequest: true,
     },

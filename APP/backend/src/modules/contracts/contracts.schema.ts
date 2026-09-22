@@ -671,6 +671,14 @@ export const PublicRentalContextSchema = z.object({
     cardBrand: z.string().nullable().optional(),
     cardReady: z.boolean(),
     futureUseConsentAvailable: z.boolean(),
+    futureUseConsent: z
+      .object({
+        version: z.string(),
+        locale: z.enum(["en", "ar"]),
+        text: z.string(),
+        scope: z.string(),
+      })
+      .nullable(),
   }),
   tarsOtp: TarsOtpPublicStateSchema,
 });
@@ -712,6 +720,7 @@ export const PaymentCheckoutSchema = z.object({
 
 export const PublicPaymentStartBodySchema = z.object({
   savePaymentMethodForFutureUse: z.boolean().optional().default(false),
+  consentVersion: z.string().optional(),
 });
 
 export const PublicPaymentAttemptSchema = PaymentCheckoutSchema.extend({

@@ -71,6 +71,7 @@ export function PaymentStep({
     contractStatus: context.contract.status,
   });
   const futureUseConsentAvailable = context.payment.futureUseConsentAvailable;
+  const futureUseConsent = context.payment.futureUseConsent;
   const isDev = process.env.NODE_ENV === "development";
   const inFlight = panel === "processing" || panel === "pending" || payPending;
   const stripeCheckoutAvailable = context.payment.providerAvailable;
@@ -179,19 +180,25 @@ export function PaymentStep({
         <>
           <p className={styles.secure}>{t("secureStripe")}</p>
           <p className={styles.stripeMethod}>{t("stripeMethod")}</p>
-          <label className={styles.consent} data-testid="payment-future-use-consent">
-            <Checkbox
-              checked={saveForFutureUse}
-              onChange={(event) => setSaveForFutureUse(event.target.checked)}
-              disabled={inFlight || linkExpiredDuringPayment || !futureUseConsentAvailable}
-              aria-label={t("futureUseConsentTitle")}
-            />
-            <span>
-              <b>{t("futureUseConsentTitle")}</b>
-              <span className={styles.consentHint}>{t("futureUseConsentBody")}</span>
-              <span className={styles.consentLegal}>{t("futureUseConsentLegal")}</span>
-            </span>
-          </label>
+          {futureUseConsentAvailable && futureUseConsent ? (
+            <label className={styles.consent} data-testid="payment-future-use-consent">
+              <Checkbox
+                checked={saveForFutureUse}
+                onChange={(event) => setSaveForFutureUse(event.target.checked)}
+                disabled={inFlight || linkExpiredDuringPayment}
+                aria-label={t("futureUseConsentTitle")}
+              />
+              <span>
+                <b>{t("futureUseConsentOptional")}</b>
+                <span className={styles.consentHint}>{futureUseConsent.text}</span>
+                <span className={styles.consentLegal}>{t("futureUseConsentLegal")}</span>
+              </span>
+            </label>
+          ) : !futureUseConsentAvailable ? (
+            <p className={styles.consentUnavailable} data-testid="payment-consent-unavailable">
+              {t("futureUseConsentUnavailable")}
+            </p>
+          ) : null}
         </>
       ) : simulationEnabled ? (
         <p className={styles.dev}>{t("devCardSetupNotice")}</p>
@@ -218,10 +225,10 @@ export function PaymentStep({
           onClick={() => onPay(futureUseConsentAvailable && saveForFutureUse)}
         >
           {payPending
-            ? t("preparing")
+            ? t("openingCheckout")
             : canRetryPayment(status)
               ? t("retry")
-              : t("payNow")}
+              : t("payNowStripe")}
         </Button>
       ) : null}
       {simulationEnabled && !stripeCheckoutAvailable ? (

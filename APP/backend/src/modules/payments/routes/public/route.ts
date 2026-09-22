@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { createPaymentProvider } from "src/modules/contracts/payment/payment-provider.factory";
-import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
+import { createStripeWebhookInboxService } from "src/modules/contracts/payment/stripe-webhook-inbox.service";
 
 export default async function paymentsPublicRoutes(fastify: FastifyInstance) {
-  const paymentService = createContractPaymentService(fastify.prisma);
+  const inbox = createStripeWebhookInboxService(fastify.prisma);
 
   await fastify.register(async (instance) => {
     instance.addContentTypeParser(
@@ -18,7 +18,7 @@ export default async function paymentsPublicRoutes(fastify: FastifyInstance) {
       "/webhooks/stripe",
       {
         schema: {
-          summary: "Stripe webhook (authoritative payment confirmation)",
+          summary: "Stripe webhook (fast ACK + durable inbox)",
           operationId: "stripeWebhook",
           tags: ["Payments"],
           public: true,
@@ -32,6 +32,10 @@ export default async function paymentsPublicRoutes(fastify: FastifyInstance) {
         }
 
         const provider = createPaymentProvider();
+        if (!provider.configured) {
+          return reply.status(503).send({ error: { code: "NOT_CONFIGURED" } });
+        }
+
         const payload = request.body as Buffer;
         const verified = await provider.verifyWebhook(payload, signature);
         if (!verified.ok) {
@@ -39,22 +43,13 @@ export default async function paymentsPublicRoutes(fastify: FastifyInstance) {
           return reply.status(status).send({ error: { code: verified.reason } });
         }
 
-        const outcome = verified.event.kind === "CARD_SETUP"
-          ? await paymentService.processCardSetupWebhook(verified.event)
-          : await paymentService.processWebhookEvent(
-              verified.event.stripeEventId,
-              verified.event.eventType,
-              verified.event.paymentId,
-              verified.event.providerReference,
-              verified.event.status,
-              verified.event.amountMinor,
-              verified.event.currency,
-            );
+        const event = verified.event;
+        const outcome = await inbox.insertEvent(event as Parameters<typeof inbox.insertEvent>[0]);
 
         if (outcome === "duplicate") {
           return reply.status(200).send({ data: { duplicate: true } });
         }
-        return reply.status(200).send({ data: { processed: true } });
+        return reply.status(200).send({ data: { received: true } });
       },
     );
   });

@@ -171,6 +171,12 @@ export interface PublicRentalContext {
     cardBrand?: string | null;
     cardReady: boolean;
     futureUseConsentAvailable: boolean;
+    futureUseConsent: {
+      version: string;
+      locale: "en" | "ar";
+      text: string;
+      scope: string;
+    } | null;
   };
   tarsOtp: TarsOtpPublicState;
 }

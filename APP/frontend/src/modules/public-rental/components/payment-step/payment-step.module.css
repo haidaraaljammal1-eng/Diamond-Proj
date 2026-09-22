@@ -122,6 +122,13 @@
   font-size: 11px;
 }
 
+.consentUnavailable {
+  margin: 0 0 8px;
+  color: var(--diamond-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
 @media (max-width: 480px) {
   .amountHero b {
     font-size: 28px;

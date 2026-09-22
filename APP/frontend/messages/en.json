@@ -1369,6 +1369,8 @@
       "unavailable": "Stripe payment is not configured yet.",
       "devNote": "Payment provider not configured",
       "payNow": "Pay now with Stripe",
+      "payNowStripe": "Pay now with Stripe",
+      "openingCheckout": "Opening secure Stripe checkout...",
       "retry": "Retry payment",
       "processing": "Processing your payment...",
       "pending": "Payment verification in progress. Please do not retry until the current payment status is confirmed.",
@@ -1382,7 +1384,9 @@
       "preparing": "Preparing secure payment…",
       "notCompleted": "Payment was not completed. You can try again.",
       "futureUseConsentTitle": "Save payment method for authorized future charges",
+      "futureUseConsentOptional": "Optional — save card for authorized future charges",
       "futureUseConsentBody": "I authorize my payment method to be saved with Stripe for future charges directly related to this rental agreement, subject to the rental terms.",
+      "futureUseConsentUnavailable": "Payment is available. Saving your card for future authorized charges is not available for this contract.",
       "futureUseConsentLegal": "Operational consent copy — requires owner/legal approval before production.",
       "devCardSetupNotice": "Development payment simulation is enabled.",
       "simulateSuccess": "Simulate Successful Payment"

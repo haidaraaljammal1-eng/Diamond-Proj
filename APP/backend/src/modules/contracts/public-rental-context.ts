@@ -13,6 +13,8 @@ import {
   maskLicenseNumber,
 } from "src/modules/contracts/driving-license-policy";
 import { canMaterializeContractCustomer } from "src/modules/contracts/contract-customer-materialization";
+import { getPaymentConsent, PAYMENT_METHOD_AUTHORIZATION_VERSION } from "src/modules/contracts/payment/payment-consent.constants";
+import { normalizePublicLocale, type PublicFrontendLocale } from "src/lib/http/public-frontend-url";
 import { fleetVehicleTypeLabel, vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import type { PublicRentalContextSchema } from "src/modules/contracts/contracts.schema";
@@ -42,6 +44,7 @@ export type PublicRentalRow = Prisma.ContractGetPayload<{ include: typeof PUBLIC
 export function toPublicRentalContext(
   row: PublicRentalRow,
   now: Date = new Date(),
+  locale: PublicFrontendLocale = "en",
 ): z.infer<typeof PublicRentalContextSchema> {
   const verification = row.licenseVerifications[0] ?? null;
   const passport = row.passportExtractions[0] ?? null;
@@ -154,6 +157,25 @@ export function toPublicRentalContext(
         customerId: row.customerId,
         snapshot: row.snapshot,
       }),
+      futureUseConsent: canMaterializeContractCustomer({
+        customerId: row.customerId,
+        snapshot: row.snapshot,
+      })
+        ? (() => {
+            const consent = getPaymentConsent(
+              PAYMENT_METHOD_AUTHORIZATION_VERSION,
+              normalizePublicLocale(locale),
+            );
+            return consent
+              ? {
+                  version: consent.version,
+                  locale: consent.locale,
+                  text: consent.text,
+                  scope: consent.scope,
+                }
+              : null;
+          })()
+        : null,
     },
     // Overwritten by loadPublicRental with provider-aware state from TarsWorkflowOrchestrator.
     tarsOtp: {

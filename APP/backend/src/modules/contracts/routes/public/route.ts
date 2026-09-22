@@ -49,7 +49,12 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         response: { 200: dataResponse(PublicRentalContextSchema), ...commonErrorResponses },
       },
     },
-    async (request) => ({ data: await contracts.getPublicRental(request.params.token) }),
+    async (request) => ({
+      data: await contracts.getPublicRental(
+        request.params.token,
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
+    }),
   );
 
   app.post(
@@ -84,7 +89,12 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         response: { 200: dataResponse(PublicRentalContextSchema), ...commonErrorResponses },
       },
     },
-    async (request) => ({ data: await contracts.getPublicRental(request.params.token) }),
+    async (request) => ({
+      data: await contracts.getPublicRental(
+        request.params.token,
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
+    }),
   );
 
   app.post(
@@ -357,7 +367,13 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         response: { 200: dataResponse(PublicRentalContextSchema), ...commonErrorResponses },
       },
     },
-    async (request) => ({ data: await contracts.submitPublicForm(request.params.token, request.body) }),
+    async (request) => ({
+      data: await contracts.submitPublicForm(
+        request.params.token,
+        request.body,
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
+    }),
   );
 
   app.post(
@@ -374,10 +390,15 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({
-      data: await contracts.acceptPublic(request.params.token, request.body, {
-        ip: request.ip,
-        userAgent: request.headers["user-agent"],
-      }),
+      data: await contracts.acceptPublic(
+        request.params.token,
+        request.body,
+        {
+          ip: request.ip,
+          userAgent: request.headers["user-agent"],
+        },
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
     }),
   );
 
@@ -393,7 +414,12 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         response: { 200: dataResponse(PublicPaymentContextSchema), ...commonErrorResponses },
       },
     },
-    async (request) => ({ data: await contracts.getPaymentContext(request.params.token) }),
+    async (request) => ({
+      data: await contracts.getPaymentContext(
+        request.params.token,
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
+    }),
   );
 
   app.post(
@@ -458,6 +484,8 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
           typeof key === "string" ? key : undefined,
           publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
           request.body.savePaymentMethodForFutureUse,
+          request.body.consentVersion,
+          { ip: request.ip, userAgent: request.headers["user-agent"] ?? null },
         ),
       };
     },

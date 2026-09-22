@@ -101,17 +101,17 @@ model TarsOperation {
 
 /// TARS Vehicle DID scoped to the owning operating company.
 model TarsVehicleIntegration {
-  id                   String               @id @default(uuid())
+  id                   String                @id @default(uuid())
   vehicleId            Int
-  vehicle              Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle              Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   companyId            Int
-  company              OperatingCompany     @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  company              OperatingCompany      @relation(fields: [companyId], references: [id], onDelete: Restrict)
   externalVehicleDid   String?
-  syncStatus           TarsVehicleSyncStatus  @default(NOT_STARTED)
+  syncStatus           TarsVehicleSyncStatus @default(NOT_STARTED)
   lastSuccessfulSyncAt DateTime?
   lastErrorCode        String?
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   @@unique([vehicleId, companyId])
   @@index([companyId, externalVehicleDid])
@@ -121,17 +121,17 @@ model TarsVehicleIntegration {
 /// Diamond Attachment → TARS upload mapping per company. Stores returned
 /// hash/url only — never Attachment bytes.
 model TarsAttachmentUpload {
-  id             String           @id @default(uuid())
-  attachmentId   String
-  attachment     Attachment       @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
-  companyId      Int
-  company        OperatingCompany @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  externalUrl    String?
-  externalHash   String?
-  uploadedAt     DateTime?
-  lastErrorCode  String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id            String           @id @default(uuid())
+  attachmentId  String
+  attachment    Attachment       @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  companyId     Int
+  company       OperatingCompany @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  externalUrl   String?
+  externalHash  String?
+  uploadedAt    DateTime?
+  lastErrorCode String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@unique([attachmentId, companyId])
   @@index([companyId])
@@ -140,23 +140,23 @@ model TarsAttachmentUpload {
 
 /// TARS OTP challenge state. OTP values are NEVER stored.
 model TarsContractOtpChallenge {
-  id                 String                  @id @default(uuid())
+  id                 String                    @id @default(uuid())
   contractId         String
-  contract           Contract                @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract           Contract                  @relation(fields: [contractId], references: [id], onDelete: Cascade)
   provider           String
   challengeReference String?
   maskedDestination  String?
   status             TarsOtpVerificationStatus @default(REQUESTED)
-  requestedAt        DateTime                @default(now())
+  requestedAt        DateTime                  @default(now())
   expiresAt          DateTime?
   resendAvailableAt  DateTime?
   otpLength          Int?
   maxAttempts        Int?
   verifiedAt         DateTime?
-  attemptCount       Int                     @default(0)
+  attemptCount       Int                       @default(0)
   lastErrorCode      String?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 
   @@index([contractId, createdAt])
   @@index([contractId, status])
