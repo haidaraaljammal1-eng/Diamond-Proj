@@ -28,6 +28,10 @@ export class UnconfiguredPaymentProvider implements PaymentProvider {
     return { status: "UNKNOWN" };
   }
 
+  async getPaymentSessionPaymentMethod() {
+    return null;
+  }
+
   async verifyWebhook(): Promise<WebhookVerifyResult> {
     return { ok: false, reason: "NOT_CONFIGURED" };
   }

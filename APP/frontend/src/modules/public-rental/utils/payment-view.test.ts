@@ -22,24 +22,37 @@ describe("paymentPanelFromStatus", () => {
 });
 
 describe("canStartCardPayment", () => {
-  it("requires a linked card before starting a real payment", () => {
+  it("allows Pay on SIGNED contracts without a pre-linked card", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: true,
-        cardLinked: false,
         paymentStatus: null,
         payPending: false,
+        contractStatus: "SIGNED",
+      }),
+      true,
+    );
+  });
+
+  it("blocks Pay before SIGNED", () => {
+    assert.equal(
+      canStartCardPayment({
+        providerAvailable: true,
+        paymentStatus: null,
+        payPending: false,
+        contractStatus: "FORM",
       }),
       false,
     );
   });
+
   it("disables Pay when the provider is unavailable", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: false,
-        cardLinked: true,
         paymentStatus: null,
         payPending: false,
+        contractStatus: "SIGNED",
       }),
       false,
     );
@@ -49,18 +62,30 @@ describe("canStartCardPayment", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: true,
-        cardLinked: true,
         paymentStatus: "PROCESSING",
         payPending: false,
+        contractStatus: "SIGNED",
       }),
       false,
     );
     assert.equal(
       canStartCardPayment({
         providerAvailable: true,
-        cardLinked: true,
         paymentStatus: "PENDING",
         payPending: false,
+        contractStatus: "SIGNED",
+      }),
+      false,
+    );
+  });
+
+  it("blocks duplicate clicks while pay is pending", () => {
+    assert.equal(
+      canStartCardPayment({
+        providerAvailable: true,
+        paymentStatus: null,
+        payPending: true,
+        contractStatus: "SIGNED",
       }),
       false,
     );
@@ -70,13 +95,25 @@ describe("canStartCardPayment", () => {
     assert.equal(
       canStartCardPayment({
         providerAvailable: true,
-        cardLinked: true,
         paymentStatus: "FAILED",
         payPending: false,
+        contractStatus: "SIGNED",
       }),
       true,
     );
     assert.equal(canRetryPayment("FAILED"), true);
     assert.equal(canRetryPayment("PENDING"), false);
+  });
+
+  it("does not offer Pay on PAID contracts", () => {
+    assert.equal(
+      canStartCardPayment({
+        providerAvailable: true,
+        paymentStatus: "CONFIRMED",
+        payPending: false,
+        contractStatus: "PAID",
+      }),
+      false,
+    );
   });
 });

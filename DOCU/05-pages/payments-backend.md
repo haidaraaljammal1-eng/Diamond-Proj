@@ -2,9 +2,9 @@
 
 Diamond V1 customer payments use **Stripe Checkout only**. Money is collected only after a verified provider confirmation (webhook primary, status poll fallback). There is no manual staff confirmation and no fake runtime success.
 
-Customers may first link a card through Stripe Checkout setup mode. The browser returns only a Checkout Session id; the backend retrieves the Stripe Session/SetupIntent, verifies the Contract metadata, and stores safe card metadata (`stripeCustomerId`, `stripePaymentMethodId`, brand, last4). Later rental Checkout prefers the saved Stripe customer when available, while Stripe still owns any 3DS/SCA customer action.
+Rental payment uses a server-derived amount/currency and a single Stripe Hosted Checkout (`price_data`). The normal customer journey does **not** require a separate card-link trip before payment. Optional future-use authorization is consent-based on `POST /contracts/rental/:token/payment` (`savePaymentMethodForFutureUse`). When true, Checkout sets `payment_intent_data.setup_future_usage = off_session`, resolves one Stripe Customer per Diamond Customer, and records consent version `payment_method_authorization_v1` on `ContractPayment`. Webhook confirmation reconciles safe card metadata only when consent was granted. Off-session charging is not implemented yet.
 
-Rental payment requires that saved Customer and PaymentMethod reference. The backend derives amount/currency from the Contract and starts a separate card-only Checkout payment session. A completed Checkout event confirms money only when Stripe reports `payment_status=paid`; a return URL alone never settles the Contract. An open Checkout remains in flight through a card decline or customer authentication request. Before another attempt, the backend reconciles any prior active session with Stripe and blocks an unresolved attempt, including one whose Checkout URL has expired locally. The public return page polls the status token and offers the existing Checkout URL while the attempt remains in flight.
+Legacy card-link routes (`POST /card-link`, `GET /card-link/return`) remain for compatibility; they are not part of the normal rental UX. A completed Checkout event confirms money only when Stripe reports `payment_status=paid`; a return URL alone never settles the Contract. An open Checkout remains in flight through a card decline or customer authentication request. Before another attempt, the backend reconciles any prior active session with Stripe and blocks an unresolved attempt, including one whose Checkout URL has expired locally. The public return page polls the status token and offers the existing Checkout URL while the attempt remains in flight.
 
 Public rental payment POST requires `Idempotency-Key`; missing keys are rejected before creating an attempt. The browser generates one key per user action and never retries this POST automatically.
 
@@ -51,6 +51,12 @@ STRIPE_WEBHOOK_SECRET=
 ```
 
 When unconfigured: `PAYMENT_PROVIDER_NOT_CONFIGURED` — no checkout URL, no domain mutation.
+
+Checkout `success_url` / `cancel_url` are built from `FRONTEND_URL` plus the public route locale. Public payment POST and card-link POST accept `Accept-Language` (`ar` / `en`) so Arabic customers return to `/ar/payment/callback` instead of hard-coded English paths.
+
+Webhook route: `POST /payments/webhooks/stripe` — raw body required for `Stripe-Signature` verification. Handled events: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`. Session metadata includes `paymentId`, `contractId`, `purpose`, and optional `companyCode` for reconciliation.
+
+Local test-mode setup: [stripe-test-mode-setup.md](../04-api-contracts/stripe-test-mode-setup.md).
 
 ## Development payment provider substitution
 

@@ -47,9 +47,56 @@ export function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status | nul
  * Production Stripe adapter. When credentials are missing, configured=false and
  * every call fails closed — no fake URLs or confirmed payments.
  */
+/** Pure Checkout Session params for rental payment (testable without Stripe network). */
+export function buildStripePaymentCheckoutParams(
+  input: CreateCheckoutInput,
+  unitAmount: number,
+): Stripe.Checkout.SessionCreateParams {
+  const params: Stripe.Checkout.SessionCreateParams = {
+    mode: "payment",
+    payment_method_types: ["card"],
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    client_reference_id: input.paymentId,
+    metadata: {
+      paymentId: input.paymentId,
+      purpose: input.purpose,
+      contractId: input.contractId,
+      targetId: input.targetId,
+      savePaymentMethodForFutureUse: input.savePaymentMethodForFutureUse ? "true" : "false",
+      ...(input.companyCode ? { companyCode: input.companyCode } : {}),
+    },
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: input.currency.toLowerCase(),
+          unit_amount: unitAmount,
+          product_data: {
+            name: `Diamond ${input.purpose}`,
+          },
+        },
+      },
+    ],
+  };
+  const customerId =
+    input.stripeCustomerId ?? input.savedPaymentMethod?.stripeCustomerId ?? null;
+  if (customerId) {
+    params.customer = customerId;
+    params.payment_method_collection = "if_required";
+  }
+  if (input.savePaymentMethodForFutureUse) {
+    params.payment_intent_data = {
+      setup_future_usage: "off_session",
+    };
+  }
+  return params;
+}
+
 export class StripePaymentProvider implements PaymentProvider {
   readonly name = "stripe";
-  readonly configured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
+  /** Checkout and status polling need the API secret; webhooks need `STRIPE_WEBHOOK_SECRET` too. */
+  readonly configured = Boolean(env.STRIPE_SECRET_KEY);
 
   private client(): Stripe {
     if (!env.STRIPE_SECRET_KEY) {
@@ -64,35 +111,7 @@ export class StripePaymentProvider implements PaymentProvider {
     }
     assertAedCurrency(input.currency);
     const unitAmount = aedToStripeMinorUnits(input.amount);
-    const params: Stripe.Checkout.SessionCreateParams = {
-      mode: "payment",
-      payment_method_types: ["card"],
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      client_reference_id: input.paymentId,
-      metadata: {
-        paymentId: input.paymentId,
-        purpose: input.purpose,
-        contractId: input.contractId,
-        targetId: input.targetId,
-      },
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: input.currency.toLowerCase(),
-            unit_amount: unitAmount,
-            product_data: {
-              name: `Diamond ${input.purpose}`,
-            },
-          },
-        },
-      ],
-    };
-    if (input.savedPaymentMethod?.stripeCustomerId) {
-      params.customer = input.savedPaymentMethod.stripeCustomerId;
-      params.payment_method_collection = "if_required";
-    }
+    const params = buildStripePaymentCheckoutParams(input, unitAmount);
     const session = await this.client().checkout.sessions.create(params);
     if (!session.url || !session.id) {
       return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };
@@ -174,6 +193,36 @@ export class StripePaymentProvider implements PaymentProvider {
           : typeof session.customer === "string"
             ? session.customer
             : undefined,
+      stripePaymentMethodId: paymentMethod.id,
+      cardBrand: card.brand,
+      cardLast4: card.last4,
+    };
+  }
+
+  async getPaymentSessionPaymentMethod(providerReference: string) {
+    if (!this.configured) return null;
+    const session = await this.client().checkout.sessions.retrieve(providerReference, {
+      expand: ["payment_intent.payment_method"],
+    });
+    if (session.payment_status !== "paid") return null;
+    const paymentIntent =
+      typeof session.payment_intent === "object" && session.payment_intent
+        ? session.payment_intent
+        : null;
+    const paymentMethod =
+      paymentIntent && typeof paymentIntent.payment_method === "object"
+        ? paymentIntent.payment_method
+        : null;
+    const card = paymentMethod?.type === "card" ? paymentMethod.card : null;
+    if (!paymentMethod || !card || paymentMethod.type !== "card") return null;
+    const stripeCustomerId =
+      typeof paymentIntent?.customer === "string"
+        ? paymentIntent.customer
+        : typeof session.customer === "string"
+          ? session.customer
+          : undefined;
+    return {
+      stripeCustomerId,
       stripePaymentMethodId: paymentMethod.id,
       cardBrand: card.brand,
       cardLast4: card.last4,
@@ -267,6 +316,33 @@ export class StripePaymentProvider implements PaymentProvider {
           providerReference: session.id,
           paymentId,
           status: "EXPIRED",
+        },
+      };
+    }
+
+    if (
+      event.type === "checkout.session.async_payment_succeeded" ||
+      event.type === "checkout.session.async_payment_failed"
+    ) {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const paymentId = session.metadata?.paymentId;
+      if (!paymentId || !session.id) return { ok: false, reason: "IGNORED" };
+      const status =
+        event.type === "checkout.session.async_payment_succeeded" ? "CONFIRMED" : "FAILED";
+      if (status === "CONFIRMED" && session.payment_status !== "paid") {
+        return { ok: false, reason: "IGNORED" };
+      }
+      return {
+        ok: true,
+        event: {
+          stripeEventId: event.id,
+          kind: "PAYMENT",
+          eventType: event.type,
+          providerReference: session.id,
+          paymentId,
+          status,
+          amountMinor: session.amount_total ?? undefined,
+          currency: session.currency?.toUpperCase(),
         },
       };
     }

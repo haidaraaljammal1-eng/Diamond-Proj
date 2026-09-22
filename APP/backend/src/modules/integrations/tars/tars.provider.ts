@@ -30,5 +30,6 @@ export function lastTarsProviderCompanyCode(): string | null {
 export function createTarsProvider(companyCode: string): TarsProvider {
   lastRequestedCompanyCode = companyCode;
   if (override) return override;
-  return new TarsUnconfiguredProvider();
+  // Future: if getTarsCompanyConfig(companyCode).credentialsShellPresent → TarsApiProvider
+  return new TarsUnconfiguredProvider(companyCode);
 }

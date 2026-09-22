@@ -45,6 +45,12 @@ function contractRow(overrides: Partial<TarsContractRow> = {}): TarsContractRow 
     startAt: new Date("2026-03-03T00:00:00.000Z"),
     endAt: new Date("2026-03-06T00:00:00.000Z"),
     closedAt: CLOSED_AT,
+    company: {
+      id: 1,
+      code: "UNIQUE",
+      displayName: "UNIQUE",
+      accentColor: "#C9A15C",
+    },
     vehicle: {
       id: 42,
       vehicleName: "Nissan Patrol",
@@ -53,7 +59,9 @@ function contractRow(overrides: Partial<TarsContractRow> = {}): TarsContractRow 
       plateNumber: "DXB A 12345",
       vin: "VIN-TEST-0001",
       color: "White",
+      tarsIntegrations: [],
     },
+    tarsIntegration: null,
     customer: {
       id: 7,
       name: "Omar Test",
@@ -151,15 +159,20 @@ const TEST_COMPANY = { id: 1, code: "UNIQUE", displayName: "UNIQUE", accentColor
 
 describe("tars unconfigured provider", () => {
   test("every mandatory capability fails closed and fabricates nothing", async () => {
-    const provider = new TarsUnconfiguredProvider();
+    const provider = new TarsUnconfiguredProvider("UNIQUE");
     assert.equal(provider.configured, false);
 
+    const stub = {} as never;
     const results = await Promise.all([
-      provider.registerContract(),
-      provider.submitContractAcceptance(),
-      provider.submitHandover(),
-      provider.submitReturn(),
-      provider.completeContract(),
+      provider.createRental(stub),
+      provider.updateRental(stub),
+      provider.returnRental(stub),
+      provider.settleRental(stub),
+      provider.registerContract(stub),
+      provider.submitContractAcceptance(stub),
+      provider.submitHandover(stub),
+      provider.submitReturn(stub),
+      provider.completeContract(stub),
     ]);
 
     for (const result of results) {
@@ -190,6 +203,10 @@ describe("tars projection", () => {
     assert.equal(state.externalContractId, null);
     assert.equal(state.lastSuccessfulSyncAt, null);
     assert.deepEqual(state.operations, {
+      createRental: "NOT_STARTED",
+      updateRental: "NOT_STARTED",
+      returnRental: "NOT_STARTED",
+      settleRental: "NOT_STARTED",
       registerContract: "NOT_STARTED",
       contractAcceptance: "NOT_STARTED",
       handover: "NOT_STARTED",
@@ -202,10 +219,14 @@ describe("tars projection", () => {
     const state = toTarsContractIntegrationState({
       company: TEST_COMPANY,
       configured: true,
-      integration: { externalContractId: "EXT-1", lastSuccessfulSyncAt: APPROVED_AT },
+      integration: {
+        externalContractId: "EXT-1",
+        externalRentalDid: null,
+        lastSuccessfulSyncAt: APPROVED_AT,
+      },
       operations: [
-        { operationType: "REGISTER_CONTRACT", status: "FAILED", createdAt: new Date(1) },
-        { operationType: "REGISTER_CONTRACT", status: "SUCCEEDED", createdAt: new Date(2) },
+        { operationType: "REGISTER_CONTRACT", status: "FAILED", correlationSubject: null, createdAt: new Date(1) },
+        { operationType: "REGISTER_CONTRACT", status: "SUCCEEDED", correlationSubject: null, createdAt: new Date(2) },
       ],
     });
     assert.equal(state.operations.registerContract, "SUCCEEDED");
@@ -218,8 +239,8 @@ describe("tars projection", () => {
       configured: true,
       integration: null,
       operations: [
-        { operationType: "HANDOVER", status: "SUCCEEDED", createdAt: new Date(1) },
-        { operationType: "HANDOVER", status: "FAILED", createdAt: new Date(2) },
+        { operationType: "HANDOVER", status: "SUCCEEDED", correlationSubject: null, createdAt: new Date(1) },
+        { operationType: "HANDOVER", status: "FAILED", correlationSubject: null, createdAt: new Date(2) },
       ],
     });
     assert.equal(state.operations.handover, "SUCCEEDED");
@@ -378,9 +399,12 @@ describe("tars acceptance and completion mappers", () => {
   });
 });
 
-test("buildTarsOperationInput covers exactly the five mandatory procedures", () => {
+test("buildTarsOperationInput covers official and legacy operation types", () => {
   const row = contractRow();
   const types = [
+    "CREATE_RENTAL",
+    "RETURN_RENTAL",
+    "SETTLE_RENTAL",
     "REGISTER_CONTRACT",
     "CONTRACT_ACCEPTANCE",
     "HANDOVER",
@@ -392,6 +416,10 @@ test("buildTarsOperationInput covers exactly the five mandatory procedures", () 
     assert.equal(input.operationType, operationType);
     assert.equal(input.payload.contract.contractNumber, "DE-2026-000123");
   }
+  const update = buildTarsOperationInput("UPDATE_RENTAL", row, {
+    correlationSubject: "renewal-test",
+  });
+  assert.equal(update.operationType, "UPDATE_RENTAL");
 });
 
 function getError(fn: () => unknown): unknown {

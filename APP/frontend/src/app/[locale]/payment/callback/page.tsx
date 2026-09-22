@@ -83,6 +83,9 @@ function PaymentCallbackContent() {
             ) : null}
           </dl>
           <p>{t("readyForHandover")}</p>
+          {summary.paymentMethodSavedForFutureUse ? (
+            <p role="status">{t("paymentMethodSaved")}</p>
+          ) : null}
         </>
       ) : null}
     </main>

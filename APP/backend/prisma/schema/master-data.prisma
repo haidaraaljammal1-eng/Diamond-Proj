@@ -38,10 +38,12 @@ model OperatingCompany {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  vehicles        Vehicle[]
-  contracts       Contract[]
-  manualExpenses  ManualExpense[]
-  ledgerEntries   FinancialLedgerEntry[]
+  vehicles              Vehicle[]
+  contracts             Contract[]
+  manualExpenses        ManualExpense[]
+  ledgerEntries         FinancialLedgerEntry[]
+  tarsVehicleIntegrations TarsVehicleIntegration[]
+  tarsAttachmentUploads   TarsAttachmentUpload[]
 
   @@index([isActive])
   @@map("operating_companies")

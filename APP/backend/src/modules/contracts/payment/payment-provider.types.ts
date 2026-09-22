@@ -7,12 +7,25 @@ export interface CreateCheckoutInput {
   targetId: string;
   amount: number;
   currency: string;
+  /** Safe reconciliation metadata — Contract.company code when available. */
+  companyCode?: string | null;
   successUrl: string;
   cancelUrl: string;
   savedPaymentMethod?: {
     stripeCustomerId: string | null;
     stripePaymentMethodId: string;
   } | null;
+  /** Stripe Customer for this Checkout session (Diamond Customer mapping). */
+  stripeCustomerId?: string | null;
+  /** When true, sets payment_intent_data.setup_future_usage = off_session. */
+  savePaymentMethodForFutureUse?: boolean;
+}
+
+export interface PaymentSessionPaymentMethod {
+  stripeCustomerId?: string;
+  stripePaymentMethodId: string;
+  cardBrand: string;
+  cardLast4: string;
 }
 
 export interface CreateCardSetupInput {
@@ -119,5 +132,6 @@ export interface PaymentProvider {
   createCardSetupSession(input: CreateCardSetupInput): Promise<CreateCardSetupResult>;
   getCardSetupSession(providerReference: string): Promise<CardSetupSessionResult>;
   getPaymentStatus(providerReference: string): Promise<PaymentStatusResult>;
+  getPaymentSessionPaymentMethod(providerReference: string): Promise<PaymentSessionPaymentMethod | null>;
   verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult>;
 }

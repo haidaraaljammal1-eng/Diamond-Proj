@@ -52,6 +52,12 @@ import {
   PUBLIC_RENTAL_INCLUDE,
   toPublicRentalContext,
 } from "src/modules/contracts/public-rental-context";
+import {
+  buildPublicFrontendUrl,
+  type PublicFrontendLocale,
+} from "src/lib/http/public-frontend-url";
+import { createTarsWorkflowOrchestrator } from "src/modules/integrations/tars/tars-workflow.orchestrator";
+import { tarsError } from "src/modules/integrations/tars/tars.errors";
 import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
 import { analyzeDrivingLicenseDocument } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
 import { evaluatePassportOcr } from "src/modules/contracts/passport-extraction-policy";
@@ -175,6 +181,7 @@ export function createContractsService(fastify: FastifyInstance) {
   const files = createFilesService(fastify);
   const customerCharges = createRoadLiabilityCustomerChargeService(fastify);
   const paymentService = createContractPaymentService(prisma);
+  const tars = createTarsWorkflowOrchestrator(fastify);
 
   function assertSimulationEnabled(): void {
     if (!devPaymentSimulationEnabled()) {
@@ -242,7 +249,34 @@ export function createContractsService(fastify: FastifyInstance) {
       include: PUBLIC_RENTAL_INCLUDE,
     });
     if (!row) throw contractError.notFound();
-    return toPublicRentalContext(row);
+    const base = toPublicRentalContext(row);
+    const tarsOtpState = await tars.getOtpPublicState(id);
+    return { ...base, tarsOtp: tarsOtpState };
+  }
+
+  async function resolvePublicRentalContractId(token: string, allowedStatuses?: ContractStatus[]) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL");
+      const contract = await tx.contract.findUnique({
+        where: { id: link.contractId },
+        select: { id: true, status: true },
+      });
+      if (!contract) throw contractError.notFound();
+      if (allowedStatuses && !allowedStatuses.includes(contract.status)) {
+        throw contractError.officialContractReviewLocked();
+      }
+      return contract.id;
+    });
+  }
+
+  async function requestPublicTarsOtp(token: string) {
+    const contractId = await resolvePublicRentalContractId(token, ["AWAITING", "FORM"]);
+    return tars.requestOtp(contractId);
+  }
+
+  async function verifyPublicTarsOtp(token: string, code: string) {
+    const contractId = await resolvePublicRentalContractId(token, ["AWAITING", "FORM"]);
+    return tars.verifyOtp(contractId, code);
   }
 
   async function latestLicense(tx: Parameters<Parameters<typeof withTransaction>[1]>[0], contractId: string) {
@@ -2217,6 +2251,9 @@ export function createContractsService(fastify: FastifyInstance) {
       if (!view.permissions.canSign) {
         throw contractError.officialContractIncomplete(view.permissions.missingRequirements);
       }
+      if (!(await tars.isOtpVerificationSatisfied(contract.id))) {
+        throw tarsError.otpVerificationRequired();
+      }
 
       assertTransition(contract.status, "SIGNED");
 
@@ -2364,7 +2401,12 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
-  async function startCardPayment(token: string, idempotencyKey?: string) {
+  async function startCardPayment(
+    token: string,
+    idempotencyKey?: string,
+    locale: PublicFrontendLocale = "en",
+    savePaymentMethodForFutureUse = false,
+  ) {
     if (!idempotencyKey?.trim()) throw contractError.paymentIdempotencyRequired();
     const run = async () => {
       const link = await resolveContractLink(prisma, token, "RENTAL");
@@ -2378,14 +2420,11 @@ export function createContractsService(fastify: FastifyInstance) {
       const result = await paymentService.startPayment({
         purpose: "RENTAL",
         targetId: contract.id,
-        validate: async (tx, obligation) => {
+        locale,
+        savePaymentMethodForFutureUse,
+        cancelUrl: buildPublicFrontendUrl(locale, `/rental/${token}`, { payment: "cancelled" }),
+        validate: async (_tx, obligation) => {
           if (obligation.amount <= 0) throw contractError.paymentNotAllowed();
-          const card = await tx.contractCardPaymentMethod.findUnique({
-            where: { contractId: obligation.contractId },
-          });
-          if (!card?.stripeCustomerId || !card.stripePaymentMethodId || !/^\d{4}$/.test(card.cardLast4)) {
-            throw contractError.paymentNotAllowed();
-          }
         },
       });
       return {
@@ -2406,7 +2445,7 @@ export function createContractsService(fastify: FastifyInstance) {
       {
         scope: `contract:card-payment:${hashToken(token)}`,
         key: idempotencyKey,
-        fingerprint: fingerprintIdempotentPayload({ method: "CARD" }),
+        fingerprint: fingerprintIdempotentPayload({ method: "CARD", savePaymentMethodForFutureUse }),
       },
       run,
     );
@@ -2432,7 +2471,7 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
-  async function startCardLink(token: string) {
+  async function startCardLink(token: string, locale: PublicFrontendLocale = "en") {
     const link = await resolveContractLink(prisma, token, "RENTAL");
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
@@ -2444,8 +2483,8 @@ export function createContractsService(fastify: FastifyInstance) {
     const result = await provider.createCardSetupSession({
       contractId: contract.id,
       stripeCustomerId: saved?.stripeCustomerId ?? null,
-      successUrl: `${env.FRONTEND_URL.replace(/\/$/, "")}/en/rental/${token}?card=linked&setup_session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${env.FRONTEND_URL.replace(/\/$/, "")}/en/rental/${token}?card=cancelled`,
+      successUrl: `${buildPublicFrontendUrl(locale, `/rental/${token}`)}?card=linked&setup_session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: buildPublicFrontendUrl(locale, `/rental/${token}`, { card: "cancelled" }),
     });
     if (!result.ok) throw contractError.paymentProviderNotConfigured();
     return { checkoutUrl: result.checkoutUrl, providerAvailable: true };
@@ -2543,7 +2582,10 @@ export function createContractsService(fastify: FastifyInstance) {
     };
   }
 
-  async function startRenewalPaymentPublic(token: string) {
+  async function startRenewalPaymentPublic(
+    token: string,
+    locale: PublicFrontendLocale = "en",
+  ) {
     const link = await resolveContractLink(prisma, token, "RENEWAL", { allowCompleted: true });
     const renewal = await prisma.contractRenewal.findFirst({
       where: {
@@ -2559,6 +2601,7 @@ export function createContractsService(fastify: FastifyInstance) {
     const result = await paymentService.startPayment({
       purpose: "RENEWAL",
       targetId: renewal.id,
+      locale,
       validate: async (tx) => {
         const row = await tx.contractRenewal.findUnique({ where: { id: renewal.id } });
         if (!row?.approvedAt) throw contractError.renewalOfferRequired();
@@ -2694,6 +2737,8 @@ export function createContractsService(fastify: FastifyInstance) {
     openPublicOfficialSignature,
     openStaffOfficialSignature,
     signPublicOfficialContract,
+    requestPublicTarsOtp,
+    verifyPublicTarsOtp,
     updateOfficialContractTerms,
     getPaymentContext,
     startCardPayment,

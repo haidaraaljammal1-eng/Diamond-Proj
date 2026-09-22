@@ -14,7 +14,7 @@ test("DEV payment capability is unavailable in production and restores card setu
   assert.equal(devPaymentSimulationEnabled({ nodeEnv: "development", enabled: false }), false);
   assert.equal(devPaymentSimulationEnabled({ nodeEnv: "development", enabled: true }), true);
   assert.equal(requiresCardSetupBeforeSigning({ nodeEnv: "development", enabled: true }), false);
-  assert.equal(requiresCardSetupBeforeSigning({ nodeEnv: "production", enabled: true }), true);
+  assert.equal(requiresCardSetupBeforeSigning({ nodeEnv: "production", enabled: true }), false);
 });
 
 test("unconfigured provider fails closed", async () => {
@@ -34,9 +34,10 @@ test("unconfigured provider fails closed", async () => {
   if (!created.ok) assert.equal(created.reason, "NOT_CONFIGURED");
 });
 
-test("stripe provider is not configured without credentials", () => {
+test("stripe provider configured flag follows STRIPE_SECRET_KEY", async () => {
+  const { env } = await import("src/config/env");
   const provider = new StripePaymentProvider();
-  assert.equal(provider.configured, false);
+  assert.equal(provider.configured, Boolean(env.STRIPE_SECRET_KEY));
 });
 
 test("a completed Checkout without paid status is not confirmed", () => {

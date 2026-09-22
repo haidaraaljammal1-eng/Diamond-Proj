@@ -12,10 +12,11 @@ export function devPaymentSimulationEnabled(
   return config.nodeEnv !== "production" && config.enabled;
 }
 
+/** Hosted Checkout collects the payment method at pay time — no pre-link gate. */
 export function requiresCardSetupBeforeSigning(
-  config?: { nodeEnv: string; enabled: boolean },
+  _config?: { nodeEnv: string; enabled: boolean },
 ): boolean {
-  return !devPaymentSimulationEnabled(config);
+  return false;
 }
 
 export function setPaymentProviderForTests(provider: PaymentProvider | undefined): void {

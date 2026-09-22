@@ -97,6 +97,16 @@ export function createFakePaymentProvider(run: string) {
         currency: input?.currency,
       };
     },
+    async getPaymentSessionPaymentMethod(ref: string) {
+      const input = sessions.get(ref);
+      if (!input?.savePaymentMethodForFutureUse) return null;
+      return {
+        stripeCustomerId: input.stripeCustomerId ?? "cus_test_fake",
+        stripePaymentMethodId: "pm_test_fake",
+        cardBrand: "visa",
+        cardLast4: "4242",
+      };
+    },
     async verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult> {
       if (signature !== TEST_STRIPE_WEBHOOK_SIGNATURE) {
         return { ok: false, reason: "INVALID_SIGNATURE" };

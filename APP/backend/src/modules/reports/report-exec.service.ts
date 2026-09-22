@@ -5,6 +5,7 @@ import path from "node:path";
 import type { z } from "zod";
 import { env } from "src/config/env";
 import type { AuthUser } from "src/lib/context/auth-context";
+import { resolveEffectivePermissions } from "src/lib/rbac/effective-permissions";
 import { generateStorageKey, resolveStoragePath } from "src/lib/files/storage-key";
 import { encryptSecret, decryptSecret } from "src/lib/security/encryption";
 import type { Language } from "src/config/i18n";
@@ -293,9 +294,35 @@ export function createReportExecService(fastify: FastifyInstance, deps: Deps = {
   }
 
   async function loadViewer(userId: number): Promise<AuthUser> {
-    const u = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, status: true, roles: { select: { role: { select: { key: true, permissions: { select: { permission: { select: { key: true } } } } } } } } } });
-    const permissions = [...new Set((u?.roles ?? []).flatMap((r) => r.role.permissions.map((p) => p.permission.key)))];
-    return { id: userId, email: u?.email ?? "", status: u?.status ?? "ACTIVE", permissions, roleKeys: (u?.roles ?? []).map((r) => r.role.key) };
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        status: true,
+        roles: {
+          select: {
+            role: {
+              select: {
+                key: true,
+                isSystem: true,
+                permissions: { select: { permission: { select: { key: true } } } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const roleGrants = (u?.roles ?? []).map((r) => r.role);
+    const { permissions, isSystemAdmin } = resolveEffectivePermissions(roleGrants);
+    return {
+      id: userId,
+      email: u?.email ?? "",
+      status: u?.status ?? "ACTIVE",
+      permissions,
+      roleKeys: roleGrants.map((role) => role.key),
+      isSystemAdmin,
+    };
   }
 
   /** Worker cycle: run due schedules once (idempotent), generate artifact, honest delivery. */

@@ -1,6 +1,6 @@
 ﻿# Current implementation status
 
-Updated 2026-09-21.
+Updated 2026-09-22.
 
 Diamond has two separate development simulation categories. Rental provider substitutions are Driver License OCR, Passport OCR, and successful payment; they require a real Rental Link and update the real Contract. Browser-only UI demos are Dashboard, WhatsApp, and Road Liabilities; they use local fixtures and never write Contracts, Vehicles, Payments, or any backend data. The former general rental journey simulation remains disabled. Contract Review, legal signatures, lifecycle, PAID reservation, and Car-Out use the normal persisted workflow.
 
@@ -10,7 +10,7 @@ The backend requires `NODE_ENV !== production` and `DIAMOND_SIMULATION_ENABLED=t
 
 DEV payment mode skips the external Stripe Card Setup requirement before signing. It does not create a fake card, Stripe Customer, PaymentMethod, Checkout Session, or provider id. A real legal signature is still required. The DEV payment action derives the amount server-side, records a `dev_simulation` payment source, uses the shared settlement transition, and persists `SIGNED -> PAID` idempotently. Payment does not perform Car-Out.
 
-When DEV payment mode is off, the original Stripe Card Setup and Checkout/webhook flow applies. Stripe Test Mode still needs configured credentials and a webhook.
+When DEV payment mode is off, Stripe Hosted Checkout pays the rental in one trip (STRIPE-3). Optional future-use authorization is consent-based (`savePaymentMethodForFutureUse`); Checkout sets `setup_future_usage=off_session` only when consented. One Stripe Customer maps to each Diamond Customer. Separate card-link UX is removed from the normal rental journey; legacy card-link routes remain on the backend only. Off-session charging is not implemented. Stripe Test Mode needs `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` (Stripe CLI `whsec_...` locally). Hosted Checkout return URLs are locale-aware via `Accept-Language`. See `DOCU/04-api-contracts/stripe-test-mode-setup.md` and `DOCU/05-pages/public-rental-flow.md`.
 
 ## Review and signing
 
@@ -61,6 +61,43 @@ Contract company to their context headers without changing either workflow.
 Placeholder accents remain `#C9A15C` and `#3E5C76`, sourced from backend data.
 TARS provider routing remains company-aware and unconfigured for both companies.
 Future invoices and statements must reuse the same authoritative company identity.
+
+### RBAC Phase A — system admin full access
+
+The `system_admin` role (`Role.isSystem = true`) is the Diamond owner/manager account.
+It has **full access by definition**: central backend `hasPermission` / `hasAnyPermission`
+and frontend `usePermissions` treat system admins as authorized for every catalog
+permission, including permissions added later. `/auth/me` expands the permission list to
+the full catalog for UX. Employee roles remain explicitly permission-controlled.
+Authentication is still required. See `DOCU/00-system-overview/system-admin-full-access.md`.
+
+### TARS Phase T1 — dual-provider foundation + OTP UI
+
+UNIQUE and ELITE TARS are **fully isolated** integrations: separate `TARS_UNIQUE_*` /
+`TARS_ELITE_*` configuration namespaces, separate `createTarsProvider(companyCode)`
+instances, and **no cross-company fallback**. Routing is always from frozen
+`Contract.companyId`.
+
+`TarsWorkflowOrchestrator` centralizes integration and OTP calls. Official
+capabilities (`CREATE_RENTAL`, `UPDATE_RENTAL`, `RETURN_RENTAL`, `SETTLE_RENTAL`)
+plus uncertain boundaries (OTP, vehicle identity, upload, handover/return evidence,
+driver-license inquiry, digital acceptance) are prepared on `TarsProvider` and fail
+closed through `TarsUnconfiguredProvider` until live mapping exists. Optional TARS
+catalog APIs (Salik, fines, maintenance, borrowing, reservation) are excluded.
+
+Public rental now includes a **Verify identity** OTP panel before signature when the
+provider is configured and OTP is required. Diamond OTP UI states are internal
+(`NOT_STARTED`, `REQUESTING`, `CODE_SENT`, `VERIFYING`, `VERIFIED`, `FAILED`,
+`EXPIRED`, `RATE_LIMITED`, `UNAVAILABLE`); `otpLength`, `expiresAt`,
+`resendAvailableAt` and `attemptsRemaining` are backend-driven when available. OTP
+plaintext is never stored or logged. The browser calls Diamond public routes only
+(`POST /contracts/rental/:token/tars-otp/request|verify`). CREATE_RENTAL vs OTP
+order remains provider-mappable (`TARS_CREATE_RENTAL_CHECKPOINT_PENDING_STAGING_VERIFICATION`).
+
+Migration `20260922050000_tars_otp_metadata` adds safe OTP challenge metadata
+(`resendAvailableAt`, `otpLength`, `maxAttempts`). Staff TARS status shows
+`TARS · UNIQUE` / `TARS · ELITE` with nine operation keys (four official + five legacy).
+See `DOCU/04-api-contracts/tars-integration.md` and `tars-api-scope-matrix.md`.
 
 ### Phase A rollout — TARS UI, Vehicle pickers, Maintenance, GPS
 

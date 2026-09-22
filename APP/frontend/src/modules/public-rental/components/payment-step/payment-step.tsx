@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
+import { Checkbox } from "@/shared/components/ui/checkbox/checkbox";
 import { SimulationAction } from "@/modules/demo-simulation";
 import type {
   ContractPaymentStatus,
@@ -11,9 +13,7 @@ import type {
 import { formatRentalAmount, formatRentalDays } from "../../utils/format-money";
 import {
   canRetryPayment,
-  canStartCardLink,
   canStartCardPayment,
-  maskCardLast4,
   paymentPanelFromStatus,
 } from "../../utils/payment-view";
 import styles from "./payment-step.module.css";
@@ -26,14 +26,22 @@ interface PaymentStepProps {
   payPending: boolean;
   statusPending: boolean;
   linkExpiredDuringPayment: boolean;
-  /** Free Stripe-hosted card linking (no charge) request state. */
-  cardLinkPending: boolean;
-  cardLinkError: boolean;
-  /** Notice after returning from the Stripe-hosted setup page (?card=linked|cancelled). */
-  linkNotice: string | null;
-  onPay: () => void;
-  onLinkCard: () => void;
+  paymentNotice: string | null;
+  onPay: (savePaymentMethodForFutureUse: boolean) => void;
   onRefreshStatus: () => void;
+}
+
+function formatRentalPeriod(
+  startAt: string | null,
+  endAt: string | null,
+  durationLabel: string,
+): string {
+  if (startAt && endAt) {
+    const start = startAt.slice(0, 10);
+    const end = endAt.slice(0, 10);
+    return `${start} → ${end} · ${durationLabel}`;
+  }
+  return durationLabel;
 }
 
 export function PaymentStep({
@@ -44,82 +52,82 @@ export function PaymentStep({
   payPending,
   statusPending,
   linkExpiredDuringPayment,
-  cardLinkPending,
-  cardLinkError,
-  linkNotice,
+  paymentNotice,
   onPay,
-  onLinkCard,
   onRefreshStatus,
 }: PaymentStepProps) {
   const t = useTranslations("PublicRental.payment");
+  const [saveForFutureUse, setSaveForFutureUse] = useState(false);
   const status = paymentStatus ?? context.payment.status;
   const panel = paymentPanelFromStatus(context.payment.providerAvailable || simulationEnabled, status);
-  const amount = formatRentalAmount(
-    context.rental.agreedAmount,
-    context.rental.currency,
-  );
+  const amount = formatRentalAmount(context.rental.agreedAmount, context.rental.currency);
   const duration = formatRentalDays(context.rental.rentalDays, t("days"));
-  const cardLinked = context.payment.cardReady;
   const canPay = canStartCardPayment({
     providerAvailable: context.payment.providerAvailable,
-    cardLinked,
     paymentStatus: status,
     payPending,
+    contractStatus: context.contract.status,
   });
   const isDev = process.env.NODE_ENV === "development";
   const inFlight = panel === "processing" || panel === "pending" || payPending;
-  const cardMask = maskCardLast4(context.payment.cardLast4);
-  const cardBrand = context.payment.cardBrand
-    ? context.payment.cardBrand.charAt(0).toUpperCase() + context.payment.cardBrand.slice(1)
-    : t("cardTitle");
-  const rentalPeriod =
-    context.rental.startAt && context.rental.endAt
-      ? `${context.rental.startAt.slice(0, 10)} - ${context.rental.endAt.slice(0, 10)}`
-      : duration;
-  const canLink = canStartCardLink({
-    providerAvailable: context.payment.providerAvailable,
-    cardLinked,
-    payPending,
-    cardLinkPending,
-    paymentStatus: status,
-  });
+  const stripeCheckoutAvailable = context.payment.providerAvailable;
+  const vehicleLine = [
+    context.vehicle.displayName,
+    context.vehicle.plateNumber,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Card data-testid="payment-step">
       <Card.Title>{t("title")}</Card.Title>
+
       {linkExpiredDuringPayment ? (
         <p className={styles.unavailable}>{t("linkExpiredDuring")}</p>
       ) : null}
-      {linkNotice ? (
-        <p className={styles.notice} role="status" data-testid="payment-card-link-notice">
-          {linkNotice}
+      {paymentNotice ? (
+        <p className={styles.notice} role="status" data-testid="payment-notice">
+          {paymentNotice}
         </p>
       ) : null}
 
-      <div className={styles.total}>
-        <span>{t("totalDue")}</span>
+      <dl className={styles.summary}>
+        <div className={styles.summaryRow}>
+          <dt>{t("contractLabel")}</dt>
+          <dd dir="ltr">{context.contract.contractNumber}</dd>
+        </div>
+        <div className={styles.summaryRow}>
+          <dt>{t("companyLabel")}</dt>
+          <dd>{context.office.company.displayName}</dd>
+        </div>
+        <div className={styles.summaryRow}>
+          <dt>{t("vehicleLabel")}</dt>
+          <dd>{vehicleLine}</dd>
+        </div>
+        <div className={styles.summaryRow}>
+          <dt>{t("periodLabel")}</dt>
+          <dd dir="ltr">
+            {formatRentalPeriod(context.rental.startAt, context.rental.endAt, duration)}
+          </dd>
+        </div>
+      </dl>
+
+      <div className={styles.amountHero} data-testid="payment-amount-due">
+        <span className={styles.amountLabel}>{t("amountDueNow")}</span>
         <b dir="ltr">{amount}</b>
       </div>
-      <p className={styles.meta}>
-        {context.vehicle.displayName}
-        {context.vehicle.vehicleType ? ` · ${context.vehicle.vehicleType}` : ""}
-        {context.vehicle.plateNumber ? ` · ${context.vehicle.plateNumber}` : ""}
-        {" · "}
-        <span dir="ltr">{rentalPeriod}</span>
-        {context.rental.startAt && context.rental.endAt ? ` · ${duration}` : ""}
-      </p>
-      <p className={styles.meta}>
-        {t("contract")}{" "}
-        <span dir="ltr">{context.contract.contractNumber}</span>
-        {" · "}
-        {context.office.company.displayName}
-      </p>
 
       {panel === "processing" || payPending ? (
         <div className={styles.status} role="status" data-testid="payment-processing">
-          <p className={styles.unavailable}>{t("processing")}</p>
+          <p className={styles.unavailable}>{payPending ? t("preparing") : t("processing")}</p>
           {!payPending ? (
-            <Button type="button" variant="secondary" size="md" loading={statusPending} onClick={onRefreshStatus}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              loading={statusPending}
+              onClick={onRefreshStatus}
+            >
               {t("checkStatus")}
             </Button>
           ) : null}
@@ -159,76 +167,68 @@ export function PaymentStep({
         </div>
       ) : null}
 
-      {!simulationEnabled ? <><h3 className={styles.methodsTitle}>{t("methods")}</h3>
-      <div className={styles.methods}>
-        <div
-          className={styles.method}
-          data-disabled={!context.payment.providerAvailable || inFlight}
-          data-testid="payment-card-method"
-        >
-          <span className={styles.mark}>C</span>
-          <div className={styles.copy}>
-            <b>{t("cardTitle")}</b>
-            <span>{t("cardHint")}</span>
-          </div>
-        </div>
-      </div></> : <p className={styles.dev}>{t("devCardSetupNotice")}</p>}
-
-      {/* Stripe-hosted card linking: prepares a saved payment method, never charges. */}
-      {!simulationEnabled && cardLinked ? (
-        <div className={styles.method} data-testid="payment-card-linked">
-          <span className={styles.mark}>C</span>
-          <div className={styles.copy}>
-            <b>
-              {t("cardSaved")} <span dir="ltr">{cardBrand} {cardMask}</span>
-            </b>
-            <span>{t("cardSavedHint")}</span>
-          </div>
-        </div>
-      ) : !simulationEnabled && canLink ? (
-        <div className={styles.linkBlock} data-testid="payment-card-link">
-          <p className={styles.unavailable}>{t("linkCardHint")}</p>
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            loading={cardLinkPending}
-            disabled={cardLinkPending}
-            data-testid="payment-link-card"
-            onClick={onLinkCard}
-          >
-            {cardLinkPending ? t("linking") : t("linkCard")}
-          </Button>
-        </div>
-      ) : null}
-      {!simulationEnabled && cardLinkError ? (
-        <p className={styles.unavailable} role="alert" data-testid="payment-card-link-error">
-          {t("linkCardFailed")}
-        </p>
+      {stripeCheckoutAvailable ? (
+        <>
+          <p className={styles.secure}>{t("secureStripe")}</p>
+          <p className={styles.stripeMethod}>{t("stripeMethod")}</p>
+          <label className={styles.consent} data-testid="payment-future-use-consent">
+            <Checkbox
+              checked={saveForFutureUse}
+              onChange={(event) => setSaveForFutureUse(event.target.checked)}
+              disabled={inFlight || linkExpiredDuringPayment}
+              aria-label={t("futureUseConsentTitle")}
+            />
+            <span>
+              <b>{t("futureUseConsentTitle")}</b>
+              <span className={styles.consentHint}>{t("futureUseConsentBody")}</span>
+              <span className={styles.consentLegal}>{t("futureUseConsentLegal")}</span>
+            </span>
+          </label>
+        </>
+      ) : simulationEnabled ? (
+        <p className={styles.dev}>{t("devCardSetupNotice")}</p>
       ) : null}
 
-      {!simulationEnabled && (panel === "unavailable" || !context.payment.providerAvailable) ? (
+      {!stripeCheckoutAvailable && panel === "unavailable" ? (
         <p className={styles.unavailable} data-testid="payment-unavailable">
           {t("unavailable")}
         </p>
       ) : null}
 
-      {isDev && !simulationEnabled && !context.payment.providerAvailable ? (
+      {isDev && !stripeCheckoutAvailable ? (
         <p className={styles.dev}>{t("devNote")}</p>
       ) : null}
 
-      {!simulationEnabled ? <p className={styles.meta}>{t("secureStripe")}</p> : null}
-
-      {!simulationEnabled ? <Button
-        type="button"
-        className={styles.pay}
-        disabled={!canPay || linkExpiredDuringPayment}
-        loading={payPending}
-        onClick={onPay}
-      >
-        {canRetryPayment(status) ? t("retry") : t("completePayment")}
-      </Button> : null}
-      {simulationEnabled ? <SimulationAction label={t("simulateSuccess")} testId="simulate-payment-success" disabled={context.contract.status !== "SIGNED" || inFlight || status === "CONFIRMED" || linkExpiredDuringPayment} onClick={onSimulatePayment} /> : null}
+      {stripeCheckoutAvailable ? (
+        <Button
+          type="button"
+          className={styles.pay}
+          variant="primary"
+          disabled={!canPay || linkExpiredDuringPayment}
+          loading={payPending}
+          data-testid="payment-pay-stripe"
+          onClick={() => onPay(saveForFutureUse)}
+        >
+          {payPending
+            ? t("preparing")
+            : canRetryPayment(status)
+              ? t("retry")
+              : t("payNow")}
+        </Button>
+      ) : null}
+      {simulationEnabled && !stripeCheckoutAvailable ? (
+        <SimulationAction
+          label={t("simulateSuccess")}
+          testId="simulate-payment-success"
+          disabled={
+            context.contract.status !== "SIGNED" ||
+            inFlight ||
+            status === "CONFIRMED" ||
+            linkExpiredDuringPayment
+          }
+          onClick={onSimulatePayment}
+        />
+      ) : null}
     </Card>
   );
 }

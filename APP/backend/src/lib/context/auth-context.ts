@@ -12,6 +12,8 @@ export interface AuthUser {
   status: string;
   permissions: string[];
   roleKeys: string[];
+  /** True when the user holds a protected system role (`Role.isSystem`). */
+  isSystemAdmin: boolean;
   sessionId?: string;
 }
 
@@ -21,9 +23,11 @@ export function requireAuth(request: FastifyRequest): AuthUser {
 }
 
 export function hasPermission(auth: AuthUser, permission: string): boolean {
+  if (auth.isSystemAdmin) return true;
   return auth.permissions.includes(permission);
 }
 
 export function hasAnyPermission(auth: AuthUser, permissions: string[]): boolean {
+  if (auth.isSystemAdmin) return true;
   return permissions.some((p) => auth.permissions.includes(p));
 }

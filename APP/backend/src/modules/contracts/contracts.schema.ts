@@ -7,6 +7,12 @@ import {
   CAR_OUT_PHOTO_ANGLES,
 } from "src/modules/contracts/contracts.constants";
 import { DAMAGE_MARK_TYPES, DAMAGE_ZONES } from "src/modules/contracts/official-contract-interactive";
+import {
+  TarsOtpPublicStateSchema,
+  TarsOtpVerifyBodySchema,
+} from "src/modules/integrations/tars/tars.schema";
+
+export { TarsOtpPublicStateSchema, TarsOtpVerifyBodySchema };
 
 export const ContractStatusSchema = z.enum([
   "AWAITING",
@@ -665,6 +671,7 @@ export const PublicRentalContextSchema = z.object({
     cardBrand: z.string().nullable().optional(),
     cardReady: z.boolean(),
   }),
+  tarsOtp: TarsOtpPublicStateSchema,
 });
 
 export const PublicPaymentContextSchema = z.object({
@@ -700,6 +707,10 @@ export const PaymentCheckoutSchema = z.object({
   statusToken: z.string().nullable(),
   providerAvailable: z.boolean(),
   noPaymentRequired: z.boolean().optional(),
+});
+
+export const PublicPaymentStartBodySchema = z.object({
+  savePaymentMethodForFutureUse: z.boolean().optional().default(false),
 });
 
 export const PublicPaymentAttemptSchema = PaymentCheckoutSchema.extend({
@@ -740,6 +751,7 @@ export const PublicPaymentStatusSchema = z.object({
       currency: z.string(),
       cardLast4: z.string().regex(/^\d{4}$/).nullable(),
       cardBrand: z.string().nullable(),
+      paymentMethodSavedForFutureUse: z.boolean().optional(),
     })
     .optional(),
 });

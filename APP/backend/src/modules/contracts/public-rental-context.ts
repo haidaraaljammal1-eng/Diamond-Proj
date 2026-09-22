@@ -150,5 +150,16 @@ export function toPublicRentalContext(
         /^\d{4}$/.test(row.cardPaymentMethod.cardLast4),
       ),
     },
+    // Overwritten by loadPublicRental with provider-aware state from TarsWorkflowOrchestrator.
+    tarsOtp: {
+      providerConfigured: false,
+      required: false,
+      status: "NOT_REQUIRED",
+      maskedDestination: null,
+      resendAvailableAt: null,
+      expiresAt: null,
+      otpLength: null,
+      attemptsRemaining: null,
+    },
   };
 }

@@ -5,9 +5,11 @@ import type { TarsOperationTypeKey } from "src/modules/integrations/tars/tars.co
 import { tarsError } from "src/modules/integrations/tars/tars.errors";
 import type {
   TarsAttachmentRef,
+  TarsCompanyRef,
   TarsContractAcceptanceInput,
   TarsContractRef,
   TarsCompleteContractInput,
+  TarsCreateRentalInput,
   TarsCustomerData,
   TarsDrivingLicenseData,
   TarsHandoverInput,
@@ -15,6 +17,10 @@ import type {
   TarsRegisterContractInput,
   TarsRentalData,
   TarsReturnInput,
+  TarsReturnRentalInput,
+  TarsSettleRentalInput,
+  TarsUpdateRentalInput,
+  TarsUploadRef,
   TarsVehicleData,
 } from "src/modules/integrations/tars/tars.types";
 
@@ -29,7 +35,12 @@ import type {
  * persisted Contract aggregate.
  */
 const CONTRACT_INCLUDE = {
-  vehicle: { include: { model: { select: { name: true } } } },
+  vehicle: {
+    include: {
+      model: { select: { name: true } },
+      tarsIntegrations: { select: { companyId: true, externalVehicleDid: true } },
+    },
+  },
   customer: true,
   acceptance: true,
   carOut: {
@@ -49,6 +60,7 @@ const CONTRACT_INCLUDE = {
     },
   },
   company: { select: COMPANY_REF_SELECT },
+  tarsIntegration: { select: { externalRentalDid: true, externalContractId: true } },
   reconciliation: true,
   licenseVerifications: {
     where: { status: "VALID" as const },
@@ -76,6 +88,13 @@ function contractRef(row: TarsContractRow): TarsContractRef {
   };
 }
 
+function companyRef(row: TarsContractRow): TarsCompanyRef {
+  return {
+    companyId: row.company.id,
+    companyCode: row.company.code,
+  };
+}
+
 function vehicleData(row: TarsContractRow): TarsVehicleData {
   return {
     vehicleId: row.vehicle.id,
@@ -90,6 +109,9 @@ function vehicleData(row: TarsContractRow): TarsVehicleData {
     modelName: row.vehicle.model?.name ?? null,
     modelYear: row.vehicle.modelYear,
     color: row.vehicle.color,
+    externalVehicleDid:
+      row.vehicle.tarsIntegrations?.find((entry) => entry.companyId === row.company.id)
+        ?.externalVehicleDid ?? null,
   };
 }
 
@@ -162,6 +184,102 @@ function photoRefs(
 
 function assertComplete(operationType: TarsOperationTypeKey, missing: string[]): void {
   if (missing.length > 0) throw tarsError.mappingIncomplete(operationType, missing);
+}
+
+export function mapCreateRentalInput(row: TarsContractRow): TarsCreateRentalInput {
+  const license = licenseData(row);
+  const missing: string[] = [];
+  if (!row.customer) missing.push("contract.customer");
+  if (!license) missing.push("contract.drivingLicense");
+  assertComplete("CREATE_RENTAL", missing);
+
+  return {
+    company: companyRef(row),
+    contract: contractRef(row),
+    customer: customerData(row.customer!),
+    vehicle: vehicleData(row),
+    rental: rentalData(row),
+    license: license!,
+  };
+}
+
+export function mapUpdateRentalInput(
+  row: TarsContractRow,
+  correlationSubject: string,
+  externalRentalDid: string | null,
+): TarsUpdateRentalInput {
+  assertComplete("UPDATE_RENTAL", correlationSubject ? [] : ["correlationSubject"]);
+  return {
+    company: companyRef(row),
+    contract: contractRef(row),
+    rental: rentalData(row),
+    correlationSubject,
+    externalRentalDid,
+  };
+}
+
+function uploadRefs(
+  photos: Array<{
+    attachmentId: string;
+    angle: TarsUploadRef["angle"];
+    attachment: { mimeType: string };
+  }>,
+): TarsUploadRef[] {
+  return photos.map((photo) => ({
+    attachmentId: photo.attachmentId,
+    angle: photo.angle,
+    mimeType: photo.attachment.mimeType,
+    externalUrl: null,
+    externalHash: null,
+  }));
+}
+
+export function mapReturnRentalInput(
+  row: TarsContractRow,
+  externalRentalDid: string | null,
+): TarsReturnRentalInput {
+  assertComplete("RETURN_RENTAL", row.carIn ? [] : ["contract.carIn"]);
+  const carIn = row.carIn!;
+  return {
+    company: companyRef(row),
+    contract: contractRef(row),
+    returnDocumentation: {
+      occurredAt: carIn.occurredAt,
+      odometer: carIn.mileageIn,
+      fuelLevel: carIn.fuelIn,
+      notes: carIn.notes,
+    },
+    photos: uploadRefs(carIn.photos),
+    externalRentalDid,
+  };
+}
+
+export function mapSettleRentalInput(
+  row: TarsContractRow,
+  externalRentalDid: string | null,
+): TarsSettleRentalInput {
+  const reconciliation = row.reconciliation;
+  const missing: string[] = [];
+  if (!row.carIn) missing.push("contract.carIn");
+  if (!reconciliation) missing.push("contract.reconciliation");
+  else if (!reconciliation.approvedAt) missing.push("contract.reconciliation.approvedAt");
+  assertComplete("SETTLE_RENTAL", missing);
+
+  return {
+    company: companyRef(row),
+    contract: contractRef(row),
+    completion: {
+      closedAt: row.closedAt,
+      reconciliation: {
+        chargesTotal: reconciliation!.chargesTotal,
+        depositAmount: reconciliation!.depositAmount,
+        deductions: reconciliation!.deductions,
+        finalAmount: reconciliation!.finalAmount,
+        approvedAt: reconciliation!.approvedAt!,
+      },
+    },
+    externalRentalDid,
+  };
 }
 
 export function mapRegisterContractInput(row: TarsContractRow): TarsRegisterContractInput {
@@ -251,8 +369,24 @@ export function mapCompleteContractInput(row: TarsContractRow): TarsCompleteCont
 export function buildTarsOperationInput(
   operationType: TarsOperationTypeKey,
   row: TarsContractRow,
+  options: {
+    correlationSubject?: string;
+    externalRentalDid?: string | null;
+  } = {},
 ): TarsOperationInput {
+  const rentalDid = options.externalRentalDid ?? row.tarsIntegration?.externalRentalDid ?? null;
   switch (operationType) {
+    case "CREATE_RENTAL":
+      return { operationType, payload: mapCreateRentalInput(row) };
+    case "UPDATE_RENTAL":
+      return {
+        operationType,
+        payload: mapUpdateRentalInput(row, options.correlationSubject ?? "", rentalDid),
+      };
+    case "RETURN_RENTAL":
+      return { operationType, payload: mapReturnRentalInput(row, rentalDid) };
+    case "SETTLE_RENTAL":
+      return { operationType, payload: mapSettleRentalInput(row, rentalDid) };
     case "REGISTER_CONTRACT":
       return { operationType, payload: mapRegisterContractInput(row) };
     case "CONTRACT_ACCEPTANCE":

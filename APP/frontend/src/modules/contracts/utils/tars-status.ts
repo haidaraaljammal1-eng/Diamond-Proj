@@ -2,12 +2,21 @@ import type { ChipTone } from "@/shared/components/ui/chip";
 import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
 import type {
   ContractTarsStateDto,
+  TarsLegacyOperationKey,
+  TarsOfficialOperationKey,
   TarsOperationKey,
   TarsOperationStatus,
 } from "../types/tars.types";
 
-/** Display order of the five approved mandatory procedures. */
-export const TARS_OPERATION_ORDER: readonly TarsOperationKey[] = [
+/** Official capabilities first; legacy rows follow for transitional staff UI. */
+export const TARS_OFFICIAL_OPERATION_ORDER: readonly TarsOfficialOperationKey[] = [
+  "createRental",
+  "updateRental",
+  "returnRental",
+  "settleRental",
+];
+
+export const TARS_LEGACY_OPERATION_ORDER: readonly TarsLegacyOperationKey[] = [
   "registerContract",
   "contractAcceptance",
   "handover",
@@ -15,10 +24,15 @@ export const TARS_OPERATION_ORDER: readonly TarsOperationKey[] = [
   "completeContract",
 ];
 
+export const TARS_OPERATION_ORDER: readonly TarsOperationKey[] = [
+  ...TARS_OFFICIAL_OPERATION_ORDER,
+  ...TARS_LEGACY_OPERATION_ORDER,
+];
+
 export interface TarsStatusPresentation {
   status: TarsOperationStatus;
   tone: ChipTone;
-  /** PROCESSING only — a restrained pulse, never a spinner. */
+  /** In-flight async operations — a restrained pulse, never a spinner. */
   syncing: boolean;
 }
 
@@ -26,6 +40,8 @@ const STATUS_PRESENTATION: Record<TarsOperationStatus, TarsStatusPresentation> =
   NOT_STARTED: { status: "NOT_STARTED", tone: "neutral", syncing: false },
   PENDING: { status: "PENDING", tone: "warn", syncing: false },
   PROCESSING: { status: "PROCESSING", tone: "gold", syncing: true },
+  SUBMITTING: { status: "SUBMITTING", tone: "gold", syncing: true },
+  PENDING_PROVIDER: { status: "PENDING_PROVIDER", tone: "gold", syncing: true },
   SUCCEEDED: { status: "SUCCEEDED", tone: "ok", syncing: false },
   FAILED: { status: "FAILED", tone: "bad", syncing: false },
 };
@@ -68,6 +84,7 @@ export interface TarsSummary {
    */
   company: OperatingCompanyIdentity | null;
   externalContractId: string | null;
+  externalRentalDid: string | null;
   lastSuccessfulSyncAt: string | null;
   rows: TarsOperationRow[];
 }
@@ -78,6 +95,7 @@ export function buildTarsSummary(state: ContractTarsStateDto): TarsSummary {
     configured: state.configured,
     company: state.company ?? null,
     externalContractId: state.externalContractId,
+    externalRentalDid: state.externalRentalDid ?? null,
     lastSuccessfulSyncAt: state.lastSuccessfulSyncAt,
     rows: TARS_OPERATION_ORDER.map((key) => ({
       key,

@@ -4,23 +4,26 @@ import type {
   ContractStatus,
   CustomerType,
 } from "@prisma/client";
-import type { TarsOperationTypeKey } from "src/modules/integrations/tars/tars.constants";
+import type {
+  TarsOperationTypeKey,
+  TarsOtpUiStatus,
+} from "src/modules/integrations/tars/tars.constants";
 
 /**
- * NORMALIZED, DIAMOND-OWNED integration DTOs.
- *
- * Every field below is sourced from an existing Diamond model. No TARS payload
- * field name, casing, envelope or transport format is assumed anywhere in this
- * file — a future TarsApiProvider translates these DTOs into the real TARS
- * request shape once official documentation exists.
+ * NORMALIZED, DIAMOND-OWNED integration DTOs. A future TarsApiProvider
+ * translates these into the official TARS request shape.
  */
 
-/** Contract identity. Diamond's contract number is never replaced by TARS. */
 export interface TarsContractRef {
   contractId: string;
   contractNumber: string;
   status: ContractStatus;
   termsVersion: string;
+}
+
+export interface TarsCompanyRef {
+  companyId: number;
+  companyCode: string;
 }
 
 export interface TarsCustomerData {
@@ -35,10 +38,8 @@ export interface TarsCustomerData {
   address: string | null;
 }
 
-/** Backend-verified license facts only — never the customer-typed value. */
 export interface TarsDrivingLicenseData {
   number: string;
-  /** Backend calendar date `YYYY-MM-DD`, not a client timestamp. */
   expiryDate: string | null;
 }
 
@@ -50,12 +51,13 @@ export interface TarsVehicleData {
   modelName: string | null;
   modelYear: number | null;
   color: string | null;
+  /** Known TARS Vehicle DID when already synced for this company. */
+  externalVehicleDid: string | null;
 }
 
 export interface TarsRentalData {
   priceType: ContractPriceType;
   rentalDays: number;
-  /** Whole AED, exactly as agreed on the Diamond Contract. */
   agreedAmount: number;
   currency: string;
   depositAmount: number | null;
@@ -64,11 +66,18 @@ export interface TarsRentalData {
 }
 
 /**
- * Inspection evidence passed by REFERENCE. Image bytes stay in the Diamond
- * Attachment store: no Base64, no multipart and no public URL is produced here
- * because TARS upload format is unknown. `streamPath` is the existing
- * staff-authenticated Diamond route, not a shareable link.
+ * Provider-neutral upload reference. Future flow: Diamond Attachment → TARS
+ * Upload → cached hash/url. No staff streamPath assumption.
  */
+export interface TarsUploadRef {
+  attachmentId: string;
+  angle: ContractInspectionAngle;
+  mimeType: string;
+  externalUrl: string | null;
+  externalHash: string | null;
+}
+
+/** @deprecated Legacy attachment ref — use TarsUploadRef for new mappers. */
 export interface TarsAttachmentRef {
   attachmentId: string;
   angle: ContractInspectionAngle;
@@ -76,6 +85,54 @@ export interface TarsAttachmentRef {
   streamPath: string;
 }
 
+export interface TarsCreateRentalInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  customer: TarsCustomerData;
+  vehicle: TarsVehicleData;
+  rental: TarsRentalData;
+  license: TarsDrivingLicenseData;
+}
+
+export interface TarsUpdateRentalInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  rental: TarsRentalData;
+  /** renewalId, revision, or other business event identifier. */
+  correlationSubject: string;
+  externalRentalDid: string | null;
+}
+
+export interface TarsReturnRentalInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  returnDocumentation: {
+    occurredAt: Date;
+    odometer: number;
+    fuelLevel: string;
+    notes: string | null;
+  };
+  photos: TarsUploadRef[];
+  externalRentalDid: string | null;
+}
+
+export interface TarsSettleRentalInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  completion: {
+    closedAt: Date | null;
+    reconciliation: {
+      chargesTotal: number;
+      depositAmount: number;
+      deductions: number;
+      finalAmount: number;
+      approvedAt: Date;
+    };
+  };
+  externalRentalDid: string | null;
+}
+
+/** Legacy DTOs preserved for historical mapper tests and rows. */
 export interface TarsRegisterContractInput {
   contract: TarsContractRef;
   customer: TarsCustomerData;
@@ -84,17 +141,11 @@ export interface TarsRegisterContractInput {
   license: TarsDrivingLicenseData;
 }
 
-/**
- * One high-level acceptance capability. Whether TARS exposes send-OTP,
- * verify-OTP, a digital signature call, or a single API is unknown, so this
- * stays a single Diamond boundary and carries NO OTP value.
- */
 export interface TarsContractAcceptanceInput {
   contract: TarsContractRef;
   acceptance: {
     acceptedAt: Date;
     termsVersion: string;
-    /** Attachment reference only; signature bytes are never copied. */
     signatureAttachmentId: string | null;
   };
 }
@@ -124,7 +175,6 @@ export interface TarsReturnInput {
 export interface TarsCompleteContractInput {
   contract: TarsContractRef;
   completion: {
-    /** Null until Diamond CLOSE; completion may be prepared while in REVIEW. */
     closedAt: Date | null;
     reconciliation: {
       chargesTotal: number;
@@ -137,34 +187,157 @@ export interface TarsCompleteContractInput {
 }
 
 export type TarsOperationInput =
+  | { operationType: "CREATE_RENTAL"; payload: TarsCreateRentalInput }
+  | { operationType: "UPDATE_RENTAL"; payload: TarsUpdateRentalInput }
+  | { operationType: "RETURN_RENTAL"; payload: TarsReturnRentalInput }
+  | { operationType: "SETTLE_RENTAL"; payload: TarsSettleRentalInput }
   | { operationType: "REGISTER_CONTRACT"; payload: TarsRegisterContractInput }
   | { operationType: "CONTRACT_ACCEPTANCE"; payload: TarsContractAcceptanceInput }
   | { operationType: "HANDOVER"; payload: TarsHandoverInput }
   | { operationType: "RETURN_DOCUMENTATION"; payload: TarsReturnInput }
   | { operationType: "COMPLETE_CONTRACT"; payload: TarsCompleteContractInput };
 
-/**
- * Normalized, Diamond-owned provider result. Provider-specific response
- * structures must never leak past this boundary into the Contracts domain.
- */
-export interface TarsProviderResult {
+export interface TarsOtpRequestInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  customerMobile: string;
+}
+
+export interface TarsOtpVerifyInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  challengeReference: string;
+  /** OTP code from customer — never persisted by Diamond. */
+  code: string;
+}
+
+export interface TarsOtpRequestResult {
   success: boolean;
-  externalContractId?: string;
-  externalReference?: string;
-  providerOperationId?: string;
-  /** Stable Diamond code on failure (e.g. TARS_NOT_CONFIGURED). */
+  challengeReference?: string;
+  maskedDestination?: string;
+  expiresAt?: Date;
+  resendAvailableAt?: Date;
+  otpLength?: number;
+  maxAttempts?: number;
+  errorCode?: string;
+}
+
+export interface TarsOtpVerifyResult {
+  success: boolean;
+  verifiedAt?: Date;
   errorCode?: string;
 }
 
 /**
- * Provider capabilities are the five mandatory BUSINESS operations. A future
- * adapter method may call one TARS API or several — that is an adapter detail
- * and must not change this interface.
+ * Provider result. HTTP 202 Accepted sets `accepted: true` with
+ * `providerRequestId` — that is NOT success. Immediate `success: true` is rare.
  */
+export interface TarsProviderResult {
+  success?: boolean;
+  accepted?: boolean;
+  externalContractId?: string;
+  externalRentalDid?: string;
+  externalReference?: string;
+  providerOperationId?: string;
+  providerRequestId?: string;
+  errorCode?: string;
+}
+
+export interface TarsAsyncStatusResult {
+  status: "PENDING" | "SUCCEEDED" | "FAILED";
+  externalRentalDid?: string;
+  externalReference?: string;
+  errorCode?: string;
+}
+
+/** Uncertain — vehicle identity resolution boundary (no speculative mutation). */
+export interface TarsVehicleLookupInput {
+  company: TarsCompanyRef;
+  vehicle: TarsVehicleData;
+}
+
+export interface TarsVehicleIdentityResult {
+  success: boolean;
+  externalVehicleDid?: string;
+  errorCode?: string;
+}
+
+export interface TarsDrivingLicenseInquiryInput {
+  company: TarsCompanyRef;
+  licenseNumber: string;
+  nationality?: string | null;
+}
+
+export interface TarsDrivingLicenseInquiryResult {
+  success: boolean;
+  errorCode?: string;
+}
+
+export interface TarsUploadAttachmentInput {
+  company: TarsCompanyRef;
+  attachmentId: string;
+  mimeType: string;
+}
+
+export interface TarsUploadAttachmentResult {
+  success: boolean;
+  externalUrl?: string;
+  externalHash?: string;
+  errorCode?: string;
+}
+
+export interface TarsHandoverEvidenceInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  handover: TarsHandoverInput["handover"];
+  photos: TarsUploadRef[];
+  externalRentalDid: string | null;
+}
+
+export interface TarsReturnEvidenceInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  returnDocumentation: TarsReturnRentalInput["returnDocumentation"];
+  photos: TarsUploadRef[];
+  externalRentalDid: string | null;
+}
+
+export interface TarsDigitalAcceptanceInput {
+  company: TarsCompanyRef;
+  contract: TarsContractRef;
+  acceptance: TarsContractAcceptanceInput["acceptance"];
+  externalRentalDid: string | null;
+}
+
+export interface TarsAuthReadinessResult {
+  ready: boolean;
+  errorCode?: string;
+}
+
 export interface TarsProvider {
   readonly name: string;
-  /** False until a real, credentialed TarsApiProvider exists. */
   readonly configured: boolean;
+  readonly companyCode: string;
+  checkAuthReadiness(): Promise<TarsAuthReadinessResult>;
+  createRental(input: TarsCreateRentalInput): Promise<TarsProviderResult>;
+  updateRental(input: TarsUpdateRentalInput): Promise<TarsProviderResult>;
+  returnRental(input: TarsReturnRentalInput): Promise<TarsProviderResult>;
+  settleRental(input: TarsSettleRentalInput): Promise<TarsProviderResult>;
+  /** Poll authoritative async status for a prior 202 acceptance. */
+  getAsyncRequestStatus(providerRequestId: string): Promise<TarsAsyncStatusResult>;
+  requestContractOtp(input: TarsOtpRequestInput): Promise<TarsOtpRequestResult>;
+  verifyContractOtp(input: TarsOtpVerifyInput): Promise<TarsOtpVerifyResult>;
+  /** Uncertain capabilities — prepared boundaries, fail closed until mapped. */
+  lookupVehicle(input: TarsVehicleLookupInput): Promise<TarsVehicleIdentityResult>;
+  registerVehicleIfRequired(input: TarsVehicleLookupInput): Promise<TarsVehicleIdentityResult>;
+  inquireDrivingLicense(
+    input: TarsDrivingLicenseInquiryInput,
+  ): Promise<TarsDrivingLicenseInquiryResult>;
+  uploadAttachment(input: TarsUploadAttachmentInput): Promise<TarsUploadAttachmentResult>;
+  submitHandoverEvidence(input: TarsHandoverEvidenceInput): Promise<TarsProviderResult>;
+  submitReturnEvidence(input: TarsReturnEvidenceInput): Promise<TarsProviderResult>;
+  linkDigitalAcceptance(input: TarsDigitalAcceptanceInput): Promise<TarsProviderResult>;
+  /** Legacy capabilities — retained for adapter transition. */
   registerContract(input: TarsRegisterContractInput): Promise<TarsProviderResult>;
   submitContractAcceptance(
     input: TarsContractAcceptanceInput,
@@ -174,14 +347,30 @@ export interface TarsProvider {
   completeContract(input: TarsCompleteContractInput): Promise<TarsProviderResult>;
 }
 
-/** Outcome of one TarsIntegrationService execution attempt. */
+export type TarsExecutionTerminalStatus = "SUCCEEDED" | "FAILED" | "PENDING_PROVIDER";
+
 export interface TarsExecutionResult {
   operationId: string;
   operationType: TarsOperationTypeKey;
-  status: "SUCCEEDED" | "FAILED";
+  status: TarsExecutionTerminalStatus;
   attemptNumber: number;
   externalContractId: string | null;
+  externalRentalDid: string | null;
   externalReference: string | null;
   providerOperationId: string | null;
+  providerRequestId: string | null;
   errorCode: string | null;
+}
+
+export interface TarsOtpPublicState {
+  providerConfigured: boolean;
+  required: boolean;
+  /** Diamond-owned UI status — not an official TARS status name. */
+  status: TarsOtpUiStatus;
+  maskedDestination: string | null;
+  resendAvailableAt: Date | null;
+  expiresAt: Date | null;
+  /** Authoritative from provider when available; null lets the UI stay adaptable. */
+  otpLength: number | null;
+  attemptsRemaining: number | null;
 }

@@ -8,6 +8,10 @@ function ops(
   values: Partial<Record<keyof ContractTarsStateDto["operations"], TarsOperationStatus>>,
 ): ContractTarsStateDto["operations"] {
   return {
+    createRental: "NOT_STARTED",
+    updateRental: "NOT_STARTED",
+    returnRental: "NOT_STARTED",
+    settleRental: "NOT_STARTED",
     registerContract: "NOT_STARTED",
     contractAcceptance: "NOT_STARTED",
     handover: "NOT_STARTED",
@@ -28,24 +32,27 @@ export const DEMO_TARS_PRESETS: Record<
   notStarted: {
     configured: true,
     externalContractId: null,
+    externalRentalDid: null,
     lastSuccessfulSyncAt: null,
     operations: ops({}),
   },
   syncing: {
     configured: true,
     externalContractId: null,
+    externalRentalDid: null,
     lastSuccessfulSyncAt: null,
     operations: ops({
-      registerContract: "SUCCEEDED",
-      contractAcceptance: "PROCESSING",
+      createRental: "PENDING_PROVIDER",
+      contractAcceptance: "SUBMITTING",
     }),
   },
   synced: {
     configured: true,
     externalContractId: "DEMO-TARS-STATUS",
+    externalRentalDid: "DEMO-RENTAL-DID",
     lastSuccessfulSyncAt: "2026-09-09T10:00:00.000Z",
     operations: ops({
-      registerContract: "SUCCEEDED",
+      createRental: "SUCCEEDED",
       contractAcceptance: "SUCCEEDED",
       handover: "SUCCEEDED",
     }),
@@ -53,9 +60,10 @@ export const DEMO_TARS_PRESETS: Record<
   partialFailure: {
     configured: true,
     externalContractId: "DEMO-TARS-STATUS",
+    externalRentalDid: "DEMO-RENTAL-DID",
     lastSuccessfulSyncAt: "2026-09-09T10:00:00.000Z",
     operations: ops({
-      registerContract: "SUCCEEDED",
+      createRental: "SUCCEEDED",
       contractAcceptance: "SUCCEEDED",
       handover: "FAILED",
     }),

@@ -28,7 +28,7 @@ import {
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
 import { ContractTarsResponseSchema } from "src/modules/integrations/tars/tars.schema";
-import { createTarsIntegrationService } from "src/modules/integrations/tars/tars.service";
+import { createTarsWorkflowOrchestrator } from "src/modules/integrations/tars/tars-workflow.orchestrator";
 import { commonErrorResponses, dataResponse, listResponse } from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { requireAuth } from "src/lib/context/auth-context";
@@ -43,7 +43,7 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   const contracts = createContractsService(fastify);
   // Read-only integration state. Contracts business logic never calls TARS —
   // see DOCU/04-api-contracts/tars-integration.md.
-  const tars = createTarsIntegrationService(fastify);
+  const tars = createTarsWorkflowOrchestrator(fastify);
 
   app.get(
     "/",

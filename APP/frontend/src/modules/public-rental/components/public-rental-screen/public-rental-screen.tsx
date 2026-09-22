@@ -48,9 +48,8 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   const [fileHint, setFileHint] = useState<string | null>(null);
   const [passportPreviewUrl, setPassportPreviewUrl] = useState<string | null>(null);
   const [passportHint, setPassportHint] = useState<string | null>(null);
-  // Notice after returning from the free Stripe-hosted card-linking page.
   const searchParams = useSearchParams();
-  const [cardLinkNotice, setCardLinkNotice] = useState<string | null>(null);
+  const [paymentCancelNotice, setPaymentCancelNotice] = useState<string | null>(null);
 
   if (boundToken !== token) {
     setBoundToken(token);
@@ -63,33 +62,18 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     setPassportPreviewUrl(null);
   }
 
-  // After a free Stripe-hosted card-linking redirect, validate the Stripe
-  // Checkout Session server-side before showing linked card state.
+  // Stripe Checkout cancel returns to the payment step with ?payment=cancelled.
   useEffect(() => {
-    const outcome = searchParams.get("card");
-    if (outcome !== "linked" && outcome !== "cancelled") return;
-    const setupSessionId = searchParams.get("setup_session_id");
+    if (searchParams.get("payment") !== "cancelled") return;
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
-      url.searchParams.delete("card");
-      url.searchParams.delete("setup_session_id");
+      url.searchParams.delete("payment");
       window.history.replaceState(null, "", url.toString());
     }
-    if (outcome === "cancelled") {
-      void Promise.resolve().then(() =>
-        setCardLinkNotice(t("payment.cardLinkCancelledNotice")),
-      );
-      void rental.load(token);
-      return;
-    }
-    if (!setupSessionId) {
-      return;
-    }
-    void rental.completeCardLink(setupSessionId).then((ok) => {
-      setCardLinkNotice(ok ? t("payment.cardLinkedNotice") : null);
-    });
-    // rental.load and translate are stable; the query param is the trigger.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPaymentCancelNotice(t("payment.notCompleted"));
+    setViewStage("payment");
+    void rental.load(token);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- query param is the trigger
   }, [searchParams, token]);
 
   useEffect(() => {
@@ -235,10 +219,16 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 token={token}
                 context={context}
                 allowed={allowed}
-                devPaymentSimulation={rentalSimulation}
-                cardLinkPending={rental.cardLinkPending}
-                onLinkCard={() => void rental.linkCard()}
                 onNextStage={goToStage}
+                tarsOtpRequestPending={rental.tarsOtpRequestPending}
+                tarsOtpVerifyPending={rental.tarsOtpVerifyPending}
+                tarsOtpError={rental.tarsOtpError}
+                onRequestTarsOtp={async () => {
+                  await rental.requestTarsOtp();
+                }}
+                onVerifyTarsOtp={async (code) => {
+                  await rental.verifyTarsOtp(code);
+                }}
                 onSigned={async () => {
                   await rental.load(token);
                   goToStage("payment");
@@ -258,14 +248,9 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 payPending={rental.payPending || rental.simulationPending}
                 statusPending={rental.statusPending}
                 linkExpiredDuringPayment={rental.linkExpiredDuringPayment}
-                cardLinkPending={rental.cardLinkPending}
-                cardLinkError={Boolean(rental.cardLinkError)}
-                linkNotice={cardLinkNotice}
-                onPay={() => {
-                  void rental.startPayment();
-                }}
-                onLinkCard={() => {
-                  void rental.linkCard();
+                paymentNotice={paymentCancelNotice}
+                onPay={(savePaymentMethodForFutureUse) => {
+                  void rental.startPayment(savePaymentMethodForFutureUse);
                 }}
                 onRefreshStatus={() => {
                   void rental.refreshPaymentStatus();

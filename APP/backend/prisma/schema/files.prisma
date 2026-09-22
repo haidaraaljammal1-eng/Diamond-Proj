@@ -30,6 +30,7 @@ model Attachment {
   contractDocuments          ContractDocument[]          @relation("ContractDocumentAttachment")
   officialContractSignatures OfficialContractSignature[] @relation("OfficialContractSignatureAttachment")
   manualExpenses             ManualExpense[]
+  tarsUploads                TarsAttachmentUpload[]
 
   @@index([uploadedById])
   @@map("attachments")

@@ -24,12 +24,12 @@ export function paymentPanelFromStatus(
 
 export function canStartCardPayment(options: {
   providerAvailable: boolean;
-  cardLinked: boolean;
   paymentStatus: ContractPaymentStatus | null | undefined;
   payPending: boolean;
+  contractStatus: string;
 }): boolean {
   if (!options.providerAvailable) return false;
-  if (!options.cardLinked) return false;
+  if (options.contractStatus !== "SIGNED") return false;
   if (options.payPending) return false;
   if (
     options.paymentStatus === "PROCESSING" ||
@@ -45,30 +45,6 @@ export function canRetryPayment(
   status: ContractPaymentStatus | null | undefined,
 ): boolean {
   return status === "FAILED" || status === "CANCELLED";
-}
-
-/**
- * The free Stripe-hosted card-linking action is offered only when the provider
- * is available, a card is not already saved, and no payment is in flight.
- */
-export function canStartCardLink(options: {
-  providerAvailable: boolean;
-  cardLinked: boolean;
-  payPending: boolean;
-  cardLinkPending: boolean;
-  paymentStatus: ContractPaymentStatus | null | undefined;
-}): boolean {
-  if (options.cardLinked) return false;
-  if (!options.providerAvailable) return false;
-  if (options.payPending || options.cardLinkPending) return false;
-  if (
-    options.paymentStatus === "PROCESSING" ||
-    options.paymentStatus === "PENDING" ||
-    options.paymentStatus === "CONFIRMED"
-  ) {
-    return false;
-  }
-  return true;
 }
 
 /** Compact mask for the payment summary: `•••• 4817`. Empty when not a 4-digit last4. */

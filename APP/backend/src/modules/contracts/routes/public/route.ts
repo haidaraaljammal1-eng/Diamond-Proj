@@ -20,13 +20,18 @@ import {
   PublicCardSetupSchema,
   PublicPaymentAttemptSchema,
   PublicPaymentContextSchema,
+  PublicPaymentStartBodySchema,
   PublicPaymentStatusSchema,
   PublicRentalContextSchema,
+  TarsOtpPublicStateSchema,
+  TarsOtpVerifyBodySchema,
   ConfirmPublicRenewalSchema,
 } from "src/modules/contracts/contracts.schema";
 import { commonErrorResponses, dataResponse } from "src/lib/http/response";
 import { AppError } from "src/lib/errors/app-error";
 import { devPaymentSimulationEnabled } from "src/modules/contracts/payment/payment-provider.factory";
+import { authRateLimit } from "src/plugins/rate-limit";
+import { publicLocaleFromAcceptLanguage } from "src/lib/http/public-frontend-url";
 
 export default async function contractsPublicRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -262,6 +267,55 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
   );
 
   app.post(
+    "/rental/:token/tars-otp/request",
+    {
+      config: authRateLimit(),
+      schema: {
+        summary: "Request TARS OTP for contract identity verification",
+        operationId: "requestPublicTarsOtp",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(TarsOtpPublicStateSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const state = await contracts.requestPublicTarsOtp(request.params.token);
+      request.setAudit({
+        action: "contract.tars_otp_requested",
+        entityType: "contract",
+        metadata: { status: state.status },
+      });
+      return { data: state };
+    },
+  );
+
+  app.post(
+    "/rental/:token/tars-otp/verify",
+    {
+      config: authRateLimit(),
+      schema: {
+        summary: "Verify TARS OTP for contract identity verification",
+        operationId: "verifyPublicTarsOtp",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        body: TarsOtpVerifyBodySchema,
+        response: { 200: dataResponse(TarsOtpPublicStateSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const state = await contracts.verifyPublicTarsOtp(request.params.token, request.body.code);
+      request.setAudit({
+        action: "contract.tars_otp_verified",
+        entityType: "contract",
+        metadata: { status: state.status },
+      });
+      return { data: state };
+    },
+  );
+
+  app.post(
     "/rental/:token/official-contract/sign",
     {
       schema: {
@@ -354,7 +408,12 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         response: { 200: dataResponse(PublicCardSetupSchema), ...commonErrorResponses },
       },
     },
-    async (request) => ({ data: await contracts.startCardLink(request.params.token) }),
+    async (request) => ({
+      data: await contracts.startCardLink(
+        request.params.token,
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
+    }),
   );
 
   app.get(
@@ -387,6 +446,7 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         tags: ["Contracts"],
         public: true,
         params: ContractTokenParam,
+        body: PublicPaymentStartBodySchema,
         response: { 200: dataResponse(PublicPaymentAttemptSchema), ...commonErrorResponses },
       },
     },
@@ -396,6 +456,8 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
         data: await contracts.startCardPayment(
           request.params.token,
           typeof key === "string" ? key : undefined,
+          publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+          request.body.savePaymentMethodForFutureUse,
         ),
       };
     },
@@ -521,7 +583,10 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({
-      data: await contracts.startRenewalPaymentPublic(request.params.token),
+      data: await contracts.startRenewalPaymentPublic(
+        request.params.token,
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
     }),
   );
 

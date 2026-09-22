@@ -102,11 +102,28 @@ const EnvSchema = z
     STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
     STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
 
-    // TARS mandatory-procedure integration. There is no official TARS API
-    // documentation yet, so this flag only expresses intent — no adapter,
-    // endpoint, credential or payload contract is assumed. Execution stays
-    // fail-closed (TARS_NOT_CONFIGURED) until a real TarsApiProvider exists.
+    // TARS integration — global intent flag. Per-company namespaces are
+    // TARS_UNIQUE_* and TARS_ELITE_* (separate credentials, no fallback).
+    // Empty values keep runtime fail-closed until a real adapter exists.
     TARS_ENABLED: envBool(false),
+    TARS_UNIQUE_ENABLED: z.string().optional().default(""),
+    TARS_UNIQUE_BASE_URL: z.string().optional().default(""),
+    TARS_UNIQUE_AUTH_URL: z.string().optional().default(""),
+    TARS_UNIQUE_AGENCY_DID: z.string().optional().default(""),
+    TARS_UNIQUE_CLIENT_ID: z.string().optional().default(""),
+    TARS_UNIQUE_CLIENT_SECRET: z.string().optional().default(""),
+    TARS_UNIQUE_API_VERSION: z.string().optional().default(""),
+    TARS_UNIQUE_TIMEOUT_MS: z.string().optional().default(""),
+    TARS_UNIQUE_STATUS_POLL_INTERVAL_MS: z.string().optional().default(""),
+    TARS_ELITE_ENABLED: z.string().optional().default(""),
+    TARS_ELITE_BASE_URL: z.string().optional().default(""),
+    TARS_ELITE_AUTH_URL: z.string().optional().default(""),
+    TARS_ELITE_AGENCY_DID: z.string().optional().default(""),
+    TARS_ELITE_CLIENT_ID: z.string().optional().default(""),
+    TARS_ELITE_CLIENT_SECRET: z.string().optional().default(""),
+    TARS_ELITE_API_VERSION: z.string().optional().default(""),
+    TARS_ELITE_TIMEOUT_MS: z.string().optional().default(""),
+    TARS_ELITE_STATUS_POLL_INTERVAL_MS: z.string().optional().default(""),
 
     // GPS Operations. There is no official GPS vendor yet, so GPS_ENABLED is
     // intent only — runtime always uses GpsUnconfiguredProvider until a real

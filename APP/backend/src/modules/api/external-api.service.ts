@@ -23,7 +23,14 @@ export function createExternalApiService(fastify: FastifyInstance) {
   function apiViewer(auth: ApiAuth): AuthUser {
     const perms: string[] = [PERMISSIONS.COMPLAINTS_VIEW_ALL_BRANCHES, PERMISSIONS.REPORTS_VIEW_ALL_BRANCHES];
     if (auth.scopes.includes("responses.read_pii")) perms.push(PERMISSIONS.CALL_CENTER_CONTACTS_READ);
-    return { id: 0, email: "api", status: "ACTIVE", permissions: perms, roleKeys: [] };
+    return {
+      id: 0,
+      email: "api",
+      status: "ACTIVE",
+      permissions: perms,
+      roleKeys: [],
+      isSystemAdmin: false,
+    };
   }
   const includePii = (auth: ApiAuth) => auth.scopes.includes("responses.read_pii");
   function assertBranchInScope(auth: ApiAuth, branchId: number | null) {

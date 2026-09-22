@@ -183,6 +183,7 @@ function viewer(permissions: string[]): AuthUser {
     status: "ACTIVE",
     permissions,
     roleKeys: [],
+    isSystemAdmin: false,
   };
 }
 

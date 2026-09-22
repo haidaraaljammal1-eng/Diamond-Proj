@@ -42,5 +42,6 @@ export interface PaymentStatusDto {
     currency: string;
     cardLast4: string | null;
     cardBrand: string | null;
+    paymentMethodSavedForFutureUse?: boolean;
   };
 }

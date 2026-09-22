@@ -47,8 +47,13 @@ function stateWith(
     configured: false,
     company: UNIQUE,
     externalContractId: null,
+    externalRentalDid: null,
     lastSuccessfulSyncAt: null,
     operations: {
+      createRental: status,
+      updateRental: status,
+      returnRental: status,
+      settleRental: status,
       registerContract: status,
       contractAcceptance: status,
       handover: status,
@@ -60,14 +65,14 @@ function stateWith(
 }
 
 describe("TARS operation order", () => {
-  it("lists exactly the five approved mandatory procedures, in workflow order", () => {
-    assert.deepEqual(TARS_OPERATION_ORDER, [
-      "registerContract",
-      "contractAcceptance",
-      "handover",
-      "returnDocumentation",
-      "completeContract",
+  it("lists official capabilities first, then legacy keys", () => {
+    assert.deepEqual(TARS_OPERATION_ORDER.slice(0, 4), [
+      "createRental",
+      "updateRental",
+      "returnRental",
+      "settleRental",
     ]);
+    assert.equal(TARS_OPERATION_ORDER.length, 9);
   });
 });
 
@@ -135,12 +140,12 @@ describe("getTarsStatusPresentation", () => {
 });
 
 describe("buildTarsSummary", () => {
-  it("renders the unconfigured contract as five NOT_STARTED rows", () => {
+  it("renders the unconfigured contract as nine NOT_STARTED rows", () => {
     const summary = buildTarsSummary(stateWith());
 
     assert.equal(summary.configured, false);
     assert.equal(summary.connection.translationKey, "notConnected");
-    assert.equal(summary.rows.length, 5);
+    assert.equal(summary.rows.length, 9);
     assert.ok(summary.rows.every((row) => row.presentation.status === "NOT_STARTED"));
     assert.equal(summary.externalContractId, null);
     assert.equal(summary.lastSuccessfulSyncAt, null);
@@ -151,6 +156,10 @@ describe("buildTarsSummary", () => {
       stateWith({
         configured: true,
         operations: {
+          createRental: "PENDING_PROVIDER",
+          updateRental: "SUBMITTING",
+          returnRental: "NOT_STARTED",
+          settleRental: "NOT_STARTED",
           registerContract: "SUCCEEDED",
           contractAcceptance: "PROCESSING",
           handover: "PENDING",
@@ -163,6 +172,10 @@ describe("buildTarsSummary", () => {
     assert.deepEqual(
       summary.rows.map((row) => [row.key, row.presentation.status]),
       [
+        ["createRental", "PENDING_PROVIDER"],
+        ["updateRental", "SUBMITTING"],
+        ["returnRental", "NOT_STARTED"],
+        ["settleRental", "NOT_STARTED"],
         ["registerContract", "SUCCEEDED"],
         ["contractAcceptance", "PROCESSING"],
         ["handover", "PENDING"],
@@ -210,6 +223,8 @@ describe("TARS translations", () => {
     "NOT_STARTED",
     "PENDING",
     "PROCESSING",
+    "SUBMITTING",
+    "PENDING_PROVIDER",
     "SUCCEEDED",
     "FAILED",
   ];
@@ -263,8 +278,8 @@ describe("TARS translations", () => {
     assert.equal(tars.title, "حالة الربط مع TARS");
     assert.equal(tars.notConnected, "غير متصل حالياً");
     assert.equal(tars.notConnectedHint, "سيتم تفعيل المزامنة عند ربط واجهة TARS الرسمية.");
-    assert.equal(tars.operation.registerContract, "تسجيل العقد");
-    assert.equal(tars.operation.handover, "تسليم المركبة");
+    assert.equal(tars.operation.createRental, "إنشاء إيجار");
+    assert.equal(tars.operation.handover, "تسليم المركبة (قديم)");
     assert.equal(tars.status.PROCESSING, "جارٍ المزامنة");
     assert.equal(tars.status.FAILED, "فشل الربط");
   });
@@ -284,8 +299,8 @@ describe("TARS translations", () => {
       tars.notConnectedHint,
       "Synchronization will be enabled once the official TARS API is configured.",
     );
-    assert.equal(tars.operation.returnDocumentation, "Vehicle Return");
-    assert.equal(tars.operation.completeContract, "Contract Completion");
+    assert.equal(tars.operation.createRental, "Create Rental");
+    assert.equal(tars.operation.returnDocumentation, "Vehicle Return (legacy)");
     assert.equal(tars.status.PROCESSING, "Syncing");
     assert.equal(tars.status.SUCCEEDED, "Synced");
   });
@@ -373,7 +388,7 @@ describe("TARS routing company", () => {
     if (view.kind !== "ready") return;
     // A stale payload drops the marker; it never takes the section down.
     assert.equal(view.summary.company, null);
-    assert.equal(view.summary.rows.length, 5);
+    assert.equal(view.summary.rows.length, 9);
   });
 
   it("renders the company through the shared CompanyIdentity, not a TARS badge", () => {

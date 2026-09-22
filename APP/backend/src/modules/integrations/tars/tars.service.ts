@@ -5,6 +5,7 @@ import { fingerprintIdempotentPayload, runIdempotent } from "src/lib/db/idempote
 import {
   TARS_IDEMPOTENCY_SCOPE,
   TARS_OPERATION_LOCK_NS,
+  TARS_REPEATABLE_OPERATION_TYPES,
   type TarsOperationTypeKey,
 } from "src/modules/integrations/tars/tars.constants";
 import { getTarsConfig } from "src/modules/integrations/tars/tars.config";
@@ -16,6 +17,7 @@ import {
 } from "src/modules/integrations/tars/tars.mapper";
 import { createTarsProvider } from "src/modules/integrations/tars/tars.provider";
 import {
+  isOperationInFlight,
   toTarsContractIntegrationState,
   type TarsContractIntegrationState,
 } from "src/modules/integrations/tars/tars.projection";
@@ -26,15 +28,19 @@ import type {
   TarsProviderResult,
 } from "src/modules/integrations/tars/tars.types";
 
-/**
- * Dispatch to the provider's business capability. Which TARS API(s) a
- * capability calls is an adapter detail that must not leak here.
- */
 function callProvider(
   provider: TarsProvider,
   input: TarsOperationInput,
 ): Promise<TarsProviderResult> {
   switch (input.operationType) {
+    case "CREATE_RENTAL":
+      return provider.createRental(input.payload);
+    case "UPDATE_RENTAL":
+      return provider.updateRental(input.payload);
+    case "RETURN_RENTAL":
+      return provider.returnRental(input.payload);
+    case "SETTLE_RENTAL":
+      return provider.settleRental(input.payload);
     case "REGISTER_CONTRACT":
       return provider.registerContract(input.payload);
     case "CONTRACT_ACCEPTANCE":
@@ -48,10 +54,6 @@ function callProvider(
   }
 }
 
-/**
- * Normalizes whatever a future adapter reports into a short, stable code, so
- * `lastErrorCode` can never end up holding a raw HTTP body, header or PII.
- */
 function safeErrorCode(code: string | undefined): string {
   const normalized = (code ?? "")
     .trim()
@@ -61,18 +63,17 @@ function safeErrorCode(code: string | undefined): string {
   return normalized || TARS_ERROR_REASONS.PROVIDER_ERROR;
 }
 
-/**
- * TarsIntegrationService — the ONLY component allowed to talk to a TarsProvider.
- *
- * It owns integration state (external references, operation history, idempotency
- * and concurrency) and owns nothing else: Contract lifecycle, Vehicle
- * operational status, Customer lifecycle and Payment state are untouched by
- * every method here, including on failure.
- *
- * In this foundation phase no Diamond transition calls `execute`. The five
- * capabilities exist so that wiring the mandatory checkpoints later is a small,
- * documented change — see DOCU/04-api-contracts/tars-integration.md.
- */
+function lockKey(
+  contractId: string,
+  operationType: TarsOperationTypeKey,
+  correlationSubject?: string | null,
+): string {
+  if (TARS_REPEATABLE_OPERATION_TYPES.has(operationType) && correlationSubject) {
+    return `${contractId}:${operationType}:${correlationSubject}`;
+  }
+  return `${contractId}:${operationType}`;
+}
+
 export function createTarsIntegrationService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
@@ -85,7 +86,6 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     return row;
   }
 
-  /** Staff read state. Never creates rows just to render NOT_STARTED. */
   async function getIntegrationState(
     contractId: string,
   ): Promise<TarsContractIntegrationState> {
@@ -101,17 +101,25 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     const [integration, operations] = await Promise.all([
       prisma.tarsContractIntegration.findUnique({
         where: { contractId },
-        select: { externalContractId: true, lastSuccessfulSyncAt: true },
+        select: {
+          externalContractId: true,
+          externalRentalDid: true,
+          lastSuccessfulSyncAt: true,
+        },
       }),
       prisma.tarsOperation.findMany({
         where: { contractId },
-        select: { operationType: true, status: true, createdAt: true },
+        select: {
+          operationType: true,
+          status: true,
+          correlationSubject: true,
+          createdAt: true,
+        },
         orderBy: { createdAt: "asc" },
       }),
     ]);
 
     return toTarsContractIntegrationState({
-      // Routed by the contract's own company, never by the vehicle's current one.
       configured: createTarsProvider(contract.company.code).configured,
       company: contract.company,
       integration,
@@ -119,49 +127,51 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     });
   }
 
-  /**
-   * Builds the normalized integration input from persisted Diamond state.
-   * Exposed so the future adapter work (and the tests) can verify mapping
-   * without performing any provider call.
-   */
   async function buildOperationInput(
     contractId: string,
     operationType: TarsOperationTypeKey,
+    options: { correlationSubject?: string } = {},
   ): Promise<TarsOperationInput> {
-    return buildTarsOperationInput(operationType, await loadContract(contractId));
+    return buildTarsOperationInput(
+      operationType,
+      await loadContract(contractId),
+      options,
+    );
   }
 
-  /**
-   * Replay answer for a deduped idempotency key. A settled attempt must exist;
-   * anything else means another caller is still holding this key's execution,
-   * which is reported as in-progress rather than guessed at.
-   */
   async function latestExecutionResult(
     contractId: string,
     operationType: TarsOperationTypeKey,
+    correlationSubject?: string | null,
   ): Promise<TarsExecutionResult> {
-    const [succeeded, integration] = await Promise.all([
+    const [integration, operation] = await Promise.all([
+      prisma.tarsContractIntegration.findUnique({ where: { contractId } }),
       prisma.tarsOperation.findFirst({
-        where: { contractId, operationType, status: "SUCCEEDED" },
+        where: {
+          contractId,
+          operationType,
+          ...(correlationSubject ? { correlationSubject } : {}),
+          status: { in: ["SUCCEEDED", "FAILED", "PENDING_PROVIDER"] },
+        },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.tarsContractIntegration.findUnique({ where: { contractId } }),
     ]);
-    const operation =
-      succeeded ??
-      (await prisma.tarsOperation.findFirst({
-        where: { contractId, operationType, status: "FAILED" },
-        orderBy: { createdAt: "desc" },
-      }));
     if (!operation) throw tarsError.operationInProgress(operationType);
     return {
       operationId: operation.id,
       operationType,
-      status: operation.status === "SUCCEEDED" ? "SUCCEEDED" : "FAILED",
+      status:
+        operation.status === "SUCCEEDED"
+          ? "SUCCEEDED"
+          : operation.status === "PENDING_PROVIDER"
+            ? "PENDING_PROVIDER"
+            : "FAILED",
       attemptNumber: operation.attemptNumber,
       externalContractId: integration?.externalContractId ?? null,
+      externalRentalDid: integration?.externalRentalDid ?? null,
       externalReference: operation.externalReference,
       providerOperationId: operation.providerOperationId,
+      providerRequestId: operation.providerRequestId,
       errorCode: operation.lastErrorCode,
     };
   }
@@ -172,26 +182,39 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     provider: TarsProvider,
     input: TarsOperationInput,
     fingerprint: string,
-    idempotencyKey?: string,
+    options: { idempotencyKey?: string; correlationSubject?: string | null } = {},
   ): Promise<TarsExecutionResult> {
-    // Phase 1 (short transaction): claim the attempt. The advisory lock makes
-    // the "no second PROCESSING attempt" check race-free.
+    const correlationSubject = options.correlationSubject ?? null;
     const claim = await withTransaction(prisma, async (tx) => {
-      await acquireAdvisoryLock(tx, TARS_OPERATION_LOCK_NS, `${contractId}:${operationType}`);
+      await acquireAdvisoryLock(
+        tx,
+        TARS_OPERATION_LOCK_NS,
+        lockKey(contractId, operationType, correlationSubject),
+      );
       const integration = await tx.tarsContractIntegration.upsert({
         where: { contractId },
         update: {},
         create: { contractId },
       });
       const priors = await tx.tarsOperation.findMany({
-        where: { contractId, operationType },
+        where: {
+          contractId,
+          operationType,
+          ...(correlationSubject ? { correlationSubject } : {}),
+        },
         select: { status: true },
       });
-      // An authoritative success is never re-sent by a normal execution.
-      if (priors.some((prior) => prior.status === "SUCCEEDED")) {
+      if (!TARS_REPEATABLE_OPERATION_TYPES.has(operationType)) {
+        if (priors.some((prior) => prior.status === "SUCCEEDED")) {
+          throw tarsError.operationAlreadyCompleted(operationType);
+        }
+      } else if (
+        correlationSubject &&
+        priors.some((prior) => prior.status === "SUCCEEDED")
+      ) {
         throw tarsError.operationAlreadyCompleted(operationType);
       }
-      if (priors.some((prior) => prior.status === "PROCESSING" || prior.status === "PENDING")) {
+      if (priors.some((prior) => isOperationInFlight(prior.status))) {
         throw tarsError.operationInProgress(operationType);
       }
       const operation = await tx.tarsOperation.create({
@@ -199,8 +222,9 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
           integrationId: integration.id,
           contractId,
           operationType,
-          status: "PROCESSING",
-          idempotencyKey: idempotencyKey ?? null,
+          correlationSubject,
+          status: "SUBMITTING",
+          idempotencyKey: options.idempotencyKey ?? null,
           requestFingerprint: fingerprint,
           attemptNumber: priors.length + 1,
           startedAt: new Date(),
@@ -209,18 +233,40 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
       return { operation, integration };
     });
 
-    // Phase 2: the provider/network operation runs with NO transaction open.
     let result: TarsProviderResult;
     try {
       result = await callProvider(provider, input);
     } catch {
-      // The thrown value may carry headers, bodies or PII — never log or store it.
       result = { success: false, errorCode: TARS_ERROR_REASONS.PROVIDER_ERROR };
     }
 
-    // Phase 3 (short transaction): persist the outcome.
     return withTransaction(prisma, async (tx) => {
       const completedAt = new Date();
+
+      if (result.accepted && result.providerRequestId) {
+        const pending = await tx.tarsOperation.update({
+          where: { id: claim.operation.id },
+          data: {
+            status: "PENDING_PROVIDER",
+            providerRequestId: result.providerRequestId,
+            externalReference: result.externalReference ?? null,
+            providerOperationId: result.providerOperationId ?? null,
+          },
+        });
+        return {
+          operationId: pending.id,
+          operationType,
+          status: "PENDING_PROVIDER" as const,
+          attemptNumber: pending.attemptNumber,
+          externalContractId: claim.integration.externalContractId,
+          externalRentalDid: claim.integration.externalRentalDid,
+          externalReference: pending.externalReference,
+          providerOperationId: pending.providerOperationId,
+          providerRequestId: pending.providerRequestId,
+          errorCode: null,
+        };
+      }
+
       if (!result.success) {
         const failed = await tx.tarsOperation.update({
           where: { id: claim.operation.id },
@@ -240,8 +286,10 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
           status: "FAILED" as const,
           attemptNumber: failed.attemptNumber,
           externalContractId: claim.integration.externalContractId,
+          externalRentalDid: claim.integration.externalRentalDid,
           externalReference: null,
           providerOperationId: null,
+          providerRequestId: null,
           errorCode: failed.lastErrorCode,
         };
       }
@@ -253,16 +301,17 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
           completedAt,
           externalReference: result.externalReference ?? null,
           providerOperationId: result.providerOperationId ?? null,
+          providerRequestId: result.providerRequestId ?? null,
           lastErrorCode: null,
         },
       });
-      // The first authoritative external id wins; a later operation must not
-      // silently rewrite the TARS-side contract reference.
       const integration = await tx.tarsContractIntegration.update({
         where: { id: claim.integration.id },
         data: {
           externalContractId:
             claim.integration.externalContractId ?? result.externalContractId ?? null,
+          externalRentalDid:
+            claim.integration.externalRentalDid ?? result.externalRentalDid ?? null,
           lastSuccessfulSyncAt: completedAt,
         },
       });
@@ -272,29 +321,20 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
         status: "SUCCEEDED" as const,
         attemptNumber: succeeded.attemptNumber,
         externalContractId: integration.externalContractId,
+        externalRentalDid: integration.externalRentalDid,
         externalReference: succeeded.externalReference,
         providerOperationId: succeeded.providerOperationId,
+        providerRequestId: succeeded.providerRequestId,
         errorCode: null,
       };
     });
   }
 
-  /**
-   * Executes one mandatory TARS procedure.
-   *
-   * Fails closed before touching the database when no real provider exists, so
-   * an unconfigured environment writes no operation row at all and the
-   * projection stays NOT_STARTED. `idempotencyKey` is scoped per contract and
-   * operation type; reuse it to make a retry safe, and use a fresh key when
-   * deliberately retrying a FAILED attempt.
-   */
   async function execute(
     contractId: string,
     operationType: TarsOperationTypeKey,
-    options: { idempotencyKey?: string } = {},
+    options: { idempotencyKey?: string; correlationSubject?: string } = {},
   ): Promise<TarsExecutionResult> {
-    // Historical Contract ownership decides which company's TARS account this
-    // mandatory procedure belongs to.
     const routing = await prisma.contract.findUnique({
       where: { id: contractId },
       select: { company: { select: { code: true } } },
@@ -303,32 +343,112 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     const provider = createTarsProvider(routing.company.code);
     if (!provider.configured) throw tarsError.notConfigured();
 
-    const input = await buildOperationInput(contractId, operationType);
+    const input = await buildOperationInput(contractId, operationType, options);
     const fingerprint = fingerprintIdempotentPayload(input);
 
     if (!options.idempotencyKey) {
-      return runOnce(contractId, operationType, provider, input, fingerprint);
+      return runOnce(contractId, operationType, provider, input, fingerprint, options);
     }
 
     const outcome = await runIdempotent(
       prisma,
       {
-        scope: `${TARS_IDEMPOTENCY_SCOPE}:${contractId}:${operationType}`,
+        scope: `${TARS_IDEMPOTENCY_SCOPE}:${lockKey(contractId, operationType, options.correlationSubject)}`,
         key: options.idempotencyKey,
         fingerprint,
       },
       () =>
-        runOnce(
-          contractId,
-          operationType,
-          provider,
-          input,
-          fingerprint,
-          options.idempotencyKey,
-        ),
+        runOnce(contractId, operationType, provider, input, fingerprint, {
+          ...options,
+          idempotencyKey: options.idempotencyKey,
+        }),
     );
-    if (outcome.deduped) return latestExecutionResult(contractId, operationType);
+    if (outcome.deduped) {
+      return latestExecutionResult(contractId, operationType, options.correlationSubject);
+    }
     return outcome.result!;
+  }
+
+  /** Poll a PENDING_PROVIDER row and persist authoritative provider outcome. */
+  async function refreshPendingOperation(operationId: string): Promise<TarsExecutionResult> {
+    const operation = await prisma.tarsOperation.findUnique({
+      where: { id: operationId },
+      include: { integration: true, contract: { select: { company: { select: { code: true } } } } },
+    });
+    if (!operation) throw tarsError.contractNotFound();
+    if (operation.status !== "PENDING_PROVIDER" || !operation.providerRequestId) {
+      return latestExecutionResult(operation.contractId, operation.operationType, operation.correlationSubject);
+    }
+
+    const provider = createTarsProvider(operation.contract.company.code);
+    if (!provider.configured) throw tarsError.notConfigured();
+
+    let poll;
+    try {
+      poll = await provider.getAsyncRequestStatus(operation.providerRequestId);
+    } catch {
+      poll = { status: "FAILED" as const, errorCode: TARS_ERROR_REASONS.PROVIDER_ERROR };
+    }
+
+    if (poll.status === "PENDING") {
+      return latestExecutionResult(operation.contractId, operation.operationType, operation.correlationSubject);
+    }
+
+    const completedAt = new Date();
+    return withTransaction(prisma, async (tx) => {
+      if (poll.status === "FAILED") {
+        const failed = await tx.tarsOperation.update({
+          where: { id: operation.id },
+          data: {
+            status: "FAILED",
+            completedAt,
+            lastErrorCode: safeErrorCode(poll.errorCode),
+          },
+        });
+        return {
+          operationId: failed.id,
+          operationType: operation.operationType,
+          status: "FAILED" as const,
+          attemptNumber: failed.attemptNumber,
+          externalContractId: operation.integration.externalContractId,
+          externalRentalDid: operation.integration.externalRentalDid,
+          externalReference: failed.externalReference,
+          providerOperationId: failed.providerOperationId,
+          providerRequestId: failed.providerRequestId,
+          errorCode: failed.lastErrorCode,
+        };
+      }
+
+      const succeeded = await tx.tarsOperation.update({
+        where: { id: operation.id },
+        data: {
+          status: "SUCCEEDED",
+          completedAt,
+          externalReference: poll.externalReference ?? operation.externalReference,
+          lastErrorCode: null,
+        },
+      });
+      const integration = await tx.tarsContractIntegration.update({
+        where: { id: operation.integrationId },
+        data: {
+          externalRentalDid:
+            operation.integration.externalRentalDid ?? poll.externalRentalDid ?? null,
+          lastSuccessfulSyncAt: completedAt,
+        },
+      });
+      return {
+        operationId: succeeded.id,
+        operationType: operation.operationType,
+        status: "SUCCEEDED" as const,
+        attemptNumber: succeeded.attemptNumber,
+        externalContractId: integration.externalContractId,
+        externalRentalDid: integration.externalRentalDid,
+        externalReference: succeeded.externalReference,
+        providerOperationId: succeeded.providerOperationId,
+        providerRequestId: succeeded.providerRequestId,
+        errorCode: null,
+      };
+    });
   }
 
   return {
@@ -336,6 +456,7 @@ export function createTarsIntegrationService(fastify: FastifyInstance) {
     getIntegrationState,
     buildOperationInput,
     execute,
+    refreshPendingOperation,
   };
 }
 

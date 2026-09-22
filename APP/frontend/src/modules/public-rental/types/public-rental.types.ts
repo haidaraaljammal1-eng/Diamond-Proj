@@ -90,6 +90,31 @@ export interface PublicOperatingCompanyDto {
   legalNameEn: string;
 }
 
+/** Diamond-owned OTP UI status from backend — not official TARS status names. */
+export type TarsOtpUiStatus =
+  | "NOT_REQUIRED"
+  | "NOT_STARTED"
+  | "CODE_SENT"
+  | "VERIFIED"
+  | "FAILED"
+  | "EXPIRED"
+  | "RATE_LIMITED"
+  | "UNAVAILABLE";
+
+/** Frontend-only pending states layered on top of backend status. */
+export type TarsOtpClientPhase = "REQUESTING" | "VERIFYING" | null;
+
+export interface TarsOtpPublicState {
+  providerConfigured: boolean;
+  required: boolean;
+  status: TarsOtpUiStatus;
+  maskedDestination: string | null;
+  resendAvailableAt: string | null;
+  expiresAt: string | null;
+  otpLength: number | null;
+  attemptsRemaining: number | null;
+}
+
 export interface PublicRentalContext {
   office: { displayName: string; company: PublicOperatingCompanyDto };
   flow: { step: PublicRentalFlowStep };
@@ -142,11 +167,11 @@ export interface PublicRentalContext {
     providerAvailable: boolean;
     devSimulationAvailable: boolean;
     requiresCardSetupBeforeSigning: boolean;
-    /** Safe Stripe-derived card reference after free card linking; never PAN/CVV. */
     cardLast4: string | null;
     cardBrand?: string | null;
     cardReady: boolean;
   };
+  tarsOtp: TarsOtpPublicState;
 }
 
 export interface PublicPaymentContext {

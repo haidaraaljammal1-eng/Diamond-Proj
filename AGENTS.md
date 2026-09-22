@@ -144,7 +144,7 @@
 
 ## TARS integration (Diamond)
 
-- TARS integration is mandatory-procedures-only: REGISTER_CONTRACT, CONTRACT_ACCEPTANCE, HANDOVER, RETURN_DOCUMENTATION, COMPLETE_CONTRACT. Nothing else.
+- TARS integration follows official RTA/TARS capabilities: CREATE_RENTAL, UPDATE_RENTAL, RETURN_RENTAL, SETTLE_RENTAL (legacy operation enum values remain for migration-safe history only). OTP uses `requestContractOtp` / `verifyContractOtp` — never Diamond-generated OTP. CREATE_RENTAL timing vs OTP is unresolved (`TARS_CREATE_RENTAL_CHECKPOINT_PENDING_STAGING_VERIFICATION`).
 - Never call TARS directly from a domain service (`contracts.service.ts`, `vehicles.service.ts`, Car-Out, Car-In). Always go through `TarsIntegrationService` → `TarsProvider`.
 - Do not invent TARS API endpoints, authentication, configuration or payload field names before official documentation exists.
 - No fake TARS success: no invented `externalContractId`, `externalReference` or sync timestamp. An unconfigured provider fails closed with `TARS_NOT_CONFIGURED` and writes no operation row.

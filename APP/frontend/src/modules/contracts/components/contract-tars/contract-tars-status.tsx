@@ -77,6 +77,13 @@ export function ContractTarsStatus({ contractId }: ContractTarsStatusProps) {
             <p className={styles.hint}>{t("notConnectedHint")}</p>
           )}
 
+          {view.summary.externalRentalDid ? (
+            <div className={styles.kv}>
+              <span>{t("rentalDid")}</span>
+              <bdi className={styles.reference}>{view.summary.externalRentalDid}</bdi>
+            </div>
+          ) : null}
+
           {view.summary.externalContractId ? (
             <div className={styles.kv}>
               <span>{t("reference")}</span>

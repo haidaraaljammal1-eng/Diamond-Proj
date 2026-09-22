@@ -1,45 +1,50 @@
-.methods {
+.summary {
   display: grid;
   gap: 10px;
+  margin: 0 0 18px;
 }
 
-.method {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 14px;
-  border: 1px solid var(--diamond-hair);
-  border-radius: 14px;
-  background: var(--diamond-onyx);
-}
-
-.method[data-disabled="true"] {
-  opacity: 0.72;
-}
-
-.mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--diamond-gold-gradient);
-  color: #231a08;
-  font-family: var(--diamond-font-display);
-}
-
-.copy {
+.summaryRow {
   display: grid;
   gap: 2px;
 }
 
-.copy b {
-  color: var(--diamond-champagne);
-}
-
-.copy span {
+.summaryRow dt {
+  margin: 0;
   color: var(--diamond-muted);
   font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryRow dd {
+  margin: 0;
+  color: var(--diamond-champagne);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.amountHero {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--diamond-line);
+  background: var(--diamond-onyx2);
+}
+
+.amountLabel {
+  color: var(--diamond-muted);
+  font-size: 13px;
+}
+
+.amountHero b {
+  color: var(--diamond-gold-hi);
+  font-family: var(--diamond-font-display);
+  font-size: 32px;
+  line-height: 1.1;
+  unicode-bidi: isolate;
 }
 
 .unavailable {
@@ -47,21 +52,6 @@
   color: var(--diamond-ivory);
   font-size: 13.5px;
   line-height: 1.6;
-}
-
-.total {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 8px 0 14px;
-  color: var(--diamond-muted);
-}
-
-.total b {
-  color: var(--diamond-gold-hi);
-  font-family: var(--diamond-font-display);
-  font-size: 22px;
-  unicode-bidi: isolate;
 }
 
 .status {
@@ -77,21 +67,6 @@
   font-size: 11px;
 }
 
-.meta {
-  margin: 0 0 8px;
-  color: var(--diamond-muted);
-  font-size: 13px;
-}
-
-.methodsTitle {
-  margin: 16px 0 10px;
-  color: var(--diamond-champagne);
-  font-family: var(--diamond-font-display);
-  font-size: 15px;
-  font-weight: 400;
-}
-
-/* Free Stripe-hosted card linking (no charge) + saved-card state */
 .notice {
   margin: 10px 0 0;
   padding: 12px 14px;
@@ -103,13 +78,52 @@
   line-height: 1.6;
 }
 
-.linkBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
-}
-
 .pay {
   margin-top: 16px;
+  width: 100%;
+}
+
+.secure {
+  margin: 0 0 8px;
+  color: var(--diamond-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.stripeMethod {
+  margin: 0 0 14px;
+  color: var(--diamond-champagne);
+  font-size: 13.5px;
+}
+
+.consent {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 0 4px;
+  color: var(--diamond-ivory);
+  font-size: 13px;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.consent span {
+  display: grid;
+  gap: 4px;
+}
+
+.consentHint {
+  color: var(--diamond-muted);
+  font-size: 12.5px;
+}
+
+.consentLegal {
+  color: var(--diamond-dim);
+  font-size: 11px;
+}
+
+@media (max-width: 480px) {
+  .amountHero b {
+    font-size: 28px;
+  }
 }

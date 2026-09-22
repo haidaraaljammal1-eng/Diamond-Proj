@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { resolveEffectivePermissions } from "src/lib/rbac/effective-permissions";
 import type { UserPublic } from "src/modules/users/users.schema";
 
 /** Standard include to load a user with roles + their permissions + branch scope. */
@@ -32,11 +33,12 @@ export type UserWithRoles = Prisma.UserGetPayload<{
 
 /** Map a DB user to the public API shape. passwordHash is structurally absent. */
 export function toUserPublic(user: UserWithRoles): UserPublic {
-  const permissions = [
-    ...new Set(
-      user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.key)),
-    ),
-  ];
+  const roleGrants = user.roles.map((ur) => ({
+    key: ur.role.key,
+    isSystem: ur.role.isSystem,
+    permissions: ur.role.permissions,
+  }));
+  const { permissions } = resolveEffectivePermissions(roleGrants);
   return {
     id: user.id,
     email: user.email,

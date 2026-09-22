@@ -12,16 +12,27 @@ export type TarsOperationStatus =
   | "NOT_STARTED"
   | "PENDING"
   | "PROCESSING"
+  | "SUBMITTING"
+  | "PENDING_PROVIDER"
   | "SUCCEEDED"
   | "FAILED";
 
-/** The five approved mandatory procedures, keyed as the Backend projects them. */
-export type TarsOperationKey =
+/** Official RTA/TARS rental capabilities (current writes). */
+export type TarsOfficialOperationKey =
+  | "createRental"
+  | "updateRental"
+  | "returnRental"
+  | "settleRental";
+
+/** Legacy capability keys preserved for migration-safe history rows. */
+export type TarsLegacyOperationKey =
   | "registerContract"
   | "contractAcceptance"
   | "handover"
   | "returnDocumentation"
   | "completeContract";
+
+export type TarsOperationKey = TarsOfficialOperationKey | TarsLegacyOperationKey;
 
 export interface ContractTarsStateDto {
   /** False until a real, credentialed TARS provider exists. Not an error. */
@@ -34,6 +45,7 @@ export interface ContractTarsStateDto {
    */
   company: OperatingCompanyIdentity;
   externalContractId: string | null;
+  externalRentalDid: string | null;
   lastSuccessfulSyncAt: string | null;
   operations: Record<TarsOperationKey, TarsOperationStatus>;
 }

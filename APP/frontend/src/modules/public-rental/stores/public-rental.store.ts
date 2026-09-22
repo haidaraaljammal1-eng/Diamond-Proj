@@ -5,17 +5,17 @@ import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
   acceptPublicRental,
-  completePublicRentalCardLink,
   getPublicPaymentStatus,
   getPublicRental,
   simulatePublicRentalLicense,
   simulatePublicRentalPassport,
   simulatePublicRentalPayment,
-  startPublicRentalCardLink,
   startPublicRentalPayment,
   submitPublicRentalForm,
   uploadPublicRentalLicense,
   uploadPublicRentalPassport,
+  requestPublicTarsOtp,
+  verifyPublicTarsOtp,
 } from "../api/public-rental.api";
 import type {
   DocumentCapturePhase,
@@ -44,10 +44,10 @@ interface PublicRentalState {
   payPending: boolean;
   statusPending: boolean;
   paymentStatus: PublicPaymentStatus | null;
-  /** Free Stripe-hosted card linking request lifecycle (never charges). */
-  cardLinkPending: boolean;
-  cardLinkError: ApiRequestError | null;
   simulationPending: boolean;
+  tarsOtpRequestPending: boolean;
+  tarsOtpVerifyPending: boolean;
+  tarsOtpError: ApiRequestError | null;
   /** True when the rental link expired but a payment attempt can still be queried. */
   linkExpiredDuringPayment: boolean;
   /** Returned once for a real card attempt. Memory only — never persisted. */
@@ -57,14 +57,13 @@ interface PublicRentalState {
   uploadPassport: (file: File) => Promise<boolean>;
   submitForm: (payload: PublicRentalFormPayload) => Promise<boolean>;
   accept: () => Promise<boolean>;
-  startPayment: () => Promise<boolean>;
-  /** Free Stripe-hosted card linking (no charge): redirects to Stripe setup. */
-  linkCard: () => Promise<boolean>;
-  completeCardLink: (setupSessionId: string) => Promise<boolean>;
+  startPayment: (savePaymentMethodForFutureUse?: boolean) => Promise<boolean>;
   simulateLicense: () => Promise<boolean>;
   simulatePassport: () => Promise<boolean>;
   simulatePayment: () => Promise<boolean>;
   refreshPaymentStatus: () => Promise<void>;
+  requestTarsOtp: () => Promise<boolean>;
+  verifyTarsOtp: (code: string) => Promise<boolean>;
   reset: () => void;
 }
 
@@ -81,9 +80,10 @@ const empty = {
   payPending: false,
   statusPending: false,
   paymentStatus: null as PublicPaymentStatus | null,
-  cardLinkPending: false,
-  cardLinkError: null as ApiRequestError | null,
   simulationPending: false,
+  tarsOtpRequestPending: false,
+  tarsOtpVerifyPending: false,
+  tarsOtpError: null as ApiRequestError | null,
   linkExpiredDuringPayment: false,
   statusToken: null as string | null,
 };
@@ -103,7 +103,6 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
         error: null,
         paymentStatus: null,
         linkExpiredDuringPayment: false,
-        cardLinkError: null,
       });
     } catch (error) {
       const normalized = normalizeApiError(error);
@@ -235,13 +234,15 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
     }
   },
 
-  async startPayment() {
+  async startPayment(savePaymentMethodForFutureUse = false) {
     const token = get().token;
     if (!token) return false;
     if (get().context?.payment.providerAvailable !== true) return false;
     set({ payPending: true, error: null });
     try {
-      const attempt = await startPublicRentalPayment(token, crypto.randomUUID());
+      const attempt = await startPublicRentalPayment(token, crypto.randomUUID(), {
+        savePaymentMethodForFutureUse,
+      });
       const checkoutUrl = attempt.checkoutUrl ?? null;
       set({
         payPending: false,
@@ -255,47 +256,6 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
       return true;
     } catch (error) {
       set({ payPending: false, error: normalizeApiError(error) });
-      return false;
-    }
-  },
-
-  async linkCard() {
-    const token = get().token;
-    if (!token) return false;
-    if (get().context?.payment.providerAvailable !== true) return false;
-    set({ cardLinkPending: true, cardLinkError: null, error: null });
-    try {
-      const setup = await startPublicRentalCardLink(token);
-      const checkoutUrl = setup.checkoutUrl ?? null;
-      set({ cardLinkPending: false });
-      if (checkoutUrl && typeof window !== "undefined") {
-        // Stripe-hosted setup page. It never charges; returning to
-        // ?card=linked/cancelled reloads the Backend-derived card state.
-        window.location.assign(checkoutUrl);
-        return true;
-      }
-      await get().load(token);
-      return true;
-    } catch (error) {
-      set({ cardLinkPending: false, cardLinkError: normalizeApiError(error) });
-      return false;
-    }
-  },
-
-  async completeCardLink(setupSessionId: string) {
-    const token = get().token;
-    if (!token) return false;
-    set({ cardLinkPending: true, cardLinkError: null, error: null });
-    try {
-      const result = await completePublicRentalCardLink(token, setupSessionId);
-      if (result.status !== "CONFIRMED") {
-        throw new Error("Card setup was not confirmed");
-      }
-      await get().load(token);
-      set({ cardLinkPending: false, cardLinkError: null });
-      return true;
-    } catch (error) {
-      set({ cardLinkPending: false, cardLinkError: normalizeApiError(error) });
       return false;
     }
   },
@@ -315,6 +275,42 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
       if (token) await get().load(token);
     } catch (error) {
       set({ statusPending: false, error: normalizeApiError(error) });
+    }
+  },
+
+  async requestTarsOtp() {
+    const token = get().token;
+    if (!token) return false;
+    set({ tarsOtpRequestPending: true, tarsOtpError: null });
+    try {
+      const tarsOtp = await requestPublicTarsOtp(token);
+      const context = get().context;
+      set({
+        tarsOtpRequestPending: false,
+        context: context ? { ...context, tarsOtp } : context,
+      });
+      return true;
+    } catch (error) {
+      set({ tarsOtpRequestPending: false, tarsOtpError: normalizeApiError(error) });
+      return false;
+    }
+  },
+
+  async verifyTarsOtp(code: string) {
+    const token = get().token;
+    if (!token) return false;
+    set({ tarsOtpVerifyPending: true, tarsOtpError: null });
+    try {
+      const tarsOtp = await verifyPublicTarsOtp(token, code);
+      const context = get().context;
+      set({
+        tarsOtpVerifyPending: false,
+        context: context ? { ...context, tarsOtp } : context,
+      });
+      return tarsOtp.status === "VERIFIED";
+    } catch (error) {
+      set({ tarsOtpVerifyPending: false, tarsOtpError: normalizeApiError(error) });
+      return false;
     }
   },
 

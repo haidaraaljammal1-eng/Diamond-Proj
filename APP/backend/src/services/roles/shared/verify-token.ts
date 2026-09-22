@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { AppError } from "src/lib/errors/app-error";
 import { ErrorCode } from "src/constants/error-codes";
+import { resolveEffectivePermissions } from "src/lib/rbac/effective-permissions";
 
 const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
 
@@ -56,6 +57,7 @@ export function verifyToken(fastify: FastifyInstance): void {
             role: {
               select: {
                 key: true,
+                isSystem: true,
                 permissions: { select: { permission: { select: { key: true } } } },
               },
             },
@@ -78,18 +80,16 @@ export function verifyToken(fastify: FastifyInstance): void {
       });
     }
 
-    const permissions = [
-      ...new Set(
-        user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.key)),
-      ),
-    ];
+    const roleGrants = user.roles.map((ur) => ur.role);
+    const { permissions, isSystemAdmin } = resolveEffectivePermissions(roleGrants);
 
     request.auth = {
       id: user.id,
       email: user.email,
       status: user.status,
       permissions,
-      roleKeys: user.roles.map((ur) => ur.role.key),
+      roleKeys: roleGrants.map((role) => role.key),
+      isSystemAdmin,
       sessionId: payload.sid,
     };
 

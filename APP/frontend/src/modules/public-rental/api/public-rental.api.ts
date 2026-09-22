@@ -11,11 +11,13 @@ import type {
   PublicPaymentStatus,
   PublicRentalContext,
   PublicRentalFormPayload,
+  TarsOtpPublicState,
 } from "../types/public-rental.types";
 import type {
   OfficialContractReviewPatch,
   OfficialContractView,
 } from "../types/official-contract.types";
+import { publicRequestLocaleHeaders } from "../utils/public-request-locale";
 
 const CONTRACTS_PATH = "/contracts";
 
@@ -319,12 +321,19 @@ export async function getPublicRentalPayment(
 export async function startPublicRentalPayment(
   token: string,
   idempotencyKey: string,
+  options?: { savePaymentMethodForFutureUse?: boolean },
 ): Promise<PublicPaymentAttempt> {
   const response = await apiRequest<PublicPaymentAttempt>(
     `${CONTRACTS_PATH}/rental/${token}/payment`,
     {
       method: "POST",
-      headers: { "Idempotency-Key": idempotencyKey },
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+        ...publicRequestLocaleHeaders(),
+      },
+      body: {
+        savePaymentMethodForFutureUse: Boolean(options?.savePaymentMethodForFutureUse),
+      },
       publicRequest: true,
     },
   );
@@ -339,7 +348,11 @@ export async function startPublicRentalPayment(
 export async function startPublicRentalCardLink(token: string): Promise<PublicCardSetup> {
   const response = await apiRequest<PublicCardSetup>(
     `${CONTRACTS_PATH}/rental/${token}/card-link`,
-    { method: "POST", publicRequest: true },
+    {
+      method: "POST",
+      headers: publicRequestLocaleHeaders(),
+      publicRequest: true,
+    },
   );
   return response.data;
 }
@@ -361,6 +374,29 @@ export async function getPublicPaymentStatus(
   const response = await apiRequest<PublicPaymentStatus>(
     `${CONTRACTS_PATH}/payments/status/${statusToken}`,
     { publicRequest: true },
+  );
+  return response.data;
+}
+
+export async function requestPublicTarsOtp(token: string): Promise<TarsOtpPublicState> {
+  const response = await apiRequest<TarsOtpPublicState>(
+    `${CONTRACTS_PATH}/rental/${token}/tars-otp/request`,
+    { method: "POST", publicRequest: true },
+  );
+  return response.data;
+}
+
+export async function verifyPublicTarsOtp(
+  token: string,
+  code: string,
+): Promise<TarsOtpPublicState> {
+  const response = await apiRequest<TarsOtpPublicState>(
+    `${CONTRACTS_PATH}/rental/${token}/tars-otp/verify`,
+    {
+      method: "POST",
+      publicRequest: true,
+      body: JSON.stringify({ code }),
+    },
   );
   return response.data;
 }

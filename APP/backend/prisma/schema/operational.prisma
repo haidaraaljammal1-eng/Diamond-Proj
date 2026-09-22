@@ -51,6 +51,8 @@ model Customer {
   drivingLicenseNumber String?
   drivingLicenseExpiry DateTime?
   address              String?
+  /// One Stripe Customer per Diamond customer for the current Stripe account (UNIQUE/ELITE share one account).
+  stripeCustomerId     String?              @unique
 
   experiences           PurchaseExperience[]
   callQueueItems        CallCenterQueueItem[]
@@ -110,6 +112,7 @@ model Vehicle {
   gpsLatestState            VehicleGpsLatestState?
   roadLiabilities           RoadLiability[]
   roadLiabilityObservations RoadLiabilityObservation[]
+  tarsIntegrations          TarsVehicleIntegration[]
 
   @@unique([companyId, externalId])
   @@index([companyId])

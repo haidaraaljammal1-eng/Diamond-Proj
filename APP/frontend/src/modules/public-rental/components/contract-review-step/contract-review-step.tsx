@@ -16,6 +16,7 @@ import {
 } from "../../utils/resolve-public-rental-error";
 import { OfficialContractA4 } from "../official-contract-a4/official-contract-a4";
 import { RentalLinkError } from "../rental-link-error/rental-link-error";
+import { isTarsOtpBlockingSign, TarsOtpPanel } from "../tars-otp-panel/tars-otp-panel";
 import styles from "./contract-review-step.module.css";
 
 /** A4 width in CSS px (210 mm at 96 dpi). */
@@ -26,10 +27,12 @@ interface ContractReviewStepProps {
   /** Backend rental context; supplies normalized identity. */
   context: PublicRentalContext;
   allowed: PublicRentalUiStage;
-  devPaymentSimulation: boolean;
-  cardLinkPending: boolean;
-  onLinkCard: () => void;
   onNextStage: (stage: PublicRentalUiStage) => void;
+  tarsOtpRequestPending: boolean;
+  tarsOtpVerifyPending: boolean;
+  tarsOtpError: import("@/infrastructure/api/errors").ApiRequestError | null;
+  onRequestTarsOtp: () => Promise<void>;
+  onVerifyTarsOtp: (code: string) => Promise<void>;
   /** Called after the Backend persists the legal signatures and acceptance. */
   onSigned: () => Promise<void> | void;
 }
@@ -56,10 +59,12 @@ export function ContractReviewStep({
   token,
   context,
   allowed,
-  devPaymentSimulation,
-  cardLinkPending,
-  onLinkCard,
   onNextStage,
+  tarsOtpRequestPending,
+  tarsOtpVerifyPending,
+  tarsOtpError,
+  onRequestTarsOtp,
+  onVerifyTarsOtp,
   onSigned,
 }: ContractReviewStepProps) {
   const t = useTranslations("PublicRental.review");
@@ -91,6 +96,7 @@ export function ContractReviewStep({
   const saving = contract.saveStatus === "saving";
   const signing = contract.signStatus === "signing";
   const signed = view ? !["AWAITING", "FORM"].includes(view.contract.status) : false;
+  const otpBlocksSign = isTarsOtpBlockingSign(context.tarsOtp);
   const pendingMarks = Object.fromEntries(
     Object.entries(contract.pendingSignatures).map(([slot, value]) => [slot, value === "CLEAR" ? "CLEAR" : "DRAWN"]),
   ) as Partial<Record<OfficialSignatureSlot, "DRAWN" | "CLEAR">>;
@@ -174,14 +180,18 @@ export function ContractReviewStep({
         )}
       </div>
 
+      {!signed ? (
+        <TarsOtpPanel
+          state={context.tarsOtp}
+          requestPending={tarsOtpRequestPending}
+          verifyPending={tarsOtpVerifyPending}
+          error={tarsOtpError}
+          onRequest={onRequestTarsOtp}
+          onVerify={onVerifyTarsOtp}
+        />
+      ) : null}
+
       <div className={styles.actions}>
-        {!signed && devPaymentSimulation ? <p className={styles.cardLink}>{t("devCardSetupNotice")}</p> : null}
-        {!signed && !devPaymentSimulation && context.payment.requiresCardSetupBeforeSigning ? <div className={styles.cardLink}>
-          {context.payment.cardReady && context.payment.cardBrand && context.payment.cardLast4 ? <span data-testid="review-card-linked">{t("linkedCard", { brand: context.payment.cardBrand, last4: context.payment.cardLast4 })}</span> : <>
-            <Button type="button" variant="secondary" size="sm" disabled={!context.payment.providerAvailable || cardLinkPending} loading={cardLinkPending} onClick={onLinkCard}>{t("linkCard")}</Button>
-            <span>{t("cardSetupRequired")}</span>
-          </>}
-        </div> : null}
         {errorMessage ? (
           <p className={styles.error} role="alert">{errorMessage}</p>
         ) : null}
@@ -212,7 +222,7 @@ export function ContractReviewStep({
                 size="md"
                 data-testid="contract-review-sign"
                 loading={signing}
-                disabled={!view?.permissions.canEdit || saving || signing}
+                disabled={!view?.permissions.canEdit || saving || signing || otpBlocksSign}
                 onClick={() => void handleSign()}
               >
                 {signing ? t("signing") : t("sign")}

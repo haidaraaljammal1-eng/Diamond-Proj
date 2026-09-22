@@ -184,6 +184,7 @@ model Contract {
   /// TARS integration metadata only. Contract lifecycle never depends on it.
   tarsIntegration      TarsContractIntegration?
   tarsOperations       TarsOperation[]
+  tarsOtpChallenges    TarsContractOtpChallenge[]
   roadLiabilities      RoadLiability[]
   customerCharges      RoadLiabilityCustomerCharge[]
   postCloseReceivables ContractPostCloseReceivable[]
@@ -206,6 +207,9 @@ model ContractCardPaymentMethod {
   stripePaymentMethodId String?  @unique
   cardBrand             String
   cardLast4             String
+  /// Rental payment that recorded explicit future-use authorization (if any).
+  futureUseConsentPaymentId String?  @unique
+  futureUseAuthorizedAt     DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -269,6 +273,11 @@ model ContractPayment {
   /// SHA-256 of the one-time payment-status token. Raw value is never stored.
   statusTokenHash      String?                @unique
   statusTokenExpiresAt DateTime?
+  /// Customer opted in to save the payment method for authorized future contract charges.
+  savePaymentMethodForFutureUse Boolean         @default(false)
+  futureUseConsentAt            DateTime?
+  futureUseConsentVersion       String?
+  futureUseConsentLocale          String?
   createdAt            DateTime               @default(now())
   createdByUserId      Int?
   createdBy            User?                  @relation("ContractPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
