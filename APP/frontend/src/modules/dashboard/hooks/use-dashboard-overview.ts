@@ -17,6 +17,8 @@ export function useDashboardOverview() {
   const overview = useDashboardStore((s) => s.overview);
   const status = useDashboardStore((s) => s.status);
   const error = useDashboardStore((s) => s.error);
+  const companyId = useDashboardStore((s) => s.companyId);
+  const setCompanyId = useDashboardStore((s) => s.setCompanyId);
   const load = useDashboardStore((s) => s.load);
   const refresh = useDashboardStore((s) => s.refresh);
 
@@ -38,12 +40,14 @@ export function useDashboardOverview() {
 
   useEffect(() => {
     if (isAllowed) void load();
-  }, [isAllowed, load]);
+  }, [isAllowed, companyId, load]);
 
   return {
     overview,
     status,
     error,
+    companyId,
+    setCompanyId,
     isAllowed,
     isLoading: authLoading || (isAllowed && status === "loading" && overview == null),
     isAuthLoading: authLoading,

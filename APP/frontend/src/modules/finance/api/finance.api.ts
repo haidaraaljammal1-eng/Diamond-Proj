@@ -1,16 +1,19 @@
 import { apiRequest } from "@/infrastructure/api/client";
-import type {
-  CorrectManualExpensePayload,
-  CreateManualExpensePayload,
-  FinanceAnalyticsDto,
-  FinanceSummaryDto,
-  LedgerEntryDto,
-  LedgerQuery,
-  ManualExpenseDetailDto,
-  OpenReceivableDto,
-  OpenReceivablesQuery,
-  VoidManualExpensePayload,
+import {
+  ALL_FINANCE_SCOPE,
+  type CorrectManualExpensePayload,
+  type CreateManualExpensePayload,
+  type FinanceAnalyticsDto,
+  type FinanceCompanyScopeSelection,
+  type FinanceSummaryDto,
+  type LedgerEntryDto,
+  type LedgerQuery,
+  type ManualExpenseDetailDto,
+  type OpenReceivableDto,
+  type OpenReceivablesQuery,
+  type VoidManualExpensePayload,
 } from "../types/finance.types";
+import { appendFinanceCompanyScope } from "../utils/finance-company-scope";
 import {
   FINANCE_LEDGER_PAGE_SIZE,
   FINANCE_RECEIVABLES_PAGE_SIZE,
@@ -28,9 +31,10 @@ function buildPeriodQuery(from: string, to: string): string {
 export async function getFinanceSummary(
   from: string,
   to: string,
+  scope: FinanceCompanyScopeSelection = ALL_FINANCE_SCOPE,
 ): Promise<FinanceSummaryDto> {
   const response = await apiRequest<FinanceSummaryDto>(
-    `${FINANCE_PATH}/summary?${buildPeriodQuery(from, to)}`,
+    appendFinanceCompanyScope(`${FINANCE_PATH}/summary?${buildPeriodQuery(from, to)}`, scope),
   );
   return response.data;
 }
@@ -39,9 +43,10 @@ export async function getFinanceSummary(
 export async function getFinanceAnalytics(
   from: string,
   to: string,
+  scope: FinanceCompanyScopeSelection = ALL_FINANCE_SCOPE,
 ): Promise<FinanceAnalyticsDto> {
   const response = await apiRequest<FinanceAnalyticsDto>(
-    `${FINANCE_PATH}/analytics?${buildPeriodQuery(from, to)}`,
+    appendFinanceCompanyScope(`${FINANCE_PATH}/analytics?${buildPeriodQuery(from, to)}`, scope),
   );
   return response.data;
 }
@@ -49,6 +54,7 @@ export async function getFinanceAnalytics(
 /** `GET /finance/open-receivables` (Backend permission: `finance.read`). */
 export async function getOpenReceivables(
   query: OpenReceivablesQuery,
+  scope: FinanceCompanyScopeSelection = ALL_FINANCE_SCOPE,
 ): Promise<{ data: OpenReceivableDto[]; meta: PageMeta | null }> {
   const params = new URLSearchParams({
     page: String(query.page),
@@ -59,7 +65,7 @@ export async function getOpenReceivables(
   if (query.sourceType) params.set("sourceType", query.sourceType);
 
   const response = await apiRequest<OpenReceivableDto[]>(
-    `${FINANCE_PATH}/open-receivables?${params.toString()}`,
+    appendFinanceCompanyScope(`${FINANCE_PATH}/open-receivables?${params.toString()}`, scope),
   );
   return { data: response.data, meta: parsePageMeta(response.meta) };
 }
@@ -67,6 +73,7 @@ export async function getOpenReceivables(
 /** `GET /finance/ledger` (Backend permission: `finance.read`). */
 export async function getFinanceLedger(
   query: LedgerQuery,
+  scope: FinanceCompanyScopeSelection = ALL_FINANCE_SCOPE,
 ): Promise<{ data: LedgerEntryDto[]; meta: PageMeta | null }> {
   const params = new URLSearchParams({
     page: String(query.page),
@@ -81,7 +88,7 @@ export async function getFinanceLedger(
   if (query.direction) params.set("direction", query.direction);
 
   const response = await apiRequest<LedgerEntryDto[]>(
-    `${FINANCE_PATH}/ledger?${params.toString()}`,
+    appendFinanceCompanyScope(`${FINANCE_PATH}/ledger?${params.toString()}`, scope),
   );
   return { data: response.data, meta: parsePageMeta(response.meta) };
 }

@@ -518,7 +518,8 @@
     "unique": "يونيك",
     "elite": "إيليت",
     "loading": "جارٍ تحميل الشركات…",
-    "unmatched": "بدون شركة"
+    "unmatched": "بدون شركة",
+    "general": "عام"
   },
   "Vehicles": {
     "crumbs": "الأسطول",
@@ -2077,6 +2078,11 @@
       "week": "الأسبوع",
       "month": "الشهر",
       "custom": "فترة مخصصة"
+    },
+    "scope": {
+      "label": "نطاق الشركة",
+      "all": "الكل",
+      "classification": "التصنيف"
     },
     "kpi": {
       "collected": "تم التحصيل",

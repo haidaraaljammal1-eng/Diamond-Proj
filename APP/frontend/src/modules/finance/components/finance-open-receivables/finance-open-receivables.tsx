@@ -20,6 +20,7 @@ import {
 import { isSimulatedFinanceId } from "../../utils/finance-simulation";
 import { formatFinanceAed } from "../../utils/format-finance-money";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
+import { FinanceClassification } from "../finance-classification/finance-classification";
 import styles from "./finance-open-receivables.module.css";
 
 export interface FinanceOpenReceivablesProps {
@@ -166,7 +167,10 @@ export function FinanceOpenReceivables({
                   data-source={row.sourceType}
                 >
                   <td>{receivableSourceLabel(row.sourceType, t)}</td>
-                  <td dir="ltr">{row.contractNumber}</td>
+                  <td>
+                    <div dir="ltr">{row.contractNumber}</div>
+                    <FinanceClassification company={row.company} />
+                  </td>
                   <td className={styles.hideMd}>{row.customer?.name ?? "—"}</td>
                   <td className={styles.hideMd}>{formatVehicleLabel(row.vehicle) ?? "—"}</td>
                   <td>

@@ -1,0 +1,19 @@
+.scope {
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.scope > * {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  .scope {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}

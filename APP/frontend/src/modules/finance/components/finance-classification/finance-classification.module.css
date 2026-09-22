@@ -1,0 +1,9 @@
+.general {
+  display: inline-block;
+  max-width: 100%;
+  color: var(--diamond-muted, #6f6556);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}

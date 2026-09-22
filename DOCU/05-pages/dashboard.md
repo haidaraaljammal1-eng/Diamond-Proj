@@ -112,10 +112,19 @@ number. It is metadata, not the row's primary content, and never occupies the
 trailing status slot.
 
 The company comes from the row payload; neither card fetches companies and there
-is no per-row lookup. The dashboard has **no company selector and no company
-filter** — the KPIs, weekly finance, weekly rental activity and fleet status are
-whole-business and unchanged. A dashboard company scope is deferred until the
-Finance company foundation (Phase C) exists.
+is no per-row lookup.
+
+## Company scope
+
+The header selector is **All Companies** plus the active operating companies from
+the OperatingCompany store. It does not offer GENERAL. All Companies omits
+`companyId` and is the default. UNIQUE / ELITE send `?companyId=` and the backend
+filters every company-sensitive figure: fleet by `Vehicle.companyId`, contract
+KPIs, active rentals, today's deliveries and recent contracts by
+`Contract.companyId`, weekly rental activity by the Contract on Car-Out / Car-In,
+and weekly finance by the persisted ledger company. All Companies finance still
+includes GENERAL (`companyId` null). GPS online follows the vehicle company
+inside Diamond; the GPS page is unchanged.
 
 The field is optional on both row types, so a simulated or pre-multi-company
 payload simply renders no marker.

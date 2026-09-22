@@ -23,6 +23,7 @@ import {
 } from "../../utils/finance-labels";
 import { isSimulatedFinanceId } from "../../utils/finance-simulation";
 import { formatOperationalLedgerAmount } from "../../utils/format-finance-money";
+import { FinanceClassification } from "../finance-classification/finance-classification";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
 import styles from "./finance-ledger.module.css";
 
@@ -290,7 +291,12 @@ export function FinanceLedger({
                       <td className={`${styles.colSource} ${styles.cellClip}`} data-testid="finance-ledger-source">
                         {source ? ledgerSourceLabel(source, t) : entry.kind}
                       </td>
-                      <td className={`${styles.colReference} ${styles.cellClip}`}>{referenceLabel(entry)}</td>
+                      <td className={`${styles.colReference} ${styles.cellClip}`}>
+                        <span className={styles.referenceText}>{referenceLabel(entry)}</span>
+                        <span className={styles.classification}>
+                          <FinanceClassification company={entry.company} />
+                        </span>
+                      </td>
                       <td className={`${styles.colContract} ${styles.hideMd} ${styles.cellClip}`} dir="ltr">
                         {contractVehicleLabel(entry)}
                       </td>

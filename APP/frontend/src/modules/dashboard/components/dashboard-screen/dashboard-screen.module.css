@@ -4,6 +4,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 20px;
+  min-width: 0;
 }
 
 /* Demo `.dashg` — the contracts list beside Quick Access. */
@@ -12,6 +13,7 @@
   grid-template-columns: 1.65fr 1fr;
   gap: 15px;
   align-items: stretch;
+  min-width: 0;
 }
 
 /* Wider first column — the hand-over list needs the room, the fleet split

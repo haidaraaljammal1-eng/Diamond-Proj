@@ -5,17 +5,12 @@ Diamond runs one fleet, one staff team and one workflow for two rental companies
 It never forks the Contract lifecycle, Car-Out/Car-In, payments, reservation or
 maintenance, and it never changes contract numbering.
 
-Status: **database + backend + frontend done, and rolled out to the first
-operational modules.** Vehicles and Contracts expose company identity and
-server-side filters, Add Vehicle requires an active company, the public rental
-flow shows the Contract company, and the printed A4 reads the legal names frozen
-in the authoritative official-contract view. Phase A added TARS company display,
-both Vehicle pickers, Maintenance and GPS. Phase B added road liabilities / Salik,
-dashboard row markers, and closed every Vehicle-creation path outside
-Fleet → Add Vehicle. TARS routing is company-aware but both providers remain
-unconfigured. Phase C1 gave Finance its own persisted classification and
-introduced **GENERAL** — the absence of a company, not a third one. The Finance
-frontend and the dashboard company scope are Phase C2.
+Status: **UNIQUE / ELITE is rolled out across the current operational pages.**
+Phase C2 added the Finance page scope (ALL / UNIQUE / ELITE / GENERAL) and the
+Dashboard scope (All Companies / UNIQUE / ELITE). GENERAL stays a Finance
+classification (`companyId` null), not a dashboard company and not an
+`OperatingCompany`. TARS routing is company-aware; both providers remain
+unconfigured. Invoices and daily statements are still later.
 
 Which domains carry company today, which still do not, and which phase owns each
 gap: [operating-company-rollout-audit.md](./operating-company-rollout-audit.md).
@@ -189,22 +184,9 @@ Phase 3 report (what shipped, the verification round and the open items):
 
 ## Frontend verification suite
 
-`APP/frontend/e2e/multi-company.visual.spec.ts` runs the whole company surface
-against the live stack (backend :3001, frontend :3100): ELITE projections through
-an intercepted DTO, Fleet marker + filter + Add Vehicle options, the Contracts
-company column, the signed A4 under UNIQUE, and AR/EN at 390px.
-
-Two environment rules keep it deterministic:
-
-- It signs in **once** and reuses the stored session. `/auth/login` allows five
-  attempts per minute per caller (`RATE_LIMIT_AUTH_MAX`), so a per-test login
-  made the last tests 429 and surface as *Invalid credentials*.
-- The A4 test walks the signed rows until one renders a document. Contracts
-  created before the official-contract snapshot existed (for example
-  `DE-2026-000017`, whose snapshot holds only
-  `vehicle|customer|commercial|termsVersion|contractNumber`) have no A4 at all and
-  correctly show *the signed copy is not available yet*. That is pre-existing data,
-  unrelated to company identity, and is not repaired from the frontend.
+`APP/frontend/e2e/multi-company.visual.spec.ts` covers Fleet, Contracts and the
+signed A4 in AR/EN at 390px. It signs in once (the auth route allows five
+attempts a minute) and skips pre-snapshot contracts that have no A4.
 
 ## Company marker layout rule
 
@@ -232,23 +214,10 @@ a pre-existing branding mismatch and was not used to redesign the contract.
 
 ## Current state
 
-Read this before touching anything company-related.
-
-**Done:** the database foundation (migration `20260920012059_multi_company_foundation`),
-the per-company `externalId` constraint (`20260920033000_vehicle_external_id_per_company`),
-and the full backend above. Both migrations are applied to `diamond` and `haidara_test`.
-`prisma validate`, `db:generate`, backend `typecheck` and `build` are clean, and the focused
-company suites pass.
-
-The frontend company lookup, Add Vehicle Select, Fleet and Contracts display/filter,
-official A4 names, public rental identity and custody context are implemented and
-verified in AR/EN on desktop and 390px mobile.
-
-**Known pre-existing test failures, not caused by this work and not repaired here:**
-`tests/unit/integration-catalog.test.ts` (CRM kind), `contracts.test.ts` "full lifecycle" and
-"legacy stored deposit", `official-contract.test.ts` review field-lock cases
-(`OFFICIAL_CONTRACT_FIELD_LOCKED`, committed at HEAD), and `public-rental-flow.test.ts`
-payment-provider cases, which depend on local provider env flags.
+The foundation migrations are applied. Fleet, Contracts, the official A4, public
+rental and custody show company. Pre-existing failures in `integration-catalog`,
+some contract lifecycle cases, official-contract field locks and public-rental
+payment-provider cases are unrelated and were not repaired here.
 
 ## Phase A — TARS UI, Vehicle pickers, Maintenance, GPS (done)
 
@@ -412,9 +381,8 @@ liability shows the neutral `OperatingCompanies.unmatched` label instead.
 
 `todayDeliveries` and `recentContracts` carry the compact company ref from
 `Contract.company`, selected in the same query, and render it as row metadata. The
-dashboard has **no company scope**: no selector, no `?companyId=`, and no KPI,
-weekly finance, weekly rental activity or fleet-status figure changed. A
-company-scoped dashboard waits for Phase C.
+dashboard had **no company scope** in Phase B. Phase C2 added `?companyId=`
+and the header selector; see [Phase C2](#phase-c2--finance-page-and-dashboard-scope-done).
 
 ## Phase C1 — Finance database + backend (done)
 
@@ -493,26 +461,31 @@ Receivables keep **no** company column: they derive through `Contract.company`,
 which every Contract has. GENERAL therefore returns no contract receivables, and
 no "general receivable" concept was invented to fill that space.
 
-The dashboard is unchanged: the analytics helpers take an optional scope that
-defaults to ALL, so `weeklyFinance` behaves exactly as before and Phase C2 can
-pass a scope without another backend change.
+## Phase C2 — Finance page and Dashboard scope (done)
 
-### Backfill and verification
+No new Prisma model and no new migration. The Finance page sends the C1 contract:
+nothing = ALL (UNIQUE + ELITE + GENERAL), `?companyId=` = that company,
+`?companyScope=GENERAL` = null only. Filtering stays on the server. The same
+scope is applied to summary, analytics, the ledger and open receivables, and it
+composes with the existing period and ledger filters. `company: null` renders as
+عام / GENERAL in neutral text. A real company uses `CompanyIdentity`. Add /
+Correct Expense still has no Company field; the Vehicle picker remains search UX
+and the returned DTO is what the list shows.
 
-1. `manual_expenses.companyId` from the Vehicle relation; vehicle-less rows stay null.
-2. `financial_ledger_entries.companyId` by precedence: Contract → Manual Expense →
-   Maintenance → Vehicle → null. No description parsing, no category guessing.
-3. Guards abort the migration on a vehicle-linked expense without a company, on a
-   ledger row disagreeing with its Contract or Manual Expense, and on any
-   operating company other than UNIQUE / ELITE.
+The dashboard selector is All Companies / the active operating companies. It
+never offers GENERAL. `GET /dashboard/overview?companyId=` filters fleet KPIs by
+`Vehicle.companyId`, contract KPIs, active rentals, today's deliveries and recent
+contracts by `Contract.companyId`, weekly rental activity by the Contract on
+Car-Out / Car-In, and weekly finance by `FinancialLedgerEntry.companyId`. Omitting
+`companyId` is All Companies, and that finance total still includes GENERAL.
+`companyScope=GENERAL` is 422 `DASHBOARD_COMPANY_SCOPE_UNSUPPORTED`. GPS online
+follows `Vehicle.companyId` inside Diamond's own summary; the GPS page itself is
+unchanged. Vehicle company stays write-once, Contract company stays frozen, and
+TARS routing is untouched.
 
-`npm run verify:finance-company` reproduces the evidence on any database and
-refuses to pass on a mismatch or a NOT NULL column. Applied to `diamond` (10
-manual expenses, all GENERAL; 12 ledger rows, all GENERAL) and `haidara_test`
-(173 ledger rows: 165 from Contract, 8 from maintenance, 0 unresolved).
-
-Tests: `tests/integration/finance-company.test.ts` (24) and
-`tests/unit/finance-company-scope.test.ts` (5).
+The C1 backfill is relation-only (Contract → Manual Expense → Maintenance →
+Vehicle → null) and `npm run verify:finance-company` refuses a mismatch.
+`finance-company` integration is 24 tests; `finance-company-scope` unit is 5.
 
 ## Later document work
 

@@ -4,7 +4,15 @@ import { z } from "zod";
  * Diamond home dashboard aggregate. Cross-domain sections are NULLABLE: null
  * when the viewer lacks the section's domain read permission, or when that
  * section failed to compute. `null` means "not available", never "zero".
+ *
+ * Company scope is an optional operating-company id. Omitting it is All
+ * Companies. GENERAL is not a dashboard scope — `companyScope` is parsed only
+ * so the route can reject it.
  */
+export const DashboardOverviewQuerySchema = z.object({
+  companyId: z.coerce.number().int().positive().optional(),
+  companyScope: z.string().optional(),
+});
 
 const ContractStatusSchema = z.enum([
   "AWAITING",
@@ -65,9 +73,8 @@ const FleetStatusSchema = z.object({
   service: z.number().int(),
 });
 
-/// Row-level company identity only. The dashboard KPIs stay whole-business: there
-/// is no dashboard company scope, and this ref exists so a row can show which
-/// company a Contract belongs to without one lookup per row.
+/// Compact company identity from `Contract.company`. Rows keep showing it when
+/// the overview is also filtered by `?companyId=`.
 const DashboardCompanyRefSchema = z.object({
   id: z.number().int(),
   code: z.string(),

@@ -518,7 +518,8 @@
     "unique": "UNIQUE",
     "elite": "ELITE",
     "loading": "Loading companies…",
-    "unmatched": "No company"
+    "unmatched": "No company",
+    "general": "GENERAL"
   },
   "Vehicles": {
     "crumbs": "Fleet",
@@ -2077,6 +2078,11 @@
       "week": "Week",
       "month": "Month",
       "custom": "Custom"
+    },
+    "scope": {
+      "label": "Company scope",
+      "all": "All",
+      "classification": "Classification"
     },
     "kpi": {
       "collected": "Collected",

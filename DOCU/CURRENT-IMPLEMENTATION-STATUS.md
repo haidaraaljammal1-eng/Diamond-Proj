@@ -131,13 +131,10 @@ Companies keeps unmatched rows visible. `RoadLiabilityCustomerCharge` and
 `CompanyIdentity` in the row, card and drawer, and a neutral "No company" /
 "بدون شركة" label for unmatched.
 
-**The dashboard got rows, not a scope.** `todayDeliveries` and `recentContracts`
-carry `Contract.company` and display it as row metadata; there is no dashboard
-company selector, no `?companyId=` on the overview, and no KPI, weekly finance,
-weekly rental activity or fleet-status change. A company-scoped dashboard waits
-for Phase C2 — Phase C1 only made the backend analytics helpers accept an optional
-scope that defaults to ALL, so current dashboard behaviour is byte-for-byte
-unchanged.
+**The dashboard rows from Phase B now sit under a page scope (Phase C2).**
+All Companies is the default. UNIQUE and ELITE filter fleet by
+`Vehicle.companyId` and contract figures by `Contract.companyId`. Weekly finance
+for All Companies still includes GENERAL. GENERAL is not a dashboard option.
 
 Verified on 2026-09-21 in the browser against real UNIQUE and ELITE data: all
 five liability cases (contract-UNIQUE, contract-ELITE, vehicle-only UNIQUE,
@@ -193,6 +190,19 @@ Contract, 8 from maintenance, 0 unresolved. Zero mismatches on both.
 
 Verified: `finance-company` integration 24/24, `finance-company-scope` unit 5/5,
 backend typecheck, build, touched lint and `git diff --check` all clean.
+
+### Phase C2 — Finance page and Dashboard scope
+
+No Prisma change and no new migration. Finance gained a page scope of All /
+UNIQUE / ELITE / GENERAL. ALL includes GENERAL. The Manual Expense dialog still
+has no Company field; `company: null` renders as عام / GENERAL without
+`CompanyIdentity`. The dashboard scope is All Companies / UNIQUE / ELITE only.
+`companyScope=GENERAL` on the overview is 422. Weekly finance for All Companies
+includes GENERAL ledger rows. Invoices and daily statements were not built.
+
+The current operational pages — Fleet, Contracts, Official Contract, Public
+Rental, Car-Out, Car-In, Maintenance, GPS, Violations / Salik, Imports, Finance
+and Dashboard — now carry UNIQUE / ELITE. GENERAL exists only in Finance.
 
 ## RETOUT and Car-In
 

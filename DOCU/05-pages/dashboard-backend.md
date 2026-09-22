@@ -25,19 +25,24 @@ composes existing Prisma counts and domain services. It does **not** call
 Every cross-domain field/section is **nullable** when the viewer lacks that
 domain read permission, or when the section failed. `null` never means zero.
 
-## Operating company — rows only
+## Operating company scope
 
-`company` is `{ id, code, displayName, accentColor }`, selected on the Contract in
-the same query (`COMPANY_REF_SELECT`), so no row costs a company lookup. The source
-is **`Contract.companyId`** — the historical company the contract was written
-under — never the Vehicle's current company.
+`GET /dashboard/overview?companyId=<OperatingCompany id>` filters the overview.
+Omitting it is All Companies. `companyScope` (including GENERAL) is 422
+`DASHBOARD_COMPANY_SCOPE_UNSUPPORTED` — GENERAL is a Finance classification, not
+a dashboard company.
 
-The dashboard itself has **no company scope**. There is no `?companyId=` on
-`/dashboard/overview`, and `activeRentals`, `fleetTotal`, `fleetRented`,
-`fleetAvailable`, `fleetService`, `pendingLinks`, `deliveriesToday`,
-`readyForDelivery`, `contractsTotal`, `weeklyFinance`, `weeklyRentalActivity` and
-`fleetStatus` are unchanged and count both companies together. A company-scoped
-dashboard waits for the Finance company foundation (Phase C).
+| Section | Filter |
+| ------- | ------ |
+| Fleet counts / `fleetStatus` | `Vehicle.companyId` |
+| Contract KPIs, today's deliveries, recent contracts | `Contract.companyId` |
+| Weekly rental activity | Contract company on Car-Out / Car-In |
+| Weekly finance | `FinancialLedgerEntry.companyId`. All Companies adds no predicate, so GENERAL stays in the total. A selected company excludes it. |
+| GPS online | `Vehicle.companyId` inside `gps.summary`. The GPS HTTP route is unscoped. |
+
+Row `company` is still `{ id, code, displayName, accentColor }` from
+`Contract.companyId` in the same query (`COMPANY_REF_SELECT`), never the
+Vehicle's current company.
 
 ## Composition
 

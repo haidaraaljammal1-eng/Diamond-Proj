@@ -7,9 +7,8 @@ import { companyId as testCompanyId } from "tests/helpers/operating-company";
 /**
  * Dashboard row-level operating company (Phase B3).
  *
- * The dashboard gains company on individual Contract-derived ROWS only. It has no
- * company scope of its own: the KPIs, weekly finance, weekly rental activity and
- * fleet status stay whole-business, and there is no `?companyId=` on the overview.
+ * Row-level company identity. Page scope (`?companyId=`) is covered by
+ * `dashboard-company-scope.test.ts`. An omitted filter remains the whole-business view.
  *
  * Requires RUN_INTEGRATION=true against the disposable haidara_test database.
  */
@@ -217,28 +216,11 @@ if (!RUN) {
       assert.equal(crossed!.company.code, "ELITE");
     });
 
-    test("the overview has no company scope and its KPIs are unfiltered", async () => {
+    test("an omitted company filter still returns both companies together", async () => {
       const plain = await overview();
-
-      // An unknown query parameter must not become a company filter.
-      const withParam = await app.inject({
-        method: "GET",
-        url: `/dashboard/overview?companyId=${eliteCompanyId}`,
-        headers: auth(),
-      });
-      assert.equal(withParam.statusCode, 200, withParam.body);
-      const scoped = withParam.json().data as typeof plain;
-
-      assert.deepEqual(scoped.kpis, plain.kpis, "a company parameter changed the KPIs");
-      assert.deepEqual(scoped.fleetStatus, plain.fleetStatus);
-      assert.deepEqual(scoped.weeklyFinance, plain.weeklyFinance);
-      assert.equal(
-        scoped.todayDeliveries?.length,
-        plain.todayDeliveries?.length,
-        "a company parameter filtered the delivery rows",
-      );
-
-      // Both companies are still counted together.
+      const numbers = plain.todayDeliveries?.map((row) => row.contractNumber) ?? [];
+      assert.ok(numbers.includes(`DSH-U-${run}`));
+      assert.ok(numbers.includes(`DSH-E-${run}`));
       assert.ok((plain.kpis.fleetTotal ?? 0) >= 2);
     });
   });

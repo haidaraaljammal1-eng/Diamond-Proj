@@ -4,7 +4,7 @@ Where UNIQUE / ELITE is visible today, where it is still missing, and which phas
 owns each gap. Read this with
 [operating-companies.md](./operating-companies.md), which defines the rules.
 
-Updated 2026-09-21, after **Phase C1** (Finance backend).
+Updated 2026-09-22, after **Phase C2** (Finance page + Dashboard scope).
 
 ## The two kinds of company
 
@@ -42,11 +42,14 @@ two answers to one question. That is a bug waiting for its first disagreement.
 | Vehicle pickers (Maintenance, Finance) | `Vehicle.company` on the existing card DTO | yes | `?companyId=` on `GET /vehicles` | **A** |
 | Road liabilities / Salik | derived: attributed `Contract.company`, else `Vehicle.company`, else `null` | yes (nullable) | `?companyId=` (contract-first) | **B** |
 | Imports | none — imports are match-only and never create or assign a company | n/a | n/a | **B** |
-| Dashboard rows | `Contract.company` on `todayDeliveries` / `recentContracts` | yes | none — the dashboard has no company scope | **B** |
+| Dashboard rows | `Contract.company` on `todayDeliveries` / `recentContracts` | yes | `?companyId=` on the overview | **C2** |
+| Dashboard fleet KPIs | `Vehicle.companyId` | counts | `?companyId=` | **C2** |
+| Dashboard contract KPIs / rentals / weekly rental | `Contract.companyId` | counts | `?companyId=` | **C2** |
+| Dashboard weekly finance | `FinancialLedgerEntry.companyId` | totals | omitted = ALL, includes GENERAL; `?companyId=` excludes it | **C2** |
 | Finance ledger (`FinancialLedgerEntry`) | `companyId` (persisted at write time, nullable) | yes (nullable) | `?companyId=` / `?companyScope=GENERAL` | **C1** |
 | Manual expense (`ManualExpense`) | `companyId` derived from the optional Vehicle, persisted, nullable | yes (nullable) | through the ledger and its own column | **C1** |
 | Finance receivables | derived from `Contract.company` — no column | yes (nullable) | `?companyId=`, GENERAL returns none | **C1** |
-| Finance frontend + dashboard scope | — | — | — | C2 |
+| Finance frontend | consumes the C1 scope; no expense company field | yes | server-side, not client-filtered | **C2** |
 | Invoices / daily statements | do not exist yet | — | — | later |
 | Company-scoped RBAC | does not exist — staff see every company | — | — | later |
 
@@ -78,9 +81,8 @@ statement, and no third OperatingCompany.**
 - **Receivables derive through the Contract** and gained no column. A Contract
   always has a company, so GENERAL correctly returns no contract receivables, and
   no general-receivable concept was invented to fill the gap.
-- **The dashboard is unchanged.** `sumCollected` / `sumExpenses` /
-  `movementBreakdown` take an optional scope that defaults to ALL, so
-  `weeklyFinance` behaves exactly as before while Phase C2 can pass a scope.
+- **Phase C1 left the dashboard on the ALL default.** Phase C2 now passes a
+  company scope into those same helpers. All Companies still includes GENERAL.
 
 Backfill, and what the numbers were: development `diamond` had 10 manual expenses
 (all vehicle-less → all GENERAL) and 12 ledger rows (all from those expenses →
@@ -117,7 +119,7 @@ no Finance schema change.
   guessing.
 - **Dashboard got rows, not a scope.** `todayDeliveries` and `recentContracts`
   carry `Contract.company` in the same query and render it as row metadata. No
-  header selector, no `?companyId=`, no KPI change. That waits for Phase C.
+  header selector and no KPI change. The page scope arrived in Phase C2.
 
 ### The rule Phase B exists to protect
 
@@ -165,7 +167,7 @@ relation.
   own `companyId` at write time, because a ledger row is recognized history and
   must not be re-derived from the Vehicle later. Maintenance still derives.
 - Road liabilities, imports and dashboard rows — done in **Phase B** (above).
-- Finance frontend and the dashboard company scope — **Phase C2**.
+- Finance frontend and the dashboard company scope — done in **Phase C2**.
 - Invoices, daily statements and company-scoped RBAC — later.
 
 ### Two defects the QA pass caught

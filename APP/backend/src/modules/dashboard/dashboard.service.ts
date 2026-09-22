@@ -3,6 +3,7 @@ import { env } from "src/config/env";
 import { hasPermission, type AuthUser } from "src/lib/context/auth-context";
 import { PERMISSIONS } from "src/constants/permissions";
 import { FINANCE_CURRENCY } from "src/modules/finance/finance.constants";
+import type { FinanceCompanyScope } from "src/modules/finance/finance-company-scope";
 import { createFinanceAnalyticsService } from "src/modules/finance/finance-analytics.service";
 import { createGpsService } from "src/modules/gps/gps.service";
 import { createVehiclesService } from "src/modules/vehicles/vehicles.service";
@@ -42,7 +43,21 @@ export function createDashboardService(fastify: FastifyInstance) {
   const financeAnalytics = createFinanceAnalyticsService(prisma);
   const gps = createGpsService(fastify);
 
-  async function overview(viewer: AuthUser, now = new Date()) {
+  async function overview(
+    viewer: AuthUser,
+    queryOrNow: { companyId?: number } | Date = {},
+    now = new Date(),
+  ) {
+    // Unit callers still pass the clock as the second argument. A query object
+    // is the company scope; a Date is the clock and means All Companies.
+    const query = queryOrNow instanceof Date ? {} : queryOrNow;
+    const clock = queryOrNow instanceof Date ? queryOrNow : now;
+    const companyId = query.companyId;
+    // Absent companyId is All Companies: no predicate, so weekly finance still
+    // includes GENERAL (`companyId IS NULL`). A selected company never does.
+    const contractWhere = companyId != null ? { companyId } : {};
+    const financeScope: FinanceCompanyScope =
+      companyId != null ? { kind: "COMPANY", companyId } : { kind: "ALL" };
     const runSection = async <T>(label: string, perm: string, fn: () => Promise<T>): Promise<T | null> => {
       if (!hasPermission(viewer, perm)) return null;
       try {
@@ -54,38 +69,40 @@ export function createDashboardService(fastify: FastifyInstance) {
     };
 
     const offsetMinutes = env.BUSINESS_TIMEZONE_OFFSET_MINUTES;
-    const week = resolveLastNCalendarDays(now, offsetMinutes, DASHBOARD_WEEK_DAYS);
-    const today = resolveBusinessDay(now, offsetMinutes);
+    const week = resolveLastNCalendarDays(clock, offsetMinutes, DASHBOARD_WEEK_DAYS);
+    const today = resolveBusinessDay(clock, offsetMinutes);
 
     const [fleetStatus, contractKpis, weeklyFinance, weeklyRentalActivity, todayDeliveries, recentContracts, gpsOnline] =
       await Promise.all([
-        runSection("fleetStatus", P.VEHICLES_READ, () => vehicles.activeFleetStatusCounts()),
+        runSection("fleetStatus", P.VEHICLES_READ, () => vehicles.activeFleetStatusCounts(companyId)),
         runSection("kpis", P.CONTRACTS_READ, async () => {
           const [activeRentals, pendingLinks, deliveries, readyForDelivery, contractsTotal] = await Promise.all([
-            prisma.contract.count({ where: { status: { in: [...ACTIVE_RENTAL_STATUSES] } } }),
-            prisma.contract.count({ where: { status: { in: [...PENDING_LINK_STATUSES] } } }),
+            prisma.contract.count({ where: { status: { in: [...ACTIVE_RENTAL_STATUSES] }, ...contractWhere } }),
+            prisma.contract.count({ where: { status: { in: [...PENDING_LINK_STATUSES] }, ...contractWhere } }),
             prisma.contract.count({
               where: {
                 status: { in: [...TODAY_DELIVERY_STATUSES] },
                 startAt: { gte: today.from, lt: today.to },
+                ...contractWhere,
               },
             }),
             prisma.contract.count({
               where: {
                 status: READY_FOR_DELIVERY_STATUS,
                 startAt: { gte: today.from, lt: today.to },
+                ...contractWhere,
               },
             }),
-            prisma.contract.count(),
+            prisma.contract.count({ where: contractWhere }),
           ]);
           return { activeRentals, pendingLinks, deliveriesToday: deliveries, readyForDelivery, contractsTotal };
         }),
         runSection("weeklyFinance", P.FINANCE_READ, async () => {
           const period = { from: week.from, to: week.to };
           const [collected, expenses, breakdown] = await Promise.all([
-            financeAnalytics.sumCollected(period),
-            financeAnalytics.sumExpenses(period),
-            financeAnalytics.movementBreakdown(period),
+            financeAnalytics.sumCollected(period, financeScope),
+            financeAnalytics.sumExpenses(period, financeScope),
+            financeAnalytics.movementBreakdown(period, financeScope),
           ]);
           return {
             from: week.from,
@@ -100,11 +117,17 @@ export function createDashboardService(fastify: FastifyInstance) {
         runSection("weeklyRentalActivity", P.CONTRACTS_READ, async () => {
           const [outs, ins] = await Promise.all([
             prisma.contractCarOut.findMany({
-              where: { occurredAt: { gte: week.from, lt: week.to } },
+              where: {
+                occurredAt: { gte: week.from, lt: week.to },
+                ...(companyId != null ? { contract: { companyId } } : {}),
+              },
               select: { occurredAt: true },
             }),
             prisma.contractCarIn.findMany({
-              where: { occurredAt: { gte: week.from, lt: week.to } },
+              where: {
+                occurredAt: { gte: week.from, lt: week.to },
+                ...(companyId != null ? { contract: { companyId } } : {}),
+              },
               select: { occurredAt: true },
             }),
           ]);
@@ -120,6 +143,7 @@ export function createDashboardService(fastify: FastifyInstance) {
             where: {
               status: { in: [...TODAY_DELIVERY_STATUSES] },
               startAt: { gte: today.from, lt: today.to },
+              ...contractWhere,
             },
             orderBy: { startAt: "asc" },
             select: {
@@ -151,6 +175,7 @@ export function createDashboardService(fastify: FastifyInstance) {
         }),
         runSection("recentContracts", P.CONTRACTS_READ, async () => {
           const rows = await prisma.contract.findMany({
+            where: contractWhere,
             orderBy: { createdAt: "desc" },
             take: DASHBOARD_RECENT_CONTRACTS_LIMIT,
             select: {
@@ -179,13 +204,13 @@ export function createDashboardService(fastify: FastifyInstance) {
           }));
         }),
         runSection("gpsOnline", P.GPS_READ, async () => {
-          const summary = await gps.summary();
+          const summary = await gps.summary(companyId);
           return summary.online;
         }),
       ]);
 
     return {
-      generatedAt: now,
+      generatedAt: clock,
       range: { from: week.from, to: week.to },
       today: { from: today.from, to: today.to, offsetMinutes },
       kpis: {

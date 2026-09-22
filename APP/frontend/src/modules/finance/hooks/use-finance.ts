@@ -48,6 +48,8 @@ export function useFinanceOverview() {
 
   const summary = useFinanceStore((s) => s.summary);
   const analytics = useFinanceStore((s) => s.analytics);
+  const companyScope = useFinanceStore((s) => s.companyScope);
+  const setCompanyScope = useFinanceStore((s) => s.setCompanyScope);
   const overviewQuery = useFinanceStore((s) => s.overviewQuery);
   const summaryStatus = useFinanceStore((s) => s.summaryStatus);
   const analyticsStatus = useFinanceStore((s) => s.analyticsStatus);
@@ -84,6 +86,8 @@ export function useFinanceOverview() {
       summary: displaySummary,
       analytics: displayAnalytics,
       overviewQuery,
+      companyScope,
+      setCompanyScope,
       lastUpdatedAt: overlay ? overlay.generatedAt : lastUpdatedAt,
       isSummaryLoading:
         !overlay &&
@@ -110,6 +114,7 @@ export function useFinanceOverview() {
       displaySummary,
       displayAnalytics,
       overviewQuery,
+      companyScope,
       lastUpdatedAt,
       overlay,
       summaryStatus,
@@ -118,6 +123,7 @@ export function useFinanceOverview() {
       analyticsError,
       refreshAll,
       setOverviewQuery,
+      setCompanyScope,
     ],
   );
 }

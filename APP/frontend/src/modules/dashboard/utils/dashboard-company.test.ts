@@ -2,13 +2,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
+import {
+  dashboardOverviewPath,
+  isLatestDashboardRequest,
+} from "./dashboard-company-scope.ts";
 
 /**
- * Dashboard company visibility is ROW-LEVEL ONLY (Phase B3).
+ * Dashboard company rows (Phase B) plus the page scope (Phase C2).
  *
- * Today Deliveries and Recent Contracts show `Contract.company` as metadata. The
- * dashboard itself has no company scope: no header selector, no `companyId` in the
- * overview request, and no KPI, weekly finance or fleet-status figure changes.
+ * Today Deliveries and Recent Contracts still show `Contract.company`. The page
+ * now sends an optional `companyId`. All Companies omits it. GENERAL is not a
+ * dashboard option.
  */
 
 const MODULE_DIR = path.join(import.meta.dirname, "..");
@@ -61,26 +65,39 @@ describe("Dashboard row company", () => {
   });
 });
 
-describe("Dashboard has no company scope", () => {
-  it("never sends a company filter with the overview request", () => {
-    const api = read("api/dashboard.api.ts");
-    assert.equal(api.includes("companyId"), false, "the overview request gained a company filter");
+describe("Dashboard company scope", () => {
+  it("defaults to All Companies and never sends GENERAL", () => {
+    assert.equal(dashboardOverviewPath(null), "/dashboard/overview");
+    assert.equal(dashboardOverviewPath(7), "/dashboard/overview?companyId=7");
+    const scope = read("components/dashboard-company-scope/dashboard-company-scope.tsx");
+    assert.ok(scope.includes('tCompany("all")'));
+    assert.ok(scope.includes("useOperatingCompanies"));
+    assert.equal(scope.includes("GENERAL"), false);
+    assert.equal(scope.includes("companyScope"), false);
+    assert.equal(scope.includes('"UNIQUE"'), false);
+    assert.equal(scope.includes('"ELITE"'), false);
     const store = read("stores/dashboard.store.ts");
-    assert.equal(store.includes("companyId"), false, "the dashboard store gained a company filter");
-    const hook = read("hooks/use-dashboard-overview.ts");
-    assert.equal(hook.includes("companyId"), false, "the dashboard hook gained a company filter");
+    assert.ok(store.includes("companyId: null"));
+    assert.ok(store.includes("isLatestDashboardRequest"));
   });
 
-  it("adds no company selector to the dashboard header", () => {
+  it("puts the selector on the page and keeps row markers", () => {
     const screen = read("components/dashboard-screen/dashboard-screen.tsx");
-    assert.equal(screen.includes("useOperatingCompanies"), false);
-    assert.equal(screen.includes("CompanyIdentity"), false);
-    assert.equal(screen.includes("companyId"), false);
+    assert.ok(screen.includes("DashboardCompanyScope"));
+    assert.ok(screen.includes("companyId"));
+    assert.equal(screen.includes("GENERAL"), false);
+    assert.ok(read("components/today-deliveries-card/today-deliveries-card.tsx").includes("CompanyIdentity"));
+    assert.ok(read("components/recent-contracts-card/recent-contracts-card.tsx").includes("CompanyIdentity"));
   });
 
-  it("leaves the KPI and fleet selectors company-blind", () => {
+  it("drops a stale overview response", () => {
+    assert.equal(isLatestDashboardRequest(1, 2), false);
+    assert.equal(isLatestDashboardRequest(2, 2), true);
+  });
+
+  it("leaves chart selectors as presentation of the already-scoped payload", () => {
     for (const file of ["utils/dashboard.selectors.ts", "utils/dashboard-chart-days.ts"]) {
-      assert.equal(read(file).includes("company"), false, `${file} became company-aware`);
+      assert.equal(read(file).includes("companyId"), false, `${file} started filtering locally`);
     }
   });
 });

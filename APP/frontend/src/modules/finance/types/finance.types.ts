@@ -44,6 +44,25 @@ export type LedgerDisplaySource =
 
 export type FinancePeriodPreset = "today" | "week" | "month" | "custom";
 
+/** Real operating company. GENERAL is `null`, never a synthetic company object. */
+export interface FinanceCompanyRef {
+  id: number;
+  code: string;
+  displayName: string;
+  accentColor: string;
+}
+
+/**
+ * Page-level Finance scope. ALL sends no company parameter so the backend
+ * includes UNIQUE, ELITE and GENERAL. GENERAL is not an operating company.
+ */
+export type FinanceCompanyScopeSelection =
+  | { kind: "ALL" }
+  | { kind: "COMPANY"; companyId: number }
+  | { kind: "GENERAL" };
+
+export const ALL_FINANCE_SCOPE: FinanceCompanyScopeSelection = { kind: "ALL" };
+
 export interface FinancePeriodRange {
   from: string;
   to: string;
@@ -102,6 +121,8 @@ export interface OpenReceivableDto {
   outstandingAmount: number;
   currency: string;
   obligationCreatedAt: string;
+  /** Derived from Contract.company. `null` is GENERAL and yields no contract receivables. */
+  company?: FinanceCompanyRef | null;
   paymentState: string;
   paymentPurpose: string;
   latestPaymentId: string | null;
@@ -123,6 +144,8 @@ export interface LedgerEntryDto {
     vehicleName: string | null;
     plateNumber: string | null;
   } | null;
+  /** Persisted classification. `null` is GENERAL. Absent only on older simulated rows. */
+  company?: FinanceCompanyRef | null;
   category: string | null;
   description: string | null;
   contractPaymentId: string | null;
@@ -154,6 +177,8 @@ export interface ManualExpenseDetailDto {
     vehicleName: string | null;
     plateNumber: string | null;
   } | null;
+  /** Backend-resolved. A Vehicle selects that Vehicle's company; no Vehicle is GENERAL (`null`). */
+  company?: FinanceCompanyRef | null;
   vendorName: string | null;
   receiptNumber: string | null;
   attachment: ManualExpenseAttachmentDto | null;

@@ -10,6 +10,7 @@ import {
 } from "../../utils/finance-labels";
 import { formatFinanceAed } from "../../utils/format-finance-money";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
+import { FinanceClassification } from "../finance-classification/finance-classification";
 import styles from "./expense-detail-drawer.module.css";
 
 export interface ExpenseDetailDrawerProps {
@@ -133,6 +134,12 @@ export function ExpenseDetailDrawer({
             })}
           />
           <Kv label={t("expense.description")} value={detail.description} />
+          {detail.company !== undefined ? (
+            <div className={styles.kv}>
+              <span>{t("scope.classification")}</span>
+              <FinanceClassification company={detail.company} />
+            </div>
+          ) : null}
           <Kv label={t("expense.vehicle")} value={formatVehicleLabel(detail.vehicle)} ltr />
           <Kv label={t("expense.vendor")} value={detail.vendorName} />
           <Kv label={t("expense.receiptNumber")} value={detail.receiptNumber} />

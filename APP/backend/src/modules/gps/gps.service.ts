@@ -159,11 +159,12 @@ export function createGpsService(fastify: FastifyInstance) {
     return outcome;
   }
 
-  async function summary(): Promise<GpsSummary> {
+  async function summary(companyId?: number): Promise<GpsSummary> {
     const configured = providerConfigured();
     const config = gpsConfig();
     const now = new Date();
-    const totalVehicles = await prisma.vehicle.count({ where: { isActive: true } });
+    const vehiclesWhere = { isActive: true, ...(companyId != null ? { companyId } : {}) };
+    const totalVehicles = await prisma.vehicle.count({ where: vehiclesWhere });
 
     if (!configured) {
       return {
@@ -181,7 +182,7 @@ export function createGpsService(fastify: FastifyInstance) {
     }
 
     const bindings = await prisma.vehicleGpsBinding.findMany({
-      where: { vehicle: { isActive: true } },
+      where: { vehicle: vehiclesWhere },
       select: {
         isActive: true,
         latestState: {

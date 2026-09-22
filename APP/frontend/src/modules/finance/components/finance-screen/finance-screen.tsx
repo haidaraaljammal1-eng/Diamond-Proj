@@ -25,6 +25,7 @@ import { FinanceKpis } from "../finance-kpis/finance-kpis";
 import { FinanceLedger } from "../finance-ledger/finance-ledger";
 import { FinanceOpenReceivables } from "../finance-open-receivables/finance-open-receivables";
 import { FinancePeriodControl } from "../finance-period-control/finance-period-control";
+import { FinanceScopeControl } from "../finance-scope-control/finance-scope-control";
 import styles from "./finance-screen.module.css";
 
 export function FinanceScreen() {
@@ -153,6 +154,13 @@ export function FinanceScreen() {
           <span>{t("simulation.bannerHint")}</span>
         </div>
       ) : null}
+
+      <div className={styles.scopeRow}>
+        <FinanceScopeControl
+          scope={overview.companyScope}
+          onChange={overview.setCompanyScope}
+        />
+      </div>
 
       <FinancePeriodControl
         preset={overview.overviewQuery.preset}

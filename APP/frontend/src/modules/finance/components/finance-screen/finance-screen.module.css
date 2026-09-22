@@ -1,6 +1,14 @@
 .screen {
   display: grid;
   gap: 0;
+  min-width: 0;
+}
+
+.scopeRow {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  margin-bottom: 10px;
 }
 
 .simBanner {

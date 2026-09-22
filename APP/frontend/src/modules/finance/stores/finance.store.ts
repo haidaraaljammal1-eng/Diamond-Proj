@@ -19,19 +19,22 @@ import {
   FINANCE_RECEIVABLES_PAGE_SIZE,
   type PageMeta,
 } from "../api/finance.api.types";
-import type {
-  CorrectManualExpensePayload,
-  CreateManualExpensePayload,
-  FinanceAnalyticsDto,
-  FinancePeriodPreset,
-  FinanceSummaryDto,
-  LedgerEntryDto,
-  LedgerQuery,
-  ManualExpenseDetailDto,
-  OpenReceivableDto,
-  OpenReceivablesQuery,
-  VoidManualExpensePayload,
+import {
+  ALL_FINANCE_SCOPE,
+  type CorrectManualExpensePayload,
+  type CreateManualExpensePayload,
+  type FinanceAnalyticsDto,
+  type FinanceCompanyScopeSelection,
+  type FinancePeriodPreset,
+  type FinanceSummaryDto,
+  type LedgerEntryDto,
+  type LedgerQuery,
+  type ManualExpenseDetailDto,
+  type OpenReceivableDto,
+  type OpenReceivablesQuery,
+  type VoidManualExpensePayload,
 } from "../types/finance.types";
+import { isLatestFinanceRequest } from "../utils/finance-company-scope";
 import { resolveFinancePeriodRange } from "../utils/finance-period";
 import { applySimulatedManualExpenseCorrection } from "../utils/finance-simulation";
 
@@ -44,6 +47,7 @@ export interface FinanceOverviewQuery {
 }
 
 interface FinanceState {
+  companyScope: FinanceCompanyScopeSelection;
   overviewQuery: FinanceOverviewQuery;
   summary: FinanceSummaryDto | null;
   analytics: FinanceAnalyticsDto | null;
@@ -74,6 +78,7 @@ interface FinanceState {
   correctExpenseError: ApiRequestError | null;
   loadOverview: () => Promise<void>;
   refreshAll: () => Promise<void>;
+  setCompanyScope: (scope: FinanceCompanyScopeSelection) => void;
   setOverviewQuery: (partial: Partial<FinanceOverviewQuery>) => void;
   setReceivablesQuery: (partial: Partial<OpenReceivablesQuery>) => void;
   resetReceivablesFilters: () => void;
@@ -100,6 +105,9 @@ let overviewInFlight: Promise<void> | null = null;
 let receivablesInFlight: Promise<void> | null = null;
 let ledgerInFlight: Promise<void> | null = null;
 let expenseDetailInFlight: Promise<void> | null = null;
+let overviewSeq = 0;
+let receivablesSeq = 0;
+let ledgerSeq = 0;
 
 const DEFAULT_OVERVIEW_QUERY: FinanceOverviewQuery = {
   preset: "month",
@@ -139,7 +147,9 @@ function buildLedgerQueryFromOverview(
 
 export const useFinanceStore = create<FinanceState>((set, get) => {
   async function fetchOverview(): Promise<void> {
+    const requestId = ++overviewSeq;
     if (isFinanceSimulating()) {
+      if (!isLatestFinanceRequest(requestId, overviewSeq)) return;
       set({
         summaryStatus: "ready",
         analyticsStatus: "ready",
@@ -149,7 +159,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
       });
       return;
     }
-    const { overviewQuery } = get();
+    const { overviewQuery, companyScope } = get();
     const period = resolveFinancePeriodRange(
       overviewQuery.preset,
       overviewQuery.customFrom,
@@ -163,9 +173,10 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     });
 
     const [summaryResult, analyticsResult] = await Promise.allSettled([
-      getFinanceSummary(period.from, period.to),
-      getFinanceAnalytics(period.from, period.to),
+      getFinanceSummary(period.from, period.to, companyScope),
+      getFinanceAnalytics(period.from, period.to, companyScope),
     ]);
+    if (!isLatestFinanceRequest(requestId, overviewSeq)) return;
 
     const patch: Partial<FinanceState> = {
       lastUpdatedAt: new Date().toISOString(),
@@ -193,14 +204,17 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
   }
 
   async function fetchReceivables(): Promise<void> {
+    const requestId = ++receivablesSeq;
     if (isFinanceSimulating()) {
+      if (!isLatestFinanceRequest(requestId, receivablesSeq)) return;
       set({ receivablesStatus: "ready", receivablesError: null });
       return;
     }
-    const { receivablesQuery } = get();
+    const { receivablesQuery, companyScope } = get();
     set({ receivablesStatus: "loading", receivablesError: null });
     try {
-      const result = await getOpenReceivables(receivablesQuery);
+      const result = await getOpenReceivables(receivablesQuery, companyScope);
+      if (!isLatestFinanceRequest(requestId, receivablesSeq)) return;
       set({
         receivables: result.data,
         receivablesMeta: result.meta,
@@ -208,6 +222,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
         receivablesError: null,
       });
     } catch (error) {
+      if (!isLatestFinanceRequest(requestId, receivablesSeq)) return;
       set({
         receivablesStatus: "error",
         receivablesError: normalizeApiError(error),
@@ -216,14 +231,17 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
   }
 
   async function fetchLedger(): Promise<void> {
+    const requestId = ++ledgerSeq;
     if (isFinanceSimulating()) {
+      if (!isLatestFinanceRequest(requestId, ledgerSeq)) return;
       set({ ledgerStatus: "ready", ledgerError: null });
       return;
     }
-    const { ledgerQuery } = get();
+    const { ledgerQuery, companyScope } = get();
     set({ ledgerStatus: "loading", ledgerError: null });
     try {
-      const result = await getFinanceLedger(ledgerQuery);
+      const result = await getFinanceLedger(ledgerQuery, companyScope);
+      if (!isLatestFinanceRequest(requestId, ledgerSeq)) return;
       set({
         ledger: result.data,
         ledgerMeta: result.meta,
@@ -231,6 +249,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
         ledgerError: null,
       });
     } catch (error) {
+      if (!isLatestFinanceRequest(requestId, ledgerSeq)) return;
       set({
         ledgerStatus: "error",
         ledgerError: normalizeApiError(error),
@@ -239,27 +258,27 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
   }
 
   function runOverview(): Promise<void> {
-    if (overviewInFlight) return overviewInFlight;
-    overviewInFlight = fetchOverview().finally(() => {
-      overviewInFlight = null;
+    const run = fetchOverview().finally(() => {
+      if (overviewInFlight === run) overviewInFlight = null;
     });
-    return overviewInFlight;
+    overviewInFlight = run;
+    return run;
   }
 
   function runReceivables(): Promise<void> {
-    if (receivablesInFlight) return receivablesInFlight;
-    receivablesInFlight = fetchReceivables().finally(() => {
-      receivablesInFlight = null;
+    const run = fetchReceivables().finally(() => {
+      if (receivablesInFlight === run) receivablesInFlight = null;
     });
-    return receivablesInFlight;
+    receivablesInFlight = run;
+    return run;
   }
 
   function runLedger(): Promise<void> {
-    if (ledgerInFlight) return ledgerInFlight;
-    ledgerInFlight = fetchLedger().finally(() => {
-      ledgerInFlight = null;
+    const run = fetchLedger().finally(() => {
+      if (ledgerInFlight === run) ledgerInFlight = null;
     });
-    return ledgerInFlight;
+    ledgerInFlight = run;
+    return run;
   }
 
   function refreshOverview(): Promise<void> {
@@ -275,6 +294,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
   }
 
   return {
+    companyScope: ALL_FINANCE_SCOPE,
     overviewQuery: DEFAULT_OVERVIEW_QUERY,
     summary: null,
     analytics: null,
@@ -314,6 +334,17 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
         refreshReceivables(),
         refreshLedger(),
       ]);
+    },
+
+    setCompanyScope: (companyScope) => {
+      set({
+        companyScope,
+        receivablesQuery: { ...get().receivablesQuery, page: 1 },
+        ledgerQuery: { ...get().ledgerQuery, page: 1 },
+      });
+      void refreshOverview();
+      void refreshReceivables();
+      void refreshLedger();
     },
 
     setOverviewQuery: (partial) => {

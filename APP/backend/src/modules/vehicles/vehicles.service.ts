@@ -438,10 +438,10 @@ export function createVehiclesService(fastify: FastifyInstance) {
     return toVehiclePublic(row);
   }
 
-  async function activeFleetStatusCounts() {
+  async function activeFleetStatusCounts(companyId?: number) {
     const rows = await prisma.vehicle.groupBy({
       by: ["operationalStatus"],
-      where: { isActive: true },
+      where: { isActive: true, ...(companyId != null ? { companyId } : {}) },
       _count: { _all: true },
     });
     const fleet = { available: 0, rented: 0, service: 0, total: 0 };

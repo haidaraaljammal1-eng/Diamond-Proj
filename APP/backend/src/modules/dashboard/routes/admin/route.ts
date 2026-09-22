@@ -3,8 +3,12 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { commonErrorResponses, dataResponse } from "src/lib/http/response";
 import { requireAuth } from "src/lib/context/auth-context";
 import { PERMISSIONS } from "src/constants/permissions";
+import { dashboardCompanyScopeUnsupportedError } from "src/modules/dashboard/dashboard.errors";
 import { createDashboardService } from "src/modules/dashboard/dashboard.service";
-import { DashboardOverviewSchema } from "src/modules/dashboard/dashboard.schema";
+import {
+  DashboardOverviewQuerySchema,
+  DashboardOverviewSchema,
+} from "src/modules/dashboard/dashboard.schema";
 
 const T = ["Dashboard"];
 
@@ -15,11 +19,17 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
 
   app.get("/overview", {
     schema: {
-      summary: "Home dashboard overview (last 7 days, permission-gated)",
+      summary: "Home dashboard overview (last 7 days, optional company scope)",
       operationId: "getDashboardOverview",
       tags: T,
       permissions: [PERMISSIONS.DASHBOARD_READ],
+      querystring: DashboardOverviewQuerySchema,
       response: { 200: dataResponse(DashboardOverviewSchema), ...commonErrorResponses },
     },
-  }, async (request) => ({ data: await svc.overview(requireAuth(request)) }));
+  }, async (request) => {
+    if (request.query.companyScope != null) throw dashboardCompanyScopeUnsupportedError();
+    return {
+      data: await svc.overview(requireAuth(request), { companyId: request.query.companyId }),
+    };
+  });
 }

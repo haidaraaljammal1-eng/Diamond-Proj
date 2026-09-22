@@ -16,6 +16,7 @@ import {
   selectDashboardPresentation,
   useDashboardSimulation,
 } from "../../simulation";
+import { DashboardCompanyScope } from "../dashboard-company-scope/dashboard-company-scope";
 import { ExpenseBreakdownCard } from "../expense-breakdown-card/expense-breakdown-card";
 import { FleetStatusCard } from "../fleet-status-card/fleet-status-card";
 import { QuickAccessCard } from "../quick-access-card/quick-access-card";
@@ -40,6 +41,8 @@ export function DashboardScreen() {
     canGenerateLink,
     quickAccess,
     refresh,
+    companyId,
+    setCompanyId,
   } = useDashboardOverview();
   const simulation = useDashboardSimulation();
   const registerNotificationTargets = useNotificationRecordTargets();
@@ -94,6 +97,9 @@ export function DashboardScreen() {
       subtitle={isOfficeView ? t("subtitleOwner") : t("subtitleEmployee")}
       actions={
         <>
+          {isAllowed ? (
+            <DashboardCompanyScope companyId={companyId} onChange={setCompanyId} />
+          ) : null}
           <DashboardSimulationControls />
           {canGenerateLink ? (
             <Button type="button" size="md" onClick={goVehicles}>

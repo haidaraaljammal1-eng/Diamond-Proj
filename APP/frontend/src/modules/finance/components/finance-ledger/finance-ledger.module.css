@@ -17,6 +17,19 @@
   color: var(--diamond-muted, #6f6556);
 }
 
+.referenceText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classification {
+  display: block;
+  margin-top: 4px;
+  min-width: 0;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
