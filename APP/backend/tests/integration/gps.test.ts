@@ -368,6 +368,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 900,
+          collectionMode: "ELECTRONIC",
         startAt: new Date("2026-09-10T08:00:00.000Z"),
         endAt: new Date("2026-09-13T08:00:00.000Z"),
         snapshot: { customer: { name: "GPS Tester" } },

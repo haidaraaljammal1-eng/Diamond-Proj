@@ -70,9 +70,9 @@ if (!RUN) {
     if (app) await app.close();
   });
 
-  test("listCatalog returns exactly the 5 managed integrations, creating missing rows as NOT_CONFIGURED", async () => {
+  test("listCatalog returns exactly the managed integrations, creating missing rows as NOT_CONFIGURED", async () => {
     const list = await svc.listCatalog();
-    assert.equal(list.length, 5);
+    assert.equal(list.length, INTEGRATION_CATALOG.length);
     const email = list.find((i) => i.kind === "EMAIL");
     assert.equal(email?.status, "NOT_CONFIGURED");
     assert.equal(email?.configured, false);

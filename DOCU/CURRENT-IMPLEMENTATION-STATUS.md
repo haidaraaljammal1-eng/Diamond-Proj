@@ -1,6 +1,6 @@
 ﻿# Current implementation status
 
-Updated 2026-09-22.
+Updated 2026-09-23.
 
 Diamond has two separate development simulation categories. Rental provider substitutions are Driver License OCR, Passport OCR, and successful payment; they require a real Rental Link and update the real Contract. Browser-only UI demos are Dashboard, WhatsApp, and Road Liabilities; they use local fixtures and never write Contracts, Vehicles, Payments, or any backend data. The former general rental journey simulation remains disabled. Contract Review, legal signatures, lifecycle, PAID reservation, and Car-Out use the normal persisted workflow.
 
@@ -10,7 +10,11 @@ The backend requires `NODE_ENV !== production` and `DIAMOND_SIMULATION_ENABLED=t
 
 DEV payment mode skips the external Stripe Card Setup requirement before signing. It does not create a fake card, Stripe Customer, PaymentMethod, Checkout Session, or provider id. A real legal signature is still required. The DEV payment action derives the amount server-side, records a `dev_simulation` payment source, uses the shared settlement transition, and persists `SIGNED -> PAID` idempotently. Payment does not perform Car-Out.
 
-When DEV payment mode is off, Stripe Hosted Checkout pays the rental in one trip (**STRIPE-4 foundation**). Customer identity is resolved before payment (`Customer` → `CustomerPaymentProfile` → optional `CustomerPaymentMethod` + `ContractPaymentAuthorization`). Optional future-use authorization is consent-based (`savePaymentMethodForFutureUse` + backend consent version); Checkout sets `setup_future_usage=off_session` only when consented. One Stripe Customer per Diamond Customer per TEST/LIVE profile. Webhooks ACK fast into `StripeWebhookEvent` and settle via the background worker. Callback polling is DB-first. Legacy card-link routes are gated off by default (`LEGACY_CARD_LINK_ENABLED=false`). Off-session Road Liability charging is **not** implemented. Stripe Test Mode needs `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` (Stripe CLI `whsec_...` locally). See `DOCU/05-pages/stripe4-payment-foundation.md`, `DOCU/04-api-contracts/stripe-test-mode-setup.md`, and `DOCU/05-pages/public-rental-flow.md`.
+**Customer collection modes (uncommitted):** Staff choose `ELECTRONIC` or `CASH` when generating a Rental Link (`Contract.collectionMode` + audit fields). Electronic rentals follow **STRIPE-4/5**: Hosted Checkout, consent v2 default for new authorizations, v1 remains historical and ineligible for road-liability off-session. Cash rentals skip Stripe entirely; signature triggers shared `ContractPayment` settlement (`method = CASH`) and `SIGNED → PAID`.
+
+When DEV payment mode is off, Stripe Hosted Checkout pays electronic rentals in one trip. Customer identity is resolved before payment (`Customer` → `CustomerPaymentProfile` → optional `CustomerPaymentMethod` + `ContractPaymentAuthorization`). Optional future-use authorization is consent-based (`savePaymentMethodForFutureUse` + backend consent catalog v2); Checkout sets `setup_future_usage=off_session` only when consented. One Stripe Customer per Diamond Customer per TEST/LIVE profile. Webhooks ACK fast into `StripeWebhookEvent` and settle via the background worker. Callback polling is DB-first. Legacy card-link routes are gated off by default (`LEGACY_CARD_LINK_ENABLED=false`).
+
+**STRIPE-5 Road Liability direct collection (uncommitted):** Confirmed, matched liabilities on the attributed historical Contract may be collected via Stripe off-session (v2 consent) or **cash** when the contract's collection mode is CASH. Settlement uses `RoadLiabilityCustomerCharge` + shared `ContractPayment` + ledger exactly once. Stripe Test Mode needs `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET`. See `DOCU/05-pages/stripe4-payment-foundation.md`, `DOCU/05-pages/violations-salik.md`, and `DOCU/05-pages/public-rental-flow.md`.
 
 ## Review and signing
 

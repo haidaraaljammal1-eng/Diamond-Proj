@@ -90,6 +90,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 3,
           agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
           depositAmount: 500,
           carOut: {
             create: {
@@ -594,6 +595,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 2,
           agreedAmount: 800,
+          collectionMode: "ELECTRONIC",
           depositAmount: 200,
           closedAt: new Date("2026-09-04T12:00:00.000Z"),
           carOut: {

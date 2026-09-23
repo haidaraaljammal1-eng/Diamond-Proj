@@ -9,13 +9,15 @@ import type { PrismaClient } from "@prisma/client";
  * RUN_INTEGRATION=true with a disposable test DATABASE_URL. All external keys are
  * run-suffixed to stay re-runnable.
  */
-const RUN = process.env.RUN_INTEGRATION === "true";
+import { bindIntegrationDatabase, INTEGRATION_ENABLED, uniqueFixtureName } from "tests/helpers/integration-harness";
+import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
-if (!RUN) {
-  test("operational integration skipped (set RUN_INTEGRATION=true + a test DATABASE_URL)", {
+if (!INTEGRATION_ENABLED) {
+  test("operational integration skipped (set RUN_INTEGRATION=true + TEST_DATABASE_URL)", {
     skip: true,
   });
 } else {
+  bindIntegrationDatabase();
   let app: FastifyInstance;
   let prisma: PrismaClient;
   const run = Date.now().toString(36).toUpperCase();
@@ -90,8 +92,12 @@ if (!RUN) {
     app.inject({ method: "POST", url, headers: auth(token), payload });
 
   async function createVehicle(vin: string) {
-    const res = await post("/vehicles", adminToken, { vin, modelId });
-    assert.equal(res.statusCode, 201);
+    const res = await post("/vehicles", adminToken, {
+      companyId: await testCompanyId(prisma),
+      vin,
+      modelId,
+    });
+    assert.equal(res.statusCode, 201, res.body);
     return res.json().data.id as number;
   }
   async function createCustomer(name: string, extra: Record<string, unknown> = {}) {
@@ -113,11 +119,11 @@ if (!RUN) {
     readerToken = await login(reader);
 
     const model = await prisma.vehicleModel.create({
-      data: { code: `MDL-${run}`, name: "Attrage" },
+      data: { code: `MDL-${run}`, name: uniqueFixtureName(run, "Attrage") },
     });
     modelId = model.id;
-    const branchA = await prisma.branch.create({ data: { code: `BRA-${run}`, name: "Branch A" } });
-    const branchB = await prisma.branch.create({ data: { code: `BRB-${run}`, name: "Branch B" } });
+    const branchA = await prisma.branch.create({ data: { code: `BRA-${run}`, name: uniqueFixtureName(run, "Branch A") } });
+    const branchB = await prisma.branch.create({ data: { code: `BRB-${run}`, name: uniqueFixtureName(run, "Branch B") } });
     branchAId = branchA.id;
     branchBId = branchB.id;
   });
@@ -150,57 +156,43 @@ if (!RUN) {
     assert.ok(!JSON.stringify(row?.metadata).includes("ahmed@example.com"));
   });
 
-  test("inline vehicle: creating an experience creates + links the Vehicle (Customer → Vehicle → Experience)", async () => {
+  test("inline vehicle block is refused (fleet vehicle must exist first)", async () => {
     const customerId = await createCustomer("Inline Buyer");
-    const vin = `VIN-${run}-INLINE`;
     const res = await createExperience({
       customerId,
-      vehicle: { modelId, modelYear: 2024, vin },
+      vehicle: { modelId, modelYear: 2024, vin: `VIN-${run}-INLINE` },
       branchId: branchAId,
       purchaseDate: "2026-01-15",
     });
-    assert.equal(res.statusCode, 201);
-    const exp = res.json().data;
-    assert.ok(exp.vehicleId, "experience references a freshly created vehicle");
-    const veh = await prisma.vehicle.findUnique({ where: { id: exp.vehicleId } });
-    assert.equal(veh?.vin, vin.toUpperCase());
-    assert.equal(veh?.modelId, modelId);
-    assert.equal(veh?.modelYear, 2024);
+    assert.equal(res.statusCode, 422);
+    assert.equal(res.json().error.context.fields?.[0], "vehicle");
+    const vehicleId = await createVehicle(`VIN-${run}-INLINE`);
+    const linked = await createExperience({
+      customerId,
+      vehicleId,
+      branchId: branchAId,
+      purchaseDate: "2026-01-15",
+    });
+    assert.equal(linked.statusCode, 201);
+    assert.equal(linked.json().data.vehicleId, vehicleId);
   });
 
-  test("inline vehicle: an existing VIN is rejected (409) with NO partial row", async () => {
+  test("duplicate VIN on fleet create is rejected (409) with NO partial experience row", async () => {
     const customerId = await createCustomer("Dup VIN Buyer");
     const vin = `VIN-${run}-DUP`;
-    await createVehicle(vin); // pre-existing vehicle with this VIN
+    const vehicleId = await createVehicle(vin);
     const before = await prisma.purchaseExperience.count({ where: { customerId } });
-    const res = await createExperience({
-      customerId,
-      vehicle: { modelId, vin },
-      branchId: branchAId,
+    const dup = await post("/vehicles", adminToken, {
+      companyId: await testCompanyId(prisma),
+      vin: vin.toLowerCase(),
+      modelId,
     });
-    assert.equal(res.statusCode, 409);
-    assert.equal(res.json().error.code, "CONFLICT");
+    assert.equal(dup.statusCode, 409);
+    assert.equal(dup.json().error.conflicts[0].field, "vin");
+    const exp = await createExperience({ customerId, vehicleId, branchId: branchAId });
+    assert.equal(exp.statusCode, 201);
     const after = await prisma.purchaseExperience.count({ where: { customerId } });
-    assert.equal(after, before, "no experience row created on VIN conflict");
-  });
-
-  test("inline vehicle requires vehicles.manage (403 without it)", async () => {
-    const email = `op-exp-only-${run}@example.test`;
-    const password = "exp-only-pass-123";
-    await seedUser(email, password, `op_exp_only_${run}`, [
-      "customers.read",
-      "branches.read",
-      "purchase_experiences.read",
-      "purchase_experiences.manage",
-    ]);
-    const token = await login({ email, password });
-    const customerId = await createCustomer("Perm Test Buyer");
-    const res = await post("/purchase-experiences", token, {
-      customerId,
-      vehicle: { modelId, vin: `VIN-${run}-PERM` },
-      branchId: branchAId,
-    });
-    assert.equal(res.statusCode, 403);
+    assert.equal(after, before + 1);
   });
 
   test("exactly one vehicle source: both / neither are rejected", async () => {
@@ -245,15 +237,16 @@ if (!RUN) {
     assert.equal(body.experiences.length, 2);
     assert.ok(body.experiences[0].vehicle.model.name); // aggregated model
     assert.ok(body.experiences[0].branch.name); // aggregated branch
-    // Surveys summary is now real (BE-2C); complaint/callCenter still absent.
     assert.equal("modules" in body, false);
-    assert.ok("surveys" in body);
-    assert.equal(typeof body.surveys.invitationCount, "number");
+    assert.ok("complaints" in body);
+    assert.ok("callCenter" in body);
+    assert.equal(typeof body.complaints.openComplaintsCount, "number");
   });
 
   test("duplicate VIN (normalized) is rejected (409 CONFLICT, field vin)", async () => {
     await createVehicle(`DUP-${run}`);
     const dup = await post("/vehicles", adminToken, {
+      companyId: await testCompanyId(prisma),
       vin: `dup-${run}`.toLowerCase(),
       modelId,
     });
@@ -280,9 +273,10 @@ if (!RUN) {
 
   test("selecting INACTIVE master data for a new vehicle is rejected (422 inactive_reference)", async () => {
     const deadModel = await prisma.vehicleModel.create({
-      data: { code: `DEAD-${run}`, name: "Retired", isActive: false },
+      data: { code: `DEAD-${run}`, name: uniqueFixtureName(run, "Retired"), isActive: false },
     });
     const res = await post("/vehicles", adminToken, {
+      companyId: await testCompanyId(prisma),
       vin: `VIN-${run}-DEAD`,
       modelId: deadModel.id,
     });
@@ -440,6 +434,7 @@ if (!RUN) {
 
     // Color is a first-class vehicle field on create...
     const vRes = await post("/vehicles", adminToken, {
+      companyId: await testCompanyId(prisma),
       vin: `VIN-${run}-CLR`,
       modelId,
       color: "Pearl White",

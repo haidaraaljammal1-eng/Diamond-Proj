@@ -116,6 +116,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 500,
+          collectionMode: "ELECTRONIC",
       },
     });
     const bankContract = await prisma.contract.create({
@@ -129,6 +130,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 500,
+          collectionMode: "ELECTRONIC",
       },
     });
     const manualPayment = await prisma.contractPayment.create({
@@ -190,6 +192,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
         acceptance: {
           create: {
             acceptedAt: new Date("2026-06-01T10:00:00.000Z"),
@@ -241,6 +244,103 @@ if (!RUN) {
     assert.equal(
       openAfter.json().data.some((row: { sourceId: string }) => row.sourceId === signed.id),
       false,
+    );
+  });
+
+  test("confirmed CASH rental increases Collected, ledger, analytics, net movement and company scope", async () => {
+    const eliteCompanyId = await testCompanyId(prisma, "ELITE");
+    const cashVehicle = await prisma.vehicle.create({
+      data: {
+        companyId: eliteCompanyId,
+        vehicleName: `Cash Fin ${run}`,
+        plateNumber: `CF ${run}`,
+        operationalStatus: "AVAILABLE",
+        dailyRate: 440,
+      },
+    });
+    const cashContract = await prisma.contract.create({
+      data: {
+        companyId: eliteCompanyId,
+        contractNumber: `FIN-CASH-${run}`,
+        status: "SIGNED",
+        vehicleId: cashVehicle.id,
+        customerId,
+        createdByUserId: adminUserId,
+        priceType: "DAILY",
+        rentalDays: 2,
+        agreedAmount: 880,
+        collectionMode: "CASH",
+      },
+    });
+
+    const beforeAll = await financeSummary();
+    const beforeElite = await app.inject({
+      method: "GET",
+      url: `/finance/summary?from=${period.from.toISOString()}&to=${period.to.toISOString()}&companyId=${eliteCompanyId}`,
+      headers: auth(token),
+    });
+    assert.equal(beforeElite.statusCode, 200, beforeElite.body);
+
+    const { createContractPaymentService } = await import(
+      "src/modules/contracts/payment/contract-payment.service"
+    );
+    const paymentService = createContractPaymentService(prisma);
+    const payment = await paymentService.settleCashRental(cashContract.id, adminUserId);
+    assert.equal(payment.purpose, "RENTAL");
+    assert.equal(payment.method, "CASH");
+    assert.equal(payment.status, "CONFIRMED");
+    assert.equal(payment.provider, null);
+    assert.equal(payment.amount, 880);
+
+    const ledgerCount = await prisma.financialLedgerEntry.count({
+      where: { contractPaymentId: payment.id, kind: "RENTAL_PAYMENT" },
+    });
+    assert.equal(ledgerCount, 1);
+    const ledger = await prisma.financialLedgerEntry.findFirst({
+      where: { contractPaymentId: payment.id },
+    });
+    assert.equal(ledger?.companyId, eliteCompanyId);
+    assert.notEqual(ledger?.companyId, null, "cash rental must not classify as GENERAL");
+
+    const afterAll = await financeSummary();
+    assert.equal(afterAll.collected - beforeAll.collected, 880);
+    assert.equal(afterAll.netMovement - beforeAll.netMovement, 880);
+
+    const analytics = await app.inject({
+      method: "GET",
+      url: `/finance/analytics?from=${period.from.toISOString()}&to=${period.to.toISOString()}`,
+      headers: auth(token),
+    });
+    assert.equal(analytics.statusCode, 200, analytics.body);
+    const trend = analytics.json().data.trend as Array<{ collected: number; netMovement: number }>;
+    const totalCollected = trend.reduce((sum, row) => sum + row.collected, 0);
+    assert.ok(totalCollected >= 880);
+
+    const afterElite = await app.inject({
+      method: "GET",
+      url: `/finance/summary?from=${period.from.toISOString()}&to=${period.to.toISOString()}&companyId=${eliteCompanyId}`,
+      headers: auth(token),
+    });
+    const uniqueCompanyId = await testCompanyId(prisma, "UNIQUE");
+    const beforeUnique = await app.inject({
+      method: "GET",
+      url: `/finance/summary?from=${period.from.toISOString()}&to=${period.to.toISOString()}&companyId=${uniqueCompanyId}`,
+      headers: auth(token),
+    });
+    const afterUnique = await app.inject({
+      method: "GET",
+      url: `/finance/summary?from=${period.from.toISOString()}&to=${period.to.toISOString()}&companyId=${uniqueCompanyId}`,
+      headers: auth(token),
+    });
+    assert.equal(
+      afterElite.json().data.collected - beforeElite.json().data.collected,
+      880,
+      afterElite.body,
+    );
+    assert.equal(
+      afterUnique.json().data.collected,
+      beforeUnique.json().data.collected,
+      "UNIQUE scope must not include ELITE cash rental",
     );
   });
 
@@ -478,6 +578,24 @@ if (!RUN) {
   });
 
   test("category correction moves expense breakdown to the new category only", async () => {
+    const day = String(14 + (parseInt(run.slice(-2), 36) % 10)).padStart(2, "0");
+    const recognizedAt = `2027-04-${day}T10:00:00.000Z`;
+    const periodFrom = `2027-04-${day}T00:00:00.000Z`;
+    const periodTo = `2027-04-${day}T23:59:59.999Z`;
+    const beforeAnalytics = await app.inject({
+      method: "GET",
+      url: `/finance/analytics?from=${periodFrom}&to=${periodTo}`,
+      headers: auth(token),
+    });
+    assert.equal(beforeAnalytics.statusCode, 200, beforeAnalytics.body);
+    const beforeBreakdown = beforeAnalytics.json().data.expenseBreakdown as Array<{
+      category: string;
+      amount: number;
+    }>;
+    const beforeCleaning =
+      beforeBreakdown.find((row) => row.category === "VEHICLE_CLEANING")?.amount ?? 0;
+    const beforeOperations =
+      beforeBreakdown.find((row) => row.category === "OPERATIONS")?.amount ?? 0;
     const createRes = await app.inject({
       method: "POST",
       url: "/finance/expenses",
@@ -485,8 +603,8 @@ if (!RUN) {
       payload: {
         amount: 40,
         category: "VEHICLE_CLEANING",
-        recognizedAt: "2026-08-04T10:00:00.000Z",
-        description: "Ops recode",
+        recognizedAt,
+        description: `Ops recode ${run}`,
       },
     });
     const expenseId = createRes.json().data.id as string;
@@ -497,14 +615,14 @@ if (!RUN) {
       payload: {
         amount: 40,
         category: "OPERATIONS",
-        recognizedAt: "2026-08-04T10:00:00.000Z",
-        description: "Ops recode",
+        recognizedAt,
+        description: `Ops recode ${run}`,
       },
     });
     assert.equal(corrected.statusCode, 200, corrected.body);
     const analytics = await app.inject({
       method: "GET",
-      url: `/finance/analytics?from=2026-08-04T00:00:00.000Z&to=2026-08-05T00:00:00.000Z`,
+      url: `/finance/analytics?from=${periodFrom}&to=${periodTo}`,
       headers: auth(token),
     });
     assert.equal(analytics.statusCode, 200, analytics.body);
@@ -514,11 +632,22 @@ if (!RUN) {
     }>;
     const cleaning = breakdown.find((row) => row.category === "VEHICLE_CLEANING");
     const operations = breakdown.find((row) => row.category === "OPERATIONS");
-    assert.equal(cleaning?.amount ?? 0, 0);
-    assert.equal(operations?.amount, 40);
+    assert.equal(cleaning?.amount ?? 0, beforeCleaning);
+    assert.equal(operations?.amount ?? 0, beforeOperations + 40);
   });
 
   test("date correction follows the corrected recognizedAt period", async () => {
+    const dayOffset = parseInt(run.slice(-2), 36) % 12;
+    const originalDay = String(12 + dayOffset).padStart(2, "0");
+    const correctedDay = String(10 + dayOffset).padStart(2, "0");
+    const originalAt = `2027-03-${originalDay}T10:00:00.000Z`;
+    const correctedAt = `2027-03-${correctedDay}T10:00:00.000Z`;
+    const oldPeriodUrl = `/finance/summary?from=2027-03-${originalDay}T00:00:00.000Z&to=2027-03-${originalDay}T23:59:59.999Z`;
+    const newPeriodUrl = `/finance/summary?from=2027-03-${correctedDay}T00:00:00.000Z&to=2027-03-${correctedDay}T23:59:59.999Z`;
+    const beforeOld = await app.inject({ method: "GET", url: oldPeriodUrl, headers: auth(token) });
+    const beforeNew = await app.inject({ method: "GET", url: newPeriodUrl, headers: auth(token) });
+    assert.equal(beforeOld.statusCode, 200, beforeOld.body);
+    assert.equal(beforeNew.statusCode, 200, beforeNew.body);
     const createRes = await app.inject({
       method: "POST",
       url: "/finance/expenses",
@@ -526,8 +655,8 @@ if (!RUN) {
       payload: {
         amount: 25,
         category: "OTHER",
-        recognizedAt: "2026-08-10T10:00:00.000Z",
-        description: "Date move",
+        recognizedAt: originalAt,
+        description: `Date move ${run}`,
       },
     });
     const expenseId = createRes.json().data.id as string;
@@ -538,28 +667,24 @@ if (!RUN) {
       payload: {
         amount: 25,
         category: "OTHER",
-        recognizedAt: "2026-08-08T10:00:00.000Z",
-        description: "Date move",
+        recognizedAt: correctedAt,
+        description: `Date move ${run}`,
       },
     });
     assert.equal(corrected.statusCode, 200, corrected.body);
-    const oldPeriod = await app.inject({
-      method: "GET",
-      url: `/finance/summary?from=2026-08-10T00:00:00.000Z&to=2026-08-11T00:00:00.000Z`,
-      headers: auth(token),
-    });
-    const newPeriod = await app.inject({
-      method: "GET",
-      url: `/finance/summary?from=2026-08-08T00:00:00.000Z&to=2026-08-09T00:00:00.000Z`,
-      headers: auth(token),
-    });
-    assert.equal(oldPeriod.json().data.expenses, 0);
-    assert.equal(newPeriod.json().data.expenses, 25);
+    const afterOld = await app.inject({ method: "GET", url: oldPeriodUrl, headers: auth(token) });
+    const afterNew = await app.inject({ method: "GET", url: newPeriodUrl, headers: auth(token) });
+    assert.equal(afterOld.json().data.expenses, beforeOld.json().data.expenses, afterOld.body);
+    assert.equal(
+      afterNew.json().data.expenses - beforeNew.json().data.expenses,
+      25,
+      afterNew.body,
+    );
     const ledger = await prisma.financialLedgerEntry.findMany({
       where: { manualExpenseId: expenseId, kind: "MANUAL_EXPENSE" },
     });
     assert.equal(ledger.length, 1);
-    assert.equal(ledger[0]?.occurredAt.toISOString(), "2026-08-08T10:00:00.000Z");
+    assert.equal(ledger[0]?.occurredAt.toISOString(), correctedAt);
   });
 
   test("voided expenses cannot be corrected and no-change submissions are rejected", async () => {
@@ -726,13 +851,22 @@ if (!RUN) {
   });
 
   test("outstanding breakdown total matches summary outstanding", async () => {
-    const summary = await financeSummary();
-    const analytics = await app.inject({
-      method: "GET",
-      url: `/finance/analytics?from=${period.from.toISOString()}&to=${period.to.toISOString()}`,
-      headers: auth(token),
-    });
-    const breakdownTotal = analytics.json().data.outstandingBreakdown.reduce(
+    const [summaryRes, analyticsRes] = await Promise.all([
+      app.inject({
+        method: "GET",
+        url: `/finance/summary?from=${period.from.toISOString()}&to=${period.to.toISOString()}`,
+        headers: auth(token),
+      }),
+      app.inject({
+        method: "GET",
+        url: `/finance/analytics?from=${period.from.toISOString()}&to=${period.to.toISOString()}`,
+        headers: auth(token),
+      }),
+    ]);
+    assert.equal(summaryRes.statusCode, 200, summaryRes.body);
+    assert.equal(analyticsRes.statusCode, 200, analyticsRes.body);
+    const summary = summaryRes.json().data as { outstanding: number };
+    const breakdownTotal = analyticsRes.json().data.outstandingBreakdown.reduce(
       (sum: number, row: { amount: number }) => sum + row.amount,
       0,
     );

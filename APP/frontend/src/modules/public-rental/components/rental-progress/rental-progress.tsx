@@ -11,14 +11,20 @@ interface RentalProgressProps {
   allowed: PublicRentalUiStage;
   current: PublicRentalUiStage;
   onSelect: (stage: PublicRentalUiStage) => void;
+  cashCollection?: boolean;
 }
 
-export function RentalProgress({ allowed, current, onSelect }: RentalProgressProps) {
+export function RentalProgress({
+  allowed,
+  current,
+  onSelect,
+  cashCollection = false,
+}: RentalProgressProps) {
   const t = useTranslations("PublicRental.progress");
   const labels = {
     license: t("license"),
     contract: t("contract"),
-    payment: t("payment"),
+    payment: cashCollection ? t("completion") : t("payment"),
   } as const;
 
   return (

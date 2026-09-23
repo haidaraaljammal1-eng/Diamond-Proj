@@ -37,6 +37,11 @@ const NOTIFICATION_DEFINITIONS = [
   { key: "complaint.resolved", name: "Complaint resolved", defaultChannels: ["IN_APP"] },
   { key: "complaint.closed", name: "Complaint closed", defaultChannels: ["IN_APP"] },
   { key: "complaint.reopened", name: "Complaint reopened", defaultChannels: ["IN_APP"] },
+  {
+    key: "road_liability.chargeable",
+    name: "Chargeable road liability",
+    defaultChannels: ["IN_APP"],
+  },
 ];
 
 const COMPLAINT_CATEGORIES: { code: string; nameEn: string; nameAr: string; defaultPriority: "CRITICAL" | "URGENT" | "HIGH" | "MEDIUM" | "LOW"; sortOrder: number }[] = [

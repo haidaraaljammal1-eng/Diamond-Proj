@@ -319,6 +319,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
         acceptance: {
           create: {
             acceptedAt: new Date("2026-06-01T10:00:00.000Z"),

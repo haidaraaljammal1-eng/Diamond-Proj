@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { INTEGRATION_CATALOG, getDescriptor, secretFieldKeys, configFieldKeys } from "src/modules/integrations/catalog";
 
-test("catalog has exactly the 5 managed kinds, no CRM/ERP/CUSTOM", () => {
+test("catalog has exactly the 6 managed kinds, no ERP/CUSTOM", () => {
   const kinds = INTEGRATION_CATALOG.map((d) => d.kind).sort();
-  assert.deepEqual(kinds, ["EMAIL", "POWER_BI", "SMS", "SSO_ACTIVE_DIRECTORY", "WHATSAPP"]);
+  assert.deepEqual(kinds, ["CRM", "EMAIL", "POWER_BI", "SMS", "SSO_ACTIVE_DIRECTORY", "WHATSAPP"]);
 });
 
 test("EMAIL descriptor: password is the only secret; smtp fields are config", () => {

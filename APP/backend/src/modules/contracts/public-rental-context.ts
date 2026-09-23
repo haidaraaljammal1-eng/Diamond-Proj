@@ -60,6 +60,7 @@ export function toPublicRentalContext(
     status: row.status,
     identityReady: identity.identityReady,
     paymentStatus: payment?.status ?? null,
+    collectionMode: row.collectionMode,
   });
   const verifiedNumber =
     verification?.status === "VALID" ? verification.licenseNumber : null;
@@ -73,6 +74,7 @@ export function toPublicRentalContext(
       company: row.company,
     },
     flow: { step },
+    collection: { mode: row.collectionMode },
     contract: {
       contractNumber: row.contractNumber,
       status: row.status,

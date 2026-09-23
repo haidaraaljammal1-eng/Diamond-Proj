@@ -9,6 +9,7 @@ import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
 } from "../helpers/fake-payment-provider";
+import { settlePayment, startReconciliationPayment } from "../helpers/payment-integration-helpers";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 /**
@@ -180,6 +181,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 1200,
+          collectionMode: "ELECTRONIC",
       },
     });
     assert.equal(res.statusCode, 409);
@@ -196,7 +198,7 @@ if (!RUN) {
     const reservedVehicleId = vehicleResponse.json().data.id as number;
     const otherOffer = await app.inject({
       method: "POST", url: "/contracts/offers", headers: auth(),
-      payload: { vehicleId: reservedVehicleId, priceType: "DAILY", rentalDays: 2, agreedAmount: 700 },
+      payload: { vehicleId: reservedVehicleId, priceType: "DAILY", rentalDays: 2, agreedAmount: 700 , collectionMode: "ELECTRONIC"},
     });
     assert.equal(otherOffer.statusCode, 201, otherOffer.body);
     const otherId = otherOffer.json().data.id as string;
@@ -206,6 +208,7 @@ if (!RUN) {
         companyId: await testCompanyId(prisma),
         contractNumber: `CT-RSV-PAID-${run}`, status: "PAID", vehicleId: reservedVehicleId,
         createdByUserId: actor.id, priceType: "DAILY", rentalDays: 2, agreedAmount: 800,
+          collectionMode: "ELECTRONIC",
       },
     });
     await prisma.contractPayment.create({
@@ -234,7 +237,7 @@ if (!RUN) {
 
     const blockedOffer = await app.inject({
       method: "POST", url: "/contracts/offers", headers: auth(),
-      payload: { vehicleId: reservedVehicleId, priceType: "DAILY", rentalDays: 1, agreedAmount: 500 },
+      payload: { vehicleId: reservedVehicleId, priceType: "DAILY", rentalDays: 1, agreedAmount: 500 , collectionMode: "ELECTRONIC"},
     });
     assert.equal(blockedOffer.statusCode, 409);
     assert.equal(blockedOffer.json().error.context.reason, "VEHICLE_ALREADY_RENTED");
@@ -282,7 +285,7 @@ if (!RUN) {
     assert.equal(vehicle.statusCode, 201, vehicle.body);
     const vehicleOutId = vehicle.json().data.id as number;
     const signed = await app.inject({ method: "POST", url: "/contracts/offers", headers: auth(),
-      payload: { vehicleId: vehicleOutId, priceType: "DAILY", rentalDays: 2, agreedAmount: 600 } });
+      payload: { vehicleId: vehicleOutId, priceType: "DAILY", rentalDays: 2, agreedAmount: 600 , collectionMode: "ELECTRONIC"} });
     assert.equal(signed.statusCode, 201, signed.body);
     const contractId = signed.json().data.id as string;
     await prisma.contract.update({ where: { id: contractId }, data: { status: "SIGNED" } });
@@ -363,6 +366,7 @@ if (!RUN) {
       companyId: await testCompanyId(prisma),
       contractNumber: `CT-OUT-CONFLICT-${run}`, status: "ACTIVE", vehicleId: vehicleOutId,
       createdByUserId: actor.id, priceType: "DAILY", rentalDays: 1, agreedAmount: 100,
+          collectionMode: "ELECTRONIC",
     } });
     const conflictBlocked = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-out/complete`, headers: auth() });
     assert.equal(conflictBlocked.statusCode, 409);
@@ -410,7 +414,7 @@ if (!RUN) {
     assert.equal(vehicle.statusCode, 201, vehicle.body);
     const vehicleInId = vehicle.json().data.id as number;
     const signed = await app.inject({ method: "POST", url: "/contracts/offers", headers: auth(),
-      payload: { vehicleId: vehicleInId, priceType: "DAILY", rentalDays: 2, agreedAmount: 600 } });
+      payload: { vehicleId: vehicleInId, priceType: "DAILY", rentalDays: 2, agreedAmount: 600 , collectionMode: "ELECTRONIC"} });
     assert.equal(signed.statusCode, 201, signed.body);
     const contractId = signed.json().data.id as string;
 
@@ -562,6 +566,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 3,
         agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
       },
     });
     assert.equal(offer.statusCode, 201, offer.body);
@@ -922,6 +927,10 @@ if (!RUN) {
       ["DAMAGE", "FUEL", "LATE", "OTHER"],
     );
 
+    const reconciliationPayment = await startReconciliationPayment(app, token, contractId);
+    payments.confirm();
+    await settlePayment(app, payments, reconciliationPayment.payment.id);
+
     const closed = await app.inject({
       method: "POST",
       url: `/contracts/${contractId}/close`,
@@ -953,13 +962,13 @@ if (!RUN) {
       method: "POST",
       url: "/contracts/offers",
       headers: auth(),
-      payload: { vehicleId: vid, priceType: "DAILY", rentalDays: 2, agreedAmount: 800 },
+      payload: { vehicleId: vid, priceType: "DAILY", rentalDays: 2, agreedAmount: 800 , collectionMode: "ELECTRONIC"},
     });
     const b = await app.inject({
       method: "POST",
       url: "/contracts/offers",
       headers: auth(),
-      payload: { vehicleId: vid, priceType: "DAILY", rentalDays: 2, agreedAmount: 900 },
+      payload: { vehicleId: vid, priceType: "DAILY", rentalDays: 2, agreedAmount: 900 , collectionMode: "ELECTRONIC"},
     });
     assert.equal(a.statusCode, 201);
     assert.equal(b.statusCode, 201);
@@ -1043,6 +1052,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 2,
         agreedAmount: 800,
+          collectionMode: "ELECTRONIC",
         depositAmount: 0,
         carOut: {
           create: {
@@ -1086,6 +1096,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 2,
         agreedAmount: 900,
+          collectionMode: "ELECTRONIC",
       },
     });
     await prisma.contractPayment.create({
@@ -1141,6 +1152,7 @@ if (!RUN) {
         priceType: "CUSTOM",
         rentalDays: 1,
         agreedAmount: 100,
+          collectionMode: "ELECTRONIC",
       },
     });
     const id = offer.json().data.id as string;
@@ -1174,7 +1186,12 @@ if (!RUN) {
       method: "POST",
       url: "/vehicles",
       headers: auth(),
-      payload: { companyId: await testCompanyId(prisma), vehicleName: `CT-DEP-${run}`, plateNumber: `CT D ${run}` },
+      payload: {
+        companyId: await testCompanyId(prisma),
+        vehicleName: `CT-DEP-${run}`,
+        plateNumber: `CT D ${run}`,
+        dailyRate: 400,
+      },
     });
     const vid = v.json().data.id as number;
     const actor = await prisma.user.findUniqueOrThrow({
@@ -1192,6 +1209,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 2,
         agreedAmount: 800,
+          collectionMode: "ELECTRONIC",
         depositAmount: 500,
         carOut: {
           create: {

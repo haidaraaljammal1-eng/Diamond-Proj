@@ -99,11 +99,11 @@ if (!RUN) {
     if (app) await app.close();
   });
 
-  test("GET /integrations returns exactly 5 with fields + secretHints, no secretEncrypted", async () => {
+  test("GET /integrations returns the managed catalog with fields + secretHints, no secretEncrypted", async () => {
     const res = await app.inject({ method: "GET", url: "/integrations", headers: auth(managerT) });
     assert.equal(res.statusCode, 200);
     const data = res.json().data as { fields: unknown[] }[];
-    assert.equal(data.length, 5);
+    assert.equal(data.length, INTEGRATION_CATALOG.length);
     assert.equal(res.payload.includes("secretEncrypted"), false);
     assert.ok(data.every((d) => Array.isArray(d.fields)));
   });
@@ -132,19 +132,19 @@ if (!RUN) {
     assert.equal(res.statusCode, 403);
   });
 
-  test("pre-existing CRM/ERP rows are never returned by GET /integrations", async () => {
+  test("pre-existing non-catalog CRM rows do not replace the managed CRM catalog entry", async () => {
     await prisma.integrationConnection.create({
       data: { kind: "CRM", name: "Legacy CRM", status: "CONFIGURED", configured: true, enabled: true },
     });
     try {
       const res = await app.inject({ method: "GET", url: "/integrations", headers: auth(managerT) });
       assert.equal(res.statusCode, 200);
-      const data = res.json().data as { kind: string }[];
-      const kinds = data.map((d) => d.kind);
-      assert.equal(kinds.includes("CRM"), false);
-      assert.equal(data.length, 5);
+      const data = res.json().data as { kind: string; name: string }[];
+      assert.equal(data.length, INTEGRATION_CATALOG.length);
+      const managedCrm = data.find((row) => row.kind === "CRM");
+      assert.equal(managedCrm?.name, "CRM");
+      assert.equal(data.some((row) => row.name === "Legacy CRM"), false);
     } finally {
-      // Cleanup: never leave the stray CRM row behind for other suites.
       await prisma.integrationConnection.deleteMany({ where: { kind: "CRM", name: "Legacy CRM" } });
     }
   });

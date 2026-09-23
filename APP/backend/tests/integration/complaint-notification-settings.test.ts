@@ -5,11 +5,12 @@ import type { PrismaClient } from "@prisma/client";
 
 // BE-4 close-out: complaint notification settings (event × channel preferences),
 // optimistic-locked, provider-availability honest. Requires complaint_notifications.manage.
-const RUN = process.env.RUN_INTEGRATION === "true";
+import { bindIntegrationDatabase, INTEGRATION_ENABLED } from "tests/helpers/integration-harness";
 
-if (!RUN) {
-  test("complaint notification-settings integration skipped (set RUN_INTEGRATION=true)", { skip: true }, () => {});
+if (!INTEGRATION_ENABLED) {
+  test("complaint notification-settings integration skipped (set RUN_INTEGRATION=true + TEST_DATABASE_URL)", { skip: true }, () => {});
 } else {
+  bindIntegrationDatabase();
   let app: FastifyInstance;
   let prisma: PrismaClient;
   const run = Date.now().toString(36).toUpperCase() + "NS";
@@ -31,6 +32,15 @@ if (!RUN) {
   }
   const auth = (t: string) => ({ authorization: `Bearer ${t}` });
 
+  async function currentRevision(eventKey: string, channel: string): Promise<number> {
+    const list = await app.inject({ method: "GET", url: "/complaint-notification-settings", headers: auth(manageT) });
+    assert.equal(list.statusCode, 200, list.body);
+    const cell = list.json().data.settings.find(
+      (s: { eventKey: string; channel: string }) => s.eventKey === eventKey && s.channel === channel,
+    );
+    return cell?.revision ?? 0;
+  }
+
   before(async () => {
     const { buildApp } = await import("src/app");
     app = await buildApp();
@@ -46,7 +56,7 @@ if (!RUN) {
     const res = await app.inject({ method: "GET", url: "/complaint-notification-settings", headers: auth(manageT) });
     assert.equal(res.statusCode, 200, res.body);
     const body = res.json().data;
-    assert.equal(body.settings.length, 44, "11 events × 4 channels");
+    assert.equal(body.settings.length, 40, "10 events × 4 channels");
     const channelAvail = Object.fromEntries(body.channels.map((c: { channel: string; availability: string }) => [c.channel, c.availability]));
     assert.equal(channelAvail.IN_APP, "CONFIGURED", "in-app always delivers");
     assert.equal(channelAvail.WHATSAPP, "NOT_CONFIGURED", "no whatsapp provider in this build");
@@ -60,16 +70,17 @@ if (!RUN) {
   });
 
   test("update toggles a cell + persists (optimistic revision advances)", async () => {
-    const put = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.created", headers: auth(manageT), payload: { channel: "EMAIL", enabled: true, revision: 0 } });
+    const revision = await currentRevision("complaint.created", "EMAIL");
+    const put = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.created", headers: auth(manageT), payload: { channel: "EMAIL", enabled: true, revision } });
     assert.equal(put.statusCode, 200, put.body);
     assert.equal(put.json().data.enabled, true);
-    assert.equal(put.json().data.revision, 1, "revision advanced");
+    assert.equal(put.json().data.revision, revision + 1, "revision advanced");
     assert.equal(put.json().data.availability, "NOT_CONFIGURED", "enabling email never claims it is connected");
     // Persisted on next read.
     const list = await app.inject({ method: "GET", url: "/complaint-notification-settings", headers: auth(manageT) });
     const cell = list.json().data.settings.find((s: { eventKey: string; channel: string }) => s.eventKey === "complaint.created" && s.channel === "EMAIL");
     assert.equal(cell.enabled, true);
-    assert.equal(cell.revision, 1);
+    assert.equal(cell.revision, revision + 1);
   });
 
   test("write is permission-gated (403 without manage)", async () => {
@@ -89,17 +100,17 @@ if (!RUN) {
   });
 
   test("stale revision yields a guided conflict (409)", async () => {
-    // First establish a known revision on a fresh cell.
-    const first = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.assigned", headers: auth(manageT), payload: { channel: "IN_APP", enabled: false, revision: 0 } });
+    const baseRevision = await currentRevision("complaint.assigned", "IN_APP");
+    const first = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.assigned", headers: auth(manageT), payload: { channel: "IN_APP", enabled: false, revision: baseRevision } });
     assert.equal(first.statusCode, 200, first.body);
-    // Now submit against the stale revision 0 again.
-    const stale = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.assigned", headers: auth(manageT), payload: { channel: "IN_APP", enabled: true, revision: 0 } });
+    const stale = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.assigned", headers: auth(manageT), payload: { channel: "IN_APP", enabled: true, revision: baseRevision } });
     assert.equal(stale.statusCode, 409, stale.body);
     assert.equal(stale.json().error.context.reason, "complaint_notification_setting_conflict");
   });
 
   test("enabling a NOT_CONFIGURED channel stays honest (availability unchanged)", async () => {
-    const put = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.escalated", headers: auth(manageT), payload: { channel: "WHATSAPP", enabled: true, revision: 0 } });
+    const revision = await currentRevision("complaint.escalated", "WHATSAPP");
+    const put = await app.inject({ method: "PUT", url: "/complaint-notification-settings/complaint.escalated", headers: auth(manageT), payload: { channel: "WHATSAPP", enabled: true, revision } });
     assert.equal(put.statusCode, 200, put.body);
     assert.equal(put.json().data.enabled, true, "preference stored");
     assert.equal(put.json().data.availability, "NOT_CONFIGURED", "provider readiness is never faked to CONFIGURED");

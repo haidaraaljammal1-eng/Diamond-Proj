@@ -127,7 +127,7 @@ export const RoadLiabilityListItemSchema = z.object({
   reconciliationLineId: z.string().uuid().nullable(),
   customerCharge: z.object({
     confirmed: z.boolean(),
-    destination: z.enum(["RECONCILIATION", "POST_CLOSE_RECEIVABLE"]).nullable(),
+    destination: z.enum(["RECONCILIATION", "POST_CLOSE_RECEIVABLE", "DIRECT_COLLECTION"]).nullable(),
   }),
 });
 export type RoadLiabilityListItem = z.infer<typeof RoadLiabilityListItemSchema>;
@@ -199,6 +199,7 @@ export type ListRoadLiabilitiesQuery = z.infer<typeof ListRoadLiabilitiesQuerySc
 export const RoadLiabilityCustomerChargeDestinationSchema = z.enum([
   "RECONCILIATION",
   "POST_CLOSE_RECEIVABLE",
+  "DIRECT_COLLECTION",
 ]);
 
 export const RoadLiabilityCustomerChargeStateSchema = z.enum([

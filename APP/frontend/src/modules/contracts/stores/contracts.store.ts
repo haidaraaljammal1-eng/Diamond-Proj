@@ -324,7 +324,12 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         if (generateLink) {
           try {
             const issued = await generateRentalLinkRequest(contract.id);
-            set({ issuedLink: toIssuedLink(issued, locale) });
+            set({
+              issuedLink: {
+                ...toIssuedLink(issued, locale),
+                collectionMode: payload.collectionMode,
+              },
+            });
           } catch (linkError) {
             set({ rentalLink: { pending: false, error: normalizeApiError(linkError) } });
           }

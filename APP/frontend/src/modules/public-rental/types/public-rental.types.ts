@@ -115,9 +115,12 @@ export interface TarsOtpPublicState {
   attemptsRemaining: number | null;
 }
 
+export type RentalCollectionMode = "ELECTRONIC" | "CASH";
+
 export interface PublicRentalContext {
   office: { displayName: string; company: PublicOperatingCompanyDto };
   flow: { step: PublicRentalFlowStep };
+  collection: { mode: RentalCollectionMode | null };
   contract: {
     contractNumber: string;
     status: ContractStatus;

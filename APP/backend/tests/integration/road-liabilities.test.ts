@@ -143,6 +143,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 5,
           agreedAmount: 500,
+          collectionMode: "ELECTRONIC",
           startAt: input.startAt ?? null,
           endAt: input.endAt ?? null,
           carOut: {
@@ -532,6 +533,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 3,
           agreedAmount: 300,
+          collectionMode: "ELECTRONIC",
           startAt: new Date("2026-07-20T00:00:00.000Z"),
           endAt: new Date("2026-07-25T00:00:00.000Z"),
         },
@@ -571,6 +573,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 5,
           agreedAmount: 500,
+          collectionMode: "ELECTRONIC",
           carOut: {
             create: {
               performedByUserId: adminUserId,
@@ -592,6 +595,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 5,
           agreedAmount: 500,
+          collectionMode: "ELECTRONIC",
           carOut: {
             create: {
               performedByUserId: adminUserId,
@@ -1035,6 +1039,7 @@ if (!RUN) {
           priceType: "DAILY" as const,
           rentalDays: 3,
           agreedAmount: 300,
+          collectionMode: "ELECTRONIC" as const,
         };
         uniqueContractId = (
           await prisma.contract.create({

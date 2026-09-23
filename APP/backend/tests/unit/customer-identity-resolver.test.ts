@@ -26,11 +26,13 @@ describe("extractStrongIdentity", () => {
 });
 
 describe("resolveCustomerIdFromIdentity policy (documented semantics)", () => {
-  it("requires at least one strong identifier", () => {
-    assert.throws(
-      () => contractError.customerIdentityAmbiguous(),
-      (error: Error & { code?: string }) => error.code === "CUSTOMER_IDENTITY_AMBIGUOUS",
-    );
+  it("customerIdentityAmbiguous uses a stable domain reason", () => {
+    const error = contractError.customerIdentityAmbiguous() as Error & {
+      code?: string;
+      context?: { reason?: string };
+    };
+    assert.equal(error.code, "CONFLICT");
+    assert.equal(error.context?.reason, "CUSTOMER_IDENTITY_AMBIGUOUS");
   });
 
   it("union-of-non-empty candidate sets must agree on a single customer id", () => {

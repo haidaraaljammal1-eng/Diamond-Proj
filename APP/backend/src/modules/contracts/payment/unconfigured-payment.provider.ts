@@ -28,6 +28,19 @@ export class UnconfiguredPaymentProvider implements PaymentProvider {
     return { status: "UNKNOWN" };
   }
 
+  async getPaymentIntentStatus(_providerReference: string) {
+    return { status: "UNKNOWN" as const };
+  }
+
+  async createOffSessionPaymentIntent() {
+    return {
+      providerReference: "",
+      providerStatus: "failed",
+      status: "FAILED" as const,
+      requiresAction: false,
+    };
+  }
+
   async getPaymentSessionPaymentMethod() {
     return null;
   }

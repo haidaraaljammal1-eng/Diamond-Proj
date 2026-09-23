@@ -135,6 +135,30 @@ export interface WebhookVerifyFailure {
 
 export type WebhookVerifyResult = WebhookVerifySuccess | WebhookVerifyFailure;
 
+export interface CreateOffSessionPaymentInput {
+  idempotencyKey: string;
+  paymentId: string;
+  contractId: string;
+  purpose: ContractPaymentPurpose;
+  targetId: string;
+  amount: number;
+  currency: string;
+  stripeCustomerId: string;
+  stripePaymentMethodId: string;
+  companyCode?: string | null;
+}
+
+export interface OffSessionPaymentResult {
+  providerReference: string;
+  providerStatus: string;
+  status: ProviderPaymentStatus;
+  failureCode?: string | null;
+  declineCode?: string | null;
+  requiresAction: boolean;
+  amountMinor?: number;
+  currency?: string;
+}
+
 export interface PaymentProvider {
   readonly name: string;
   readonly configured: boolean;
@@ -142,6 +166,8 @@ export interface PaymentProvider {
   createCardSetupSession(input: CreateCardSetupInput): Promise<CreateCardSetupResult>;
   getCardSetupSession(providerReference: string): Promise<CardSetupSessionResult>;
   getPaymentStatus(providerReference: string): Promise<PaymentStatusResult>;
+  getPaymentIntentStatus(providerReference: string): Promise<PaymentStatusResult & { failureCode?: string | null; declineCode?: string | null; requiresAction?: boolean }>;
+  createOffSessionPaymentIntent(input: CreateOffSessionPaymentInput): Promise<OffSessionPaymentResult>;
   getPaymentSessionPaymentMethod(providerReference: string): Promise<PaymentSessionPaymentMethod | null>;
   verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult>;
 }

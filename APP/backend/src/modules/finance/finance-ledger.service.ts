@@ -17,6 +17,15 @@ export function isTrustedStripeCollection(
   );
 }
 
+/** Trusted customer collections: Stripe CARD confirmations and explicit CASH collections. */
+export function isTrustedCustomerCollection(
+  payment: Pick<ContractPayment, "status" | "method" | "provider" | "confirmedAt">,
+): boolean {
+  if (payment.status !== "CONFIRMED" || payment.confirmedAt == null) return false;
+  if (payment.method === "CASH") return payment.provider == null;
+  return isTrustedStripeCollection(payment);
+}
+
 /**
  * Every ledger entry persists its company AT WRITE TIME, from its own
  * authoritative source: Contract-based movements use the Contract's frozen
@@ -50,8 +59,8 @@ async function insertLedgerEntry(
   }
 }
 
-export async function recordStripePaymentLedger(tx: Tx, payment: ContractPayment): Promise<void> {
-  if (!isTrustedStripeCollection(payment)) return;
+export async function recordTrustedCollectionLedger(tx: Tx, payment: ContractPayment): Promise<void> {
+  if (!isTrustedCustomerCollection(payment)) return;
   const kind = PAYMENT_PURPOSE_TO_LEDGER_KIND[payment.purpose];
   const contract = await tx.contract.findUnique({
     where: { id: payment.contractId },
@@ -74,6 +83,11 @@ export async function recordStripePaymentLedger(tx: Tx, payment: ContractPayment
     vehicleId: contract.vehicleId,
     contractPaymentId: payment.id,
   });
+}
+
+/** @deprecated Use recordTrustedCollectionLedger — kept for Stripe-specific call sites. */
+export async function recordStripePaymentLedger(tx: Tx, payment: ContractPayment): Promise<void> {
+  return recordTrustedCollectionLedger(tx, payment);
 }
 
 export async function recordMaintenanceExpenseLedger(tx: Tx, maintenanceOrderId: number): Promise<void> {
@@ -152,6 +166,38 @@ export async function reprojectManualExpenseLedger(
   if (result.count === 0) {
     await recordManualExpenseLedger(tx, expense);
   }
+}
+
+export async function recordRoadLiabilityPaymentLedger(tx: Tx, payment: ContractPayment): Promise<void> {
+  if (
+    payment.purpose !== "ROAD_LIABILITY" ||
+    !isTrustedCustomerCollection(payment)
+  ) {
+    return;
+  }
+  const charge = await tx.roadLiabilityCustomerCharge.findUnique({
+    where: { id: payment.targetId },
+    include: {
+      roadLiability: { select: { id: true } },
+      contract: { select: { customerId: true, vehicleId: true, companyId: true } },
+    },
+  });
+  if (!charge) return;
+
+  await insertLedgerEntry(tx, {
+    kind: "ROAD_LIABILITY_PAYMENT",
+    sourceType: "CONTRACT_PAYMENT",
+    sourceId: payment.id,
+    dedupeKey: `road-liability:${charge.roadLiabilityId}`,
+    amount: payment.amount,
+    currency: payment.currency,
+    occurredAt: payment.confirmedAt!,
+    companyId: charge.contract.companyId,
+    contractId: charge.contractId,
+    customerId: charge.contract.customerId,
+    vehicleId: charge.contract.vehicleId,
+    contractPaymentId: payment.id,
+  });
 }
 
 export async function recordManualExpenseReversalLedger(

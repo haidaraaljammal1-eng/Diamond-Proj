@@ -34,7 +34,7 @@ if (!RUN) {
     let adminUserId = 0;
     let vehicleId = 0;
     let customerId = 0;
-    let payments = installPaymentProvider(run);
+    let payments: ReturnType<typeof installPaymentProvider>;
     let seq = 0;
 
     const FINANCE_PERMS = [
@@ -72,6 +72,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 5,
           agreedAmount: 1200,
+          collectionMode: "ELECTRONIC",
           activatedAt: new Date("2026-06-01T10:00:00.000Z"),
         },
       });
@@ -107,6 +108,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 2,
           agreedAmount: 800,
+          collectionMode: "ELECTRONIC",
           closedAt: new Date("2026-09-04T12:00:00.000Z"),
           carOut: {
             create: {
@@ -173,6 +175,7 @@ if (!RUN) {
       const { buildApp } = await import("src/app");
       app = await buildApp();
       prisma = app.prisma;
+      payments = installPaymentProvider(run);
       adminUserId = await seedPaymentUser(
         prisma,
         `or-admin-${run}@example.test`,
@@ -198,6 +201,10 @@ if (!RUN) {
     });
 
     after(async () => {
+      const { setPaymentProviderForTests } = await import(
+        "src/modules/contracts/payment/payment-provider.factory"
+      );
+      setPaymentProviderForTests(undefined);
       await app.close();
     });
 
@@ -222,6 +229,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 3,
           agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
           acceptance: {
             create: {
               acceptedAt: new Date("2026-06-01T10:00:00.000Z"),
@@ -313,7 +321,9 @@ if (!RUN) {
         (sum: number, row: { amount: number }) => sum + row.amount,
         0,
       );
-      assert.equal(breakdownTotal, summary.json().data.outstanding);
+      const expectedOutstanding = 1500 + 300 + 570 + 120;
+      assert.equal(summary.json().data.outstanding, expectedOutstanding);
+      assert.equal(breakdownTotal, expectedOutstanding);
 
       const { createContractPaymentService } = await import(
         "src/modules/contracts/payment/contract-payment.service"
@@ -348,13 +358,8 @@ if (!RUN) {
       assert.equal(pcStarted.statusCode, 200, pcStarted.body);
       const pcPaymentId = pcStarted.json().data.payment.id as string;
       const pcStatusToken = pcStarted.json().data.statusToken as string;
-      const pcEvent = payments.buildWebhookEvent({ paymentId: pcPaymentId });
       payments.confirm();
-      const [webhookRes, pollRes] = await Promise.all([
-        sendTestStripeWebhook(app, pcEvent),
-        app.inject({ method: "GET", url: `/contracts/payments/status/${pcStatusToken}` }),
-      ]);
-      assert.ok(webhookRes.statusCode === 200 || pollRes.statusCode === 200);
+      await settlePayment(app, payments, pcPaymentId);
 
       const gone = async (
         sourceType: string,

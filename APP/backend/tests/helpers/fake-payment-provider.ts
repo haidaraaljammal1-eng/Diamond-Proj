@@ -47,12 +47,23 @@ export function createFakePaymentProvider(run: string) {
   let n = 0;
   let eventSeq = 0;
   let getPaymentStatusCalls = 0;
+  let offSessionCallCount = 0;
+  let checkoutCallCount = 0;
+  type OffSessionBehavior =
+    | { mode: "confirm" }
+    | { mode: "processing" }
+    | { mode: "failed"; failureCode?: string };
+  let offSessionBehavior: OffSessionBehavior = { mode: "confirm" };
 
   const provider: PaymentProvider & {
     lastRef: string | null;
     lastPaymentId: string | null;
     getPaymentStatusCallCount: () => number;
     resetPaymentStatusCallCount: () => void;
+    getOffSessionCallCount: () => number;
+    resetOffSessionCallCount: () => void;
+    setOffSessionBehavior: (behavior: OffSessionBehavior) => void;
+    resetOffSessionBehavior: () => void;
   } = {
     name: "stripe",
     configured: true,
@@ -61,6 +72,7 @@ export function createFakePaymentProvider(run: string) {
     async createCheckoutSession(input: CreateCheckoutInput) {
       const cached = idempotencyResults.get(input.idempotencyKey);
       if (cached) return cached;
+      checkoutCallCount += 1;
       n += 1;
       const ref = `cs_test_${run}_${input.checkoutAttemptId.replace(/-/g, "").slice(0, 16)}`;
       statuses.set(ref, "PROCESSING");
@@ -108,6 +120,16 @@ export function createFakePaymentProvider(run: string) {
     resetPaymentStatusCallCount: () => {
       getPaymentStatusCalls = 0;
     },
+    getOffSessionCallCount: () => offSessionCallCount,
+    resetOffSessionCallCount: () => {
+      offSessionCallCount = 0;
+    },
+    setOffSessionBehavior: (behavior: OffSessionBehavior) => {
+      offSessionBehavior = behavior;
+    },
+    resetOffSessionBehavior: () => {
+      offSessionBehavior = { mode: "confirm" };
+    },
     async getPaymentStatus(ref: string) {
       getPaymentStatusCalls += 1;
       const input = sessions.get(ref);
@@ -115,6 +137,54 @@ export function createFakePaymentProvider(run: string) {
         status: statuses.get(ref) ?? "UNKNOWN",
         amountMinor: input ? input.amount * 100 : undefined,
         currency: input?.currency,
+      };
+    },
+    async getPaymentIntentStatus(ref: string) {
+      return { status: statuses.get(ref) ?? "UNKNOWN", providerReference: ref };
+    },
+    async createOffSessionPaymentIntent(input: import("src/modules/contracts/payment/payment-provider.types").CreateOffSessionPaymentInput) {
+      offSessionCallCount += 1;
+      const ref = `pi_test_${run}_${input.paymentId.slice(0, 8)}`;
+      if (offSessionBehavior.mode === "processing") {
+        statuses.set(ref, "PROCESSING");
+        paymentRefs.set(input.paymentId, ref);
+        provider.lastRef = ref;
+        provider.lastPaymentId = input.paymentId;
+        return {
+          providerReference: ref,
+          providerStatus: "processing",
+          status: "PROCESSING" as const,
+          requiresAction: false,
+          amountMinor: input.amount * 100,
+          currency: input.currency,
+        };
+      }
+      if (offSessionBehavior.mode === "failed") {
+        statuses.set(ref, "FAILED");
+        paymentRefs.set(input.paymentId, ref);
+        provider.lastRef = ref;
+        provider.lastPaymentId = input.paymentId;
+        return {
+          providerReference: ref,
+          providerStatus: "failed",
+          status: "FAILED" as const,
+          requiresAction: false,
+          failureCode: offSessionBehavior.failureCode ?? "card_declined",
+          amountMinor: input.amount * 100,
+          currency: input.currency,
+        };
+      }
+      statuses.set(ref, "CONFIRMED");
+      paymentRefs.set(input.paymentId, ref);
+      provider.lastRef = ref;
+      provider.lastPaymentId = input.paymentId;
+      return {
+        providerReference: ref,
+        providerStatus: "succeeded",
+        status: "CONFIRMED" as const,
+        requiresAction: false,
+        amountMinor: input.amount * 100,
+        currency: input.currency,
       };
     },
     async getPaymentSessionPaymentMethod(ref: string) {
@@ -257,6 +327,20 @@ export function createFakePaymentProvider(run: string) {
     },
     sessionFor(ref: string) {
       return sessions.get(ref);
+    },
+    getOffSessionCallCount: () => offSessionCallCount,
+    resetOffSessionCallCount: () => {
+      offSessionCallCount = 0;
+    },
+    getCheckoutCallCount: () => checkoutCallCount,
+    resetCheckoutCallCount: () => {
+      checkoutCallCount = 0;
+    },
+    setOffSessionBehavior: (behavior: OffSessionBehavior) => {
+      offSessionBehavior = behavior;
+    },
+    resetOffSessionBehavior: () => {
+      offSessionBehavior = { mode: "confirm" };
     },
   };
 }

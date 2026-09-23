@@ -6,11 +6,12 @@ import type { PrismaClient } from "@prisma/client";
 import { createComplaintsService } from "src/modules/complaints/complaints.service";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
-const RUN = process.env.RUN_INTEGRATION === "true";
+import { bindIntegrationDatabase, INTEGRATION_ENABLED, uniqueFixtureName } from "tests/helpers/integration-harness";
 
-if (!RUN) {
-  test("complaints integration skipped (set RUN_INTEGRATION=true + a test DATABASE_URL)", { skip: true }, () => {});
+if (!INTEGRATION_ENABLED) {
+  test("complaints integration skipped (set RUN_INTEGRATION=true + TEST_DATABASE_URL)", { skip: true }, () => {});
 } else {
+  bindIntegrationDatabase();
   let app: FastifyInstance;
   let prisma: PrismaClient;
   let svc: ReturnType<typeof createComplaintsService>;
@@ -61,7 +62,7 @@ if (!RUN) {
     svc = createComplaintsService(app);
     // Routing rules are global — clear any left over from a prior run so first-match is deterministic.
     await prisma.complaintRoutingRule.deleteMany({});
-    adminUserId = await seedUser(`cmp-admin-${run}@ex.test`, `cmp_admin_${run}`, [...CP, "complaints.view_all_branches", "complaints.escalations.cx_receive", "complaints.escalations.executive_receive", "customers.read", "customers.view_all_branches"]);
+    adminUserId = await seedUser(`cmp-admin-${run}@ex.test`, `cmp_admin_${run}`, [...CP, "complaints.view_all_branches", "complaints.view_all_departments", "complaints.escalations.cx_receive", "complaints.escalations.executive_receive", "customers.read", "customers.view_all_branches"]);
     mgrA = await seedUser(`cmp-mgrA-${run}@ex.test`, `cmp_mgrA_${run}`, ["complaints.read"]);
     deptMgrId = await seedUser(`cmp-deptmgr-${run}@ex.test`, `cmp_deptmgr_${run}`, ["complaints.read"]);
     assigneeId = await seedUser(`cmp-assignee-${run}@ex.test`, `cmp_assignee_${run}`, ["complaints.read", "complaints.manage"]);
@@ -71,12 +72,12 @@ if (!RUN) {
     const readOnlyId = await seedUser(`cmp-ro-${run}@ex.test`, `cmp_ro_${run}`, ["complaints.read", "complaints.create"]);
     adminT = tokenFor(adminUserId); scopedAT = tokenFor(scopedAId); scopedBT = tokenFor(scopedBId); zeroT = tokenFor(zeroId); readOnlyT = tokenFor(readOnlyId);
 
-    modelId = (await prisma.vehicleModel.create({ data: { code: `MDL-${run}`, name: "Attrage" } })).id;
+    modelId = (await prisma.vehicleModel.create({ data: { code: `MDL-${run}`, name: uniqueFixtureName(run, "Attrage") } })).id;
     deptDelivery = (await prisma.department.create({ data: { code: `DEP-DEL-${run}`, name: "Delivery" } })).id;
     deptSales = (await prisma.department.create({ data: { code: `DEP-SAL-${run}`, name: "Sales" } })).id;
     catDelivery = (await prisma.complaintCategory.create({ data: { code: `CAT-DEL-${run}`, nameEn: "Delivery delay", nameAr: "تأخر", defaultDepartmentId: deptDelivery, defaultPriority: "HIGH", sortOrder: 1 } })).id;
-    branchA = (await prisma.branch.create({ data: { code: `BR-A-${run}`, name: "Riyadh", managerUserId: mgrA } })).id;
-    branchB = (await prisma.branch.create({ data: { code: `BR-B-${run}`, name: "Jeddah" } })).id;
+    branchA = (await prisma.branch.create({ data: { code: `BR-A-${run}`, name: uniqueFixtureName(run, "Riyadh"), managerUserId: mgrA } })).id;
+    branchB = (await prisma.branch.create({ data: { code: `BR-B-${run}`, name: uniqueFixtureName(run, "Jeddah") } })).id;
     // memberships
     await prisma.userBranchAssignment.createMany({ data: [{ userId: scopedAId, branchId: branchA }, { userId: scopedBId, branchId: branchB }, { userId: assigneeId, branchId: branchA }, { userId: deptMgrId, branchId: branchA }] });
     await prisma.userDepartmentAssignment.createMany({ data: [{ userId: assigneeId, departmentId: deptDelivery }, { userId: deptMgrId, departmentId: deptDelivery, isManager: true }, { userId: scopedAId, departmentId: deptDelivery }] });
@@ -320,7 +321,12 @@ if (!RUN) {
     const c = await makeComplaint(branchA, catDelivery, "CRITICAL");
     await app.inject({ method: "POST", url: `/complaints/${c.id}/transition`, headers: auth(adminT), payload: { revision: c.revision, toStage: "IN_PROGRESS" } });
     const stageBefore = (await prisma.complaint.findUniqueOrThrow({ where: { id: c.id } })).stage;
-    const esc = await app.inject({ method: "POST", url: `/complaints/${c.id}/escalate`, headers: auth(adminT), payload: { revision: await rev(c.id), reason: "urgent" } });
+    const esc = await app.inject({
+      method: "POST",
+      url: `/complaints/${c.id}/escalate`,
+      headers: auth(adminT),
+      payload: { revision: await rev(c.id), reason: "urgent", targetDepartmentId: deptSales },
+    });
     assert.equal(esc.statusCode, 200);
     const comp = await prisma.complaint.findUniqueOrThrow({ where: { id: c.id } });
     assert.equal(comp.isEscalated, true);

@@ -98,6 +98,7 @@ export async function seedReviewContract(
       priceType: "DAILY",
       rentalDays: 3,
       agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
       carOut: {
         create: {
           performedByUserId: input.adminUserId,

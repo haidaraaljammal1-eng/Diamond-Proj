@@ -229,6 +229,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 3,
           agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
           depositAmount: 500,
         },
       });
@@ -341,6 +342,7 @@ if (!RUN) {
     }
 
     before(async () => {
+      process.env.LEGACY_CARD_LINK_ENABLED = "true";
       const { env } = await import("src/config/env");
       if (!/haidara_test(?:\?|$)/.test(env.DATABASE_URL)) {
         throw new Error("tars integration refuses to run unless DATABASE_URL is haidara_test");

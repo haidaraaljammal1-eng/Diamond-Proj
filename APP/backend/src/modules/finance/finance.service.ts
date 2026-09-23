@@ -227,6 +227,7 @@ export function createFinanceService(fastify: FastifyInstance) {
                 row.contractPayment?.purpose ??
                 null,
               contractPaymentId: row.contractPaymentId,
+              paymentMethod: row.contractPayment?.method ?? null,
               maintenanceOrderId: row.maintenanceOrderId,
               manualExpenseId: row.manualExpenseId,
               manualExpenseStatus: row.manualExpense?.status ?? null,

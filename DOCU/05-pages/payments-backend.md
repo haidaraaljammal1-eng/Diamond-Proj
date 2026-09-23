@@ -69,7 +69,11 @@ Confirmed payments emit `payment.confirmed` on the contract outbox with `payment
 
 ## Finance integration
 
-On trusted Stripe confirmation, `recordStripePaymentLedger` appends one `FinancialLedgerEntry` (`dedupeKey = payment:<id>`) inside the same transaction as domain settlement. Historical `MANUAL` / `BANK_TRANSFER` rows never produce Finance Collected. See [finance-backend.md](./finance-backend.md).
+On trusted collection confirmation (Stripe or explicit CASH), `recordTrustedCollectionLedger` appends one `FinancialLedgerEntry` (`dedupeKey = payment:<id>`) inside the same transaction as domain settlement. Historical `MANUAL` / `BANK_TRANSFER` rows never produce Finance Collected. See [finance-backend.md](./finance-backend.md).
+
+## Rental collection mode
+
+`CreateOffer` requires `collectionMode: ELECTRONIC | CASH`. The mode is persisted on `Contract.collectionMode` with audit fields (`collectionModeSelectedAt`, `collectionModeSelectedByUserId`). CASH contracts skip Stripe I/O in the public rental journey; cash rental settlement occurs on signature via shared `ContractPayment` settlement (`method = CASH`).
 
 ## Legacy backfill
 

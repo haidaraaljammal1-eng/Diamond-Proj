@@ -118,7 +118,9 @@
 
 ## Finance (Diamond)
 
-- Finance Collected means trusted Stripe-confirmed customer money only (`CONFIRMED` + `CARD` + `provider = stripe`). Historical `MANUAL` / `BANK_TRANSFER` rows are preserved but excluded from V1 Collected.
+- Finance Collected means trusted confirmed customer collections: Stripe (`CONFIRMED` + `CARD` + `provider = stripe`) and explicit CASH (`CONFIRMED` + `CASH`, `provider = null`). Historical `MANUAL` / `BANK_TRANSFER` rows are preserved and excluded from V1 Collected unless a future workflow explicitly promotes them.
+- Rental collection mode (`Contract.collectionMode`: `ELECTRONIC` | `CASH`) is staff-selected at offer creation and backend-authoritative. CASH rentals settle on signature via shared `ContractPayment` settlement; they never call Stripe.
+- Road liabilities on cash rental contracts require cash collection (`cashCollectionRequired`); off-session Stripe is blocked. `POST /road-liabilities/:id/collection/cash/confirm` settles through the same `ContractPayment` + ledger foundation as Stripe.
 - Outstanding is a current customer obligation balance, not collected revenue. It is not period-filtered away.
 - `FinancialLedgerEntry` records recognized movements only; unpaid obligations stay in Open Receivables projections.
 - Maintenance `COMPLETED` actual `cost` is a company Expense (`MAINTENANCE_EXPENSE`), never a customer charge.

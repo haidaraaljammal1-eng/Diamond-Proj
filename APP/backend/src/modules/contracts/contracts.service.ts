@@ -369,6 +369,9 @@ export function createContractsService(fastify: FastifyInstance) {
           rentalDays: input.rentalDays,
           agreedAmount: input.agreedAmount,
           currency: CONTRACT_CURRENCY,
+          collectionMode: input.collectionMode,
+          collectionModeSelectedAt: new Date(),
+          collectionModeSelectedByUserId: actorUserId,
           startAt,
           endAt,
         },
@@ -2339,6 +2342,9 @@ export function createContractsService(fastify: FastifyInstance) {
           revision: { increment: 1 },
         },
       });
+      if (row.collectionMode === "CASH") {
+        await paymentService.settleCashRentalInTx(tx, contract.id, null);
+      }
       await emit(tx, "contract.signed", contract.id);
       return { contractId: contract.id, view: await loadOfficialContract(tx, contract.id) };
     });
@@ -2387,9 +2393,9 @@ export function createContractsService(fastify: FastifyInstance) {
       );
       const contract = await prisma.contract.findUnique({
         where: { id: link.contractId },
-        select: { status: true },
+        select: { status: true, collectionMode: true },
       });
-      if (contract?.status !== "PAID") {
+      if (contract?.collectionMode !== "CASH" && contract?.status !== "PAID") {
         const activePayment = await prisma.contractPayment.findFirst({
           where: {
             contractId: link.contractId,
@@ -2461,6 +2467,7 @@ export function createContractsService(fastify: FastifyInstance) {
       const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
       if (!contract) throw contractError.notFound();
       if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+      if (contract.collectionMode === "CASH") throw contractError.paymentNotAllowed();
 
       const verification = await latestLicense(prisma, contract.id);
       assertLicenseProgress(verification?.status, verification?.expiryDate);
@@ -2527,6 +2534,7 @@ export function createContractsService(fastify: FastifyInstance) {
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
     if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+    if (contract.collectionMode === "CASH") throw contractError.paymentNotAllowed();
     const saved = await prisma.contractCardPaymentMethod.findUnique({
       where: { contractId: contract.id },
     });
@@ -2547,6 +2555,7 @@ export function createContractsService(fastify: FastifyInstance) {
     const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
     if (!contract) throw contractError.notFound();
     if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+    if (contract.collectionMode === "CASH") throw contractError.paymentNotAllowed();
     const result = await paymentService.processCardSetupReturn({
       contractId: contract.id,
       providerReference: setupSessionId,

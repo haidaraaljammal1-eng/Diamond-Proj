@@ -125,6 +125,7 @@ if (!RUN) {
         priceType: "DAILY",
         rentalDays: 2,
         agreedAmount: 500,
+          collectionMode: "ELECTRONIC",
         ...extra,
       },
     });

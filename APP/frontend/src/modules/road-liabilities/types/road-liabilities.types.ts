@@ -231,3 +231,115 @@ export interface RoadLiabilitiesListQuery {
   page: number;
   pageSize: number;
 }
+
+export type RoadLiabilityCollectionOperationalState =
+  | "collectible"
+  | "processing"
+  | "paid"
+  | "failed"
+  | "requires_action"
+  | "manual_pending"
+  | "payment_link_ready";
+
+export type RoadLiabilityCollectionAuthorizationStatus =
+  | "active"
+  | "missing"
+  | "revoked"
+  | "scope_ineligible"
+  | "contract_mismatch"
+  | "method_inactive"
+  | "provider_mismatch";
+
+export interface RoadLiabilitySavedPaymentMethodDto {
+  brand: string;
+  last4: string;
+}
+
+export interface RoadLiabilityCollectionCapabilityDto {
+  offSessionAvailable: boolean;
+  cashCollectionRequired: boolean;
+  authorizationStatus: RoadLiabilityCollectionAuthorizationStatus;
+  savedPaymentMethod: RoadLiabilitySavedPaymentMethodDto | null;
+  reasonCode: string | null;
+}
+
+export interface RoadLiabilityCollectionChargeDto {
+  officialAmount: number;
+  customerChargeAmount: number;
+  currency: string;
+  adjustmentAmount: number | null;
+  adjustmentReason: string | null;
+  contractNumber: string;
+  customerName: string | null;
+}
+
+export interface RoadLiabilityCollectionViewDto {
+  liabilityId: string;
+  collectionStatus: RoadLiabilityCollectionStatus;
+  operationalState: RoadLiabilityCollectionOperationalState | null;
+  capability: RoadLiabilityCollectionCapabilityDto;
+  charge: RoadLiabilityCollectionChargeDto | null;
+  checkoutUrl: string | null;
+}
+
+export interface OffSessionCollectionInput {
+  customerChargeAmount?: number;
+  adjustmentReason?: string;
+  adjustmentNote?: string;
+}
+
+export interface RoadLiabilityFailureCustomerDto {
+  fullName: string | null;
+  nationality: string | null;
+  identityNumber: string | null;
+  passportNumber: string | null;
+  passportIssueDate: string | null;
+  passportExpiryDate: string | null;
+  dateOfBirth: string | null;
+  sex: string | null;
+  issuingCountry: string | null;
+  drivingLicenseNumber: string | null;
+  drivingLicenseExpiry: string | null;
+  telephone: string | null;
+  address: string | null;
+}
+
+export interface RoadLiabilityCollectionFailureDto {
+  liability: {
+    id: string;
+    source: string | null;
+    type: string;
+    amount: number | null;
+    occurredAt: string;
+    externalReference: string | null;
+    contractNumber: string | null;
+    vehicleLabel: string | null;
+    plateNumber: string | null;
+  };
+  customer: RoadLiabilityFailureCustomerDto;
+  savedCard: RoadLiabilitySavedPaymentMethodDto | null;
+  failure: {
+    reasonCode: string;
+    messageEn: string;
+    messageAr: string;
+    declineCode: string | null;
+    occurredAt: string;
+  };
+}
+
+export interface OffSessionCollectionResultDto {
+  status: "succeeded" | "failed" | "requires_action" | "processing";
+  operationalState: RoadLiabilityCollectionOperationalState;
+  failure: RoadLiabilityCollectionFailureDto | null;
+}
+
+export interface ManualCollectionConfirmInput {
+  amount: number;
+  method?: string;
+  note?: string;
+}
+
+export interface RoadLiabilityPaymentLinkResultDto {
+  checkoutUrl: string | null;
+  paymentId: string;
+}

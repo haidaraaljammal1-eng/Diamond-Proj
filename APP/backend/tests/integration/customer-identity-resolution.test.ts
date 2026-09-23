@@ -105,7 +105,7 @@ if (!RUN) {
         method: "POST",
         url: "/contracts/offers",
         headers: auth(),
-        payload: { vehicleId: vehicle.json().data.id, priceType: "DAILY", rentalDays: 4, agreedAmount: 1600 },
+        payload: { vehicleId: vehicle.json().data.id, priceType: "DAILY", rentalDays: 4, agreedAmount: 1600 , collectionMode: "ELECTRONIC"},
       });
       assert.equal(offer.statusCode, 201);
       const contractId = offer.json().data.id as string;

@@ -44,7 +44,7 @@ function destinationForStatus(
 }
 
 function lockedFromCharge(charge: {
-  destinationType: "RECONCILIATION" | "POST_CLOSE_RECEIVABLE";
+  destinationType: "RECONCILIATION" | "POST_CLOSE_RECEIVABLE" | "DIRECT_COLLECTION";
   officialAmountSnapshot: number;
   customerChargeAmount: number;
   adjustmentAmount: number;

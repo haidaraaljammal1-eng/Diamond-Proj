@@ -225,6 +225,7 @@ model CustomerPaymentMethod {
   createdAt               DateTime                       @default(now())
   updatedAt               DateTime                       @updatedAt
   authorizations          ContractPaymentAuthorization[]
+  offSessionAttempts      ContractPaymentOffSessionAttempt[]
 
   @@unique([profileId, providerPaymentMethodId])
   @@map("customer_payment_methods")

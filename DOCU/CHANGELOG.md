@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-23
+
+- **CASH customer collection foundation** (uncommitted, builds on STRIPE-5): `ContractPaymentMethod.CASH`, `RentalCollectionMode` on `Contract`; staff collection-mode dialog; CASH public rental skips Stripe; shared settlement via `ContractPayment`; Finance trusted collections include CASH; road-liability cash confirm + STRIPE-5 off-session. Migration `20260923200000_cash_collection_foundation`. **Verified integration:** `cash-collection` 4/4, `cash-collection-concurrency` 1/1, `road-liability-collection` 10/10 (incl. concurrency), `contracts-payment-security` 11/11, `finance` 15/15. **Verified unit:** backend 468/468, frontend 693/693. Open receivables now exclude confirmed CASH rentals. Consent v2 default; v1 historical. TARS provider unchanged.
+
 ## 2026-09-22
 
 - Stripe STRIPE-4 payment foundation (verified on working tree): customer resolution at signing with strong-identity matching; `CustomerPaymentProfile` / `CustomerPaymentMethod` / `ContractPaymentAuthorization`; TEST/LIVE Stripe profile isolation; deterministic Stripe idempotency keys; checkout orphan recovery; webhook fast-ACK + durable inbox worker (`FOR UPDATE SKIP LOCKED`); DB-first payment status polling; backend-authoritative consent catalog; legacy card-link gated (`LEGACY_CARD_LINK_ENABLED=false`). Migration `20260922120000_stripe4_payment_foundation` applied to `haidara` + `haidara_test`. Integration `contracts-payment-security.test.ts` 11/11 green. Off-session Road Liability charging not implemented. See `DOCU/05-pages/stripe4-payment-foundation.md`.

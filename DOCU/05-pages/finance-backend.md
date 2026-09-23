@@ -1,12 +1,12 @@
 # Finance Backend V1
 
-Finance V1 is a **backend-only** operational layer on top of the unified Stripe payment foundation. It does not include Finance frontend, Invoices, VAT/GL accounting, or manual customer collections.
+Finance V1 is an operational layer on top of the unified customer collection foundation (Stripe + explicit CASH). It does not include Invoices, VAT/GL accounting, or ad-hoc manual customer collections outside the CASH rental / CASH road-liability flows.
 
 ## Definitions
 
 | Concept | Meaning |
 | --- | --- |
-| **Collected** | Trusted Stripe-confirmed customer money (`ContractPayment`: `CONFIRMED` + `CARD` + `provider = stripe` + `confirmedAt`) |
+| **Collected** | Trusted confirmed customer collections: Stripe (`CONFIRMED` + `CARD` + `provider = stripe`) and explicit CASH (`CONFIRMED` + `CASH`, `provider = null`) |
 | **Outstanding** | Current unpaid customer obligations (rental, renewal, reconciliation, post-close receivable) — not revenue |
 | **Expenses** | Completed maintenance actual cost + active manual expenses (net of void reversals) |
 | **Net Movement** | `Collected − Expenses` for the selected period (not profit) |
@@ -58,11 +58,16 @@ GENERAL returns none.
 
 Full rules: [operating-companies.md](../00-system-overview/operating-companies.md).
 
-## Stripe-only Collected rule
+## Trusted Collected rule
 
-Historical `MANUAL` / `BANK_TRANSFER` payments are preserved but **never** counted in V1 Collected totals.
+V1 Collected includes only trusted customer collections:
 
-Ledger rows are created inside the existing payment confirmation transaction (`recordStripePaymentLedger`).
+- Electronic: `CONFIRMED` + `CARD` + `provider = stripe`
+- Cash: `CONFIRMED` + `CASH` + `provider = null` (staff-selected rental collection mode or road-liability cash confirm)
+
+Historical `MANUAL` / `BANK_TRANSFER` payments are preserved but **never** counted automatically in Collected totals.
+
+Ledger rows are created inside the existing payment confirmation transaction (`recordTrustedCollectionLedger`, alias `recordStripePaymentLedger`).
 
 ## Open Receivables
 

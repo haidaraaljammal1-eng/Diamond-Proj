@@ -200,6 +200,28 @@ Staff JWT. Permission: `violations.read`. No public or rental-token routes.
 | GET | `/road-liabilities/:id` | Detail + observation provenance timeline |
 | GET | `/road-liabilities/:id/customer-charge` | Unified Charge Review read (`violations.read`) |
 | POST | `/road-liabilities/:id/customer-charge/confirm` | Unified confirm (`violations.charge`); destination from Contract lifecycle |
+| GET | `/road-liabilities/:id/collection` | Direct collection capability + frozen charge snapshot (`violations.read`) |
+| POST | `/road-liabilities/:id/collection/off-session` | Stripe off-session when v2 consent on attributed Contract (`violations.charge`) |
+| POST | `/road-liabilities/:id/collection/cash/confirm` | Cash receipt when attributed Contract is CASH (`violations.charge`) |
+| POST | `/road-liabilities/:id/collection/payment-link` | Stripe Checkout fallback when off-session unavailable (`violations.charge`) |
+
+## Direct collection (STRIPE-5 + CASH)
+
+When a liability is confirmed, matched, and collectible, staff may settle it immediately through **`DIRECT_COLLECTION`** on `RoadLiabilityCustomerCharge` instead of waiting for Reconciliation or Post-Close Receivable.
+
+| Channel | When | Settlement |
+| --- | --- | --- |
+| `STRIPE_OFF_SESSION` | Electronic rental + valid consent v2 on the **same attributed Contract** | Provider-confirmed `ContractPayment` (`CARD`) |
+| `CHECKOUT` | Off-session unavailable; payment link created | Stripe Checkout webhook |
+| `CASH` | Attributed Contract `collectionMode = CASH` (or confirmed CASH rental payment) | `POST …/collection/cash/confirm` → `ContractPayment` (`CASH`) |
+
+Rules:
+
+- Historical **attributed Contract** determines channel — never current renter or a saved card from another contract.
+- Cash contracts: `cashCollectionRequired = true`, `offSessionAvailable = false`. Saved-card CTA hidden.
+- Consent v1 remains historical and ineligible for off-session.
+- Settlement is exactly once per liability (`roadLiabilityId` UNIQUE on customer charge).
+- CLOSED contracts are not reopened; liability `collectionStatus` becomes `SETTLED`.
 
 List search: vehicle name, plate, contract number, customer name, external reference, location. Filters: `companyId`, type, sourceKey, confirmation/attribution/collection status, vehicleId, contractId, date range.
 

@@ -29,6 +29,7 @@ function row(overrides: Partial<Record<keyof OfficialContractRow, unknown>> = {}
     priceType: "DAILY",
     rentalDays: 3,
     agreedAmount: 900,
+          collectionMode: "ELECTRONIC",
     currency: "AED",
     startAt: start,
     endAt: new Date(start.getTime() + 3 * 86_400_000),

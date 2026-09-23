@@ -119,6 +119,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 4,
           agreedAmount: 1600,
+          collectionMode: "ELECTRONIC",
         },
       });
       assert.equal(offer.statusCode, 201, offer.body);

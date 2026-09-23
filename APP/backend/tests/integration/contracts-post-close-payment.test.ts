@@ -11,7 +11,7 @@ import {
   seedPaymentUser,
   settlePayment,
 } from "../helpers/payment-integration-helpers";
-import { sendTestStripeWebhook } from "../helpers/fake-payment-provider";
+import { flushStripeWebhookInbox, sendTestStripeWebhook } from "../helpers/fake-payment-provider";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
@@ -51,6 +51,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 2,
           agreedAmount: 800,
+          collectionMode: "ELECTRONIC",
           closedAt: new Date("2026-09-04T12:00:00.000Z"),
           carOut: {
             create: {
@@ -253,6 +254,7 @@ if (!RUN) {
         webhookRes.statusCode === 200 || pollRes.statusCode === 200,
         `${webhookRes.body}\n${pollRes.body}`,
       );
+      await flushStripeWebhookInbox(app);
 
       const confirmed = await prisma.contractPayment.findMany({
         where: { purpose: "POST_CLOSE_RECEIVABLE", targetId: receivableId, status: "CONFIRMED" },

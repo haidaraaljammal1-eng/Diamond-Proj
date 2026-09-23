@@ -9,6 +9,7 @@ import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
   linkCardViaFakeProvider,
+  reconcileFakeProviderPayment,
 } from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
@@ -50,6 +51,24 @@ if (!RUN) {
     ];
 
     const auth = () => ({ authorization: `Bearer ${token}` });
+
+    async function confirmRenewalPaymentStatus(
+      payments: ReturnType<typeof createFakePaymentProvider>,
+      statusToken: string,
+    ) {
+      const payment = await prisma.contractPayment.findUniqueOrThrow({
+        where: { statusTokenHash: hashToken(statusToken) },
+      });
+      payments.confirm();
+      await reconcileFakeProviderPayment(app, payments, payment.id);
+      const payStatus = await app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${statusToken}`,
+      });
+      assert.equal(payStatus.statusCode, 200, payStatus.body);
+      assert.equal(payStatus.json().data.status, "CONFIRMED");
+      return payStatus;
+    }
 
     async function seedUser() {
       const { hashPassword } = await import("src/lib/security/password");
@@ -141,6 +160,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 3,
           agreedAmount: 1500,
+          collectionMode: "ELECTRONIC",
         },
       });
       assert.equal(offer.statusCode, 201, offer.body);
@@ -189,6 +209,7 @@ if (!RUN) {
     }
 
     before(async () => {
+      process.env.LEGACY_CARD_LINK_ENABLED = "true";
       const { env } = await import("src/config/env");
       if (!/haidara_test(?:\?|$)/.test(env.DATABASE_URL)) {
         throw new Error("renewal integration refuses to run unless DATABASE_URL is haidara_test");
@@ -223,6 +244,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 2,
           agreedAmount: 800,
+          collectionMode: "ELECTRONIC",
         },
       });
       assert.equal(offer.statusCode, 201, offer.body);
@@ -317,13 +339,7 @@ if (!RUN) {
       });
       assert.equal(payStart.statusCode, 200, payStart.body);
       const statusToken = payStart.json().data.statusToken as string;
-      payments.confirm();
-      const payStatus = await app.inject({
-        method: "GET",
-        url: `/contracts/payments/status/${statusToken}`,
-      });
-      assert.equal(payStatus.statusCode, 200, payStatus.body);
-      assert.equal(payStatus.json().data.status, "CONFIRMED");
+      await confirmRenewalPaymentStatus(payments, statusToken);
 
       const replay = await app.inject({
         method: "POST",
@@ -502,10 +518,7 @@ if (!RUN) {
       await confirmReturnViaLink(contractId);
 
       // The provider then reports the renewal payment as captured.
-      payments.confirm();
-      const payStatus = await app.inject({ method: "GET", url: `/contracts/payments/status/${statusToken}` });
-      assert.equal(payStatus.statusCode, 200, payStatus.body);
-      assert.equal(payStatus.json().data.status, "CONFIRMED", "captured money stays recorded");
+      await confirmRenewalPaymentStatus(payments, statusToken);
 
       const detail = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
       assert.equal(detail.json().data.status, "RETOUT", "no rollback to ACTIVE");
@@ -534,9 +547,7 @@ if (!RUN) {
     test("a renewal applied first is kept when the return is confirmed afterwards", async () => {
       const { contractId } = await createActiveContract();
       const { payments, statusToken } = await startRenewalPayment(contractId, "race-renewal-first");
-      payments.confirm();
-      const payStatus = await app.inject({ method: "GET", url: `/contracts/payments/status/${statusToken}` });
-      assert.equal(payStatus.json().data.status, "CONFIRMED");
+      await confirmRenewalPaymentStatus(payments, statusToken);
       const renewed = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
       assert.equal(renewed.json().data.status, "ACTIVE");
       assert.equal(renewed.json().data.rentalDays, 7);

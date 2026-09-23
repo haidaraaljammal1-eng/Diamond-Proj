@@ -38,7 +38,7 @@ if (!RUN) {
         method: "POST",
         url: "/contracts/offers",
         headers: auth(),
-        payload: { vehicleId: vehicle.json().data.id, priceType: "WEEKLY", rentalDays: 7, agreedAmount: 2100 },
+        payload: { vehicleId: vehicle.json().data.id, priceType: "WEEKLY", rentalDays: 7, agreedAmount: 2100 , collectionMode: "ELECTRONIC"},
       });
       assert.equal(created.statusCode, 201, created.body);
       const contractId = created.json().data.id as string;
@@ -280,7 +280,7 @@ if (!RUN) {
       res = await sign(ctx.token);
       assert.equal(res.statusCode, 409, res.body);
       assert.equal(res.json().error.context.reason, "OFFICIAL_CONTRACT_INCOMPLETE");
-      assert.deepEqual(res.json().error.context.missing, ["SIGNATURE_HIRER"]);
+      assert.deepEqual(res.json().error.context.missing, ["ADDRESS", "TELEPHONE", "SIGNATURE_HIRER"]);
 
       await putSignature(ctx.token, "hirer");
       // Stripe-hosted linking already persisted the safe card reference before signing.
@@ -408,7 +408,7 @@ if (!RUN) {
         assert.equal(list.json().data[0].status, "PAID");
         const conflictingOffer = await app.inject({
           method: "POST", url: "/contracts/offers", headers: auth(),
-          payload: { vehicleId: ctx.vehicleId, priceType: "DAILY", rentalDays: 1, agreedAmount: 300 },
+          payload: { vehicleId: ctx.vehicleId, priceType: "DAILY", rentalDays: 1, agreedAmount: 300 , collectionMode: "ELECTRONIC"},
         });
         assert.equal(conflictingOffer.statusCode, 409);
       });

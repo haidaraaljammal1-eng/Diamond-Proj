@@ -124,6 +124,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 2,
           agreedAmount: 400,
+          collectionMode: "ELECTRONIC",
           startAt: input.startAt,
         },
         select: { id: true },

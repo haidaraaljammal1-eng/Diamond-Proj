@@ -54,6 +54,7 @@ if (!RUN) {
           priceType: input.priceType ?? "WEEKLY",
           rentalDays: input.rentalDays ?? 7,
           agreedAmount: input.agreedAmount ?? 2100,
+          collectionMode: "ELECTRONIC",
         },
       });
       assert.equal(created.statusCode, 201, created.body);
@@ -207,14 +208,13 @@ if (!RUN) {
       const counter = createFakeDocumentOcrProvider();
       await injectDocumentOcr(counter.provider);
       const res = await patchOfficial(ctx.token, {
-        hirerName: "TEST PERSON CORRECTED",
         address: "TEST ADDRESS 1",
         telephone: "+971 50 000 0001",
         sponsorName: "TEST SPONSOR",
       });
       assert.equal(res.statusCode, 200, res.body);
       const v = res.json().data;
-      assert.equal(v.hirer.name, "TEST PERSON CORRECTED");
+      assert.equal(v.hirer.name, "TEST PERSON", "OCR identity name stays locked on the review link");
       assert.equal(v.hirer.address, "TEST ADDRESS 1");
       assert.equal(v.hirer.telephone, "+971500000001");
       assert.equal(v.hirer.nationality, "TEST", "unpatched field still resolves from OCR");
@@ -234,8 +234,8 @@ if (!RUN) {
       assert.equal(contract.status, "AWAITING");
       assert.equal(contract.snapshot, null);
 
-      const cleared = await patchOfficial(ctx.token, { hirerName: null });
-      assert.equal(cleared.json().data.hirer.name, "TEST PERSON", "clearing an override falls back to OCR");
+      const cleared = await patchOfficial(ctx.token, { address: null });
+      assert.equal(cleared.json().data.hirer.address, null, "clearing an override removes the manual value");
 
       const audit = await prisma.auditLog.findMany({
         where: { entityId: ctx.contractId, action: "contract.official_review_updated" },
@@ -243,8 +243,7 @@ if (!RUN) {
       assert.ok(audit.length >= 1);
       const auditJson = JSON.stringify(audit);
       assert.equal(auditJson.includes("TEST ADDRESS 1"), false);
-      assert.equal(auditJson.includes("TEST PERSON CORRECTED"), false);
-      assert.ok(auditJson.includes("hirerName"));
+      assert.ok(auditJson.includes("address"));
     });
 
     test("mass assignment: system-locked fields are rejected and nothing is saved", async () => {

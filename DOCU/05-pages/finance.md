@@ -47,7 +47,7 @@ Contracts: [finance-backend.md](./finance-backend.md).
 
 | KPI | Meaning | Period |
 | --- | --- | --- |
-| Collected | Stripe-confirmed customer money (or simulated Customer Collection rows) | Selected period |
+| Collected | Trusted confirmed customer collections (Stripe card + explicit CASH) | Selected period |
 | Outstanding | Current unpaid obligations | **Current balance** (not period-filtered) |
 | Expenses | Recognized company expenses (maintenance + manual, net of reversals) | Selected period |
 | Net Movement | `Collected − Expenses` | Selected period |
@@ -182,4 +182,4 @@ FinanceScreen → useFinance* hooks → finance.store → finance.api → Fastif
 
 ## Stripe-only rule
 
-Customer collections are Stripe-confirmed only. Finance V1 has no Deposit, no Invoices, no manual customer collection UI.
+Customer collections are trusted confirmed collections (Stripe card + explicit CASH). Finance V1 has no Deposit, no Invoices, and no ad-hoc manual customer collection UI outside the CASH rental / CASH road-liability flows.

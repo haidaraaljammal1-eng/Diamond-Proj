@@ -155,6 +155,29 @@ model RoadLiability {
 enum RoadLiabilityCustomerChargeDestination {
   RECONCILIATION
   POST_CLOSE_RECEIVABLE
+  DIRECT_COLLECTION
+}
+
+enum RoadLiabilityCollectionOperationalState {
+  COLLECTIBLE
+  PROCESSING
+  PAID
+  FAILED
+  REQUIRES_ACTION
+  MANUAL_PENDING
+  PAYMENT_LINK_READY
+}
+
+enum RoadLiabilitySettlementChannel {
+  OFF_SESSION
+  CHECKOUT
+  MANUAL
+  CASH
+}
+
+enum RoadLiabilityManualCollectionStatus {
+  PENDING_RECEIPT
+  CONFIRMED
 }
 
 enum ContractPostCloseReceivableStatus {
@@ -164,7 +187,7 @@ enum ContractPostCloseReceivableStatus {
 }
 
 /// One employee-confirmed customer charge from one RoadLiability.
-/// Destination is either current Reconciliation or a Post-Close Receivable — never both.
+/// Destination is Reconciliation, Post-Close Receivable, or Direct Collection — never more than one.
 model RoadLiabilityCustomerCharge {
   id                     String                                 @id @default(uuid())
   roadLiabilityId        String                                 @unique
@@ -183,9 +206,23 @@ model RoadLiabilityCustomerCharge {
   reconciliationLineId   String?                                @unique
   reconciliationLine     ContractReconciliationLine?            @relation(fields: [reconciliationLineId], references: [id], onDelete: SetNull)
   postCloseReceivable    ContractPostCloseReceivable?
+  operationalState       RoadLiabilityCollectionOperationalState?
+  settlementChannel      RoadLiabilitySettlementChannel?
+  contractPaymentId      String?                                @unique
+  contractPayment        ContractPayment?                       @relation("RoadLiabilitySettlement", fields: [contractPaymentId], references: [id], onDelete: SetNull)
+  manualSelectedByUserId Int?
+  manualSelectedBy       User?                                  @relation("RoadLiabilityManualSelectedBy", fields: [manualSelectedByUserId], references: [id], onDelete: SetNull)
+  manualSelectedAt       DateTime?
+  manualConfirmedByUserId Int?
+  manualConfirmedBy      User?                                  @relation("RoadLiabilityManualConfirmedBy", fields: [manualConfirmedByUserId], references: [id], onDelete: SetNull)
+  manualConfirmedAt      DateTime?
+  manualCollectionStatus RoadLiabilityManualCollectionStatus?
+  offSessionAttempts     ContractPaymentOffSessionAttempt[]
   createdAt              DateTime                               @default(now())
+  updatedAt              DateTime                               @updatedAt
 
   @@index([contractId])
+  @@index([operationalState])
   @@map("road_liability_customer_charges")
 }
 

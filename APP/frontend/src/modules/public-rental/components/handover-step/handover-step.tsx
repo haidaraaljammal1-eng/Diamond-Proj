@@ -11,7 +11,8 @@ interface HandoverStepProps {
 }
 
 export function HandoverStep({ context }: HandoverStepProps) {
-  const t = useTranslations("PublicRental.handover");
+  const isCash = context.collection.mode === "CASH";
+  const t = useTranslations(isCash ? "PublicRental.handoverCash" : "PublicRental.handover");
   const amount = formatRentalAmount(
     context.rental.agreedAmount,
     context.rental.currency,

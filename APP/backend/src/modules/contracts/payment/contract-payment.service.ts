@@ -61,7 +61,10 @@ import {
   resolveStripeProviderAccountKey,
   stripeLivemodeConfigured,
 } from "src/modules/contracts/payment/stripe-account-identity";
-import { recordStripePaymentLedger } from "src/modules/finance/finance-ledger.service";
+import {
+  recordRoadLiabilityPaymentLedger,
+  recordTrustedCollectionLedger,
+} from "src/modules/finance/finance-ledger.service";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import Stripe from "stripe";
 import { env } from "src/config/env";
@@ -199,6 +202,23 @@ async function loadObligation(
         currency: receivable.currency,
       };
     }
+    case "ROAD_LIABILITY": {
+      const charge = await tx.roadLiabilityCustomerCharge.findUnique({
+        where: { id: targetId },
+        include: { roadLiability: true },
+      });
+      if (!charge) throw contractError.notFound();
+      if (charge.destinationType !== "DIRECT_COLLECTION") throw contractError.paymentNotAllowed();
+      assertPositiveAedAmount(charge.customerChargeAmount);
+      assertAedCurrency("AED");
+      return {
+        contractId: charge.contractId,
+        purpose,
+        targetId: charge.id,
+        amount: charge.customerChargeAmount,
+        currency: "AED",
+      };
+    }
     default:
       throw contractError.paymentNotAllowed();
   }
@@ -221,6 +241,13 @@ async function isObligationSettled(
   if (purpose === "POST_CLOSE_RECEIVABLE") {
     const receivable = await tx.contractPostCloseReceivable.findUnique({ where: { id: targetId } });
     return receivable?.status === "SETTLED";
+  }
+  if (purpose === "ROAD_LIABILITY") {
+    const charge = await tx.roadLiabilityCustomerCharge.findUnique({
+      where: { id: targetId },
+      include: { roadLiability: true },
+    });
+    return charge?.roadLiability.collectionStatus === "SETTLED";
   }
   if (purpose === "RENEWAL") {
     const renewal = await tx.contractRenewal.findUnique({ where: { id: targetId } });
@@ -369,6 +396,50 @@ async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<
       }
       break;
     }
+    case "ROAD_LIABILITY": {
+      const charge = await tx.roadLiabilityCustomerCharge.findUnique({
+        where: { id: payment.targetId },
+        include: { roadLiability: true },
+      });
+      if (!charge) throw contractError.notFound();
+      if (
+        charge.operationalState === "PAID" &&
+        charge.contractPaymentId &&
+        charge.contractPaymentId !== payment.id
+      ) {
+        return;
+      }
+      if (charge.roadLiability.collectionStatus !== "SETTLED") {
+        await tx.roadLiability.update({
+          where: { id: charge.roadLiabilityId },
+          data: { collectionStatus: "SETTLED" },
+        });
+      }
+      const channel =
+        payment.method === "CASH"
+          ? "CASH"
+          : payment.method === "MANUAL"
+            ? "MANUAL"
+            : payment.checkoutUrl
+              ? "CHECKOUT"
+              : "OFF_SESSION";
+      await tx.roadLiabilityCustomerCharge.update({
+        where: { id: charge.id },
+        data: {
+          operationalState: "PAID",
+          settlementChannel: channel,
+          contractPaymentId: payment.id,
+        },
+      });
+      await tx.contractPaymentOffSessionAttempt.updateMany({
+        where: {
+          contractPaymentId: payment.id,
+          status: { in: ["PREPARING", "PROCESSING", "REQUIRES_ACTION"] },
+        },
+        data: { status: "SUCCEEDED", completedAt: new Date() },
+      });
+      break;
+    }
     case "RENEWAL": {
       // The provider already captured the money, so the payment itself stays
       // CONFIRMED; only the extension is withheld and staff are told to settle it.
@@ -497,6 +568,63 @@ export function createContractPaymentService(prisma: PrismaClient) {
     });
   }
 
+  const LIABILITY_ALREADY_SETTLED_FAILURE = "LIABILITY_ALREADY_SETTLED";
+
+  async function markRoadLiabilityLateProviderConflict(
+    tx: Tx,
+    payment: ContractPayment,
+    winningPaymentId: string,
+  ): Promise<void> {
+    if (payment.status === "CONFIRMED" || payment.status === "FAILED") return;
+    await markPaymentTerminal(
+      tx,
+      payment,
+      "FAILED",
+      "provider_collected_after_domain_settlement",
+    );
+    await tx.contractPaymentOffSessionAttempt.updateMany({
+      where: {
+        contractPaymentId: payment.id,
+        status: { in: ["PREPARING", "PROCESSING", "REQUIRES_ACTION"] },
+      },
+      data: {
+        status: "FAILED",
+        failureCode: LIABILITY_ALREADY_SETTLED_FAILURE,
+        completedAt: new Date(),
+      },
+    });
+    await emitPayment(tx, "payment.provider_settlement_conflict", payment.contractId, {
+      paymentId: payment.id,
+      winningPaymentId,
+      purpose: payment.purpose,
+      targetId: payment.targetId,
+      dedupe: `${payment.id}:provider_conflict`,
+    });
+  }
+
+  async function resolveRoadLiabilityWinningPayment(
+    tx: Tx,
+    payment: ContractPayment,
+  ): Promise<ContractPayment | null> {
+    const existingConfirmed = await tx.contractPayment.findFirst({
+      where: { purpose: "ROAD_LIABILITY", targetId: payment.targetId, status: "CONFIRMED" },
+    });
+    if (existingConfirmed && existingConfirmed.id !== payment.id) {
+      return existingConfirmed;
+    }
+    const charge = await tx.roadLiabilityCustomerCharge.findUnique({
+      where: { id: payment.targetId },
+    });
+    if (
+      charge?.operationalState === "PAID" &&
+      charge.contractPaymentId &&
+      charge.contractPaymentId !== payment.id
+    ) {
+      return tx.contractPayment.findUnique({ where: { id: charge.contractPaymentId } });
+    }
+    return null;
+  }
+
   async function confirmPaymentAttempt(
     tx: Tx,
     payment: ContractPayment,
@@ -508,10 +636,21 @@ export function createContractPaymentService(prisma: PrismaClient) {
     if (payment.providerReference) {
       verifyProviderAmount(payment, amountMinor, currency);
     }
+    if (payment.purpose === "ROAD_LIABILITY") {
+      const winning = await resolveRoadLiabilityWinningPayment(tx, payment);
+      if (winning) {
+        await markRoadLiabilityLateProviderConflict(tx, payment, winning.id);
+        return winning;
+      }
+    }
     try {
       const updated = await markPaymentTerminal(tx, payment, "CONFIRMED", providerStatus);
       await applyDomainSettlement(tx, updated);
-      await recordStripePaymentLedger(tx, updated);
+      if (payment.purpose === "ROAD_LIABILITY") {
+        await recordRoadLiabilityPaymentLedger(tx, updated);
+      } else {
+        await recordTrustedCollectionLedger(tx, updated);
+      }
       await emitPayment(tx, "payment.confirmed", payment.contractId, {
         paymentId: payment.id,
         purpose: payment.purpose,
@@ -527,7 +666,12 @@ export function createContractPaymentService(prisma: PrismaClient) {
         const existing = await tx.contractPayment.findFirst({
           where: { purpose: payment.purpose, targetId: payment.targetId, status: "CONFIRMED" },
         });
-        if (existing) return existing;
+        if (existing) {
+          if (payment.purpose === "ROAD_LIABILITY" && existing.id !== payment.id) {
+            await markRoadLiabilityLateProviderConflict(tx, payment, existing.id);
+          }
+          return existing;
+        }
       }
       throw error;
     }
@@ -1235,6 +1379,95 @@ export function createContractPaymentService(prisma: PrismaClient) {
     }
   }
 
+  async function settlePaymentFromProvider(
+    paymentId: string,
+    providerStatus?: string,
+    amountMinor?: number,
+    currency?: string,
+  ): Promise<ContractPayment> {
+    return withTransaction(prisma, async (tx) => {
+      const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
+      if (!payment) throw contractError.paymentAttemptNotFound();
+      return confirmPaymentAttempt(tx, payment, providerStatus, amountMinor, currency);
+    });
+  }
+
+  /**
+   * Cash rental settlement after legal signature. Server-derived amount only;
+   * idempotent under concurrent retries via advisory lock + unique handling.
+   */
+  async function settleCashRentalInTx(
+    tx: Tx,
+    contractId: string,
+    actorUserId?: number | null,
+  ): Promise<ContractPayment> {
+    await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RENTAL:${contractId}`);
+    const contract = await tx.contract.findUnique({ where: { id: contractId } });
+    if (!contract) throw contractError.notFound();
+    if (contract.collectionMode !== "CASH") throw contractError.paymentNotAllowed();
+
+    const existingConfirmed = await tx.contractPayment.findFirst({
+      where: { contractId, purpose: "RENTAL", status: "CONFIRMED" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingConfirmed) return existingConfirmed;
+
+    if (contract.status === "PAID") {
+      throw contractError.paymentAlreadySettled();
+    }
+    if (contract.status !== "SIGNED") throw contractError.paymentNotAllowed();
+
+    const obligation = await loadObligation(tx, "RENTAL", contractId);
+    if (obligation.amount <= 0) throw contractError.paymentRequired();
+
+    const active = await tx.contractPayment.findFirst({
+      where: {
+        purpose: "RENTAL",
+        targetId: contractId,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+    });
+    if (active) throw contractError.paymentAlreadyProcessing();
+
+    try {
+      const payment = await tx.contractPayment.create({
+        data: {
+          contractId: obligation.contractId,
+          purpose: "RENTAL",
+          targetId: obligation.targetId,
+          amount: obligation.amount,
+          currency: obligation.currency,
+          method: "CASH",
+          status: "PENDING",
+          createdByUserId: actorUserId ?? null,
+        },
+      });
+      return confirmPaymentAttempt(tx, payment);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        const existing = await tx.contractPayment.findFirst({
+          where: { contractId, purpose: "RENTAL", status: "CONFIRMED" },
+          orderBy: { createdAt: "desc" },
+        });
+        if (existing) return existing;
+      }
+      throw error;
+    }
+  }
+
+  async function confirmTrustedPaymentInTx(tx: Tx, paymentId: string): Promise<ContractPayment> {
+    const payment = await tx.contractPayment.findUnique({ where: { id: paymentId } });
+    if (!payment) throw contractError.paymentAttemptNotFound();
+    return confirmPaymentAttempt(tx, payment);
+  }
+
+  async function settleCashRental(
+    contractId: string,
+    actorUserId?: number | null,
+  ): Promise<ContractPayment> {
+    return withTransaction(prisma, (tx) => settleCashRentalInTx(tx, contractId, actorUserId));
+  }
+
   return {
     startPayment,
     applyProviderPaymentStatus,
@@ -1250,5 +1483,9 @@ export function createContractPaymentService(prisma: PrismaClient) {
     isObligationSettled,
     applyZeroAmountSettlement,
     applyRenewal,
+    settlePaymentFromProvider,
+    settleCashRental,
+    settleCashRentalInTx,
+    confirmTrustedPaymentInTx,
   };
 }

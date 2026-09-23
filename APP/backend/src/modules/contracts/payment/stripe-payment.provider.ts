@@ -257,6 +257,71 @@ export class StripePaymentProvider implements PaymentProvider {
     };
   }
 
+  async getPaymentIntentStatus(providerReference: string) {
+    if (!this.configured) return { status: "UNKNOWN" as const };
+    recordProviderStatusLookup();
+    const paymentIntent = await this.client().paymentIntents.retrieve(providerReference);
+    const status = mapPaymentIntentStatus(paymentIntent.status, {
+      lastPaymentError: paymentIntent.last_payment_error,
+    });
+    const requiresAction = paymentIntent.status === "requires_action";
+    return {
+      status,
+      providerStatus: paymentIntent.status,
+      amountMinor: paymentIntent.amount ?? undefined,
+      currency: paymentIntent.currency?.toUpperCase(),
+      failureCode: paymentIntent.last_payment_error?.code ?? null,
+      declineCode: paymentIntent.last_payment_error?.decline_code ?? null,
+      requiresAction,
+    };
+  }
+
+  async createOffSessionPaymentIntent(
+    input: import("src/modules/contracts/payment/payment-provider.types").CreateOffSessionPaymentInput,
+  ) {
+    if (!this.configured) {
+      return {
+        providerReference: "",
+        providerStatus: "failed",
+        status: "FAILED" as const,
+        requiresAction: false,
+      };
+    }
+    assertAedCurrency(input.currency);
+    const unitAmount = aedToStripeMinorUnits(input.amount);
+    const paymentIntent = await this.client().paymentIntents.create(
+      {
+        amount: unitAmount,
+        currency: input.currency.toLowerCase(),
+        customer: input.stripeCustomerId,
+        payment_method: input.stripePaymentMethodId,
+        off_session: true,
+        confirm: true,
+        metadata: {
+          paymentId: input.paymentId,
+          contractId: input.contractId,
+          purpose: input.purpose,
+          targetId: input.targetId,
+          ...(input.companyCode ? { companyCode: input.companyCode } : {}),
+        },
+      },
+      { idempotencyKey: input.idempotencyKey },
+    );
+    const status = mapPaymentIntentStatus(paymentIntent.status, {
+      lastPaymentError: paymentIntent.last_payment_error,
+    });
+    return {
+      providerReference: paymentIntent.id,
+      providerStatus: paymentIntent.status,
+      status,
+      failureCode: paymentIntent.last_payment_error?.code ?? null,
+      declineCode: paymentIntent.last_payment_error?.decline_code ?? null,
+      requiresAction: paymentIntent.status === "requires_action",
+      amountMinor: paymentIntent.amount ?? undefined,
+      currency: paymentIntent.currency?.toUpperCase(),
+    };
+  }
+
   async getPaymentStatus(providerReference: string): Promise<PaymentStatusResult> {
     if (!this.configured) return { status: "UNKNOWN" };
     recordProviderStatusLookup();
@@ -380,6 +445,28 @@ export class StripePaymentProvider implements PaymentProvider {
           status,
           amountMinor: session.amount_total ?? undefined,
           currency: session.currency?.toUpperCase(),
+        },
+      };
+    }
+
+    if (event.type === "payment_intent.succeeded" || event.type === "payment_intent.payment_failed") {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const paymentId = paymentIntent.metadata?.paymentId;
+      if (!paymentId || !paymentIntent.id) {
+        return { ok: true, event: { kind: "IGNORED", stripeEventId: event.id, eventType: event.type } };
+      }
+      const status = event.type === "payment_intent.succeeded" ? "CONFIRMED" : "FAILED";
+      return {
+        ok: true,
+        event: {
+          stripeEventId: event.id,
+          kind: "PAYMENT",
+          eventType: event.type,
+          providerReference: paymentIntent.id,
+          paymentId,
+          status,
+          amountMinor: paymentIntent.amount ?? undefined,
+          currency: paymentIntent.currency?.toUpperCase(),
         },
       };
     }

@@ -141,24 +141,37 @@ test("OCR policy: unreadable, low confidence, expired, valid", () => {
 });
 
 test("public rental flow is derived, never stored as Contract.status", () => {
+  const electronic = { collectionMode: "ELECTRONIC" as const };
   assert.equal(
-    derivePublicRentalFlowStep({ status: "AWAITING", identityReady: false, paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "AWAITING", identityReady: false, paymentStatus: null, ...electronic }),
     "LICENSE_VERIFICATION",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "AWAITING", identityReady: true, paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "AWAITING", identityReady: true, paymentStatus: null, ...electronic }),
     "CONTRACT",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "FORM", identityReady: true, paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "FORM", identityReady: true, paymentStatus: null, ...electronic }),
     "CONTRACT",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "SIGNED", identityReady: true, paymentStatus: null }),
+    derivePublicRentalFlowStep({ status: "SIGNED", identityReady: true, paymentStatus: null, ...electronic }),
     "PAYMENT",
   );
   assert.equal(
-    derivePublicRentalFlowStep({ status: "PAID", identityReady: true, paymentStatus: "CONFIRMED" }),
+    derivePublicRentalFlowStep({ status: "PAID", identityReady: true, paymentStatus: "CONFIRMED", ...electronic }),
+    "READY_FOR_HANDOVER",
+  );
+});
+
+test("cash rental skips payment step after signature", () => {
+  assert.equal(
+    derivePublicRentalFlowStep({
+      status: "SIGNED",
+      identityReady: true,
+      paymentStatus: null,
+      collectionMode: "CASH",
+    }),
     "READY_FOR_HANDOVER",
   );
 });

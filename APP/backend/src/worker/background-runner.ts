@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { createCallCenterService } from "src/modules/call-center/call-center.service";
 import { createComplaintsService } from "src/modules/complaints/complaints.service";
 import { createStripeWebhookWorker } from "src/modules/contracts/payment/stripe-webhook-worker.service";
+import { createRoadLiabilityOutboxConsumer } from "src/modules/road-liabilities/road-liability-outbox-consumer";
 import { createReportExecService } from "src/modules/reports/report-exec.service";
 
 /**
@@ -19,6 +20,7 @@ export function createBackgroundRunner(app: FastifyInstance) {
   const complaints = createComplaintsService(app);
   const reportExec = createReportExecService(app);
   const stripeWebhooks = createStripeWebhookWorker(app);
+  const roadLiabilityOutbox = createRoadLiabilityOutboxConsumer(app);
 
   async function runAllCycles(): Promise<void> {
     try {
@@ -52,6 +54,14 @@ export function createBackgroundRunner(app: FastifyInstance) {
       }
     } catch (err) {
       app.log.error({ err }, "stripe-webhook: cycle failed");
+    }
+    try {
+      const rl = await roadLiabilityOutbox.runRoadLiabilityOutboxCycle();
+      if (rl.created) {
+        app.log.info(rl, "road-liability-outbox: cycle");
+      }
+    } catch (err) {
+      app.log.error({ err }, "road-liability-outbox: cycle failed");
     }
   }
 

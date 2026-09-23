@@ -15,6 +15,10 @@ import { RoadLiabilitiesList } from "../road-liabilities-list/road-liabilities-l
 import { RoadLiabilitiesQueues } from "../road-liabilities-queues/road-liabilities-queues";
 import { RoadLiabilitiesSummaryStrip } from "../road-liabilities-summary/road-liabilities-summary";
 import { RoadLiabilityDetailDrawer } from "../road-liability-detail/road-liability-detail";
+import { RoadLiabilityCollectDialog } from "../road-liability-collect/road-liability-collect-dialog";
+import { RoadLiabilityCashCollectDialog } from "../road-liability-collect/road-liability-cash-collect-dialog";
+import { RoadLiabilityCollectionFailureDialog } from "../road-liability-collect/road-liability-collection-failure-dialog";
+import { useRoadLiabilityCollection } from "../../hooks/use-road-liability-collection";
 import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
 import { useRecordFocus } from "@/shared/hooks/use-record-focus";
 import rowStyles from "../road-liability-row/road-liability-row.module.css";
@@ -27,6 +31,9 @@ export function RoadLiabilitiesScreen() {
   const router = useRouter();
   const simulation = useDemoSimulation("violations");
   const page = useRoadLiabilities();
+  const collection = useRoadLiabilityCollection(page.items, () => {
+    if (!page.simulationActive) void page.refresh();
+  });
   // Authoritative company list for the filter: the store owns the fetch, the
   // component never calls the API.
   const { companies, isLoading: companiesLoading } = useOperatingCompanies(page.isAllowed);
@@ -129,6 +136,19 @@ export function RoadLiabilitiesScreen() {
           onSelect={page.selectLiability}
           onRetry={() => void page.refresh()}
           onPage={page.setPage}
+          collection={{
+            canCharge: collection.canCharge,
+            canCollectRow: collection.canCollectRow,
+            canCashCollectRow: collection.canCashCollectRow,
+            onCollect: (item) => void collection.openCollectDialog(item),
+            onCashCollect: (item) => void collection.openCashCollectDialog(item),
+            collectSubmitting:
+              collection.collectDialog.submitting || collection.cashCollectDialog.submitting,
+            collectSubmittingId:
+              collection.collectDialog.item?.id ??
+              collection.cashCollectDialog.item?.id ??
+              null,
+          }}
           toolbar={{
             companies,
             companiesLoading,
@@ -168,6 +188,39 @@ export function RoadLiabilitiesScreen() {
         onChargeConfirmed={() => {
           if (!page.simulationActive) void page.refresh();
         }}
+      />
+
+      <RoadLiabilityCollectDialog
+        open={collection.collectDialog.open}
+        item={collection.collectDialog.item}
+        view={collection.collectDialog.view}
+        loading={collection.collectDialog.loading}
+        submitting={collection.collectDialog.submitting}
+        error={collection.collectDialog.error}
+        onClose={collection.collectDialog.close}
+        onConfirm={collection.collectDialog.confirm}
+      />
+
+      <RoadLiabilityCashCollectDialog
+        open={collection.cashCollectDialog.open}
+        item={collection.cashCollectDialog.item}
+        view={collection.cashCollectDialog.view}
+        loading={collection.cashCollectDialog.loading}
+        submitting={collection.cashCollectDialog.submitting}
+        error={collection.cashCollectDialog.error}
+        onClose={collection.cashCollectDialog.close}
+        onConfirm={collection.cashCollectDialog.confirm}
+      />
+
+      <RoadLiabilityCollectionFailureDialog
+        open={collection.failureDialog.open}
+        failure={collection.failureDialog.failure}
+        submitting={collection.failureDialog.submitting}
+        action={collection.failureDialog.action}
+        error={collection.failureDialog.error}
+        onClose={collection.failureDialog.close}
+        onManualCollection={collection.failureDialog.startManualCollection}
+        onPaymentLink={collection.failureDialog.createPaymentLink}
       />
 
       <ContractDetailDrawer

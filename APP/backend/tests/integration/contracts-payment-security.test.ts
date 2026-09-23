@@ -121,7 +121,7 @@ if (!RUN) {
         method: "POST",
         url: "/contracts/offers",
         headers: auth(token),
-        payload: { vehicleId: vId, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 },
+        payload: { vehicleId: vId, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 , collectionMode: "ELECTRONIC"},
       });
       const contractId = offer.json().data.id as string;
       const linkRes = await app.inject({
@@ -442,7 +442,7 @@ if (!RUN) {
         method: "POST",
         url: "/contracts/offers",
         headers: auth(token),
-        payload: { vehicleId: vId, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 },
+        payload: { vehicleId: vId, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 , collectionMode: "ELECTRONIC"},
       });
       assert.equal(offerRes.statusCode, 201, offerRes.body);
       const contractId = offerRes.json().data.id as string;
@@ -542,7 +542,7 @@ if (!RUN) {
         method: "POST",
         url: "/contracts/offers",
         headers: auth(token),
-        payload: { vehicleId: vehicleRes.json().data.id as number, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 },
+        payload: { vehicleId: vehicleRes.json().data.id as number, priceType: "DAILY", rentalDays: 3, agreedAmount: 1500 , collectionMode: "ELECTRONIC"},
       });
       assert.equal(offerRes.statusCode, 201, offerRes.body);
       const contractId = offerRes.json().data.id as string;

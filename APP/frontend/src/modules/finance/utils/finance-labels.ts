@@ -142,16 +142,29 @@ export function ledgerRowMovementKey(entry: {
   return isVoidedOriginalExpenseRow(entry) ? "VOIDED" : entry.direction;
 }
 
+export function ledgerPaymentMethodLabel(
+  method: string | null | undefined,
+  t: LabelTranslator,
+): string | null {
+  if (!method || method === "MANUAL" || method === "BANK_TRANSFER") return null;
+  const key = `paymentMethod.${method}`;
+  const translated = t(key);
+  return translated === key ? method : translated;
+}
+
 export function ledgerRowMovementLabel(
   entry: {
     kind: string;
     direction: LedgerDirection;
     manualExpenseStatus?: "ACTIVE" | "VOID" | null;
+    paymentMethod?: string | null;
   },
   t: LabelTranslator,
 ): string {
   if (isVoidedOriginalExpenseRow(entry)) return t("ledgerMovement.VOIDED");
-  return ledgerMovementLabel(entry.direction, t);
+  const base = ledgerMovementLabel(entry.direction, t);
+  const method = ledgerPaymentMethodLabel(entry.paymentMethod, t);
+  return method ? `${base} · ${method}` : base;
 }
 
 export function expenseCategoryLabel(

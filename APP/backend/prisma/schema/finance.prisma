@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Finance V1 — immutable ledger read model + manual company expenses.
 // Obligations stay in Contract/Renewal/Reconciliation/PostClose domains.
-// Customer collections stay in ContractPayment (trusted Stripe only).
+// Customer collections stay in ContractPayment (trusted Stripe CARD + explicit CASH).
 // ---------------------------------------------------------------------------
 
 enum FinancialLedgerKind {
@@ -9,6 +9,7 @@ enum FinancialLedgerKind {
   RENEWAL_PAYMENT
   RECONCILIATION_PAYMENT
   POST_CLOSE_RECEIVABLE_PAYMENT
+  ROAD_LIABILITY_PAYMENT
   MAINTENANCE_EXPENSE
   MANUAL_EXPENSE
   MANUAL_EXPENSE_REVERSAL

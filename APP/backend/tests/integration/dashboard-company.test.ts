@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
+import { bindIntegrationDatabase, INTEGRATION_ENABLED } from "tests/helpers/integration-harness";
 
 /**
  * Dashboard row-level operating company (Phase B3).
@@ -12,13 +13,12 @@ import { companyId as testCompanyId } from "tests/helpers/operating-company";
  *
  * Requires RUN_INTEGRATION=true against the disposable haidara_test database.
  */
-const RUN = process.env.RUN_INTEGRATION === "true";
-
-if (!RUN) {
-  test("dashboard company integration skipped (set RUN_INTEGRATION=true + a test DATABASE_URL)", {
+if (!INTEGRATION_ENABLED) {
+  test("dashboard company integration skipped (set RUN_INTEGRATION=true + TEST_DATABASE_URL)", {
     skip: true,
   });
 } else {
+  bindIntegrationDatabase();
   describe("dashboard operating company", { concurrency: false }, () => {
     let app: FastifyInstance;
     let prisma: PrismaClient;
@@ -105,6 +105,7 @@ if (!RUN) {
           priceType: "DAILY",
           rentalDays: 2,
           agreedAmount: 400,
+          collectionMode: "ELECTRONIC",
           startAt: input.startAt,
         },
         select: { id: true },
@@ -152,10 +153,9 @@ if (!RUN) {
       eliteCompanyId = await testCompanyId(prisma, "ELITE");
       customerId = (await prisma.customer.create({ data: { name: `Dash Customer ${run}` } })).id;
 
-      // Midday "today" in business time keeps the row inside the business day for any
-      // sane BUSINESS_TIMEZONE_OFFSET_MINUTES.
-      const today = new Date();
-      today.setUTCHours(12, 0, 0, 0);
+      const { resolveBusinessDay } = await import("src/modules/reports/periods");
+      const businessToday = resolveBusinessDay(new Date(), env.BUSINESS_TIMEZONE_OFFSET_MINUTES);
+      const today = new Date(businessToday.from.getTime() + 60 * 60 * 1000);
 
       await createContract({
         number: `DSH-U-${run}`,

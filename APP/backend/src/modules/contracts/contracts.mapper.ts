@@ -218,6 +218,7 @@ export function toDetail(
     rentalDays: row.rentalDays,
     agreedAmount: row.agreedAmount,
     currency: row.currency,
+    collectionMode: row.collectionMode,
     startAt: row.startAt,
     endAt: row.endAt,
     termsVersion: row.termsVersion,

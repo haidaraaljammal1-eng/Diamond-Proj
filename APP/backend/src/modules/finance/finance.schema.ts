@@ -124,6 +124,7 @@ export const LedgerEntrySchema = z.object({
   category: z.string().nullable(),
   description: z.string().nullable(),
   contractPaymentId: z.string().nullable(),
+  paymentMethod: z.enum(["BANK_TRANSFER", "CARD", "CASH", "MANUAL"]).nullable().optional(),
   maintenanceOrderId: z.number().int().nullable(),
   manualExpenseId: z.string().nullable(),
   /** Read projection: VOID originals are not active Expense movements. */

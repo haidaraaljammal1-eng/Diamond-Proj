@@ -16,6 +16,16 @@ import {
 import type { RoadLiabilitiesToolbarProps } from "../road-liabilities-toolbar/road-liabilities-toolbar";
 import styles from "./road-liabilities-list.module.css";
 
+export interface RoadLiabilitiesListCollectionProps {
+  canCharge: boolean;
+  canCollectRow: (item: RoadLiabilityListItemDto) => boolean;
+  canCashCollectRow: (item: RoadLiabilityListItemDto) => boolean;
+  onCollect: (item: RoadLiabilityListItemDto) => void;
+  onCashCollect: (item: RoadLiabilityListItemDto) => void;
+  collectSubmitting: boolean;
+  collectSubmittingId: string | null;
+}
+
 export interface RoadLiabilitiesListProps {
   items: RoadLiabilityListItemDto[];
   meta: RoadLiabilityPageMeta | null;
@@ -28,6 +38,7 @@ export interface RoadLiabilitiesListProps {
   onRetry: () => void;
   onPage: (page: number) => void;
   toolbar: Omit<RoadLiabilitiesToolbarProps, "query" | "resultsLabel" | "loading">;
+  collection?: RoadLiabilitiesListCollectionProps;
 }
 
 export function RoadLiabilitiesList({
@@ -42,11 +53,13 @@ export function RoadLiabilitiesList({
   onRetry,
   onPage,
   toolbar,
+  collection,
 }: RoadLiabilitiesListProps) {
   const t = useTranslations("RoadLiabilities");
   const page = meta?.page ?? query.page;
   const totalPages = meta?.totalPages ?? 1;
   const showEmpty = !error && !loading && items.length === 0;
+  const showActionsColumn = Boolean(collection?.canCharge);
 
   return (
     <section className={styles.list} data-testid="road-liabilities-list">
@@ -89,6 +102,7 @@ export function RoadLiabilitiesList({
                   <th>{t("columns.occurred")}</th>
                   <th>{t("columns.amount")}</th>
                   <th>{t("columns.status")}</th>
+                  {showActionsColumn ? <th>{t("columns.actions")}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -98,6 +112,15 @@ export function RoadLiabilitiesList({
                     item={item}
                     selected={item.id === selectedLiabilityId}
                     onSelect={onSelect}
+                    showCollectAction={Boolean(collection?.canCollectRow(item))}
+                    showCashCollectAction={Boolean(collection?.canCashCollectRow(item))}
+                    showActionsColumn={showActionsColumn}
+                    onCollect={collection?.onCollect}
+                    onCashCollect={collection?.onCashCollect}
+                    collectSubmitting={
+                      collection?.collectSubmitting === true &&
+                      collection.collectSubmittingId === item.id
+                    }
                   />
                 ))}
               </tbody>
@@ -110,6 +133,14 @@ export function RoadLiabilitiesList({
                 item={item}
                 selected={item.id === selectedLiabilityId}
                 onSelect={onSelect}
+                showCollectAction={Boolean(collection?.canCollectRow(item))}
+                showCashCollectAction={Boolean(collection?.canCashCollectRow(item))}
+                onCollect={collection?.onCollect}
+                onCashCollect={collection?.onCashCollect}
+                collectSubmitting={
+                  collection?.collectSubmitting === true &&
+                  collection.collectSubmittingId === item.id
+                }
               />
             ))}
           </div>

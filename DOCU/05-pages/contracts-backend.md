@@ -93,6 +93,21 @@ Never derived from row count.
 
 Blocking / currentRental statuses: **PAID, ACTIVE, RETOUT**. REVIEW is not blocking. CLOSED is never blocking. AWAITING / FORM / SIGNED do not permanently lock the vehicle — the first offer to reach PAID wins under the lock.
 
+## Rental collection mode
+
+`POST /contracts/offers` requires `collectionMode: ELECTRONIC | CASH`. The backend persists:
+
+- `collectionMode`
+- `collectionModeSelectedAt`
+- `collectionModeSelectedByUserId`
+
+Nullable `collectionMode` on historical contracts — no unsafe backfill.
+
+| Mode | Public rental after signature |
+| --- | --- |
+| `ELECTRONIC` | Stripe Hosted Checkout → trusted provider confirmation → `PAID` |
+| `CASH` | Shared cash settlement (`ContractPayment` `method=CASH`, `provider=null`) → `PAID`; no Stripe I/O |
+
 Once a Contract is PAID, its assigned Vehicle remains operationally `AVAILABLE` but is reserved and non-bookable. New offers and RENTAL links for another Contract on that Vehicle are rejected under the `vehicle_rental` advisory lock. PAID reservation is derived from Contract status and an incomplete Car-Out; no Vehicle reservation column or `RESERVED` operational status exists.
 
 Critical mutations take `withTransaction` + `acquireAdvisoryLock(tx, "vehicle_rental", vehicleId)`, then re-read Vehicle and conflicting Contracts. Second blocking contract → `409` / `VEHICLE_ALREADY_RENTED`.

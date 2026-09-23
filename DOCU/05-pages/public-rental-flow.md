@@ -12,8 +12,19 @@ Staff JWT is never used on public customer routes. The opaque Rental token (and,
 | -------- | -------------------------- | ------------------------- |
 | License photo, then passport photo | `LICENSE_VERIFICATION` | `AWAITING`, identity not ready |
 | Official contract | `CONTRACT` | `AWAITING` + `identity.identityReady` (VALID license **and** READY passport), or `FORM` |
-| Secure payment | `PAYMENT` | `SIGNED` (or active PENDING/PROCESSING payment) |
-| After paid | `READY_FOR_HANDOVER` | `PAID` and later operational statuses |
+| Secure payment | `PAYMENT` | `SIGNED` (or active PENDING/PROCESSING payment) — **electronic contracts only** |
+| After paid / cash completion | `READY_FOR_HANDOVER` | `PAID` and later operational statuses |
+
+### Collection mode branching
+
+`Contract.collectionMode` is set when staff create the offer (`ELECTRONIC` | `CASH`).
+
+| Mode | Customer journey after signature |
+| --- | --- |
+| `ELECTRONIC` | `PAYMENT` → Stripe Hosted Checkout → trusted provider confirmation → `PAID` |
+| `CASH` | No payment step. Signature triggers backend cash settlement (`ContractPayment` `method=CASH`) → `PAID` |
+
+Cash contracts never create Stripe Checkout sessions, card setup, or `ContractPaymentAuthorization` for the rental.
 
 The customer never submits `contractId`, `vehicleId`, `agreedAmount`, `rentalDays`, `currency`, or `contractNumber` as authority. Those resolve from the Contract bound to the token.
 

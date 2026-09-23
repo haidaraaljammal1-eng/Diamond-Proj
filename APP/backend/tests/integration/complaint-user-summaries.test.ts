@@ -6,11 +6,14 @@ import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 // BE-4 close-out: assignee/actor SafeUserRef projections (no per-row user N+1,
 // no PII). Verifies the additive summary embeds on list / detail / timeline.
-const RUN = process.env.RUN_INTEGRATION === "true";
+import { bindIntegrationDatabase, INTEGRATION_ENABLED, uniqueFixtureName } from "tests/helpers/integration-harness";
+
+const RUN = INTEGRATION_ENABLED;
 
 if (!RUN) {
-  test("complaint user-summaries integration skipped (set RUN_INTEGRATION=true)", { skip: true }, () => {});
+  test("complaint user-summaries integration skipped (set RUN_INTEGRATION=true + TEST_DATABASE_URL)", { skip: true }, () => {});
 } else {
+  bindIntegrationDatabase();
   let app: FastifyInstance;
   let prisma: PrismaClient;
   const run = Date.now().toString(36).toUpperCase() + "US";
@@ -33,7 +36,16 @@ if (!RUN) {
     return user.id;
   }
   const auth = (t: string) => ({ authorization: `Bearer ${t}` });
-  const CP = ["complaints.read", "complaints.manage", "complaints.create", "complaints.assign", "complaints.resolve", "complaints.close", "complaints.view_all_branches"];
+  const CP = [
+    "complaints.read",
+    "complaints.manage",
+    "complaints.create",
+    "complaints.assign",
+    "complaints.resolve",
+    "complaints.close",
+    "complaints.view_all_branches",
+    "complaints.view_all_departments",
+  ];
 
   before(async () => {
     const { buildApp } = await import("src/app");
@@ -42,9 +54,9 @@ if (!RUN) {
     adminId = await seedUser(`us-admin-${run}@ex.test`, `us_admin_${run}`, CP, "Admin Runner");
     assigneeId = await seedUser(`us-assignee-${run}@ex.test`, `us_assignee_${run}`, ["complaints.read", "complaints.manage"], "Layla Assignee");
     adminT = app.jwt.sign({ sub: adminId, type: "access" });
-    modelId = (await prisma.vehicleModel.create({ data: { code: `MDL-${run}`, name: "Attrage" } })).id;
-    deptId = (await prisma.department.create({ data: { code: `DEP-${run}`, name: "Delivery" } })).id;
-    branchA = (await prisma.branch.create({ data: { code: `BR-${run}`, name: "Riyadh" } })).id;
+    modelId = (await prisma.vehicleModel.create({ data: { code: `MDL-${run}`, name: uniqueFixtureName(run, "Attrage") } })).id;
+    deptId = (await prisma.department.create({ data: { code: `DEP-${run}`, name: uniqueFixtureName(run, "Delivery") } })).id;
+    branchA = (await prisma.branch.create({ data: { code: `BR-${run}`, name: uniqueFixtureName(run, "Riyadh") } })).id;
     await prisma.userBranchAssignment.create({ data: { userId: assigneeId, branchId: branchA } });
     await prisma.userDepartmentAssignment.create({ data: { userId: assigneeId, departmentId: deptId } });
   });

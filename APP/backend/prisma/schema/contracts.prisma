@@ -32,7 +32,14 @@ enum ContractLinkType {
 enum ContractPaymentMethod {
   BANK_TRANSFER
   CARD
+  CASH
   MANUAL
+}
+
+/// Staff-selected customer collection mode for a rental offer. Null on historical contracts.
+enum RentalCollectionMode {
+  ELECTRONIC
+  CASH
 }
 
 enum ContractPaymentStatus {
@@ -48,6 +55,15 @@ enum ContractPaymentPurpose {
   RENEWAL
   RECONCILIATION
   POST_CLOSE_RECEIVABLE
+  ROAD_LIABILITY
+}
+
+enum ContractPaymentOffSessionAttemptStatus {
+  PREPARING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REQUIRES_ACTION
 }
 
 /// Stripe Checkout provider attempt — immutable snapshot per Checkout Session create.
@@ -156,6 +172,11 @@ model Contract {
   createdBy              User             @relation("ContractCreatedBy", fields: [createdByUserId], references: [id])
   assignedEmployeeUserId Int?
   assignedEmployee       User?            @relation("ContractAssignedEmployee", fields: [assignedEmployeeUserId], references: [id], onDelete: SetNull)
+  /// Frozen at offer creation — never changes after the rental journey starts.
+  collectionMode               RentalCollectionMode?
+  collectionModeSelectedAt     DateTime?
+  collectionModeSelectedByUserId Int?
+  collectionModeSelectedBy       User?              @relation("ContractCollectionModeSelectedBy", fields: [collectionModeSelectedByUserId], references: [id], onDelete: SetNull)
 
   priceType     ContractPriceType
   rentalDays    Int
@@ -298,13 +319,46 @@ model ContractPayment {
   reconciliationSettlement ContractReconciliation?       @relation("ReconciliationSettlement")
   postCloseSettlement      ContractPostCloseReceivable?  @relation("PostCloseSettlement")
   renewalSettlement        ContractRenewal?              @relation("RenewalSettlement")
+  roadLiabilitySettlement  RoadLiabilityCustomerCharge?  @relation("RoadLiabilitySettlement")
   ledgerEntries            FinancialLedgerEntry[]
   paymentAuthorization     ContractPaymentAuthorization?
   checkoutAttempts         ContractPaymentAttempt[]
+  offSessionAttempts       ContractPaymentOffSessionAttempt[]
 
   @@index([contractId, status])
   @@index([purpose, targetId, status])
   @@map("contract_payments")
+}
+
+/// Off-session Stripe PaymentIntent attempt for direct road-liability collection.
+model ContractPaymentOffSessionAttempt {
+  id                      String                               @id @default(uuid())
+  contractPaymentId       String
+  contractPayment         ContractPayment                      @relation(fields: [contractPaymentId], references: [id], onDelete: Cascade)
+  customerChargeId        String
+  customerCharge          RoadLiabilityCustomerCharge          @relation(fields: [customerChargeId], references: [id], onDelete: Restrict)
+  authorizationId         String
+  authorization           ContractPaymentAuthorization         @relation(fields: [authorizationId], references: [id], onDelete: Restrict)
+  customerPaymentMethodId String
+  customerPaymentMethod   CustomerPaymentMethod                @relation(fields: [customerPaymentMethodId], references: [id], onDelete: Restrict)
+  provider                String
+  providerAccountKey      String?
+  livemode                Boolean
+  amount                  Int
+  currency                String
+  idempotencyKey          String                               @unique
+  providerReference       String?                              @unique
+  status                  ContractPaymentOffSessionAttemptStatus @default(PREPARING)
+  failureCode             String?
+  declineCode             String?
+  requiresAction          Boolean                              @default(false)
+  createdAt               DateTime                             @default(now())
+  updatedAt               DateTime                             @updatedAt
+  completedAt             DateTime?
+
+  @@index([contractPaymentId, status])
+  @@index([customerChargeId, status])
+  @@map("contract_payment_off_session_attempts")
 }
 
 model ContractPaymentAttempt {
@@ -396,6 +450,7 @@ model ContractPaymentAuthorization {
   userAgent               String?
   revokedAt               DateTime?
   createdAt               DateTime              @default(now())
+  offSessionAttempts      ContractPaymentOffSessionAttempt[]
 
   @@index([customerId])
   @@index([customerPaymentMethodId])

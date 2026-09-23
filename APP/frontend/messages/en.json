@@ -642,6 +642,21 @@
       "operationStatus": "Operational status",
       "serviceStatus": "At workshop — maintenance follow-up"
     },
+    "collectionMode": {
+      "title": "Payment method",
+      "description": "Choose how this contract will be collected.",
+      "continue": "Continue",
+      "electronic": {
+        "title": "Electronic payment",
+        "description": "The customer will pay securely via Stripe after signing the contract."
+      },
+      "cash": {
+        "title": "Cash payment",
+        "description": "No online payment step for the customer. The amount is recorded as cash collection after signing.",
+        "badge": "Payment: Cash",
+        "pricingHint": "The customer will not see an online payment step in the rental link."
+      }
+    },
     "setPrice": {
       "title": "Set rental price — {name}",
       "description": "Choose a rental period, then enter the amount for the customer. · {plate}",
@@ -904,6 +919,7 @@
     },
     "link": {
       "created": "Rental link created",
+      "createdCash": "Rental link created — cash collection",
       "copy": "Copy link",
       "copied": "Copied",
       "open": "Open link",
@@ -1213,6 +1229,7 @@
       "license": "Document Verification",
       "contract": "Contract Review",
       "payment": "Payment",
+      "completion": "Completion",
       "signature": "Signature"
     },
     "tarsOtp": {
@@ -1406,6 +1423,10 @@
       "futureUseConsentLegal": "Operational consent copy — requires owner/legal approval before production.",
       "devCardSetupNotice": "Development payment simulation is enabled.",
       "simulateSuccess": "Simulate Successful Payment"
+    },
+    "handoverCash": {
+      "title": "Your rental agreement has been completed successfully",
+      "body": "Thank you. The office has recorded the agreed payment method for this contract."
     },
     "handover": {
       "title": "Payment confirmed",
@@ -2016,7 +2037,8 @@
       "party": "Contract / Customer",
       "occurred": "Occurred",
       "amount": "Amount",
-      "status": "Status"
+      "status": "Status",
+      "actions": "Actions"
     },
     "list": {
       "loading": "Loading liabilities…",
@@ -2108,6 +2130,61 @@
       "notEligible": "This liability cannot be charged to the customer yet.",
       "forbidden": "You do not have permission to confirm a customer charge.",
       "generic": "The customer charge could not be confirmed. Try again."
+    },
+    "collect": {
+      "rowAction": "Collect from saved card",
+      "cashRowAction": "Mark cash collected",
+      "cashRowHint": "Cash rental — card collection is unavailable.",
+      "cashDialogTitle": "Confirm cash collection",
+      "cashDialogSubtitle": "Record the customer charge as a trusted cash collection.",
+      "cashPaymentMethod": "Payment method",
+      "cashPaymentMethodValue": "Cash",
+      "cashFinanceNote": "This amount will be recorded as an actual collection in Finance.",
+      "cashConfirm": "Confirm cash received",
+      "dialogTitle": "Collect from saved card",
+      "dialogSubtitle": "The amount will be charged immediately to the customer's saved card.",
+      "officialAmount": "Official Amount",
+      "customerCharge": "Customer Charge",
+      "contract": "Contract",
+      "customer": "Customer",
+      "savedCard": "Saved Card",
+      "noSavedCard": "No saved card",
+      "cancel": "Cancel",
+      "confirm": "Collect now",
+      "loading": "Loading collection details…",
+      "cardLabel": "{brand} ···· {last4}"
+    },
+    "collectionFailure": {
+      "dialogTitle": "Collection failed",
+      "dialogSubtitle": "The saved card could not be charged.",
+      "violation": "Violation",
+      "type": "Type",
+      "reference": "Reference",
+      "vehicle": "Vehicle",
+      "plate": "Plate",
+      "contract": "Contract",
+      "amount": "Amount",
+      "savedCard": "Saved card",
+      "reason": "Failure reason",
+      "customerSection": "Customer details",
+      "manualCollection": "Mark for manual collection",
+      "paymentLink": "Send payment link",
+      "close": "Close",
+      "customer": {
+        "fullName": "Full name",
+        "nationality": "Nationality",
+        "identityNumber": "Emirates ID",
+        "passportNumber": "Passport number",
+        "passportIssueDate": "Passport issue date",
+        "passportExpiryDate": "Passport expiry date",
+        "dateOfBirth": "Date of birth",
+        "sex": "Sex",
+        "issuingCountry": "Issuing country",
+        "drivingLicenseNumber": "Driving license number",
+        "drivingLicenseExpiry": "Driving license expiry",
+        "telephone": "Telephone",
+        "address": "Address"
+      }
     }
   },
   "Finance": {
@@ -2136,6 +2213,10 @@
       "label": "Company scope",
       "all": "All",
       "classification": "Classification"
+    },
+    "paymentMethod": {
+      "CARD": "Card",
+      "CASH": "Cash"
     },
     "kpi": {
       "collected": "Collected",

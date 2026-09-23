@@ -16,7 +16,7 @@ export type ContractPriceType = "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
 
 export type ContractLinkType = "RENTAL" | "RETURN" | "RENEWAL";
 
-export type ContractPaymentMethod = "BANK_TRANSFER" | "CARD" | "MANUAL";
+export type ContractPaymentMethod = "BANK_TRANSFER" | "CARD" | "CASH" | "MANUAL";
 
 export type ContractPaymentStatus =
   | "PENDING"
@@ -298,6 +298,7 @@ export interface ContractDetailDto {
   rentalDays: number;
   agreedAmount: number;
   currency: string;
+  collectionMode: RentalCollectionMode | null;
   startAt: string | null;
   endAt: string | null;
   termsVersion: string;
@@ -321,11 +322,14 @@ export interface ContractDetailDto {
   postCloseReceivables: ContractPostCloseReceivablesSummaryDto;
 }
 
+export type RentalCollectionMode = "ELECTRONIC" | "CASH";
+
 export interface CreateContractOfferPayload {
   vehicleId: number;
   priceType: ContractPriceType;
   rentalDays: number;
   agreedAmount: number;
+  collectionMode: RentalCollectionMode;
   startAt?: string;
   endAt?: string;
   customerId?: number;
@@ -404,6 +408,7 @@ export interface IssuedContractLinkView {
   type: ContractLinkType;
   url: string;
   expiresAt: string;
+  collectionMode?: RentalCollectionMode | null;
 }
 
 export interface ContractFiltersState {

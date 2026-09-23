@@ -642,6 +642,21 @@
       "operationStatus": "حالة التشغيل",
       "serviceStatus": "في الورشة — متابعة الصيانة"
     },
+    "collectionMode": {
+      "title": "طريقة الدفع",
+      "description": "اختر طريقة تحصيل قيمة هذا العقد.",
+      "continue": "متابعة",
+      "electronic": {
+        "title": "الدفع الإلكتروني",
+        "description": "سيكمل العميل الدفع بأمان عبر Stripe بعد توقيع العقد."
+      },
+      "cash": {
+        "title": "الدفع كاش",
+        "description": "لن تظهر للعميل مرحلة دفع إلكتروني، وسيُسجّل المبلغ كتحصيل نقدي بعد اكتمال توقيع العقد.",
+        "badge": "الدفع: كاش",
+        "pricingHint": "لن تظهر مرحلة الدفع الإلكتروني في رابط العميل."
+      }
+    },
     "setPrice": {
       "title": "تحديد سعر الإيجار — {name}",
       "description": "اختر فترة الإيجار ثم أدخل المبلغ المطلوب من العميل. · {plate}",
@@ -904,6 +919,7 @@
     },
     "link": {
       "created": "تم إنشاء رابط الإيجار",
+      "createdCash": "تم إنشاء رابط الإيجار — الدفع كاش",
       "copy": "نسخ الرابط",
       "copied": "تم النسخ",
       "open": "فتح الرابط",
@@ -1213,6 +1229,7 @@
       "license": "التحقق من المستندات",
       "contract": "مراجعة العقد",
       "payment": "الدفع",
+      "completion": "الاكتمال",
       "signature": "التوقيع"
     },
     "tarsOtp": {
@@ -1406,6 +1423,10 @@
       "futureUseConsentLegal": "نص موافقة تشغيلي — يتطلب موافقة المالك/القانوني قبل الإنتاج.",
       "devCardSetupNotice": "وضع محاكاة الدفع مفعّل في بيئة التطوير.",
       "simulateSuccess": "محاكاة الدفع الناجح"
+    },
+    "handoverCash": {
+      "title": "تم استكمال وتوقيع العقد بنجاح",
+      "body": "شكرًا لك. تم تسجيل طريقة الدفع المحددة من المكتب لهذا العقد."
     },
     "handover": {
       "title": "تم تأكيد الدفع بنجاح",
@@ -2016,7 +2037,8 @@
       "party": "العقد / العميل",
       "occurred": "وقت الحدث",
       "amount": "المبلغ",
-      "status": "الحالة"
+      "status": "الحالة",
+      "actions": "إجراءات"
     },
     "list": {
       "loading": "جارٍ تحميل الالتزامات…",
@@ -2108,6 +2130,61 @@
       "notEligible": "لا يمكن تثبيت هذا الالتزام على العميل حالياً.",
       "forbidden": "ليست لديك صلاحية تثبيت المبلغ على العميل.",
       "generic": "تعذر تثبيت المبلغ على العميل. حاول مرة أخرى."
+    },
+    "collect": {
+      "rowAction": "تحصيل من البطاقة المحفوظة",
+      "cashRowAction": "تم التحصيل كاش",
+      "cashRowHint": "العميل دفع الإيجار كاش — لا يمكن الخصم من البطاقة.",
+      "cashDialogTitle": "تأكيد التحصيل كاش",
+      "cashDialogSubtitle": "تسجيل مبلغ العميل كتحصيل نقدي موثوق.",
+      "cashPaymentMethod": "طريقة الدفع",
+      "cashPaymentMethodValue": "كاش",
+      "cashFinanceNote": "سيتم تسجيل المبلغ كتحصيل مالي فعلي في صفحة المالية.",
+      "cashConfirm": "تأكيد استلام المبلغ كاش",
+      "dialogTitle": "تحصيل من البطاقة المحفوظة",
+      "dialogSubtitle": "سيتم خصم المبلغ فوراً من بطاقة العميل المحفوظة.",
+      "officialAmount": "المبلغ الرسمي",
+      "customerCharge": "المبلغ على العميل",
+      "contract": "العقد",
+      "customer": "العميل",
+      "savedCard": "البطاقة المحفوظة",
+      "noSavedCard": "لا توجد بطاقة محفوظة",
+      "cancel": "إلغاء",
+      "confirm": "تحصيل الآن",
+      "loading": "جارٍ تحميل بيانات التحصيل…",
+      "cardLabel": "{brand} ···· {last4}"
+    },
+    "collectionFailure": {
+      "dialogTitle": "فشل التحصيل",
+      "dialogSubtitle": "تعذر خصم المبلغ من البطاقة المحفوظة.",
+      "violation": "المخالفة",
+      "type": "النوع",
+      "reference": "المرجع",
+      "vehicle": "المركبة",
+      "plate": "اللوحة",
+      "contract": "العقد",
+      "amount": "المبلغ",
+      "savedCard": "البطاقة المحفوظة",
+      "reason": "سبب الفشل",
+      "customerSection": "بيانات العميل",
+      "manualCollection": "تحصيل يدوي",
+      "paymentLink": "إرسال رابط دفع",
+      "close": "إغلاق",
+      "customer": {
+        "fullName": "الاسم الكامل",
+        "nationality": "الجنسية",
+        "identityNumber": "رقم الهوية",
+        "passportNumber": "رقم الجواز",
+        "passportIssueDate": "تاريخ إصدار الجواز",
+        "passportExpiryDate": "تاريخ انتهاء الجواز",
+        "dateOfBirth": "تاريخ الميلاد",
+        "sex": "الجنس",
+        "issuingCountry": "بلد الإصدار",
+        "drivingLicenseNumber": "رقم رخصة القيادة",
+        "drivingLicenseExpiry": "تاريخ انتهاء الرخصة",
+        "telephone": "الهاتف",
+        "address": "العنوان"
+      }
     }
   },
   "Finance": {
@@ -2136,6 +2213,10 @@
       "label": "نطاق الشركة",
       "all": "الكل",
       "classification": "التصنيف"
+    },
+    "paymentMethod": {
+      "CARD": "بطاقة",
+      "CASH": "كاش"
     },
     "kpi": {
       "collected": "تم التحصيل",

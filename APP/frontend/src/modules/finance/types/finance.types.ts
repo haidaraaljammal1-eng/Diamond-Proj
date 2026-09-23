@@ -149,6 +149,7 @@ export interface LedgerEntryDto {
   category: string | null;
   description: string | null;
   contractPaymentId: string | null;
+  paymentMethod?: "BANK_TRANSFER" | "CARD" | "CASH" | "MANUAL" | null;
   maintenanceOrderId: number | null;
   manualExpenseId: string | null;
   vendorName?: string | null;

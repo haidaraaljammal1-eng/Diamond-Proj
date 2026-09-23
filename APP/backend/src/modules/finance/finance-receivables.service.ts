@@ -15,11 +15,14 @@ import {
 
 const ALL_COMPANIES: FinanceCompanyScope = { kind: "ALL" };
 
-const TRUSTED_STRIPE_PAYMENT: Prisma.ContractPaymentWhereInput = {
+/** Matches Finance Collected: trusted Stripe CARD or explicit CASH collections. */
+const TRUSTED_CUSTOMER_COLLECTION: Prisma.ContractPaymentWhereInput = {
   status: "CONFIRMED",
-  method: "CARD",
-  provider: "stripe",
   confirmedAt: { not: null },
+  OR: [
+    { method: "CARD", provider: "stripe" },
+    { method: "CASH", provider: null },
+  ],
 };
 
 const CONTRACT_INCLUDE = {
@@ -65,7 +68,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
           payments: {
             some: {
               purpose: "RENTAL",
-              ...TRUSTED_STRIPE_PAYMENT,
+              ...TRUSTED_CUSTOMER_COLLECTION,
             },
           },
         },
@@ -114,7 +117,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         appliedAt: null,
         additionalAmount: { gt: 0 },
         NOT: {
-          settledPayment: TRUSTED_STRIPE_PAYMENT,
+          settledPayment: TRUSTED_CUSTOMER_COLLECTION,
         },
       },
       include: {

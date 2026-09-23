@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
@@ -20,6 +21,12 @@ export interface RoadLiabilityRowProps {
   item: RoadLiabilityListItemDto;
   selected: boolean;
   onSelect: (id: string) => void;
+  showCollectAction?: boolean;
+  showCashCollectAction?: boolean;
+  showActionsColumn?: boolean;
+  onCollect?: (item: RoadLiabilityListItemDto) => void;
+  onCashCollect?: (item: RoadLiabilityListItemDto) => void;
+  collectSubmitting?: boolean;
 }
 
 function AuthorityMark({ item }: { item: RoadLiabilityListItemDto }) {
@@ -75,7 +82,17 @@ function WorkStateChip({ item }: { item: RoadLiabilityListItemDto }) {
   );
 }
 
-export function RoadLiabilityRow({ item, selected, onSelect }: RoadLiabilityRowProps) {
+export function RoadLiabilityRow({
+  item,
+  selected,
+  onSelect,
+  showCollectAction = false,
+  showCashCollectAction = false,
+  showActionsColumn = false,
+  onCollect,
+  onCashCollect,
+  collectSubmitting = false,
+}: RoadLiabilityRowProps) {
   const t = useTranslations("RoadLiabilities");
   const locale = useLocale();
   const occurred = toValidOccurredDate(item.occurredAt);
@@ -95,6 +112,7 @@ export function RoadLiabilityRow({ item, selected, onSelect }: RoadLiabilityRowP
         styles.row,
         selected ? styles.selected : "",
         gpsOnly ? styles.prediction : "",
+        showCashCollectAction ? styles.cashAttention : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -151,15 +169,62 @@ export function RoadLiabilityRow({ item, selected, onSelect }: RoadLiabilityRowP
       </td>
       <td className={styles.cell}>
         <WorkStateChip item={item} />
+        {showCashCollectAction ? (
+          <p className={styles.cashHint}>{t("collect.cashRowHint")}</p>
+        ) : null}
         {item.reconciliationAttached ? (
           <p className={styles.attachedHint}>{t("charge.addedShort")}</p>
         ) : null}
       </td>
+      {showActionsColumn ? (
+        <td className={styles.cell}>
+          {showCashCollectAction ? (
+            <Button
+              type="button"
+              size="sm"
+              className={styles.collectAction}
+              loading={collectSubmitting}
+              data-testid="road-liability-cash-collect-row"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (collectSubmitting) return;
+                onCashCollect?.(item);
+              }}
+            >
+              {t("collect.cashRowAction")}
+            </Button>
+          ) : null}
+          {showCollectAction ? (
+            <Button
+              type="button"
+              size="sm"
+              className={styles.collectAction}
+              loading={collectSubmitting}
+              data-testid="road-liability-collect-row"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (collectSubmitting) return;
+                onCollect?.(item);
+              }}
+            >
+              {t("collect.rowAction")}
+            </Button>
+          ) : null}
+        </td>
+      ) : null}
     </tr>
   );
 }
 
-export function RoadLiabilityCard({ item, selected, onSelect }: RoadLiabilityRowProps) {
+export function RoadLiabilityCard({
+  item,
+  selected,
+  onSelect,
+  showCollectAction = false,
+  showActionsColumn = false,
+  onCollect,
+  collectSubmitting = false,
+}: RoadLiabilityRowProps) {
   const t = useTranslations("RoadLiabilities");
   const amount = formatLiabilityAmount(item);
   const gpsOnly = isGpsPredictionOnly(item);
@@ -214,6 +279,22 @@ export function RoadLiabilityCard({ item, selected, onSelect }: RoadLiabilityRow
           <p className={styles.attachedHint}>{t("charge.addedShort")}</p>
         ) : null}
       </div>
+      {showCollectAction ? (
+        <Button
+          type="button"
+          size="sm"
+          className={styles.collectAction}
+          loading={collectSubmitting}
+          data-testid="road-liability-collect-card"
+          onClick={(event) => {
+            event.stopPropagation();
+            if (collectSubmitting) return;
+            onCollect?.(item);
+          }}
+        >
+          {t("collect.rowAction")}
+        </Button>
+      ) : null}
     </button>
   );
 }

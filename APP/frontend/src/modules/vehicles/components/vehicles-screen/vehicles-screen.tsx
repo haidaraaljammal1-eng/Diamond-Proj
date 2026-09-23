@@ -13,6 +13,8 @@ import { VehicleDetailDialog } from "../vehicle-detail/vehicle-detail-dialog";
 import { VehicleFilters } from "../vehicle-filters/vehicle-filters";
 import { VehiclesGrid } from "../vehicles-grid/vehicles-grid";
 import { SetRentalPriceDialog } from "../../forms/rental-price/set-rental-price-dialog";
+import { RentalCollectionModeDialog } from "../../forms/rental-price/rental-collection-mode-dialog";
+import type { RentalCollectionMode } from "@/modules/contracts/types/contract.types";
 import { AddVehicleDialog } from "../../forms/add-vehicle/add-vehicle-dialog";
 import { EditDefaultRateDialog } from "../../forms/edit-rates/edit-default-rate-dialog";
 import { VehicleDeactivateDialog } from "../../forms/deactivate/vehicle-deactivate-dialog";
@@ -68,7 +70,11 @@ export function VehiclesScreen() {
   const registerNotificationTargets = useNotificationRecordTargets();
 
   const [detailVehicle, setDetailVehicle] = useState<VehicleCardDto | null>(null);
+  const [modeDialogVehicle, setModeDialogVehicle] = useState<VehicleCardDto | null>(null);
   const [priceVehicle, setPriceVehicle] = useState<VehicleCardDto | null>(null);
+  const [priceCollectionMode, setPriceCollectionMode] = useState<RentalCollectionMode | null>(
+    null,
+  );
   const [editRatesVehicle, setEditRatesVehicle] = useState<VehicleCardDto | null>(null);
   const [deactivateVehicle, setDeactivateVehicle] = useState<VehicleCardDto | null>(null);
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
@@ -159,7 +165,7 @@ export function VehiclesScreen() {
           showNotice(t("boundary.noContract"));
           return;
         case "set-rental-price":
-          setPriceVehicle(vehicle);
+          setModeDialogVehicle(vehicle);
           return;
       }
     },
@@ -352,16 +358,31 @@ export function VehiclesScreen() {
         vehicle={detailVehicle}
         canManage={canManage}
         onClose={() => setDetailVehicle(null)}
-        onSetPrice={setPriceVehicle}
+        onSetPrice={setModeDialogVehicle}
         onPrimaryAction={handlePrimaryAction}
         onGps={(vehicle) => router.push(`/${locale}/gps?vehicleId=${vehicle.id}`)}
         onMaintenance={() => router.push(`/${locale}/maintenance`)}
         onPhotoNotice={showNotice}
       />
 
+      <RentalCollectionModeDialog
+        open={modeDialogVehicle != null}
+        onClose={() => setModeDialogVehicle(null)}
+        onContinue={(mode) => {
+          if (!modeDialogVehicle) return;
+          setPriceCollectionMode(mode);
+          setPriceVehicle(modeDialogVehicle);
+          setModeDialogVehicle(null);
+        }}
+      />
+
       <SetRentalPriceDialog
         vehicle={priceVehicle}
-        onClose={() => setPriceVehicle(null)}
+        collectionMode={priceCollectionMode}
+        onClose={() => {
+          setPriceVehicle(null);
+          setPriceCollectionMode(null);
+        }}
       />
 
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />

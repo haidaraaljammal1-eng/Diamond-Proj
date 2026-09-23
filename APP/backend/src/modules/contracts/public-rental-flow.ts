@@ -1,4 +1,4 @@
-import type { ContractPaymentStatus, ContractStatus } from "@prisma/client";
+import type { ContractPaymentStatus, ContractStatus, RentalCollectionMode } from "@prisma/client";
 import type { PublicRentalFlowStep } from "src/modules/contracts/contracts.constants";
 
 export function derivePublicRentalFlowStep(input: {
@@ -6,6 +6,7 @@ export function derivePublicRentalFlowStep(input: {
   /** Backend identity gate: VALID driving license AND READY passport. */
   identityReady: boolean;
   paymentStatus: ContractPaymentStatus | null;
+  collectionMode: RentalCollectionMode | null;
 }): PublicRentalFlowStep {
   if (
     input.status === "PAID" ||
@@ -16,7 +17,13 @@ export function derivePublicRentalFlowStep(input: {
   ) {
     return "READY_FOR_HANDOVER";
   }
-  if (input.status === "SIGNED" || input.paymentStatus === "PENDING" || input.paymentStatus === "PROCESSING") {
+  if (input.collectionMode === "CASH") {
+    if (input.status === "SIGNED") return "READY_FOR_HANDOVER";
+  } else if (
+    input.status === "SIGNED" ||
+    input.paymentStatus === "PENDING" ||
+    input.paymentStatus === "PROCESSING"
+  ) {
     return "PAYMENT";
   }
   // FORM contracts already passed the document stage; they stay on the contract step.

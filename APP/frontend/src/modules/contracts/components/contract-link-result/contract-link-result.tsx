@@ -28,7 +28,9 @@ export function ContractLinkResult({ link, onClose }: ContractLinkResultProps) {
 
   return (
     <div className={styles.root} data-testid="contract-link-result">
-      <p className={styles.title}>{t("created")}</p>
+      <p className={styles.title}>
+        {link.collectionMode === "CASH" ? t("createdCash") : t("created")}
+      </p>
       <p className={styles.meta}>
         <span dir="ltr">{link.contractNumber}</span>
         {link.expiresAt ? (

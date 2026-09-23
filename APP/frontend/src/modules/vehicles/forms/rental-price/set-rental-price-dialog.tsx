@@ -8,7 +8,10 @@ import { Button } from "@/shared/components/ui/button";
 import { FormBuilder } from "@/shared/components/forms/form-builder";
 import type { FormField } from "@/shared/components/forms/form-builder";
 import { useContract } from "@/modules/contracts/hooks/use-contract";
-import type { ContractPriceType } from "@/modules/contracts/types/contract.types";
+import type {
+  ContractPriceType,
+  RentalCollectionMode,
+} from "@/modules/contracts/types/contract.types";
 import { defaultDaysForPriceType } from "@/modules/contracts/forms/offer/offer.schema";
 import { resolveContractsErrorMessage } from "@/modules/contracts/utils/resolve-contracts-error";
 import type { VehicleCardDto } from "../../types/vehicle.types";
@@ -26,19 +29,33 @@ const PRICE_CHIPS: ContractPriceType[] = ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"
 
 export interface SetRentalPriceDialogProps {
   vehicle: VehicleCardDto | null;
+  collectionMode: RentalCollectionMode | null;
   onClose: () => void;
 }
 
-export function SetRentalPriceDialog({ vehicle, onClose }: SetRentalPriceDialogProps) {
-  if (!vehicle) return null;
-  return <SetRentalPriceForm key={vehicle.id} vehicle={vehicle} onClose={onClose} />;
+export function SetRentalPriceDialog({
+  vehicle,
+  collectionMode,
+  onClose,
+}: SetRentalPriceDialogProps) {
+  if (!vehicle || !collectionMode) return null;
+  return (
+    <SetRentalPriceForm
+      key={`${vehicle.id}-${collectionMode}`}
+      vehicle={vehicle}
+      collectionMode={collectionMode}
+      onClose={onClose}
+    />
+  );
 }
 
 function SetRentalPriceForm({
   vehicle,
+  collectionMode,
   onClose,
 }: {
   vehicle: VehicleCardDto;
+  collectionMode: RentalCollectionMode;
   onClose: () => void;
 }) {
   const t = useTranslations("Vehicles");
@@ -85,6 +102,13 @@ function SetRentalPriceForm({
       description={t("setPrice.description", { plate: vehicle.plateNumber ?? "—" })}
       closeLabel={t("detail.close")}
     >
+      {collectionMode === "CASH" ? (
+        <p className={styles.pending} data-testid="rental-cash-context">
+          <strong>{t("collectionMode.cash.badge")}</strong>
+          {" — "}
+          {t("collectionMode.cash.pricingHint")}
+        </p>
+      ) : null}
       <div className={styles.periods}>
         {PRICE_CHIPS.map((type) => (
           <button
@@ -140,6 +164,7 @@ function SetRentalPriceForm({
               priceType,
               rentalDays: parsed.rentalDays,
               agreedAmount: parsed.agreedAmount,
+              collectionMode,
             },
             true,
           );

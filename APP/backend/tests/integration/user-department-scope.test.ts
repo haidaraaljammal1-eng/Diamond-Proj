@@ -23,13 +23,14 @@ import type { PrismaClient } from "@prisma/client";
  * Maps to the §32 test list (TEST 1..11). Only runs with RUN_INTEGRATION=true and a
  * disposable test DATABASE_URL. Codes/emails are suffixed per-run so it re-runs clean.
  */
-const RUN = process.env.RUN_INTEGRATION === "true";
+import { bindIntegrationDatabase, INTEGRATION_ENABLED } from "tests/helpers/integration-harness";
 
-if (!RUN) {
-  test("user-department-scope integration skipped (set RUN_INTEGRATION=true + a test DATABASE_URL)", {
+if (!INTEGRATION_ENABLED) {
+  test("user-department-scope integration skipped (set RUN_INTEGRATION=true + TEST_DATABASE_URL)", {
     skip: true,
   });
 } else {
+  bindIntegrationDatabase();
   let app: FastifyInstance;
   let prisma: PrismaClient;
   const run = Date.now().toString(36).toUpperCase();
@@ -109,8 +110,8 @@ if (!RUN) {
     app = await buildApp();
     prisma = app.prisma;
 
-    branchRiyadh = (await prisma.branch.create({ data: { code: `UDS-BR-${run}`, name: "UDS Riyadh" } })).id;
-    branchJeddah = (await prisma.branch.create({ data: { code: `UDS-BJ-${run}`, name: "UDS Jeddah" } })).id;
+    branchRiyadh = (await prisma.branch.create({ data: { code: `UDS-BR-${run}`, name: `UDS Riyadh ${run}` } })).id;
+    branchJeddah = (await prisma.branch.create({ data: { code: `UDS-BJ-${run}`, name: `UDS Jeddah ${run}` } })).id;
 
     // Same business name across two branches → two distinct branch-scoped departments.
     deptComplaintsRiyadh = (

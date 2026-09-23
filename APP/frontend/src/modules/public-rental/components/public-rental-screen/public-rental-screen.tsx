@@ -126,6 +126,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
 
   const context = rental.context;
   const rentalSimulation = providerSimulationEnabled && context.payment.devSimulationAvailable;
+  const isCashCollection = context.collection.mode === "CASH";
   const allowed = uiStageFromFlowStep(context.flow.step);
   const requestedStage = viewStage;
   const current: PublicRentalUiStage =
@@ -180,6 +181,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
             allowed={allowed}
             current={current === "handover" ? "payment" : current}
             onSelect={goToStage}
+            cashCollection={isCashCollection}
           />
         ) : null}
 
@@ -233,12 +235,12 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 }}
                 onSigned={async () => {
                   await rental.load(token);
-                  goToStage("payment");
+                  goToStage(isCashCollection ? "handover" : "payment");
                 }}
               />
             ) : null}
 
-            {current === "payment" ? (
+            {current === "payment" && !isCashCollection ? (
               <PaymentStep
                 context={context}
                 simulationEnabled={rentalSimulation}
