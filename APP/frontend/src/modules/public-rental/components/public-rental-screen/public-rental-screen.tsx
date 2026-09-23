@@ -72,7 +72,9 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     }
     setPaymentCancelNotice(t("payment.notCompleted"));
     setViewStage("payment");
-    void rental.load(token);
+    void import("../../api/public-rental.api").then(({ abandonPublicRentalPayment }) =>
+      abandonPublicRentalPayment(token).finally(() => rental.load(token)),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- query param is the trigger
   }, [searchParams, token]);
 

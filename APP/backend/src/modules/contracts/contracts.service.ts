@@ -83,7 +83,11 @@ import {
   readDamageMarks,
   SIGNATURE_UPLOAD_MIME,
 } from "src/modules/contracts/official-contract-interactive";
-import { resolveContractCustomerFromSnapshot } from "src/modules/contracts/contract-customer-materialization";
+import {
+  finalizeContractCustomerAtSigning,
+  resolveContractCustomerFromSnapshot,
+  resolvePublicFormCustomerId,
+} from "src/modules/contracts/contract-customer-materialization";
 import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
 import { createFilesService } from "src/modules/files/files.service";
@@ -1090,9 +1094,9 @@ export function createContractsService(fastify: FastifyInstance) {
         throw contractError.identityNotReady();
       }
 
-      const customerData = {
+      const materialized = {
         name: input.name,
-        mobile: normalizePhone(input.mobile),
+        mobile: input.mobile,
         email: input.email ? normalizeEmail(input.email) : null,
         nationality: input.nationality,
         identityNumber: input.identityNumber ?? null,
@@ -1102,13 +1106,12 @@ export function createContractsService(fastify: FastifyInstance) {
         address: input.address ?? null,
       };
 
-      let customerId = contract.customerId;
-      if (customerId) {
-        await tx.customer.update({ where: { id: customerId }, data: customerData });
-      } else {
-        const created = await tx.customer.create({ data: customerData });
-        customerId = created.id;
-      }
+      const customerId = await resolvePublicFormCustomerId(
+        tx,
+        contract.id,
+        materialized,
+        contract.customerId,
+      );
 
       const activeLicense = await tx.contractDocument.findFirst({
         where: { contractId: contract.id, type: "DRIVING_LICENSE", supersededAt: null },
@@ -1187,6 +1190,8 @@ export function createContractsService(fastify: FastifyInstance) {
         },
       });
 
+      const customerId = await finalizeContractCustomerAtSigning(tx, contract.id, snapshot);
+
       await tx.contractAcceptance.create({
         data: {
           contractId: contract.id,
@@ -1201,6 +1206,7 @@ export function createContractsService(fastify: FastifyInstance) {
         where: { id: contract.id },
         data: {
           status: "SIGNED",
+          customerId,
           snapshot: snapshot as unknown as Prisma.InputJsonValue,
           revision: { increment: 1 },
         },
@@ -2376,17 +2382,28 @@ export function createContractsService(fastify: FastifyInstance) {
 
   async function getPublicRental(token: string, locale: PublicFrontendLocale = "en") {
     try {
-      await withTransaction(prisma, async (tx) => {
-        const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
-        const activePayment = await tx.contractPayment.findFirst({
-          where: { contractId: link.contractId, purpose: "RENTAL", status: { in: ["PENDING", "PROCESSING"] } },
+      const link = await withTransaction(prisma, async (tx) =>
+        resolveContractLink(tx, token, "RENTAL", { allowCompleted: true }),
+      );
+      const contract = await prisma.contract.findUnique({
+        where: { id: link.contractId },
+        select: { status: true },
+      });
+      if (contract?.status !== "PAID") {
+        const activePayment = await prisma.contractPayment.findFirst({
+          where: {
+            contractId: link.contractId,
+            purpose: "RENTAL",
+            status: { in: ["PENDING", "PROCESSING"] },
+          },
           orderBy: { createdAt: "desc" },
         });
-        if (activePayment) await paymentService.applyProviderPaymentStatus(tx, activePayment.id);
-      });
+        if (activePayment) {
+          await paymentService.reconcilePaymentWithProviderIfNeeded(activePayment);
+        }
+      }
     } catch {
-      // A failed Stripe lookup must roll back its whole transaction. The page
-      // remains readable and keeps the attempt in flight for later recovery.
+      // A failed Stripe lookup must not block the rental page.
     }
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RENTAL", { allowCompleted: true });
@@ -2420,6 +2437,14 @@ export function createContractsService(fastify: FastifyInstance) {
         cardBrand: ctx.payment.cardBrand ?? null,
       };
     });
+  }
+
+  async function abandonRentalPayment(token: string) {
+    const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
+    const contract = await prisma.contract.findUnique({ where: { id: link.contractId } });
+    if (!contract || contract.status !== "SIGNED") return { abandoned: false };
+    const abandoned = await paymentService.abandonActiveRentalCheckout(contract.id);
+    return { abandoned };
   }
 
   async function startCardPayment(
@@ -2768,6 +2793,7 @@ export function createContractsService(fastify: FastifyInstance) {
     verifyPublicTarsOtp,
     updateOfficialContractTerms,
     getPaymentContext,
+    abandonRentalPayment,
     startCardPayment,
     startCardLink,
     completeCardLink,

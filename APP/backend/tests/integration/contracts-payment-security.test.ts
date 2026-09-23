@@ -138,7 +138,7 @@ if (!RUN) {
           name: "Sec Customer",
           mobile: "+971500000099",
           nationality: "AE",
-          identityNumber: "784-1990-111",
+          identityNumber: `784-${run}-rn-${seq}`,
         },
       });
       await app.inject({

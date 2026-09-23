@@ -5,8 +5,17 @@ import type { PrismaClient } from "@prisma/client";
 import { setDocumentOcrProviderForTests } from "src/modules/document-ocr/document-ocr-provider.factory";
 import { createFakeDocumentOcrProvider } from "../helpers/fake-document-ocr-provider";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
-import { createFakePaymentProvider } from "../helpers/fake-payment-provider";
+import { UnconfiguredPaymentProvider } from "src/modules/contracts/payment/unconfigured-payment.provider";
+import {
+  createFakePaymentProvider,
+  flushStripeWebhookInbox,
+  reconcileFailedFakeProviderPayment,
+  reconcileFakeProviderPayment,
+  sendTestStripeWebhook,
+} from "../helpers/fake-payment-provider";
 import { hashToken } from "src/lib/security/tokens";
+import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
+import { resetPaymentProviderReconcileCooldown } from "src/modules/contracts/payment/payment-reconcile-policy";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 const RUN =
@@ -60,6 +69,25 @@ if (!RUN) {
 
     function fakePayments() {
       return createFakePaymentProvider(run);
+    }
+
+    function paymentStart(idempotencyKey: string) {
+      return {
+        method: "POST" as const,
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": idempotencyKey,
+        },
+        payload: { savePaymentMethodForFutureUse: false },
+      };
+    }
+
+    async function paymentIdForStatusToken(statusToken: string) {
+      const row = await prisma.contractPayment.findUnique({
+        where: { statusTokenHash: hashToken(statusToken) },
+      });
+      assert.ok(row, "payment for status token");
+      return row.id;
     }
 
     let offerSeq = 0;
@@ -200,7 +228,7 @@ if (!RUN) {
           name: "No License",
           mobile: "+971500000010",
           nationality: "AE",
-          identityNumber: "784-1",
+          identityNumber: `784-${run}-1`,
         },
       });
       assert.equal(form.statusCode, 409);
@@ -237,7 +265,7 @@ if (!RUN) {
           name: "Expired",
           mobile: "+971500000011",
           nationality: "AE",
-          identityNumber: "784-2",
+          identityNumber: `784-${run}-2`,
         },
       });
       assert.equal(blocked.statusCode, 409);
@@ -253,7 +281,7 @@ if (!RUN) {
           name: "Lina",
           mobile: "+971500000012",
           nationality: "AE",
-          identityNumber: "784-3",
+          identityNumber: `784-${run}-3`,
           drivingLicenseNumber: "HACKED",
         },
       });
@@ -290,9 +318,10 @@ if (!RUN) {
       assert.equal(payCtx.json().data.agreedAmount, 1600);
       assert.equal(payCtx.json().data.rentalDays, 4);
 
+      setPaymentProviderForTests(new UnconfiguredPaymentProvider());
       const unpaid = await app.inject({
-        method: "POST",
         url: `/contracts/rental/${ctx.token}/payment`,
+        ...paymentStart(`unpaid-${ctx.contractId}`),
       });
       assert.equal(unpaid.statusCode, 409);
       assert.equal(unpaid.json().error.context.reason, "PAYMENT_PROVIDER_NOT_CONFIGURED");
@@ -319,15 +348,14 @@ if (!RUN) {
           name: "Payee",
           mobile: "+971500000013",
           nationality: "AE",
-          identityNumber: "784-4",
+          identityNumber: `784-${run}-4`,
         },
       });
       await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/accept`, payload: {} });
 
       const first = await app.inject({
-        method: "POST",
         url: `/contracts/rental/${ctx.token}/payment`,
-        headers: { "idempotency-key": `pay-${ctx.contractId}` },
+        ...paymentStart(`pay-${ctx.contractId}`),
       });
       assert.equal(first.statusCode, 200, first.body);
       assert.equal(first.json().data.payment.amount, 1600);
@@ -340,17 +368,15 @@ if (!RUN) {
       assert.equal(stored.some((row) => row.statusTokenHash === statusToken), false);
 
       const replay = await app.inject({
-        method: "POST",
         url: `/contracts/rental/${ctx.token}/payment`,
-        headers: { "idempotency-key": `pay-${ctx.contractId}` },
+        ...paymentStart(`pay-${ctx.contractId}`),
       });
       assert.equal(replay.statusCode, 200);
       assert.equal(replay.json().data.statusToken, null);
 
       const second = await app.inject({
-        method: "POST",
         url: `/contracts/rental/${ctx.token}/payment`,
-        headers: { "idempotency-key": `pay-${ctx.contractId}-2` },
+        ...paymentStart(`pay-${ctx.contractId}-2`),
       });
       assert.equal(second.statusCode, 200, second.body);
       assert.ok(second.json().data.checkoutUrl);
@@ -370,6 +396,7 @@ if (!RUN) {
       assert.equal(expiredLink.statusCode, 401);
 
       payments.confirm();
+      await reconcileFakeProviderPayment(app, payments, await paymentIdForStatusToken(statusToken));
       const status = await app.inject({
         method: "GET",
         url: `/contracts/payments/status/${statusToken}`,
@@ -402,7 +429,7 @@ if (!RUN) {
           name: "Unread",
           mobile: "+971500000014",
           nationality: "AE",
-          identityNumber: "784-5",
+          identityNumber: `784-${run}-5`,
         },
       });
       assert.equal(form.statusCode, 422);
@@ -423,36 +450,41 @@ if (!RUN) {
           name: "Retry",
           mobile: "+971500000015",
           nationality: "AE",
-          identityNumber: "784-6",
+          identityNumber: `784-${run}-6`,
         },
       });
       await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/accept`, payload: {} });
 
       const first = await app.inject({
-        method: "POST",
         url: `/contracts/rental/${ctx.token}/payment`,
-        headers: { "idempotency-key": `fail-${ctx.contractId}` },
+        ...paymentStart(`fail-${ctx.contractId}`),
       });
       assert.equal(first.statusCode, 200, first.body);
-      payments.fail();
+      const firstStatusToken = first.json().data.statusToken as string;
+      await reconcileFailedFakeProviderPayment(
+        app,
+        payments,
+        await paymentIdForStatusToken(firstStatusToken),
+      );
       const failed = await app.inject({
         method: "GET",
-        url: `/contracts/payments/status/${first.json().data.statusToken}`,
+        url: `/contracts/payments/status/${firstStatusToken}`,
       });
       assert.equal(failed.json().data.status, "FAILED");
 
       const retry = await app.inject({
-        method: "POST",
         url: `/contracts/rental/${ctx.token}/payment`,
-        headers: { "idempotency-key": `fail-${ctx.contractId}-2` },
+        ...paymentStart(`fail-${ctx.contractId}-2`),
       });
       assert.equal(retry.statusCode, 200, retry.body);
       assert.equal(retry.json().data.payment.status, "PROCESSING");
 
+      const retryStatusToken = retry.json().data.statusToken as string;
       payments.confirm();
+      await reconcileFakeProviderPayment(app, payments, await paymentIdForStatusToken(retryStatusToken));
       const paid = await app.inject({
         method: "GET",
-        url: `/contracts/payments/status/${retry.json().data.statusToken}`,
+        url: `/contracts/payments/status/${retryStatusToken}`,
       });
       assert.equal(paid.statusCode, 200, paid.body);
       assert.equal(paid.json().data.status, "CONFIRMED");
@@ -465,11 +497,203 @@ if (!RUN) {
           name: "Restart",
           mobile: "+971500000016",
           nationality: "AE",
-          identityNumber: "784-7",
+          identityNumber: `784-${run}-7`,
         },
       });
       assert.equal(restart.statusCode, 401);
       assert.equal(restart.json().error.context.reason, "CONTRACT_LINK_USED");
+    });
+
+    test("getPublicRental reconciles in-flight payments with bounded provider calls", async () => {
+      fakeOcr({});
+      const payments = fakePayments();
+      setPaymentProviderForTests(payments.provider);
+      resetPaymentProviderReconcileCooldown();
+      const ctx = await offerAndToken();
+      await uploadLicense(ctx.token);
+      await uploadPassport(ctx.token);
+      await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${ctx.token}/form`,
+        payload: {
+          name: "Reconcile",
+          mobile: "+971500000017",
+          nationality: "AE",
+          identityNumber: `784-${run}-8`,
+        },
+      });
+      await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/accept`, payload: {} });
+
+      const started = await app.inject({
+        url: `/contracts/rental/${ctx.token}/payment`,
+        ...paymentStart(`reconcile-${ctx.contractId}`),
+      });
+      assert.equal(started.statusCode, 200, started.body);
+      payments.provider.resetPaymentStatusCallCount();
+
+      for (let i = 0; i < 5; i++) {
+        const load = await app.inject({ method: "GET", url: `/contracts/rental/${ctx.token}` });
+        assert.equal(load.statusCode, 200, load.body);
+      }
+      assert.equal(payments.provider.getPaymentStatusCallCount(), 1);
+
+      const statusToken = started.json().data.statusToken as string;
+      await reconcileFakeProviderPayment(app, payments, await paymentIdForStatusToken(statusToken));
+      payments.provider.resetPaymentStatusCallCount();
+      resetPaymentProviderReconcileCooldown();
+
+      for (let i = 0; i < 5; i++) {
+        const load = await app.inject({ method: "GET", url: `/contracts/rental/${ctx.token}` });
+        assert.equal(load.statusCode, 200, load.body);
+        assert.equal(load.json().data.contract.status, "PAID");
+      }
+      assert.equal(payments.provider.getPaymentStatusCallCount(), 0);
+    });
+
+    test("abandoned hosted checkout is cancelled and retryable", async () => {
+      fakeOcr({});
+      const payments = fakePayments();
+      setPaymentProviderForTests(payments.provider);
+      const ctx = await offerAndToken();
+      await uploadLicense(ctx.token);
+      await uploadPassport(ctx.token);
+      await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${ctx.token}/form`,
+        payload: {
+          name: "Abandon",
+          mobile: "+971500000020",
+          nationality: "AE",
+          identityNumber: `784-${run}-11`,
+        },
+      });
+      await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/accept`, payload: {} });
+
+      const started = await app.inject({
+        url: `/contracts/rental/${ctx.token}/payment`,
+        ...paymentStart(`abandon-${ctx.contractId}`),
+      });
+      assert.equal(started.statusCode, 200, started.body);
+
+      const abandon = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${ctx.token}/payment/abandon`,
+      });
+      assert.equal(abandon.statusCode, 200, abandon.body);
+      assert.equal(abandon.json().data.abandoned, true);
+
+      const retry = await app.inject({
+        url: `/contracts/rental/${ctx.token}/payment`,
+        ...paymentStart(`abandon-${ctx.contractId}-retry`),
+      });
+      assert.equal(retry.statusCode, 200, retry.body);
+      assert.equal(retry.json().data.payment.status, "PROCESSING");
+    });
+
+    test("expired checkout reconciles to retryable state without ledger", async () => {
+      fakeOcr({});
+      const payments = fakePayments();
+      setPaymentProviderForTests(payments.provider);
+      const ctx = await offerAndToken();
+      await uploadLicense(ctx.token);
+      await uploadPassport(ctx.token);
+      await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${ctx.token}/form`,
+        payload: {
+          name: "Expired",
+          mobile: "+971500000019",
+          nationality: "AE",
+          identityNumber: `784-${run}-10`,
+        },
+      });
+      await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/accept`, payload: {} });
+
+      const started = await app.inject({
+        url: `/contracts/rental/${ctx.token}/payment`,
+        ...paymentStart(`expired-${ctx.contractId}`),
+      });
+      assert.equal(started.statusCode, 200, started.body);
+      const statusToken = started.json().data.statusToken as string;
+      const paymentId = await paymentIdForStatusToken(statusToken);
+      payments.expire();
+      const service = createContractPaymentService(app.prisma);
+      await service.reconcilePaymentWithProvider(paymentId);
+
+      const status = await app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${statusToken}`,
+      });
+      assert.equal(status.json().data.status, "CANCELLED");
+      const contract = await prisma.contract.findUnique({ where: { id: ctx.contractId } });
+      assert.equal(contract?.status, "SIGNED");
+      const ledgerCount = await prisma.financialLedgerEntry.count({ where: { contractPaymentId: paymentId } });
+      assert.equal(ledgerCount, 0);
+
+      const retry = await app.inject({
+        url: `/contracts/rental/${ctx.token}/payment`,
+        ...paymentStart(`expired-${ctx.contractId}-retry`),
+      });
+      assert.equal(retry.statusCode, 200, retry.body);
+      assert.equal(retry.json().data.payment.status, "PROCESSING");
+    });
+
+    test("webhook inbox persists until worker processes settlement once", async () => {
+      fakeOcr({});
+      const payments = fakePayments();
+      setPaymentProviderForTests(payments.provider);
+      const ctx = await offerAndToken();
+      await uploadLicense(ctx.token);
+      await uploadPassport(ctx.token);
+      await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${ctx.token}/form`,
+        payload: {
+          name: "Worker",
+          mobile: "+971500000018",
+          nationality: "AE",
+          identityNumber: `784-${run}-9`,
+        },
+      });
+      await app.inject({ method: "POST", url: `/contracts/rental/${ctx.token}/accept`, payload: {} });
+
+      const started = await app.inject({
+        url: `/contracts/rental/${ctx.token}/payment`,
+        ...paymentStart(`worker-${ctx.contractId}`),
+      });
+      assert.equal(started.statusCode, 200, started.body);
+      const statusToken = started.json().data.statusToken as string;
+      const paymentId = await paymentIdForStatusToken(statusToken);
+      payments.confirm();
+      const event = payments.buildWebhookEvent({ paymentId });
+      const webhook = await sendTestStripeWebhook(app, event);
+      assert.equal(webhook.statusCode, 200, webhook.body);
+
+      const inbox = await prisma.stripeWebhookEvent.findUnique({
+        where: { stripeEventId: event.stripeEventId },
+      });
+      assert.equal(inbox?.processingStatus, "PENDING");
+
+      const before = await app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${statusToken}`,
+      });
+      assert.equal(before.json().data.status, "PROCESSING");
+
+      await flushStripeWebhookInbox(app);
+
+      const after = await app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${statusToken}`,
+      });
+      assert.equal(after.json().data.status, "CONFIRMED");
+      assert.equal(after.json().data.contractStatus, "PAID");
+      const ledgerCount = await prisma.financialLedgerEntry.count({ where: { contractPaymentId: paymentId } });
+      assert.equal(ledgerCount, 1);
+
+      await flushStripeWebhookInbox(app);
+      const ledgerAgain = await prisma.financialLedgerEntry.count({ where: { contractPaymentId: paymentId } });
+      assert.equal(ledgerAgain, 1);
     });
   });
 }

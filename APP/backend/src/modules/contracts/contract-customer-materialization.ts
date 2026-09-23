@@ -189,6 +189,60 @@ function materializedFromSnapshot(snapshot: unknown): MaterializableCustomer | n
   };
 }
 
+function materializationLockKey(materialized: MaterializableCustomer, contractId: string): string {
+  return [
+    materialized.identityNumber,
+    materialized.passportNumber,
+    materialized.drivingLicenseNumber,
+    normalizePhone(materialized.mobile),
+  ]
+    .filter(Boolean)
+    .join(":") || contractId;
+}
+
+/**
+ * Strong-identity resolution for public form submission and signing.
+ * Reuses an existing Customer when unambiguous; fails closed on conflict.
+ */
+export async function resolvePublicFormCustomerId(
+  tx: Tx,
+  contractId: string,
+  materialized: MaterializableCustomer,
+  existingCustomerId: number | null,
+): Promise<number> {
+  await acquireAdvisoryLock(
+    tx,
+    CUSTOMER_MATERIALIZATION_LOCK_NS,
+    materializationLockKey(materialized, contractId),
+  );
+
+  const resolvedId = await resolveCustomerIdFromIdentity(tx, materialized);
+
+  if (existingCustomerId != null && existingCustomerId !== resolvedId) {
+    throw contractError.customerIdentityAmbiguous();
+  }
+
+  return resolvedId;
+}
+
+/** Canonical customer binding at public signing using the frozen snapshot. */
+export async function finalizeContractCustomerAtSigning(
+  tx: Tx,
+  contractId: string,
+  snapshot: unknown,
+): Promise<number> {
+  const contract = await tx.contract.findUnique({
+    where: { id: contractId },
+    select: { id: true, customerId: true },
+  });
+  if (!contract) throw contractError.notFound();
+
+  const materialized = materializedFromSnapshot(snapshot);
+  if (!materialized) throw contractError.paymentNotAllowed();
+
+  return resolvePublicFormCustomerId(tx, contractId, materialized, contract.customerId);
+}
+
 /**
  * Resolves customer from an in-memory snapshot (signing boundary) or persisted snapshot.
  */
@@ -207,15 +261,11 @@ export async function resolveContractCustomerFromSnapshot(
   const materialized = materializedFromSnapshot(snapshot);
   if (!materialized) throw contractError.paymentNotAllowed();
 
-  const lockKey = [
-    materialized.identityNumber,
-    materialized.passportNumber,
-    materialized.drivingLicenseNumber,
-    normalizePhone(materialized.mobile),
-  ]
-    .filter(Boolean)
-    .join(":");
-  await acquireAdvisoryLock(tx, CUSTOMER_MATERIALIZATION_LOCK_NS, lockKey || contractId);
+  await acquireAdvisoryLock(
+    tx,
+    CUSTOMER_MATERIALIZATION_LOCK_NS,
+    materializationLockKey(materialized, contractId),
+  );
 
   const refreshed = await tx.contract.findUnique({
     where: { id: contractId },
@@ -252,6 +302,28 @@ export async function ensureContractCustomerForPayment(tx: Tx, contractId: strin
     select: { id: true, customerId: true, snapshot: true },
   });
   if (!contract) throw contractError.notFound();
-  if (contract.customerId) return contract.customerId;
-  return resolveContractCustomerFromSnapshot(tx, contractId, contract.snapshot);
+
+  const materialized = materializedFromSnapshot(contract.snapshot);
+  if (!materialized) throw contractError.paymentNotAllowed();
+
+  await acquireAdvisoryLock(
+    tx,
+    CUSTOMER_MATERIALIZATION_LOCK_NS,
+    materializationLockKey(materialized, contractId),
+  );
+
+  const resolvedId = await resolveCustomerIdFromIdentity(tx, materialized);
+
+  if (contract.customerId != null && contract.customerId !== resolvedId) {
+    throw contractError.customerIdentityAmbiguous();
+  }
+
+  if (!contract.customerId) {
+    await tx.contract.update({
+      where: { id: contractId },
+      data: { customerId: resolvedId },
+    });
+  }
+
+  return resolvedId;
 }

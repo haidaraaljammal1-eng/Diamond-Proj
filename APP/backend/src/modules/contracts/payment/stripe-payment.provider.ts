@@ -11,6 +11,7 @@ import type {
   ProviderPaymentStatus,
   WebhookVerifyResult,
 } from "src/modules/contracts/payment/payment-provider.types";
+import { recordProviderStatusLookup } from "src/modules/contracts/payment/payment-provider-instrumentation";
 
 export function mapSessionStatus(session: Stripe.Checkout.Session): ProviderPaymentStatus {
   switch (session.status) {
@@ -25,7 +26,11 @@ export function mapSessionStatus(session: Stripe.Checkout.Session): ProviderPaym
   }
 }
 
-export function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status | null): ProviderPaymentStatus {
+export function mapPaymentIntentStatus(
+  status: Stripe.PaymentIntent.Status | null,
+  options?: { lastPaymentError?: Stripe.PaymentIntent.LastPaymentError | null },
+): ProviderPaymentStatus {
+  if (options?.lastPaymentError) return "FAILED";
   switch (status) {
     case "succeeded":
       return "CONFIRMED";
@@ -41,6 +46,23 @@ export function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status | nul
     default:
       return "UNKNOWN";
   }
+}
+
+/** Maps an open Checkout session + expanded PaymentIntent to a durable provider status. */
+export function resolveCheckoutPaymentStatus(
+  session: Pick<Stripe.Checkout.Session, "status" | "payment_status">,
+  paymentIntent: Pick<Stripe.PaymentIntent, "status" | "last_payment_error"> | null,
+): ProviderPaymentStatus {
+  if (session.status === "expired") return "EXPIRED";
+  if (session.status === "complete") {
+    return session.payment_status === "paid" ? "CONFIRMED" : "PROCESSING";
+  }
+  if (paymentIntent) {
+    return mapPaymentIntentStatus(paymentIntent.status, {
+      lastPaymentError: paymentIntent.last_payment_error,
+    });
+  }
+  return mapSessionStatus(session as Stripe.Checkout.Session);
 }
 
 /**
@@ -237,6 +259,7 @@ export class StripePaymentProvider implements PaymentProvider {
 
   async getPaymentStatus(providerReference: string): Promise<PaymentStatusResult> {
     if (!this.configured) return { status: "UNKNOWN" };
+    recordProviderStatusLookup();
     const session = await this.client().checkout.sessions.retrieve(providerReference, {
       expand: ["payment_intent"],
     });
@@ -244,11 +267,7 @@ export class StripePaymentProvider implements PaymentProvider {
       typeof session.payment_intent === "object" && session.payment_intent
         ? session.payment_intent
         : null;
-    const status = session.status === "expired"
-      ? "EXPIRED"
-      : paymentIntent
-        ? mapPaymentIntentStatus(paymentIntent.status)
-        : mapSessionStatus(session);
+    const status = resolveCheckoutPaymentStatus(session, paymentIntent);
     return {
       status,
       providerStatus: paymentIntent?.status ?? session.status ?? undefined,

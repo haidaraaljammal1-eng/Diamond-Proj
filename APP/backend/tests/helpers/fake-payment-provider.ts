@@ -46,8 +46,14 @@ export function createFakePaymentProvider(run: string) {
   const setupResults = new Map<string, CardSetupSessionResult>();
   let n = 0;
   let eventSeq = 0;
+  let getPaymentStatusCalls = 0;
 
-  const provider: PaymentProvider & { lastRef: string | null; lastPaymentId: string | null } = {
+  const provider: PaymentProvider & {
+    lastRef: string | null;
+    lastPaymentId: string | null;
+    getPaymentStatusCallCount: () => number;
+    resetPaymentStatusCallCount: () => void;
+  } = {
     name: "stripe",
     configured: true,
     lastRef: null,
@@ -56,7 +62,7 @@ export function createFakePaymentProvider(run: string) {
       const cached = idempotencyResults.get(input.idempotencyKey);
       if (cached) return cached;
       n += 1;
-      const ref = `cs_test_${run}_${n}`;
+      const ref = `cs_test_${run}_${input.checkoutAttemptId.replace(/-/g, "").slice(0, 16)}`;
       statuses.set(ref, "PROCESSING");
       sessions.set(ref, input);
       paymentRefs.set(input.paymentId, ref);
@@ -98,7 +104,12 @@ export function createFakePaymentProvider(run: string) {
     async getCardSetupSession(ref: string) {
       return setupResults.get(ref) ?? { status: "UNKNOWN", providerReference: ref };
     },
+    getPaymentStatusCallCount: () => getPaymentStatusCalls,
+    resetPaymentStatusCallCount: () => {
+      getPaymentStatusCalls = 0;
+    },
     async getPaymentStatus(ref: string) {
+      getPaymentStatusCalls += 1;
       const input = sessions.get(ref);
       return {
         status: statuses.get(ref) ?? "UNKNOWN",
@@ -277,6 +288,17 @@ export async function reconcileFakeProviderPayment(
   paymentId: string,
 ): Promise<void> {
   payments.confirm();
+  const service = createContractPaymentService(app.prisma);
+  await service.reconcilePaymentWithProvider(paymentId);
+}
+
+/** Exceptional provider reconciliation after the fake provider reports failure. */
+export async function reconcileFailedFakeProviderPayment(
+  app: FastifyInstance,
+  payments: ReturnType<typeof createFakePaymentProvider>,
+  paymentId: string,
+): Promise<void> {
+  payments.fail(payments.refForPayment(paymentId) ?? undefined);
   const service = createContractPaymentService(app.prisma);
   await service.reconcilePaymentWithProvider(paymentId);
 }

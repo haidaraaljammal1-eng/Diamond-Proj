@@ -28,6 +28,11 @@ import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental
 import { assertPositiveAedAmount, assertAedCurrency, aedToStripeMinorUnits } from "src/modules/contracts/payment/money";
 import { createPaymentProvider, devPaymentSimulationEnabled } from "src/modules/contracts/payment/payment-provider.factory";
 import {
+  markPaymentProviderReconciled,
+  shouldReconcilePaymentWithProvider,
+  type ReconcileCandidate,
+} from "src/modules/contracts/payment/payment-reconcile-policy";
+import {
   getPaymentConsent,
   PAYMENT_METHOD_AUTHORIZATION_VERSION,
 } from "src/modules/contracts/payment/payment-consent.constants";
@@ -555,7 +560,15 @@ export function createContractPaymentService(prisma: PrismaClient) {
       if (payment.status !== "PENDING" && payment.status !== "PROCESSING") return payment;
       const terminalStatus: ContractPaymentStatus =
         result.status === "EXPIRED" ? "CANCELLED" : result.status;
+      const attemptStatus = result.status === "EXPIRED" ? "EXPIRED" : "FAILED";
       const updated = await markPaymentTerminal(tx, payment, terminalStatus, result.providerStatus);
+      await tx.contractPaymentAttempt.updateMany({
+        where: {
+          contractPaymentId: payment.id,
+          status: { in: ["PREPARING", "RECOVERING", "READY"] },
+        },
+        data: { status: attemptStatus },
+      });
       await emitPayment(tx, "payment.failed", payment.contractId, {
         paymentId: payment.id,
         status: terminalStatus,
@@ -564,6 +577,48 @@ export function createContractPaymentService(prisma: PrismaClient) {
       return updated;
     }
     return payment;
+  }
+
+  /** Marks an abandoned hosted checkout as cancelled so the rental can retry safely. */
+  async function abandonActiveRentalCheckout(contractId: string): Promise<boolean> {
+    const payment = await prisma.contractPayment.findFirst({
+      where: {
+        contractId,
+        purpose: "RENTAL",
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!payment) return false;
+    await withTransaction(prisma, async (tx) => {
+      const current = await tx.contractPayment.findUnique({ where: { id: payment.id } });
+      if (!current || (current.status !== "PENDING" && current.status !== "PROCESSING")) return;
+      await markPaymentTerminal(tx, current, "CANCELLED", "checkout_abandoned");
+      await tx.contractPaymentAttempt.updateMany({
+        where: {
+          contractPaymentId: current.id,
+          status: { in: ["PREPARING", "RECOVERING", "READY"] },
+        },
+        data: { status: "EXPIRED" },
+      });
+      await emitPayment(tx, "payment.failed", contractId, {
+        paymentId: current.id,
+        status: "CANCELLED",
+        dedupe: current.id,
+      });
+    });
+    return true;
+  }
+
+  /** Bounded public-read reconciliation — skips terminal and cooldown-gated payments. */
+  async function reconcilePaymentWithProviderIfNeeded(
+    payment: ReconcileCandidate,
+    audit?: { ip?: string | null; userAgent?: string | null },
+  ): Promise<ContractPayment | null> {
+    if (!shouldReconcilePaymentWithProvider(payment)) {
+      return prisma.contractPayment.findUnique({ where: { id: payment.id } });
+    }
+    return reconcilePaymentWithProvider(payment.id, audit);
   }
 
   /** Provider reconciliation outside any DB transaction. */
@@ -575,6 +630,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
     if (!payment?.providerReference) return payment;
     if (payment.status !== "PENDING" && payment.status !== "PROCESSING") return payment;
 
+    markPaymentProviderReconciled(paymentId);
     const result = await provider().getPaymentStatus(payment.providerReference);
     if (result.status === "UNKNOWN") return payment;
 
@@ -1183,6 +1239,8 @@ export function createContractPaymentService(prisma: PrismaClient) {
     startPayment,
     applyProviderPaymentStatus,
     reconcilePaymentWithProvider,
+    reconcilePaymentWithProviderIfNeeded,
+    abandonActiveRentalCheckout,
     simulateSuccessfulPayment,
     applyInboxPaymentEvent,
     applyInboxCardSetupEvent,

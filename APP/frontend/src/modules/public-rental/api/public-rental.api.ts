@@ -321,6 +321,17 @@ export async function getPublicRentalPayment(
   return response.data;
 }
 
+export async function abandonPublicRentalPayment(token: string): Promise<{ abandoned: boolean }> {
+  const response = await apiRequest<{ abandoned: boolean }>(
+    `${CONTRACTS_PATH}/rental/${token}/payment/abandon`,
+    {
+      method: "POST",
+      ...publicRentalRequestOptions(),
+    },
+  );
+  return response.data;
+}
+
 export async function startPublicRentalPayment(
   token: string,
   idempotencyKey: string,

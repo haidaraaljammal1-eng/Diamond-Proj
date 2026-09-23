@@ -464,6 +464,26 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
   );
 
   app.post(
+    "/rental/:token/payment/abandon",
+    {
+      schema: {
+        summary: "Abandon an in-flight hosted checkout and allow retry",
+        operationId: "abandonPublicRentalPayment",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: {
+          200: dataResponse(z.object({ abandoned: z.boolean() })),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => ({
+      data: await contracts.abandonRentalPayment(request.params.token),
+    }),
+  );
+
+  app.post(
     "/rental/:token/payment",
     {
       schema: {

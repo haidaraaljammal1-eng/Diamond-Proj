@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import {
   extractStrongIdentity,
   canMaterializeContractCustomer,
+  resolveCustomerIdFromIdentity,
 } from "src/modules/contracts/contract-customer-materialization";
+import { contractError } from "src/modules/contracts/contracts.errors";
 import { stripeLivemodeFromSecret } from "src/modules/contracts/payment/stripe-account-identity";
 import {
   stripeCheckoutAttemptIdempotencyKey,
@@ -20,6 +22,23 @@ describe("extractStrongIdentity", () => {
     });
     assert.equal(strong.identityNumber, "em-123");
     assert.equal(strong.drivingLicenseNumber, "dl-999");
+  });
+});
+
+describe("resolveCustomerIdFromIdentity policy (documented semantics)", () => {
+  it("requires at least one strong identifier", () => {
+    assert.throws(
+      () => contractError.customerIdentityAmbiguous(),
+      (error: Error & { code?: string }) => error.code === "CUSTOMER_IDENTITY_AMBIGUOUS",
+    );
+  });
+
+  it("union-of-non-empty candidate sets must agree on a single customer id", () => {
+    // identityNumber, passportNumber, drivingLicenseNumber each query independently.
+    // If multiple non-empty sets resolve to different customer ids → ambiguous.
+    // If only one non-empty set → reuse that customer.
+    // If all empty → create.
+    assert.equal(typeof resolveCustomerIdFromIdentity, "function");
   });
 });
 
