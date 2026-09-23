@@ -46,6 +46,15 @@ function MaintenanceIcon(props: IconProps) {
   );
 }
 
+function ArchiveIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path d="M4 4h16v4H4zM6 10h12v10H6z" />
+      <path d="M9 13h6M9 16h4" />
+    </svg>
+  );
+}
+
 function ViolationsIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" {...props}>
@@ -121,6 +130,7 @@ export const NAVIGATION_ICONS: Record<
   cars: CarsIcon,
   gps: GpsIcon,
   maintenance: MaintenanceIcon,
+  archive: ArchiveIcon,
   violations: ViolationsIcon,
   finance: FinanceIcon,
   invoices: InvoicesIcon,

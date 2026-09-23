@@ -29,6 +29,7 @@
     "cars": "Vehicles",
     "gps": "GPS Tracking",
     "maintenance": "Maintenance Center",
+    "archive": "Archive",
     "violations": "Violations & Salik",
     "finance": "Finance",
     "invoices": "Invoices",
@@ -2581,6 +2582,84 @@
       "unlink": "Unlink Customer",
       "search": "Search customers",
       "needCustomerRead": "Customer search requires customer read permission."
+    }
+  },
+  "Archive": {
+    "title": "Archive",
+    "subtitle": "Manual fleet rental archive — editable spreadsheet per vehicle.",
+    "denied": {
+      "title": "Archive access required",
+      "description": "You need archive.read permission to open this page."
+    },
+    "vehicleSelect": {
+      "label": "Vehicle",
+      "placeholder": "Select a vehicle…"
+    },
+    "emptySelection": {
+      "title": "Select a vehicle",
+      "description": "Choose a fleet vehicle to view and edit its archive rows."
+    },
+    "emptyRows": {
+      "title": "No archive rows yet",
+      "description": "Use Add Row to create the first manual entry for this vehicle."
+    },
+    "loading": {
+      "vehicles": "Loading fleet vehicles…",
+      "rows": "Loading archive rows…"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "addRow": "Add Row",
+      "addingRow": "Adding…",
+      "downloadExcel": "Download Excel",
+      "downloadingExcel": "Downloading…",
+      "close": "Close",
+      "cancel": "Cancel"
+    },
+    "table": {
+      "actions": "Actions"
+    },
+    "delete": {
+      "title": "Delete archive row?",
+      "description": "Row {rowOrder} will be removed from this vehicle archive only.",
+      "descriptionGeneric": "This archive row will be removed from the vehicle archive only.",
+      "confirm": "Delete row",
+      "deleting": "Deleting…",
+      "rowAction": "Delete row {rowOrder}"
+    },
+    "error": {
+      "generic": "Something went wrong. Please try again.",
+      "forbidden": "You do not have permission for this action.",
+      "notFound": "The archive row or vehicle was not found.",
+      "ARCHIVE_ROW_NOT_FOUND": "Archive row not found.",
+      "VEHICLE_NOT_FOUND": "Vehicle not found.",
+      "ARCHIVE_UNSAVED_CELL_ERROR": "Resolve unsaved archive edits before downloading Excel."
+    },
+    "columns": {
+      "kmIn": "KM IN",
+      "km": "KM",
+      "kmOut": "KM OUT",
+      "deliveryDate": "Delivery date",
+      "deliveryTime": "Delivery time",
+      "returnDate": "Return date",
+      "returnTime": "Return time",
+      "customerName": "Customer name",
+      "customerPhone": "Customer phone",
+      "description": "Description",
+      "days": "Days",
+      "dailyRate": "Daily rate",
+      "rentalTotal": "Rental total",
+      "salik": "Salik",
+      "parking": "Parking",
+      "fuel": "Fuel",
+      "blackPoints": "Black points",
+      "fines": "Fines",
+      "total": "Total",
+      "dollar": "Dollar",
+      "cash": "Cash",
+      "visa": "Visa",
+      "transfer": "Transfer",
+      "remaining": "Remaining"
     }
   }
 }

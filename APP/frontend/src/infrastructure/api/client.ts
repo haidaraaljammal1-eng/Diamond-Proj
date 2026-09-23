@@ -106,6 +106,10 @@ export async function apiRequest<T>(
     throw apiError;
   }
 
+  if (response.status === 204 || payload === undefined) {
+    return { data: null as T };
+  }
+
   if (typeof payload !== "object" || payload === null || !("data" in payload)) {
     throw new ApiRequestError(
       { code: "INVALID_RESPONSE", message: "Invalid API response" },

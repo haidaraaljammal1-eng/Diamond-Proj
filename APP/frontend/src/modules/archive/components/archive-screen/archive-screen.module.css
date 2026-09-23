@@ -1,0 +1,50 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 18px;
+}
+
+.selectorLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: min(100%, 360px);
+  font-size: 12px;
+  color: var(--diamond-dim);
+}
+
+.loading {
+  margin: 0;
+  font-size: 13px;
+  color: var(--diamond-dim);
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--diamond-danger, #e35d6a) 35%, transparent);
+  background: color-mix(in srgb, var(--diamond-danger, #e35d6a) 8%, transparent);
+  color: var(--diamond-champagne);
+  font-size: 13px;
+}
+
+.denied {
+  padding: 20px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--diamond-onyx) 70%, transparent);
+}
+
+.deniedTitle {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: var(--diamond-gold-hi);
+}
