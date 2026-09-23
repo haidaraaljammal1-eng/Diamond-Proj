@@ -1,6 +1,10 @@
 import type { ContractPaymentPurpose } from "@prisma/client";
 
 export interface CreateCheckoutInput {
+  /** Immutable Stripe Checkout provider attempt id (idempotency scope). */
+  checkoutAttemptId: string;
+  /** Precomputed Stripe idempotency key for this attempt. */
+  idempotencyKey: string;
   paymentId: string;
   contractId: string;
   purpose: ContractPaymentPurpose;

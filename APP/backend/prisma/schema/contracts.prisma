@@ -50,6 +50,18 @@ enum ContractPaymentPurpose {
   POST_CLOSE_RECEIVABLE
 }
 
+/// Stripe Checkout provider attempt — immutable snapshot per Checkout Session create.
+enum ContractPaymentAttemptStatus {
+  PREPARING
+  RECOVERING
+  READY
+  COMPLETED
+  FAILED
+  EXPIRED
+  CANCELLED
+  SUPERSEDED
+}
+
 enum ContractDocumentType {
   DRIVING_LICENSE
   PASSPORT
@@ -288,10 +300,46 @@ model ContractPayment {
   renewalSettlement        ContractRenewal?              @relation("RenewalSettlement")
   ledgerEntries            FinancialLedgerEntry[]
   paymentAuthorization     ContractPaymentAuthorization?
+  checkoutAttempts         ContractPaymentAttempt[]
 
   @@index([contractId, status])
   @@index([purpose, targetId, status])
   @@map("contract_payments")
+}
+
+model ContractPaymentAttempt {
+  id                            String                       @id @default(uuid())
+  contractPaymentId             String
+  contractPayment               ContractPayment              @relation(fields: [contractPaymentId], references: [id], onDelete: Cascade)
+  provider                      String
+  livemode                      Boolean
+  providerAccountKey            String?
+  amount                        Int
+  currency                      String
+  purpose                       ContractPaymentPurpose
+  contractId                    String
+  companyCode                   String?
+  locale                        String
+  savePaymentMethodForFutureUse Boolean                      @default(false)
+  consentVersion                String?
+  statusTokenHash               String                       @unique
+  successUrl                    String
+  cancelUrl                     String
+  stripeCustomerId              String?
+  idempotencyKey                String                       @unique
+  requestFingerprint            String
+  status                        ContractPaymentAttemptStatus @default(PREPARING)
+  providerReference             String?                      @unique
+  checkoutUrl                   String?
+  checkoutExpiresAt             DateTime?
+  lastErrorCode                 String?
+  lastErrorAt                   DateTime?
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+
+  @@index([contractPaymentId, status])
+  @@index([contractPaymentId, createdAt])
+  @@map("contract_payment_attempts")
 }
 
 enum StripeWebhookProcessingStatus {

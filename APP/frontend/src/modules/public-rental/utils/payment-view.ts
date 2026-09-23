@@ -27,15 +27,14 @@ export function canStartCardPayment(options: {
   paymentStatus: ContractPaymentStatus | null | undefined;
   payPending: boolean;
   contractStatus: string;
+  checkoutRecoverable?: boolean;
 }): boolean {
   if (!options.providerAvailable) return false;
   if (options.contractStatus !== "SIGNED") return false;
   if (options.payPending) return false;
-  if (
-    options.paymentStatus === "PROCESSING" ||
-    options.paymentStatus === "PENDING" ||
-    options.paymentStatus === "CONFIRMED"
-  ) {
+  if (options.paymentStatus === "CONFIRMED") return false;
+  if (options.checkoutRecoverable) return true;
+  if (options.paymentStatus === "PROCESSING" || options.paymentStatus === "PENDING") {
     return false;
   }
   return true;

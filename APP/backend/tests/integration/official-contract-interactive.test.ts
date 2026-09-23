@@ -121,31 +121,35 @@ if (!RUN) {
       assert.equal(bad.statusCode, 422);
     });
 
-    test("review link is read-only: personal text fields rejected; card/damage keys are schema-locked", async () => {
+    test("OCR identity fields stay locked; empty manual fields are editable", async () => {
       const ctx = await offer();
       await seedReadyIdentity(app, ctx.token);
-      // Schema-valid personal keys are service-locked because the review link is
-      // a check + signature only (editableFields is empty).
-      for (const payload of [
-        { hirerName: "EDITED" },
-        { telephone: "+971 50 000 0000" },
-        { sponsorName: "X" },
-      ]) {
-        const res = await patch(ctx.token, payload);
-        assert.equal(res.statusCode, 403, `${JSON.stringify(payload)} ${res.body}`);
-        assert.equal(res.json().error.context.reason, "OFFICIAL_CONTRACT_FIELD_LOCKED");
-      }
+      const locked = await patch(ctx.token, { hirerName: "EDITED" });
+      assert.equal(locked.statusCode, 403, locked.body);
+      assert.equal(locked.json().error.context.reason, "OFFICIAL_CONTRACT_FIELD_LOCKED");
+
+      const manual = await patch(ctx.token, {
+        telephone: "+971500000000",
+        address: "Dubai Marina",
+        nationality: "United Arab Emirates",
+      });
+      assert.equal(manual.statusCode, 200, manual.body);
+
       // Card metadata and damage marks no longer exist on the review PATCH: the
       // schema itself rejects them (mass-assignment guard).
       for (const payload of [
-        { cardNumberLast4: "4817", address: "X" },
+        { cardNumberLast4: "4817" },
         { damageOut: [{ zone: "TOP.HOOD", type: "SCRATCH" }] },
       ]) {
         const res = await patch(ctx.token, payload);
         assert.equal(res.statusCode, 422, `${JSON.stringify(payload)} ${res.body}`);
       }
       const view = (await get(ctx.token)).json().data;
-      assert.deepEqual(view.permissions.editableFields, []);
+      assert.ok(view.permissions.editableFields.includes("telephone"));
+      assert.ok(view.permissions.editableFields.includes("address"));
+      assert.equal(view.permissions.editableFields.includes("hirerName"), false);
+      assert.equal(view.permissions.missingRequirements.includes("TELEPHONE"), false);
+      assert.equal(view.permissions.missingRequirements.includes("ADDRESS"), false);
       assert.deepEqual(view.permissions.vehicleOut, {
         canEditDamage: false,
         canEditMileage: false,

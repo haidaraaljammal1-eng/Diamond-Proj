@@ -14,8 +14,13 @@ export function stripeCustomerIdempotencyKey(profileId: string): string {
   return `diamond:stripe-customer-profile:${profileId}:v1`;
 }
 
+/** @deprecated Use stripeCheckoutAttemptIdempotencyKey — keyed by immutable provider attempt. */
 export function stripeCheckoutIdempotencyKey(paymentId: string): string {
   return `diamond:checkout:${paymentId}:v1`;
+}
+
+export function stripeCheckoutAttemptIdempotencyKey(attemptId: string): string {
+  return `diamond:stripe:checkout:${attemptId}:v1`;
 }
 
 async function adoptLegacyStripeCustomerId(

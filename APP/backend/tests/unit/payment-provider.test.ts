@@ -21,6 +21,8 @@ test("unconfigured provider fails closed", async () => {
   const provider = new UnconfiguredPaymentProvider();
   assert.equal(provider.configured, false);
   const created = await provider.createCheckoutSession({
+    checkoutAttemptId: "att_1",
+    idempotencyKey: "diamond:stripe:checkout:att_1:v1",
     paymentId: "p1",
     contractId: "c1",
     purpose: "RENTAL",

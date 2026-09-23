@@ -69,6 +69,7 @@ export function PaymentStep({
     paymentStatus: status,
     payPending,
     contractStatus: context.contract.status,
+    checkoutRecoverable: context.payment.checkoutRecoverable,
   });
   const futureUseConsentAvailable = context.payment.futureUseConsentAvailable;
   const futureUseConsent = context.payment.futureUseConsent;

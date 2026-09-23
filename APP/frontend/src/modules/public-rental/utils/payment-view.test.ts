@@ -58,6 +58,19 @@ describe("canStartCardPayment", () => {
     );
   });
 
+  it("allows Pay when checkout is recoverable despite PROCESSING", () => {
+    assert.equal(
+      canStartCardPayment({
+        providerAvailable: true,
+        paymentStatus: "PROCESSING",
+        payPending: false,
+        contractStatus: "SIGNED",
+        checkoutRecoverable: true,
+      }),
+      true,
+    );
+  });
+
   it("blocks a new attempt while PROCESSING or PENDING", () => {
     assert.equal(
       canStartCardPayment({

@@ -679,6 +679,8 @@ export const PublicRentalContextSchema = z.object({
         scope: z.string(),
       })
       .nullable(),
+    /** PROCESSING without a persisted Checkout URL — Pay may recover the provider attempt. */
+    checkoutRecoverable: z.boolean(),
   }),
   tarsOtp: TarsOtpPublicStateSchema,
 });

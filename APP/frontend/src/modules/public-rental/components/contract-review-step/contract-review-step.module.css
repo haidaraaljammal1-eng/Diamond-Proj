@@ -97,6 +97,7 @@
   margin: 0;
   color: #f2b8b5;
   font-size: 13.5px;
+  white-space: pre-line;
 }
 
 .saved {

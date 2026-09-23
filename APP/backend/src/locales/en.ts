@@ -254,6 +254,12 @@ export const en: Record<string, string> = {
   "Public rental form is incomplete": "Public rental form is incomplete",
   "Rental is not ready for acceptance": "Rental is not ready for acceptance",
   "Card payment is not configured": "Card payment is not configured",
+  "Payment checkout could not be prepared": "Payment checkout could not be prepared",
+  "Unable to prepare the payment right now. Please try again.":
+    "Unable to prepare the payment right now. Please try again.",
+  "A previous payment attempt could not be recovered": "A previous payment attempt could not be recovered",
+  "Card payment is temporarily unavailable": "Card payment is temporarily unavailable",
+  "Payment configuration is invalid": "Payment configuration is invalid",
   "Electronic payment is not allowed": "Electronic payment is not allowed",
   "A payment attempt is already in progress": "A payment attempt is already in progress",
   "Payment attempt was not found": "Payment attempt was not found",

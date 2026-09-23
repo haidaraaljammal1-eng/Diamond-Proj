@@ -177,6 +177,7 @@ export interface PublicRentalContext {
       text: string;
       scope: string;
     } | null;
+    checkoutRecoverable: boolean;
   };
   tarsOtp: TarsOtpPublicState;
 }

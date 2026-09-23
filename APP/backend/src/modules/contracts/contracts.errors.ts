@@ -138,6 +138,37 @@ export const contractError = {
       "Card payment is not configured",
       "PAYMENT_PROVIDER_NOT_CONFIGURED",
     ),
+  paymentCheckoutPreparationFailed: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Payment checkout could not be prepared",
+      "PAYMENT_CHECKOUT_PREPARATION_FAILED",
+    ),
+  paymentAttemptRecoveryFailed: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A previous payment attempt could not be recovered",
+      "PAYMENT_ATTEMPT_RECOVERY_FAILED",
+    ),
+  paymentProviderTemporarilyUnavailable: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Card payment is temporarily unavailable",
+      "PAYMENT_PROVIDER_TEMPORARILY_UNAVAILABLE",
+    ),
+  paymentConfigurationError: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Payment configuration is invalid",
+      "PAYMENT_CONFIGURATION_ERROR",
+    ),
+  paymentCheckoutConfigurationError: (stripe?: Record<string, string | undefined>) =>
+    err(
+      ErrorCode.CONFLICT,
+      "Unable to prepare the payment right now. Please try again.",
+      "PAYMENT_CHECKOUT_CONFIGURATION_ERROR",
+      stripe,
+    ),
   paymentNotAllowed: () =>
     err(ErrorCode.CONFLICT, "Electronic payment is not allowed", "PAYMENT_NOT_ALLOWED"),
   legacyCardLinkDisabled: () =>

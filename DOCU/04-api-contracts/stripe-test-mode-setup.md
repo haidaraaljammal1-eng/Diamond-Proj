@@ -34,10 +34,18 @@ stripe listen --forward-to http://localhost:8000/payments/webhooks/stripe
 
 No public tunnel is required when using CLI forwarding.
 
+## Checkout attempt architecture (STRIPE-5)
+
+- **`ContractPayment`** — business obligation (amount, contract, settlement).
+- **`ContractPaymentAttempt`** — immutable Stripe Checkout provider attempt with frozen `successUrl`, `cancelUrl`, `requestFingerprint`, and `idempotencyKey` (`diamond:stripe:checkout:{attemptId}:v1`).
+- Retries reuse the **same attempt** and the **same Stripe idempotency key** (crash/orphan recovery).
+- Parameter changes (amount, consent, URLs) → **supersede** old attempt, create a new one with a new `attemptId`.
+- No Stripe HTTP inside long DB transactions.
+
 ## Flow
 
 1. Public rental **Pay now with Stripe** → `POST /contracts/rental/:token/payment` with body `{ savePaymentMethodForFutureUse: true|false }` (requires `Idempotency-Key`, `Accept-Language` for return URLs).
-2. Backend creates `ContractPayment` (+ consent fields when authorized) and a Stripe Checkout Session (`price_data` from authoritative contract amount; `setup_future_usage=off_session` only when consented).
+2. Backend creates or recovers a `ContractPaymentAttempt`, then a Stripe Checkout Session (`price_data` from authoritative contract amount; `setup_future_usage=off_session` only when consented).
 3. Browser redirects to `checkoutUrl`.
 4. Customer pays on Stripe.
 5. Stripe webhook → `POST /payments/webhooks/stripe` (raw body + signature) → durable inbox row → **fast 200**.

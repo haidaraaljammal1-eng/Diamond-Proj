@@ -1,7 +1,6 @@
 import Stripe from "stripe";
 import { env } from "src/config/env";
 import { aedToStripeMinorUnits, assertAedCurrency } from "src/modules/contracts/payment/money";
-import { stripeCheckoutIdempotencyKey } from "src/modules/contracts/payment/stripe-payment-profile.service";
 import type {
   CreateCheckoutInput,
   CreateCheckoutResult,
@@ -84,7 +83,6 @@ export function buildStripePaymentCheckoutParams(
     input.stripeCustomerId ?? input.savedPaymentMethod?.stripeCustomerId ?? null;
   if (customerId) {
     params.customer = customerId;
-    params.payment_method_collection = "if_required";
   }
   params.payment_intent_data = {
     metadata: {
@@ -119,7 +117,7 @@ export class StripePaymentProvider implements PaymentProvider {
     const unitAmount = aedToStripeMinorUnits(input.amount);
     const params = buildStripePaymentCheckoutParams(input, unitAmount);
     const session = await this.client().checkout.sessions.create(params, {
-      idempotencyKey: stripeCheckoutIdempotencyKey(input.paymentId),
+      idempotencyKey: input.idempotencyKey,
     });
     if (!session.url || !session.id) {
       return { ok: false, reason: "NOT_CONFIGURED", provider: this.name };

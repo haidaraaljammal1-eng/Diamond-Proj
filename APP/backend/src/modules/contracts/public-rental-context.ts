@@ -157,6 +157,9 @@ export function toPublicRentalContext(
         customerId: row.customerId,
         snapshot: row.snapshot,
       }),
+      checkoutRecoverable: Boolean(
+        payment?.status === "PROCESSING" && !payment?.checkoutUrl,
+      ),
       futureUseConsent: canMaterializeContractCustomer({
         customerId: row.customerId,
         snapshot: row.snapshot,

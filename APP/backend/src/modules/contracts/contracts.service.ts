@@ -2140,10 +2140,18 @@ export function createContractsService(fastify: FastifyInstance) {
   ) {
     return withTransaction(prisma, async (tx) => {
       const contract = await lockReviewableContract(tx, token);
+      const row = await tx.contract.findUniqueOrThrow({
+        where: { id: contract.id },
+        include: OFFICIAL_CONTRACT_INCLUDE,
+      });
+      const { view: policyView } = buildOfficialContractView(row, {
+        officeDisplayName: env.OFFICE_DISPLAY_NAME || OFFICE_DISPLAY_NAME_DEFAULT,
+        requiresCardSetupBeforeSigning: requiresCardSetupBeforeSigning(),
+      });
 
       // Lifecycle lock (409) takes precedence over field policy (403): once the
       // agreement is no longer reviewable, every key is locked for that reason.
-      const editable: readonly string[] = OFFICIAL_CONTRACT_EDITABLE_FIELDS;
+      const editable: readonly string[] = policyView.permissions.editableFields;
       const locked = Object.keys(patch).filter((key) => !editable.includes(key));
       if (locked.length > 0) throw contractError.officialContractFieldLocked(locked);
 

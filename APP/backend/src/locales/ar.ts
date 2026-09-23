@@ -242,6 +242,13 @@ export const ar: Record<string, string> = {
   "Public rental form is incomplete": "نموذج التأجير غير مكتمل",
   "Rental is not ready for acceptance": "التأجير غير جاهز للقبول",
   "Card payment is not configured": "الدفع بالبطاقة غير مُعدّ",
+  "Payment checkout could not be prepared": "تعذر تجهيز عملية الدفع. يرجى المحاولة مرة أخرى.",
+  "Unable to prepare the payment right now. Please try again.":
+    "تعذر تجهيز عملية الدفع حالياً. يرجى المحاولة مرة أخرى.",
+  "A previous payment attempt could not be recovered":
+    "تعذر إكمال تجهيز عملية الدفع السابقة. يمكنك إعادة المحاولة الآن.",
+  "Card payment is temporarily unavailable": "الدفع بالبطاقة غير متاح مؤقتاً",
+  "Payment configuration is invalid": "إعدادات الدفع غير صالحة",
   "Electronic payment is not allowed": "الدفع الإلكتروني غير مسموح",
   "A payment attempt is already in progress": "توجد محاولة دفع قيد المعالجة",
   "Payment attempt was not found": "محاولة الدفع غير موجودة",

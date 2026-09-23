@@ -1254,6 +1254,22 @@
       "signing": "Signing…",
       "signFailed": "The contract could not be signed. Please try again.",
       "missingSignatures": "Please sign: {slots}.",
+      "missingFieldsIntro": "Cannot continue because the following information is incomplete:",
+      "fillTestData": "Fill Test Data",
+      "errors": {
+        "incompleteCustomerData": "Please complete the required contract fields (such as phone number and address) before signing."
+      },
+      "requirements": {
+        "IDENTITY": "Identity documents",
+        "HIRER_NAME": "Hirer name",
+        "NATIONALITY": "Nationality",
+        "PASSPORT_NUMBER": "Passport number",
+        "ADDRESS": "Address",
+        "TELEPHONE": "Phone number",
+        "DRIVER_LICENSE_NUMBER": "Driver license number",
+        "DRIVER_LICENSE_EXPIRY": "Driver license expiry date",
+        "CARD_SETUP": "Card setup"
+      },
       "continue": "Continue",
       "signatureSlots": {
         "hirer": "Hirer Signature",

@@ -1254,6 +1254,22 @@
       "signing": "جارٍ التوقيع…",
       "signFailed": "تعذر توقيع العقد. يرجى المحاولة مرة أخرى.",
       "missingSignatures": "يرجى التوقيع: {slots}.",
+      "missingFieldsIntro": "لا يمكن المتابعة لأن المعلومات التالية غير مكتملة:",
+      "fillTestData": "تعبئة بيانات تجريبية",
+      "errors": {
+        "incompleteCustomerData": "يرجى إكمال حقول العقد المطلوبة (مثل رقم الهاتف والعنوان) قبل التوقيع."
+      },
+      "requirements": {
+        "IDENTITY": "وثائق الهوية",
+        "HIRER_NAME": "اسم المستأجر",
+        "NATIONALITY": "الجنسية",
+        "PASSPORT_NUMBER": "رقم الجواز",
+        "ADDRESS": "العنوان",
+        "TELEPHONE": "رقم الهاتف",
+        "DRIVER_LICENSE_NUMBER": "رقم رخصة القيادة",
+        "DRIVER_LICENSE_EXPIRY": "تاريخ انتهاء الرخصة",
+        "CARD_SETUP": "إعداد البطاقة"
+      },
       "continue": "متابعة",
       "signatureSlots": {
         "hirer": "توقيع المستأجر",

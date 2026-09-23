@@ -24,6 +24,13 @@ import {
   requiredSignatureSlots,
   SIGNATURE_SLOT_PATHS,
 } from "../utils/official-contract-document";
+import {
+  buildDevTestDataFill,
+  collectContractCompletionIssues,
+  type ContractRequirementCode,
+  firstScrollTargetField,
+  missingRequirementReviewFields,
+} from "../utils/official-contract-completion";
 
 export type OfficialContractLoadStatus = "idle" | "loading" | "ready" | "error";
 export type OfficialContractSaveStatus = "idle" | "saving" | "saved" | "error";
@@ -45,13 +52,17 @@ interface OfficialContractState {
   saveStatus: OfficialContractSaveStatus;
   saveError: ApiRequestError | null;
   invalidFields: string[];
+  missingRequirements: ContractRequirementCode[];
   signStatus: OfficialContractSignStatus;
   signError: ApiRequestError | null;
   missingSignatures: OfficialSignatureSlot[];
+  scrollTargetField: OfficialContractReviewField | null;
   load: (token: string) => Promise<void>;
   setEdit: (field: OfficialContractReviewField, value: string) => void;
   setDamageOut: (marks: DamageMark[]) => void;
   setSignature: (slot: OfficialSignatureSlot, image: Blob | null) => void;
+  fillDevTestData: () => void;
+  clearCompletionErrors: () => void;
   /** Saves pending changes. Resolves true when nothing is pending afterwards. */
   save: () => Promise<boolean>;
   /** Saves, then signs through the real Backend flow. */
@@ -70,9 +81,11 @@ const empty = {
   saveStatus: "idle" as OfficialContractSaveStatus,
   saveError: null as ApiRequestError | null,
   invalidFields: [] as string[],
+  missingRequirements: [] as ContractRequirementCode[],
   signStatus: "idle" as OfficialContractSignStatus,
   signError: null as ApiRequestError | null,
   missingSignatures: [] as OfficialSignatureSlot[],
+  scrollTargetField: null as OfficialContractReviewField | null,
 };
 
 let loadSeq = 0;
@@ -90,6 +103,50 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
     saveStatus: get().saveStatus === "saved" ? ("idle" as const) : get().saveStatus,
     missingSignatures: [],
   });
+
+  const runCompletionValidation = (forSign: boolean): boolean => {
+    const { view, edits, pendingSignatures } = get();
+    if (!view) return false;
+    const { missingRequirements, invalidFields } = collectContractCompletionIssues(view, edits);
+    if (missingRequirements.length > 0 || invalidFields.length > 0) {
+      set({
+        missingRequirements,
+        invalidFields,
+        saveStatus: "error",
+        saveError: null,
+        signStatus: forSign ? "error" : get().signStatus,
+        signError: forSign ? null : get().signError,
+        scrollTargetField: firstScrollTargetField(missingRequirements, invalidFields),
+      });
+      return false;
+    }
+    if (forSign) {
+      const missing = requiredSignatureSlots(view, edits).filter((slot) => {
+        const local = pendingSignatures[slot];
+        if (local === "CLEAR") return true;
+        if (local) return false;
+        return view.signatures[slot].status !== "SIGNED";
+      });
+      if (missing.length > 0) {
+        set({
+          missingSignatures: missing,
+          signStatus: "error",
+          signError: null,
+          missingRequirements: [],
+          invalidFields: [],
+          scrollTargetField: null,
+        });
+        return false;
+      }
+    }
+    set({
+      missingRequirements: [],
+      invalidFields: [],
+      missingSignatures: [],
+      scrollTargetField: null,
+    });
+    return true;
+  };
 
   return {
     ...empty,
@@ -111,8 +168,28 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
       set((state) => ({
         edits: { ...state.edits, [field]: value },
         invalidFields: state.invalidFields.filter((f) => f !== field),
+        missingRequirements: state.missingRequirements.filter(
+          (code) => !missingRequirementReviewFields([code]).includes(field),
+        ),
+        scrollTargetField: null,
         ...touched(),
       }));
+    },
+
+    fillDevTestData() {
+      const { view, edits } = get();
+      if (!view) return;
+      set({
+        edits: buildDevTestDataFill(view, edits),
+        invalidFields: [],
+        missingRequirements: [],
+        scrollTargetField: null,
+        ...touched(),
+      });
+    },
+
+    clearCompletionErrors() {
+      set({ invalidFields: [], missingRequirements: [], scrollTargetField: null });
     },
 
     setDamageOut(marks) {
@@ -129,6 +206,7 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
     async save() {
       const { token, view, edits, pendingSignatures } = get();
       if (!token || !view) return false;
+      if (!runCompletionValidation(false)) return false;
       const patch = buildReviewPatch(view, edits);
       const invalid = invalidReviewFields(patch);
       if (invalid.length > 0) {
@@ -174,17 +252,8 @@ export const useOfficialContractStore = create<OfficialContractState>((set, get)
     async sign() {
       const state = get();
       if (!state.token || !state.view) return false;
-      const missing = requiredSignatureSlots(state.view, state.edits).filter((slot) => {
-        const local = state.pendingSignatures[slot];
-        if (local === "CLEAR") return true;
-        if (local) return false;
-        return state.view!.signatures[slot].status !== "SIGNED";
-      });
-      if (missing.length > 0) {
-        set({ missingSignatures: missing, signStatus: "error", signError: null });
-        return false;
-      }
-      set({ signStatus: "signing", signError: null, missingSignatures: [] });
+      if (!runCompletionValidation(true)) return false;
+      set({ signStatus: "signing", signError: null, missingSignatures: [], missingRequirements: [] });
       const saved = await get().save();
       if (!saved) {
         set({ signStatus: "idle" });

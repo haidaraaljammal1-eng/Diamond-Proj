@@ -7,6 +7,7 @@ import type {
   CardSetupSessionResult,
   CreateCardSetupInput,
   CreateCheckoutInput,
+  CreateCheckoutSuccess,
   PaymentProvider,
   ProviderPaymentStatus,
   WebhookVerifyResult,
@@ -38,6 +39,7 @@ export interface TestCardSetupPayload {
 export function createFakePaymentProvider(run: string) {
   const statuses = new Map<string, ProviderPaymentStatus>();
   const sessions = new Map<string, CreateCheckoutInput>();
+  const idempotencyResults = new Map<string, CreateCheckoutSuccess>();
   const paymentRefs = new Map<string, string>();
   const setupSessions = new Map<string, CreateCardSetupInput>();
   const setupRefs = new Map<string, string>();
@@ -51,6 +53,8 @@ export function createFakePaymentProvider(run: string) {
     lastRef: null,
     lastPaymentId: null,
     async createCheckoutSession(input: CreateCheckoutInput) {
+      const cached = idempotencyResults.get(input.idempotencyKey);
+      if (cached) return cached;
       n += 1;
       const ref = `cs_test_${run}_${n}`;
       statuses.set(ref, "PROCESSING");
@@ -58,7 +62,7 @@ export function createFakePaymentProvider(run: string) {
       paymentRefs.set(input.paymentId, ref);
       provider.lastRef = ref;
       provider.lastPaymentId = input.paymentId;
-      return {
+      const result: CreateCheckoutSuccess = {
         ok: true,
         provider: "stripe",
         providerReference: ref,
@@ -66,6 +70,8 @@ export function createFakePaymentProvider(run: string) {
         checkoutUrl: `https://checkout.stripe.com/c/pay/${ref}`,
         checkoutExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
       };
+      idempotencyResults.set(input.idempotencyKey, result);
+      return result;
     },
     async createCardSetupSession(input: CreateCardSetupInput) {
       n += 1;

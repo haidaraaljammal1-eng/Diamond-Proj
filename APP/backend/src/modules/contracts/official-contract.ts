@@ -5,6 +5,9 @@ import type { OfficialContractView } from "src/modules/contracts/contracts.schem
 import { formatStoredExpiry } from "src/modules/contracts/driving-license-policy";
 import { fleetVehicleTypeLabel } from "src/modules/vehicles/vehicles.mapper";
 import {
+  computePublicContractEditableFields,
+} from "src/modules/contracts/official-contract-editability";
+import {
   PUBLIC_SIGNABLE_SLOTS,
   readDamageMarks,
   requiredSignatureSlots,
@@ -266,8 +269,12 @@ export function buildOfficialContractView(
   if (reviewable) {
     if (row.status === "AWAITING" && !identity.identityReady) missingRequirements.push("IDENTITY");
     if (!hirer.name) missingRequirements.push("HIRER_NAME");
+    if (!hirer.nationality) missingRequirements.push("NATIONALITY");
     if (!hirer.passportNumber) missingRequirements.push("PASSPORT_NUMBER");
+    if (!hirer.address) missingRequirements.push("ADDRESS");
+    if (!hirer.telephone) missingRequirements.push("TELEPHONE");
     if (!hirer.driverLicenseNumber) missingRequirements.push("DRIVER_LICENSE_NUMBER");
+    if (!hirer.driverLicenseExpiryDate) missingRequirements.push("DRIVER_LICENSE_EXPIRY");
     if (options.requiresCardSetupBeforeSigning &&
         !(row.cardPaymentMethod?.provider === "stripe" && row.cardPaymentMethod.stripeCustomerId && row.cardPaymentMethod.stripePaymentMethodId)) {
       missingRequirements.push("CARD_SETUP");
@@ -276,6 +283,21 @@ export function buildOfficialContractView(
       if (!captured.has(slot)) missingRequirements.push(`SIGNATURE_${slot}`);
     }
   }
+
+  const editableFields = reviewable
+    ? computePublicContractEditableFields(provenance, {
+        "hirer.name": hirer.name,
+        "hirer.nationality": hirer.nationality,
+        "hirer.passportNumber": hirer.passportNumber,
+        "hirer.address": hirer.address,
+        "hirer.telephone": hirer.telephone,
+        "additionalDriver.name": additionalDriver.name,
+        "additionalDriver.nationality": additionalDriver.nationality,
+        "additionalDriver.driverLicenseNumber": additionalDriver.driverLicenseNumber,
+        "sponsor.name": sponsor.name,
+        "sponsor.idNumber": sponsor.idNumber,
+      })
+    : [];
 
   const live: OfficialContractView = {
     header: { officeDisplayName: options.officeDisplayName, company },
@@ -343,7 +365,7 @@ export function buildOfficialContractView(
       // Field policy is listed whenever the agreement is still reviewable; `canEdit`
       // carries the identity gate. The server enforces both on every write.
       canEdit,
-      editableFields: reviewable ? [...OFFICIAL_CONTRACT_EDITABLE_FIELDS] : [],
+      editableFields: [...editableFields],
       // Public contract review never edits custody. Car-Out / Car-In workflows own these flags.
       vehicleOut: { canEditDamage: false, canEditMileage: false, canEditFuel: false, canSign: false },
       vehicleIn: { canEditDamage: false, canEditMileage: false, canEditFuel: false, canSign: false },

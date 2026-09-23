@@ -11,6 +11,14 @@ import { canEnterStage, isLinkGoneReason } from "../../utils/flow-step";
 import { SIGNATURE_SLOT_PATHS } from "../../utils/official-contract-document";
 import { withNormalizedIdentity } from "../../utils/official-contract-identity";
 import {
+  isDevTestFillEnabled,
+  missingRequirementReviewFields,
+} from "../../utils/official-contract-completion";
+import {
+  formatMissingRequirementsMessage,
+  resolveContractCompletionError,
+} from "../../utils/format-contract-completion-error";
+import {
   publicRentalErrorReason,
   resolvePublicRentalErrorMessage,
 } from "../../utils/resolve-public-rental-error";
@@ -75,6 +83,18 @@ export function ContractReviewStep({
   const errorTranslator = Object.assign((key: string) => tRental(key as never), {
     has: (key: string) => tRental.has(key as never),
   });
+  const reviewTranslator = Object.assign((key: string) => t(key as never), {
+    has: (key: string) => t.has(key as never),
+  });
+
+  useEffect(() => {
+    const field = contract.scrollTargetField;
+    if (!field) return;
+    const node = document.querySelector<HTMLElement>(`[data-field="${field}"]`);
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (node instanceof HTMLTextAreaElement) node.focus();
+  }, [contract.scrollTargetField]);
 
   if (contract.status === "error") {
     const reason = publicRentalErrorReason(contract.loadError);
@@ -97,22 +117,40 @@ export function ContractReviewStep({
   const signing = contract.signStatus === "signing";
   const signed = view ? !["AWAITING", "FORM"].includes(view.contract.status) : false;
   const otpBlocksSign = isTarsOtpBlockingSign(context.tarsOtp);
+  const highlightedFields = [
+    ...new Set([
+      ...contract.invalidFields,
+      ...missingRequirementReviewFields(contract.missingRequirements),
+    ]),
+  ];
   const pendingMarks = Object.fromEntries(
     Object.entries(contract.pendingSignatures).map(([slot, value]) => [slot, value === "CLEAR" ? "CLEAR" : "DRAWN"]),
   ) as Partial<Record<OfficialSignatureSlot, "DRAWN" | "CLEAR">>;
 
   const signatureLabel = (slot: OfficialSignatureSlot) => t(`signatureSlots.${slot}` as never);
+  const completionError =
+    contract.missingRequirements.length > 0
+      ? formatMissingRequirementsMessage(reviewTranslator, contract.missingRequirements)
+      : null;
   const errorMessage = (() => {
+    if (completionError) return completionError;
     if (contract.missingSignatures.length > 0) {
       return t("missingSignatures", { slots: contract.missingSignatures.map(signatureLabel).join("، ") });
     }
     if (contract.signStatus === "error" && contract.signError) {
-      return resolvePublicRentalErrorMessage(errorTranslator, contract.signError) ?? t("signFailed");
+      return (
+        resolveContractCompletionError(reviewTranslator, contract.signError) ??
+        resolvePublicRentalErrorMessage(errorTranslator, contract.signError) ??
+        t("signFailed")
+      );
     }
     if (contract.saveStatus === "error") {
-      return contract.invalidFields.length > 0
-        ? t("invalidFields")
-        : (resolvePublicRentalErrorMessage(errorTranslator, contract.saveError) ?? t("saveFailed"));
+      if (contract.invalidFields.length > 0) return t("invalidFields");
+      return (
+        resolveContractCompletionError(reviewTranslator, contract.saveError) ??
+        resolvePublicRentalErrorMessage(errorTranslator, contract.saveError) ??
+        t("saveFailed")
+      );
     }
     return null;
   })();
@@ -152,7 +190,7 @@ export function ContractReviewStep({
               edits={contract.edits}
               damageOut={contract.damageOut}
               pendingSignatures={pendingMarks}
-              invalidFields={contract.invalidFields}
+              invalidFields={highlightedFields}
               signatureImageUrl={(slot) =>
                 publicOfficialSignatureUrl(token, SIGNATURE_SLOT_PATHS[slot], view.signatures[slot].signedAt ?? "")
               }
@@ -193,7 +231,9 @@ export function ContractReviewStep({
 
       <div className={styles.actions}>
         {errorMessage ? (
-          <p className={styles.error} role="alert">{errorMessage}</p>
+          <p className={styles.error} role="alert" data-testid="contract-review-error">
+            {errorMessage}
+          </p>
         ) : null}
         {contract.saveStatus === "saved" && !contract.dirty && !signed ? (
           <p className={styles.saved} role="status">{t("saved")}</p>
@@ -206,16 +246,30 @@ export function ContractReviewStep({
           ) : (
             <>
               {view?.permissions.canEdit ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  loading={saving && !signing}
-                  disabled={(view?.contract.status !== "AWAITING" && !contract.dirty) || saving || signing}
-                  onClick={() => void handleSave()}
-                >
-                  {saving && !signing ? t("saving") : view?.contract.status === "AWAITING" ? t("confirmReview") : t("save")}
-                </Button>
+                <>
+                  {isDevTestFillEnabled() ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="md"
+                      disabled={saving || signing}
+                      data-testid="contract-review-fill-test-data"
+                      onClick={() => contract.fillDevTestData()}
+                    >
+                      {t("fillTestData")}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    loading={saving && !signing}
+                    disabled={(view?.contract.status !== "AWAITING" && !contract.dirty) || saving || signing}
+                    onClick={() => void handleSave()}
+                  >
+                    {saving && !signing ? t("saving") : view?.contract.status === "AWAITING" ? t("confirmReview") : t("save")}
+                  </Button>
+                </>
               ) : null}
               <Button
                 type="button"

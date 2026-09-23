@@ -6,6 +6,7 @@ import {
 } from "src/modules/contracts/contract-customer-materialization";
 import { stripeLivemodeFromSecret } from "src/modules/contracts/payment/stripe-account-identity";
 import {
+  stripeCheckoutAttemptIdempotencyKey,
   stripeCheckoutIdempotencyKey,
   stripeCustomerIdempotencyKey,
 } from "src/modules/contracts/payment/stripe-payment-profile.service";
@@ -46,6 +47,10 @@ describe("stripe idempotency keys", () => {
   it("uses deterministic provider keys", () => {
     assert.equal(stripeCustomerIdempotencyKey("prof_1"), "diamond:stripe-customer-profile:prof_1:v1");
     assert.equal(stripeCheckoutIdempotencyKey("pay_1"), "diamond:checkout:pay_1:v1");
+    assert.equal(
+      stripeCheckoutAttemptIdempotencyKey("att_1"),
+      "diamond:stripe:checkout:att_1:v1",
+    );
   });
 });
 
