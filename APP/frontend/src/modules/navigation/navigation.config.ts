@@ -2,6 +2,7 @@ import { ROLES_PAGE_PERMISSIONS } from "@/modules/roles/roles.permissions";
 import { USERS_PAGE_PERMISSIONS } from "@/modules/users/users.permissions";
 import { VEHICLES_PAGE_PERMISSIONS } from "@/modules/vehicles/vehicles.permissions";
 import { CONTRACTS_PAGE_PERMISSIONS } from "@/modules/contracts/contracts.permissions";
+import { ARCHIVE_PAGE_PERMISSIONS } from "@/modules/archive/archive.permissions";
 import { MAINTENANCE_PAGE_PERMISSIONS } from "@/modules/maintenance/maintenance.permissions";
 import { FINANCE_PAGE_PERMISSIONS } from "@/modules/finance/finance.permissions";
 import type { NavigationConfig } from "./navigation.types";
@@ -57,6 +58,14 @@ export const navigationConfig: NavigationConfig = [
         href: "/maintenance",
         icon: "maintenance",
         permissions: [...MAINTENANCE_PAGE_PERMISSIONS],
+      },
+      {
+        key: "archive",
+        type: "link",
+        labelKey: "archive",
+        href: "/archive",
+        icon: "archive",
+        permissions: [...ARCHIVE_PAGE_PERMISSIONS],
       },
       {
         key: "violations",

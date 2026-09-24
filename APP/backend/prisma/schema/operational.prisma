@@ -118,6 +118,7 @@ model Vehicle {
   roadLiabilities           RoadLiability[]
   roadLiabilityObservations RoadLiabilityObservation[]
   tarsIntegrations          TarsVehicleIntegration[]
+  archiveRows               ArchiveRow[]
 
   @@unique([companyId, externalId])
   @@index([companyId])

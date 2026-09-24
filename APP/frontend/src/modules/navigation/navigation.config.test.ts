@@ -37,6 +37,7 @@ describe("navigation config — sidebar cleanup", () => {
           "cars",
           "gps",
           "maintenance",
+          "archive",
           "violations",
           "finance",
           "invoices",
@@ -49,6 +50,7 @@ describe("navigation config — sidebar cleanup", () => {
         "cars",
         "gps",
         "maintenance",
+        "archive",
         "violations",
         "finance",
         "invoices",
@@ -60,6 +62,8 @@ describe("navigation config — sidebar cleanup", () => {
     assert.doesNotMatch(config, /badge:\s*3/);
     assert.match(config, /href:\s*"\/whatsapp"/);
     assert.match(config, /permission:\s*"whatsapp.read"/);
+    assert.match(config, /href:\s*"\/archive"/);
+    assert.match(config, /ARCHIVE_PAGE_PERMISSIONS/);
     assert.doesNotMatch(config, /\/operations/);
     assert.doesNotMatch(icons, /operations:/);
     assert.doesNotMatch(types, /"operations"/);
@@ -70,6 +74,7 @@ describe("navigation config — sidebar cleanup", () => {
           "/vehicles",
           "/gps",
           "/maintenance",
+          "/archive",
           "/violations",
           "/finance",
           "/invoices",
@@ -82,6 +87,7 @@ describe("navigation config — sidebar cleanup", () => {
         "/vehicles",
         "/gps",
         "/maintenance",
+        "/archive",
         "/violations",
         "/finance",
         "/invoices",

@@ -1,0 +1,44 @@
+// ---------------------------------------------------------------------------
+// Archive — manual editable spreadsheet rows per fleet vehicle (ARCHIVE-1).
+// Values are staff-entered only; no operational auto-population in this phase.
+// ---------------------------------------------------------------------------
+
+model ArchiveRow {
+  id            Int       @id @default(autoincrement())
+  vehicleId     Int
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  /// Stable per-vehicle spreadsheet order (1-based). Assigned on create only.
+  rowOrder      Int
+  kmIn          Int?
+  km            Int?
+  kmOut         Int?
+  deliveryDate  DateTime? @db.Date
+  /// Local wall-clock time label (HH:mm). Stored as text — not a timezone anchor.
+  deliveryTime  String?
+  returnDate    DateTime? @db.Date
+  returnTime    String?
+  customerName  String?
+  customerPhone String?
+  description   String?
+  days          Int?
+  dailyRate     Int?
+  rentalTotal   Int?
+  salik         Int?
+  parking       Int?
+  fuel          Int?
+  blackPoints   Int?
+  fines         Int?
+  total         Int?
+  /// Manual USD cash column (whole dollars). Not AED and not provider-linked.
+  dollar        Int?
+  cash          Int?
+  visa          Int?
+  transfer      Int?
+  remaining     Int?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([vehicleId, rowOrder])
+  @@index([vehicleId])
+  @@map("archive_rows")
+}

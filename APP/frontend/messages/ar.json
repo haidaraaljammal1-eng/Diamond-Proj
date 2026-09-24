@@ -29,6 +29,7 @@
     "cars": "السيارات",
     "gps": "تتبع GPS",
     "maintenance": "مركز الصيانة",
+    "archive": "الأرشيف",
     "violations": "المخالفات وسالك",
     "finance": "المالية",
     "invoices": "الفواتير",
@@ -2662,6 +2663,84 @@
       "unlink": "إلغاء ربط العميل",
       "search": "ابحث عن العملاء",
       "needCustomerRead": "البحث عن العملاء يتطلب صلاحية قراءة العملاء."
+    }
+  },
+  "Archive": {
+    "title": "الأرشيف",
+    "subtitle": "أرشيف إيجار يدوي لكل مركبة — جدول قابل للتعديل.",
+    "denied": {
+      "title": "يلزم صلاحية الأرشيف",
+      "description": "تحتاج صلاحية archive.read لفتح هذه الصفحة."
+    },
+    "vehicleSelect": {
+      "label": "المركبة",
+      "placeholder": "اختر مركبة…"
+    },
+    "emptySelection": {
+      "title": "اختر مركبة",
+      "description": "اختر مركبة من الأسطول لعرض وتعديل صفوف الأرشيف."
+    },
+    "emptyRows": {
+      "title": "لا توجد صفوف بعد",
+      "description": "استخدم إضافة صف لإنشاء أول إدخال يدوي لهذه المركبة."
+    },
+    "loading": {
+      "vehicles": "جاري تحميل مركبات الأسطول…",
+      "rows": "جاري تحميل صفوف الأرشيف…"
+    },
+    "actions": {
+      "refresh": "تحديث",
+      "addRow": "إضافة صف",
+      "addingRow": "جاري الإضافة…",
+      "downloadExcel": "تنزيل ملف Excel",
+      "downloadingExcel": "جاري التنزيل…",
+      "close": "إغلاق",
+      "cancel": "إلغاء"
+    },
+    "table": {
+      "actions": "إجراءات"
+    },
+    "delete": {
+      "title": "حذف صف الأرشيف؟",
+      "description": "سيتم حذف الصف {rowOrder} من أرشيف هذه المركبة فقط.",
+      "descriptionGeneric": "سيتم حذف هذا الصف من أرشيف المركبة فقط.",
+      "confirm": "حذف الصف",
+      "deleting": "جاري الحذف…",
+      "rowAction": "حذف الصف {rowOrder}"
+    },
+    "error": {
+      "generic": "حدث خطأ. حاول مرة أخرى.",
+      "forbidden": "لا تملك صلاحية هذا الإجراء.",
+      "notFound": "صف الأرشيف أو المركبة غير موجود.",
+      "ARCHIVE_ROW_NOT_FOUND": "صف الأرشيف غير موجود.",
+      "VEHICLE_NOT_FOUND": "المركبة غير موجودة.",
+      "ARCHIVE_UNSAVED_CELL_ERROR": "يجب حل التعديلات غير المحفوظة على الأرشيف قبل تنزيل Excel."
+    },
+    "columns": {
+      "kmIn": "KM IN",
+      "km": "KM",
+      "kmOut": "KM OUT",
+      "deliveryDate": "تاريخ التسليم",
+      "deliveryTime": "ساعة التسليم",
+      "returnDate": "تاريخ الارجاع",
+      "returnTime": "ساعة الارجاع",
+      "customerName": "اسم الزبون",
+      "customerPhone": "رقم الزبون",
+      "description": "شرح",
+      "days": "عدد الايام",
+      "dailyRate": "سعر اليوم",
+      "rentalTotal": "مجموع الايجار",
+      "salik": "سالك",
+      "parking": "parking",
+      "fuel": "بترول",
+      "blackPoints": "نقاط سوداء",
+      "fines": "مخالفات",
+      "total": "المجموع",
+      "dollar": "دولار",
+      "cash": "كاش",
+      "visa": "فيزا",
+      "transfer": "حوالة",
+      "remaining": "الباقي"
     }
   }
 }

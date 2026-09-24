@@ -83,6 +83,9 @@ export const PERMISSIONS = {
   MAINTENANCE_READ: "maintenance.read",
   MAINTENANCE_MANAGE: "maintenance.manage",
 
+  ARCHIVE_READ: "archive.read",
+  ARCHIVE_MANAGE: "archive.manage",
+
   GPS_READ: "gps.read",
 
   // Office WhatsApp: connection, Inbox read, send, optional Customer link. Permissions stay separate.
@@ -326,6 +329,16 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     key: PERMISSIONS.MAINTENANCE_MANAGE,
     category: "maintenance",
     description: "Create and manage maintenance orders",
+  },
+  {
+    key: PERMISSIONS.ARCHIVE_READ,
+    category: "archive",
+    description: "View archive vehicles and rows",
+  },
+  {
+    key: PERMISSIONS.ARCHIVE_MANAGE,
+    category: "archive",
+    description: "Create, update, and delete archive rows",
   },
   {
     key: PERMISSIONS.GPS_READ,
