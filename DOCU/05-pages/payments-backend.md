@@ -1,8 +1,15 @@
-# Payments backend (Stripe V1)
+# Payments backend (Stripe + CASH V1)
 
-Diamond V1 customer payments use **Stripe Checkout only**. Money is collected only after a verified provider confirmation (webhook primary, status poll fallback). There is no manual staff confirmation and no fake runtime success.
+Diamond V1 active customer collections are **Stripe CARD** and **explicit CASH**. Money is collected only after trusted confirmation: Stripe via verified provider confirmation (webhook primary, status poll fallback); CASH via backend-authoritative settlement after signature or staff cash confirm. There is no manual staff confirmation and no fake runtime success. Historical `MANUAL` / `BANK_TRANSFER` rows remain readable but are not active collection flows.
 
-Rental payment uses a server-derived amount/currency and a single Stripe Hosted Checkout (`price_data`). The normal customer journey does **not** require a separate card-link trip before payment. Optional future-use authorization is consent-based on `POST /contracts/rental/:token/payment` (`savePaymentMethodForFutureUse`). When true, Checkout sets `payment_intent_data.setup_future_usage = off_session`, resolves one Stripe Customer per Diamond Customer, and records consent version `payment_method_authorization_v1` on `ContractPayment`. Webhook confirmation reconciles safe card metadata only when consent was granted. Off-session charging is not implemented yet.
+## Current collection modes
+
+| Mode | Rental | Road liability |
+|------|--------|----------------|
+| `ELECTRONIC` | Stripe Hosted Checkout (`price_data`) | Off-session Stripe (STRIPE-5) or payment-link checkout when configured |
+| `CASH` | Backend settlement on signature (`method = CASH`) | `POST .../collection/cash/confirm` — no Stripe I/O |
+
+Rental payment uses a server-derived amount/currency and a single Stripe Hosted Checkout for electronic contracts. The normal customer journey does **not** require a separate card-link trip before payment. Optional future-use authorization is consent-based on `POST /contracts/rental/:token/payment` (`savePaymentMethodForFutureUse`). New authorizations default to consent **v2** (`payment_method_authorization_v2`); **v1** (`payment_method_authorization_v1`) is historical and ineligible for road-liability off-session. When consented, Checkout sets `payment_intent_data.setup_future_usage = off_session`, resolves one Stripe Customer per Diamond Customer, and records the consent version on `ContractPayment`. Webhook confirmation reconciles safe card metadata only when consent was granted. Road-liability off-session charging is implemented in STRIPE-5 (see `violations-salik.md`).
 
 Legacy card-link routes (`POST /card-link`, `GET /card-link/return`) are **disabled by default** (`LEGACY_CARD_LINK_ENABLED=false`). They are not part of the normal rental UX and return `LEGACY_CARD_LINK_DISABLED` when off. A completed Checkout event confirms money only when Stripe reports `payment_status=paid`; a return URL alone never settles the Contract. An open Checkout remains in flight through a card decline or customer authentication request. Before another attempt, the backend reconciles any prior active session with Stripe and blocks an unresolved attempt, including one whose Checkout URL has expired locally. The public return page polls the status token and offers the existing Checkout URL while the attempt remains in flight.
 

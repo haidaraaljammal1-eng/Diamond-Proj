@@ -1,12 +1,12 @@
 /**
  * Clears all rows from the disposable integration database, then re-runs the base seed.
- * Refuses to run unless TEST_DATABASE_URL targets haidara_test.
+ * Refuses to run unless TEST_DATABASE_URL targets haidara_test exactly.
  */
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { assertTestDatabaseUrl } from "../tests/helpers/integration-harness";
 
-const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? "";
+const url = process.env.TEST_DATABASE_URL ?? "";
 if (!url) {
   console.error("TEST_DATABASE_URL is required");
   process.exit(1);

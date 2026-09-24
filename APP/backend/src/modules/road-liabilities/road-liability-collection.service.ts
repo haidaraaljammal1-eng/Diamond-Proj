@@ -480,8 +480,11 @@ export function createRoadLiabilityCollectionService(fastify: FastifyInstance) {
         liability.attributedContractId,
         liability.attributedContract?.customerId ?? null,
       );
-      if (capability.cashCollectionRequired || !capability.paymentLinkAvailable) {
+      if (capability.cashCollectionRequired) {
         throw roadLiabilityCollectionError.cashCollectionRequired();
+      }
+      if (!capability.paymentLinkAvailable) {
+        throw contractError.paymentProviderNotConfigured();
       }
 
       await withTransaction(prisma, async (tx) => {

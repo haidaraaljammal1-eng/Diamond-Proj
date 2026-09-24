@@ -622,14 +622,14 @@ if (!RUN) {
     });
     assert.equal(res.statusCode, 200);
     const rates = res.json().data.map((v: { dailyRate: number | null }) => v.dailyRate);
-    for (let i = 1; i < rates.length; i++) {
-      const prev = rates[i - 1] ?? Number.MAX_SAFE_INTEGER;
-      const curr = rates[i] ?? Number.MAX_SAFE_INTEGER;
+    const firstNull = rates.indexOf(null);
+    for (let i = 1; i < (firstNull >= 0 ? firstNull : rates.length); i++) {
+      const prev = rates[i - 1] as number;
+      const curr = rates[i] as number;
       assert.ok(curr <= prev, `rate ${curr} should be <= ${prev}`);
     }
-    const lastNonNull = rates.filter((r: number | null) => r != null).at(-1);
-    if (rates.includes(null)) {
-      assert.ok(rates.at(-1) === null || lastNonNull === 0);
+    if (firstNull >= 0) {
+      assert.ok(rates.slice(firstNull).every((r: number | null) => r === null), "null dailyRate values are last");
     }
   });
 

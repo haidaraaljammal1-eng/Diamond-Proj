@@ -131,7 +131,6 @@ if (!RUN) {
       const manual = await patch(ctx.token, {
         telephone: "+971500000000",
         address: "Dubai Marina",
-        nationality: "United Arab Emirates",
       });
       assert.equal(manual.statusCode, 200, manual.body);
 
@@ -283,6 +282,10 @@ if (!RUN) {
       assert.deepEqual(res.json().error.context.missing, ["ADDRESS", "TELEPHONE", "SIGNATURE_HIRER"]);
 
       await putSignature(ctx.token, "hirer");
+      await patch(ctx.token, {
+        telephone: "+971500000000",
+        address: "Dubai Marina",
+      });
       // Stripe-hosted linking already persisted the safe card reference before signing.
       await prisma.contractCardPaymentMethod.create({
         data: {
@@ -319,8 +322,8 @@ if (!RUN) {
 
       const contract = await prisma.contract.findUniqueOrThrow({ where: { id: ctx.contractId }, include: { acceptance: true } });
       assert.equal(contract.status, "SIGNED");
-      assert.equal(contract.customerId, null, "no Customer created");
-      assert.equal(await prisma.customer.count(), customersBefore);
+      assert.ok(contract.customerId, "customer materialized at signing");
+      assert.equal(await prisma.customer.count(), customersBefore + 1);
       const hirerSig = await prisma.officialContractSignature.findUniqueOrThrow({
         where: { contractId_slot: { contractId: ctx.contractId, slot: "HIRER" } },
       });

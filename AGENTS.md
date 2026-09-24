@@ -107,8 +107,8 @@
 - Demo simulation must remain environment-gated, frontend-only, visibly labeled, non-persistent, and must never create provider/business success in backend.
 - Payment success is backend/provider authoritative. A redirect URL is not confirmation.
 - PROCESSING/PENDING card attempts block duplicate retry. UNKNOWN provider status stays in-flight.
-- Stripe is the only V1 customer payment method. Manual staff confirmation and frontend actions never confirm money.
-- Collected/settled state requires trusted Stripe/provider confirmation (webhook primary, status poll fallback).
+- Diamond active customer collections are Stripe CARD and explicit CASH only. MANUAL / BANK_TRANSFER are historical and not active collection flows. Manual staff confirmation and frontend actions never confirm money.
+- Collected/settled state requires trusted confirmation: Stripe settlement is provider-confirmed (webhook primary, status poll fallback); CASH settlement is backend-authoritative through the approved CASH flow.
 - Payment amount is always server-derived; clients must not send authoritative amounts.
 - Positive approved Reconciliation must be paid before Contract Close. Car-In releases Vehicle regardless of payment.
 - Late CLOSED road liabilities collect through Post-Close Receivable, not by reopening the Contract.
@@ -137,7 +137,7 @@
 - GPS inference is never authoritative financial evidence. Predicted road liabilities never enter confirmed financial totals.
 - GPS Salik signals on a Contract are derived, informational, and non-blocking. They never create debt or hold Close.
 - Never overwrite an authoritative external charge amount (`RoadLiability.amount`).
-- A RoadLiability may produce exactly one Customer Charge destination (Reconciliation or Post-Close Receivable), enforced by `RoadLiabilityCustomerCharge.roadLiabilityId` UNIQUE.
+- A RoadLiability may produce exactly one Customer Charge destination (`DIRECT_COLLECTION`, `RECONCILIATION`, or `POST_CLOSE_RECEIVABLE`), never more than one, enforced by `RoadLiabilityCustomerCharge.roadLiabilityId` UNIQUE.
 - New Salik/traffic-violation reconciliation charges must originate from a confirmed RoadLiability.
 - Final customer charge may exceed the official amount only through explicit pre-confirmation charge review (increase + reason). Discounts/waivers are a separate future workflow.
 - Road liabilities are attributed by actual Car-Out/Car-In custody windows, not `currentRental` or scheduled rental dates.

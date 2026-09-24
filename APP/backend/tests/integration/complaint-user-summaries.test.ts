@@ -100,6 +100,9 @@ if (!RUN) {
     d = resolve.json().data;
     const close = await app.inject({ method: "POST", url: `/complaints/${id}/close`, headers: auth(adminT), payload: { revision: d.revision } });
     assert.equal(close.statusCode, 200, close.body);
+    await prisma.complaintTimelineEvent.create({
+      data: { complaintId: id, type: "SLA_WARNING", actorUserId: null, metadata: { cycleNumber: 1 } },
+    });
     const res = await app.inject({ method: "GET", url: `/complaints/${id}/timeline?pageSize=50`, headers: auth(adminT) });
     assert.equal(res.statusCode, 200);
     const events = res.json().data as { type: string; actorUserId: number | null; actor: { id: number; displayName: string } | null }[];
@@ -107,7 +110,7 @@ if (!RUN) {
     assert.ok(assigned, "assigned event present");
     assert.deepEqual(assigned!.actor, { id: adminId, displayName: "Admin Runner" }, "actor resolved from projection");
     const nullActor = events.find((e) => e.actorUserId === null);
-    assert.ok(nullActor, "a system event with a null actor exists (e.g. POST_SURVEY_SCHEDULED)");
+    assert.ok(nullActor, "a system event with a null actor exists (e.g. SLA_WARNING)");
     assert.equal(nullActor!.actor, null, "null actor stays null (frontend renders a neutral fallback)");
   });
 

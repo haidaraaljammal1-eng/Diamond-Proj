@@ -18,7 +18,7 @@ if (!INTEGRATION_ENABLED) {
   const run = Date.now().toString(36).toUpperCase();
   let seq = 0;
   let modelId = 0, adminUserId = 0;
-  let deptDelivery = 0, deptSales = 0, catDelivery = 0;
+  let deptDelivery = 0, deptSales = 0, catDelivery = 0, catUnrouted = 0;
   let branchA = 0, branchB = 0, mgrA = 0, deptMgrId = 0, assigneeId = 0;
   let scopedAId = 0, scopedBId = 0;
   let adminT = "", scopedAT = "", scopedBT = "", zeroT = "", readOnlyT = "";
@@ -76,6 +76,7 @@ if (!INTEGRATION_ENABLED) {
     deptDelivery = (await prisma.department.create({ data: { code: `DEP-DEL-${run}`, name: "Delivery" } })).id;
     deptSales = (await prisma.department.create({ data: { code: `DEP-SAL-${run}`, name: "Sales" } })).id;
     catDelivery = (await prisma.complaintCategory.create({ data: { code: `CAT-DEL-${run}`, nameEn: "Delivery delay", nameAr: "تأخر", defaultDepartmentId: deptDelivery, defaultPriority: "HIGH", sortOrder: 1 } })).id;
+    catUnrouted = (await prisma.complaintCategory.create({ data: { code: `CAT-UNR-${run}`, nameEn: "General", nameAr: "عام", defaultDepartmentId: null, defaultPriority: "MEDIUM", sortOrder: 99 } })).id;
     branchA = (await prisma.branch.create({ data: { code: `BR-A-${run}`, name: uniqueFixtureName(run, "Riyadh"), managerUserId: mgrA } })).id;
     branchB = (await prisma.branch.create({ data: { code: `BR-B-${run}`, name: uniqueFixtureName(run, "Jeddah") } })).id;
     // memberships
@@ -148,7 +149,7 @@ if (!INTEGRATION_ENABLED) {
   const rev = async (id: number) => (await prisma.complaint.findUniqueOrThrow({ where: { id } })).revision;
 
   test("valid transition; invalid blocked; first response recorded once", async () => {
-    const c = await makeComplaint();
+    const c = await makeComplaint(branchA, catUnrouted);
     const ok = await app.inject({ method: "POST", url: `/complaints/${c.id}/transition`, headers: auth(adminT), payload: { revision: c.revision, toStage: "IN_PROGRESS" } });
     assert.equal(ok.statusCode, 200);
     // CLOSED is a formal action, never a generic stage target → still rejected.
@@ -216,7 +217,7 @@ if (!INTEGRATION_ENABLED) {
   });
 
   test("concurrent transition conflict is revision-safe", async () => {
-    const c = await makeComplaint();
+    const c = await makeComplaint(branchA, catUnrouted);
     const [a, b] = await Promise.all([
       app.inject({ method: "POST", url: `/complaints/${c.id}/transition`, headers: auth(adminT), payload: { revision: c.revision, toStage: "IN_PROGRESS" } }),
       app.inject({ method: "POST", url: `/complaints/${c.id}/transition`, headers: auth(adminT), payload: { revision: c.revision, toStage: "WAITING" } }),

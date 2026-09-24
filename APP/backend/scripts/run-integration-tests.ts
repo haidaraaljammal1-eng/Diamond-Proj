@@ -5,16 +5,19 @@
 import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { buildIntegrationProcessEnv } from "../tests/helpers/integration-harness";
 
-const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const backendRoot = process.cwd();
 const integrationDir = path.join(backendRoot, "tests", "integration");
 const files = readdirSync(integrationDir)
   .filter((name) => name.endsWith(".test.ts"))
   .sort();
 
-if (process.env.RUN_INTEGRATION !== "true" || !process.env.TEST_DATABASE_URL) {
-  console.error("RUN_INTEGRATION=true and TEST_DATABASE_URL are required");
+let integrationEnv: NodeJS.ProcessEnv;
+try {
+  integrationEnv = buildIntegrationProcessEnv(process.env);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 }
 
@@ -25,16 +28,22 @@ for (const file of files) {
     cwd: backendRoot,
     stdio: "inherit",
     shell: true,
-    env: process.env,
+    env: integrationEnv,
   });
   if (prepare.status !== 0) {
     failures += 1;
     continue;
   }
   const test = spawnSync(
-    "node",
-    ["--import", "tsx", "--test", path.join("tests", "integration", file)],
-    { cwd: backendRoot, stdio: "inherit", env: process.env },
+    "npx",
+    [
+      "tsx",
+      "--import",
+      "./tests/helpers/integration-bootstrap.ts",
+      "--test",
+      path.join("tests", "integration", file),
+    ],
+    { cwd: backendRoot, stdio: "inherit", env: integrationEnv, shell: true },
   );
   if (test.status !== 0) failures += 1;
 }

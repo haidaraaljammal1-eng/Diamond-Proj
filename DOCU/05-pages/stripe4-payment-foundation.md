@@ -1,5 +1,7 @@
 # STRIPE-4 Payment Foundation
 
+> **Historical phase note:** This document describes the STRIPE-4 foundation only. STRIPE-5 (current `main`) implements Road Liability direct/off-session collection and cash confirm; see `violations-salik.md`, `payments-backend.md`, and `CURRENT-IMPLEMENTATION-STATUS.md` for current state.
+
 Production-hardening for Diamond Stripe rental payments. Off-session Road Liability charging is **not** implemented in this phase.
 
 ## Customer identity before payment

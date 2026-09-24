@@ -8,6 +8,7 @@ import { setPaymentProviderForTests } from "src/modules/contracts/payment/paymen
 import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
+  reconcileFakeProviderPayment,
 } from "../helpers/fake-payment-provider";
 import { settlePayment, startReconciliationPayment } from "../helpers/payment-integration-helpers";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
@@ -1009,8 +1010,8 @@ if (!RUN) {
       });
     }
     const [startA, startB] = await Promise.all([
-      app.inject({ method: "POST", url: `/contracts/rental/${tokenA}/payment`, headers: { "idempotency-key": `race-${idA}` } }),
-      app.inject({ method: "POST", url: `/contracts/rental/${tokenB}/payment`, headers: { "idempotency-key": `race-${idB}` } }),
+      app.inject({ method: "POST", url: `/contracts/rental/${tokenA}/payment`, headers: { "idempotency-key": `race-${idA}` }, payload: {} }),
+      app.inject({ method: "POST", url: `/contracts/rental/${tokenB}/payment`, headers: { "idempotency-key": `race-${idB}` }, payload: {} }),
     ]);
     assert.equal(startA.statusCode, 200, startA.body);
     assert.equal(startB.statusCode, 200, startB.body);
@@ -1018,14 +1019,16 @@ if (!RUN) {
     const attemptB = await prisma.contractPayment.findFirstOrThrow({ where: { contractId: idB, purpose: "RENTAL" }, orderBy: { createdAt: "desc" } });
     payments.confirm(attemptA.providerReference!);
     payments.confirm(attemptB.providerReference!);
-    const [payA, payB] = await Promise.all([
-      app.inject({ method: "GET", url: `/contracts/payments/status/${startA.json().data.statusToken as string}` }),
-      app.inject({ method: "GET", url: `/contracts/payments/status/${startB.json().data.statusToken as string}` }),
+    const [reconcileA, reconcileB] = await Promise.allSettled([
+      reconcileFakeProviderPayment(app, payments, attemptA.id),
+      reconcileFakeProviderPayment(app, payments, attemptB.id),
     ]);
-    const codes = [payA.statusCode, payB.statusCode].sort();
-    assert.deepEqual(codes, [200, 409]);
-    const failed = payA.statusCode === 409 ? payA : payB;
-    assert.equal(failed.json().error.context.reason, "VEHICLE_ALREADY_RENTED");
+    const fulfilled = [reconcileA, reconcileB].filter((r) => r.status === "fulfilled");
+    const rejected = [reconcileA, reconcileB].filter((r) => r.status === "rejected");
+    assert.equal(fulfilled.length, 1, "exactly one rental payment settles to PAID");
+    assert.equal(rejected.length, 1, "the competing rental payment is rejected");
+    const failure = (rejected[0] as PromiseRejectedResult).reason as { context?: { reason?: string } };
+    assert.equal(failure.context?.reason, "VEHICLE_ALREADY_RENTED");
   });
 
   test("REVIEW after Car-In is not currentRental and close does not steal a newer rental", async () => {
@@ -1189,10 +1192,11 @@ if (!RUN) {
       payload: {
         companyId: await testCompanyId(prisma),
         vehicleName: `CT-DEP-${run}`,
-        plateNumber: `CT D ${run}`,
+        plateNumber: `CT DEP ${run}`,
         dailyRate: 400,
       },
     });
+    assert.equal(v.statusCode, 201, v.body);
     const vid = v.json().data.id as number;
     const actor = await prisma.user.findUniqueOrThrow({
       where: { email: (await import("src/lib/security/normalize")).normalizeEmail(admin.email) },

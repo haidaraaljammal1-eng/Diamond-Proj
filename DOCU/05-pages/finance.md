@@ -180,6 +180,6 @@ FinanceScreen → useFinance* hooks → finance.store → finance.api → Fastif
                                      ↘ financeOverlay (demo only; no API writes)
 ```
 
-## Stripe-only rule
+## Trusted collections rule
 
 Customer collections are trusted confirmed collections (Stripe card + explicit CASH). Finance V1 has no Deposit, no Invoices, and no ad-hoc manual customer collection UI outside the CASH rental / CASH road-liability flows.

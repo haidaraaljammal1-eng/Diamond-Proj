@@ -5,6 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 import { PAYMENT_CONSENT_SCOPE_V2 } from "src/modules/contracts/payment/payment-consent.catalog";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
+import { UnconfiguredPaymentProvider } from "src/modules/contracts/payment/unconfigured-payment.provider";
 import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
 import {
   createFakePaymentProvider,
@@ -519,6 +520,59 @@ if (!RUN) {
         where: { roadLiabilityId: liabilityId },
       });
       assert.equal(charge, null);
+    });
+
+    test("electronic contract payment-link rejected when provider is unconfigured", async () => {
+      setPaymentProviderForTests(new UnconfiguredPaymentProvider());
+      try {
+        const contract = await seedElectronicContract();
+        const liabilityId = await seedChargeableLiability(contract.id, 508);
+        const cap = await app.inject({
+          method: "GET",
+          url: `/road-liabilities/${liabilityId}/collection`,
+          headers: auth(adminToken),
+        });
+        assert.equal(cap.statusCode, 200, cap.body);
+        const capability = cap.json().data.capability;
+        assert.equal(capability.cashCollectionRequired, false);
+        assert.equal(capability.paymentLinkAvailable, false);
+        assert.equal(capability.reasonCode, "PAYMENT_PROVIDER_NOT_CONFIGURED");
+
+        const linkRes = await app.inject({
+          method: "POST",
+          url: `/road-liabilities/${liabilityId}/collection/payment-link`,
+          headers: { ...auth(adminToken), "idempotency-key": `eo-unconfigured-pl-${run}` },
+          payload: {},
+        });
+        assert.equal(linkRes.statusCode, 409, linkRes.body);
+        assert.equal(linkRes.json().error.context.reason, "PAYMENT_PROVIDER_NOT_CONFIGURED");
+        assert.equal(
+          await prisma.contractPayment.count({
+            where: { contractId: contract.id, purpose: "ROAD_LIABILITY" },
+          }),
+          0,
+        );
+      } finally {
+        setPaymentProviderForTests(fakePayments.provider);
+      }
+    });
+
+    test("electronic contract payment-link succeeds when provider is configured", async () => {
+      fakePayments.resetCheckoutCallCount();
+      const contract = await seedElectronicContract();
+      const liabilityId = await seedChargeableLiability(contract.id, 509);
+      const linkRes = await app.inject({
+        method: "POST",
+        url: `/road-liabilities/${liabilityId}/collection/payment-link`,
+        headers: { ...auth(adminToken), "idempotency-key": `eo-configured-pl-${run}` },
+        payload: {},
+      });
+      assert.equal(linkRes.statusCode, 200, linkRes.body);
+      assert.equal(fakePayments.getCheckoutCallCount(), 1);
+      const charge = await prisma.roadLiabilityCustomerCharge.findUniqueOrThrow({
+        where: { roadLiabilityId: liabilityId },
+      });
+      assert.equal(charge.operationalState, "PAYMENT_LINK_READY");
     });
 
     test("6. duplicate checkout webhook same stripeEventId is deduped", async () => {

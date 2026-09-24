@@ -421,6 +421,10 @@ if (!RUN) {
       assert.equal(state.externalContractId, null);
       assert.equal(state.lastSuccessfulSyncAt, null);
       assert.deepEqual(state.operations, {
+        createRental: "NOT_STARTED",
+        updateRental: "NOT_STARTED",
+        returnRental: "NOT_STARTED",
+        settleRental: "NOT_STARTED",
         registerContract: "NOT_STARTED",
         contractAcceptance: "NOT_STARTED",
         handover: "NOT_STARTED",
@@ -755,6 +759,10 @@ if (!RUN) {
       assert.equal(state.configured, true);
       assert.equal(state.externalContractId, "TARS-EXT-1");
       assert.deepEqual(state.operations, {
+        createRental: "NOT_STARTED",
+        updateRental: "NOT_STARTED",
+        returnRental: "NOT_STARTED",
+        settleRental: "NOT_STARTED",
         registerContract: "SUCCEEDED",
         contractAcceptance: "FAILED",
         handover: "SUCCEEDED",

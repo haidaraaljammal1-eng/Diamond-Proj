@@ -2,7 +2,7 @@
 
 ## 2026-09-23
 
-- **CASH customer collection foundation** (uncommitted, builds on STRIPE-5): `ContractPaymentMethod.CASH`, `RentalCollectionMode` on `Contract`; staff collection-mode dialog; CASH public rental skips Stripe; shared settlement via `ContractPayment`; Finance trusted collections include CASH; road-liability cash confirm + STRIPE-5 off-session. Migration `20260923200000_cash_collection_foundation`. **Verified integration:** `cash-collection` 4/4, `cash-collection-concurrency` 1/1, `road-liability-collection` 10/10 (incl. concurrency), `contracts-payment-security` 11/11, `finance` 15/15. **Verified unit:** backend 468/468, frontend 693/693. Open receivables now exclude confirmed CASH rentals. Consent v2 default; v1 historical. TARS provider unchanged.
+- **CASH customer collection foundation** (current `main`, builds on STRIPE-5): `ContractPaymentMethod.CASH`, `RentalCollectionMode` on `Contract`; staff collection-mode dialog; CASH public rental skips Stripe; shared settlement via `ContractPayment`; Finance trusted collections include CASH; road-liability cash confirm + STRIPE-5 off-session. Migration `20260923200000_cash_collection_foundation`. **Verified integration:** `cash-collection` 4/4, `cash-collection-concurrency` 1/1, `road-liability-collection` 10/10 (incl. concurrency), `contracts-payment-security` 11/11, `finance` 15/15. **Verified unit:** backend 468/468, frontend 693/693. Open receivables now exclude confirmed CASH rentals. Consent v2 default; v1 historical. TARS provider unchanged.
 
 ## 2026-09-22
 

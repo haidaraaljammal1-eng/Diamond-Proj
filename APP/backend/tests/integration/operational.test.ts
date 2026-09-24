@@ -165,7 +165,11 @@ if (!INTEGRATION_ENABLED) {
       purchaseDate: "2026-01-15",
     });
     assert.equal(res.statusCode, 422);
-    assert.equal(res.json().error.context.fields?.[0], "vehicle");
+    const details = res.json().error.details;
+    const field = Array.isArray(details)
+      ? details[0]?.path?.replace(/^\//, "")
+      : details?.fields?.[0] ?? res.json().error.context?.fields?.[0];
+    assert.equal(field, "vehicle");
     const vehicleId = await createVehicle(`VIN-${run}-INLINE`);
     const linked = await createExperience({
       customerId,

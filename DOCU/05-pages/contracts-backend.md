@@ -155,7 +155,7 @@ Official Contract review confirmation uses `POST /contracts/rental/:token/offici
 
 ## Payment foundation
 
-`ContractPayment`: amount, currency, method (`BANK_TRANSFER | CARD | MANUAL`), status (`PENDING | PROCESSING | CONFIRMED | FAILED | CANCELLED`), `purpose` (`RENTAL | RENEWAL | RECONCILIATION | POST_CLOSE_RECEIVABLE`), `targetId`, provider/checkout fields, and a hashed payment-status token. V1 customer collection is Stripe Checkout only (`PaymentProvider`). Staff `POST .../payment/confirm` is disabled (`MANUAL_PAYMENT_DISABLED`); historical `MANUAL` / `BANK_TRANSFER` rows remain readable. Public card POST never accepts amount. Redirect URLs are not confirmation. Close requires settled reconciliation when `finalAmount > 0`. Details: `DOCU/05-pages/payments-backend.md` and `DOCU/05-pages/public-rental-flow.md`.
+`ContractPayment`: amount, currency, method (`BANK_TRANSFER | CARD | CASH | MANUAL`), status (`PENDING | PROCESSING | CONFIRMED | FAILED | CANCELLED`), `purpose` (`RENTAL | RENEWAL | RECONCILIATION | POST_CLOSE_RECEIVABLE | ROAD_LIABILITY`), `targetId`, provider/checkout fields, and a hashed payment-status token. V1 active customer collection is Stripe CARD (`PaymentProvider`) and explicit CASH (`collectionMode = CASH`). Staff `POST .../payment/confirm` is disabled (`MANUAL_PAYMENT_DISABLED`); historical `MANUAL` / `BANK_TRANSFER` rows remain readable. Public card POST never accepts amount. Redirect URLs are not confirmation. Close requires settled reconciliation when `finalAmount > 0`. Details: `DOCU/05-pages/payments-backend.md` and `DOCU/05-pages/public-rental-flow.md`.
 
 ## Car-Out / Car-In
 
