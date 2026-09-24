@@ -179,6 +179,15 @@ const EnvSchema = z
      */
     EMAIL_RECIPIENT_ALLOWLIST: z.string().optional().default("").transform(csv),
 
+    // Pushover outbound notifications (server-only). Real credentials stay in .env only.
+    PUSHOVER_ENABLED: envBool(false),
+    PUSHOVER_APP_TOKEN: z.string().optional().default(""),
+    PUSHOVER_USER_KEY: z.string().optional().default(""),
+
+    ATTENTION_MONITOR_ENABLED: envBool(false),
+    ATTENTION_MONITOR_TIMEZONE: z.string().trim().min(1).default("Asia/Dubai"),
+    ATTENTION_MONITOR_TIMES: z.string().default("09:00,14:00,19:00"),
+
     SEED_DEV_ADMIN: envBool(false),
     DEV_ADMIN_EMAIL: z.string().default("admin@example.com"),
     DEV_ADMIN_PASSWORD: z.string().optional().default(""),
@@ -190,6 +199,22 @@ const EnvSchema = z
         path: ["SMTP_HOST"],
         message: "SMTP_HOST is required when EMAIL_ENABLED=true",
       });
+    }
+    if (val.PUSHOVER_ENABLED) {
+      if (!val.PUSHOVER_APP_TOKEN.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["PUSHOVER_APP_TOKEN"],
+          message: "PUSHOVER_APP_TOKEN is required when PUSHOVER_ENABLED=true",
+        });
+      }
+      if (!val.PUSHOVER_USER_KEY.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["PUSHOVER_USER_KEY"],
+          message: "PUSHOVER_USER_KEY is required when PUSHOVER_ENABLED=true",
+        });
+      }
     }
     if (val.NODE_ENV === "production") {
       for (const key of [

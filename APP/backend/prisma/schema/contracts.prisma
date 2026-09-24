@@ -631,14 +631,16 @@ model ContractCarInDraftPhoto {
 }
 
 model ContractCarIn {
-  id         String   @id @default(uuid())
-  contractId String   @unique
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  occurredAt DateTime
-  mileageIn  Int
-  fuelIn     String
-  notes      String?
-  createdAt  DateTime @default(now())
+  id                  String   @id @default(uuid())
+  contractId          String   @unique
+  contract            Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  performedByUserId   Int?
+  performedBy         User?    @relation("ContractCarInPerformedBy", fields: [performedByUserId], references: [id], onDelete: SetNull)
+  occurredAt          DateTime
+  mileageIn           Int
+  fuelIn              String
+  notes               String?
+  createdAt           DateTime @default(now())
 
   photos ContractCarInPhoto[]
 

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { MaintenanceOrderStatus, Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
+import { writeOutboxEvent } from "src/lib/db/outbox";
 import { withTransaction, type Tx } from "src/lib/db/transaction";
 import type { AuthUser } from "src/lib/context/auth-context";
 import { paginate, parseSort } from "src/lib/http/pagination";
@@ -269,6 +270,13 @@ export function createMaintenanceService(fastify: FastifyInstance) {
             where: { id: body.vehicleId },
             data: { operationalStatus: "SERVICE" },
           });
+          await writeOutboxEvent(tx, {
+            eventType: "maintenance.started",
+            aggregateType: "maintenance_order",
+            aggregateId: String(order.id),
+            dedupeKey: `maintenance.started:${order.id}`,
+            payload: { maintenanceOrderId: order.id, vehicleId: body.vehicleId },
+          });
         }
 
         return tx.maintenanceOrder.findUniqueOrThrow({
@@ -348,6 +356,14 @@ export function createMaintenanceService(fastify: FastifyInstance) {
           data: { operationalStatus: "SERVICE" },
         });
 
+        await writeOutboxEvent(tx, {
+          eventType: "maintenance.started",
+          aggregateType: "maintenance_order",
+          aggregateId: String(id),
+          dedupeKey: `maintenance.started:${id}`,
+          payload: { maintenanceOrderId: id, vehicleId: existing.vehicleId },
+        });
+
         return tx.maintenanceOrder.findUniqueOrThrow({
           where: { id: updated.id },
           include: ORDER_INCLUDE,
@@ -418,6 +434,14 @@ export function createMaintenanceService(fastify: FastifyInstance) {
         });
 
         await recordMaintenanceExpenseLedger(tx, id);
+
+        await writeOutboxEvent(tx, {
+          eventType: "maintenance.completed",
+          aggregateType: "maintenance_order",
+          aggregateId: String(id),
+          dedupeKey: `maintenance.completed:${id}`,
+          payload: { maintenanceOrderId: id, vehicleId: existing.vehicleId },
+        });
 
         return tx.maintenanceOrder.findUniqueOrThrow({
           where: { id: updated.id },

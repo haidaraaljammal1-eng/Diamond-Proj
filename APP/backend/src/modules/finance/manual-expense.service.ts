@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ManualExpenseCategory, Prisma } from "@prisma/client";
 import { withTransaction } from "src/lib/db/transaction";
+import { writeOutboxEvent } from "src/lib/db/outbox";
 import type { AuthUser } from "src/lib/context/auth-context";
 import {
   financeAttachmentNotFoundError,
@@ -132,6 +133,13 @@ export function createManualExpenseService(fastify: FastifyInstance) {
           include: EXPENSE_INCLUDE,
         });
         await recordManualExpenseLedger(tx, created);
+        await writeOutboxEvent(tx, {
+          eventType: "manual_expense.created",
+          aggregateType: "manual_expense",
+          aggregateId: created.id,
+          dedupeKey: `manual_expense.created:${created.id}`,
+          payload: { expenseId: created.id },
+        });
         return created;
       });
 
