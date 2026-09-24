@@ -83,6 +83,7 @@ model User {
   contractLinksCreated                 ContractLink[]                @relation("ContractLinkCreatedBy")
   contractPaymentsCreated              ContractPayment[]             @relation("ContractPaymentCreatedBy")
   contractCarOutsPerformed             ContractCarOut[]              @relation("ContractCarOutPerformedBy")
+  contractCarInsPerformed              ContractCarIn[]               @relation("ContractCarInPerformedBy")
   contractReconciliationsApproved      ContractReconciliation[]      @relation("ContractReconciliationApprovedBy")
   contractReconciliationLinesConfirmed ContractReconciliationLine[]  @relation("ContractReconciliationLineConfirmedBy")
   roadLiabilityChargesConfirmed        RoadLiabilityCustomerCharge[] @relation("RoadLiabilityCustomerChargeConfirmedBy")

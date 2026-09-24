@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { createCallCenterService } from "src/modules/call-center/call-center.service";
 import { createComplaintsService } from "src/modules/complaints/complaints.service";
 import { createStripeWebhookWorker } from "src/modules/contracts/payment/stripe-webhook-worker.service";
+import { createBusinessNotificationOutboxConsumer } from "src/modules/notification-delivery/business-notification-outbox.consumer";
+import { createAttentionMonitorService } from "src/modules/notification-delivery/attention-monitor.service";
 import { createRoadLiabilityOutboxConsumer } from "src/modules/road-liabilities/road-liability-outbox-consumer";
 import { createReportExecService } from "src/modules/reports/report-exec.service";
 
@@ -21,6 +23,8 @@ export function createBackgroundRunner(app: FastifyInstance) {
   const reportExec = createReportExecService(app);
   const stripeWebhooks = createStripeWebhookWorker(app);
   const roadLiabilityOutbox = createRoadLiabilityOutboxConsumer(app);
+  const businessNotifications = createBusinessNotificationOutboxConsumer(app);
+  const attentionMonitor = createAttentionMonitorService(app);
 
   async function runAllCycles(): Promise<void> {
     try {
@@ -62,6 +66,22 @@ export function createBackgroundRunner(app: FastifyInstance) {
       }
     } catch (err) {
       app.log.error({ err }, "road-liability-outbox: cycle failed");
+    }
+    try {
+      const bn = await businessNotifications.consumeOutbox();
+      if (bn > 0) {
+        app.log.info({ processed: bn }, "business-notification: outbox cycle");
+      }
+    } catch (err) {
+      app.log.error({ err }, "business-notification: outbox cycle failed");
+    }
+    try {
+      const sent = await attentionMonitor.runDueCycle();
+      if (sent) {
+        app.log.info("attention-monitor: summary sent");
+      }
+    } catch (err) {
+      app.log.error({ err }, "attention-monitor: cycle failed");
     }
   }
 

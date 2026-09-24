@@ -851,7 +851,11 @@ export function createContractsService(fastify: FastifyInstance) {
    * `carOut()`. This is the one authoritative staff completion path; the legacy
    * `POST /contracts/:id/car-in` route now delegates here too (see routes/admin).
    */
-  async function completeCarInStaff(contractId: string, idempotencyKey?: string) {
+  async function completeCarInStaff(
+    contractId: string,
+    actorUserId: number,
+    idempotencyKey?: string,
+  ) {
     const run = async () =>
       withTransaction(prisma, async (tx) => {
         const initial = await tx.contract.findUnique({ where: { id: contractId }, select: { vehicleId: true } });
@@ -901,6 +905,7 @@ export function createContractsService(fastify: FastifyInstance) {
         const carInRow = await tx.contractCarIn.create({
           data: {
             contractId,
+            performedByUserId: actorUserId,
             occurredAt: now,
             mileageIn,
             fuelIn,
@@ -1229,6 +1234,7 @@ export function createContractsService(fastify: FastifyInstance) {
       carOut: { id: string } | null;
     },
     input: z.infer<typeof CarInSchema>,
+    performedByUserId?: number | null,
   ): Promise<"created" | "existing"> {
     if (contract.status === "REVIEW" && contract.carIn) return "existing";
     assertTransition(contract.status, "REVIEW");
@@ -1239,6 +1245,7 @@ export function createContractsService(fastify: FastifyInstance) {
     const row = await tx.contractCarIn.create({
       data: {
         contractId: contract.id,
+        performedByUserId: performedByUserId ?? null,
         occurredAt: now,
         mileageIn: input.mileageIn,
         fuelIn: input.fuelIn,
@@ -1319,6 +1326,7 @@ export function createContractsService(fastify: FastifyInstance) {
   async function carInStaff(
     contractId: string,
     input: z.infer<typeof CarInSchema>,
+    actorUserId: number,
     idempotencyKey?: string,
   ) {
     assertEightAngles(input.photos);
@@ -1329,7 +1337,7 @@ export function createContractsService(fastify: FastifyInstance) {
           include: { carIn: true, carOut: true },
         });
         if (!contract) throw contractError.notFound();
-        const outcome = await persistCarIn(tx, contract, input);
+        const outcome = await persistCarIn(tx, contract, input, actorUserId);
         if (outcome === "created") await completeReturnLinks(tx, contract.id);
         return decorateDetail(
           await tx.contract.findUniqueOrThrow({

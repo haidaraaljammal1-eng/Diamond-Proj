@@ -343,7 +343,11 @@ async function applyRenewal(
     },
     data: { usedAt: new Date() },
   });
-  await emitPayment(tx, "contract.renewed", contract.id, { additionalDays: renewal.additionalDays });
+  await emitPayment(tx, "contract.renewed", contract.id, {
+    additionalDays: renewal.additionalDays,
+    renewalId: renewal.id,
+    dedupe: renewal.id,
+  });
   return true;
 }
 
@@ -715,6 +719,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
       });
       await emitPayment(tx, "payment.failed", payment.contractId, {
         paymentId: payment.id,
+        purpose: payment.purpose,
         status: terminalStatus,
         dedupe: payment.id,
       });
@@ -747,6 +752,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
       });
       await emitPayment(tx, "payment.failed", contractId, {
         paymentId: current.id,
+        purpose: current.purpose,
         status: "CANCELLED",
         dedupe: current.id,
       });

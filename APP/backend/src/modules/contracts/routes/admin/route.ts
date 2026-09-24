@@ -531,9 +531,13 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      requireAuth(request);
+      const actor = requireAuth(request);
       const key = request.headers["idempotency-key"];
-      const data = await contracts.completeCarInStaff(request.params.id, typeof key === "string" ? key : undefined);
+      const data = await contracts.completeCarInStaff(
+        request.params.id,
+        actor.id,
+        typeof key === "string" ? key : undefined,
+      );
       request.setAudit({ action: "contracts.car_in", entityType: "contract", entityId: request.params.id });
       return { data };
     },
@@ -558,9 +562,13 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      requireAuth(request);
+      const actor = requireAuth(request);
       const key = request.headers["idempotency-key"];
-      const data = await contracts.completeCarInStaff(request.params.id, typeof key === "string" ? key : undefined);
+      const data = await contracts.completeCarInStaff(
+        request.params.id,
+        actor.id,
+        typeof key === "string" ? key : undefined,
+      );
       request.setAudit({
         action: "contracts.car_in",
         entityType: "contract",
