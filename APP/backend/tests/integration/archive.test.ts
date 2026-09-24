@@ -364,7 +364,7 @@ if (!RUN) {
       headers: auth(adminToken),
       payload: { deliveryTime: "25:99" },
     });
-    assert.equal(patch.statusCode, 400);
+    assert.equal(patch.statusCode, 422);
   });
 
   test("GET /archive/export requires archive.read and returns XLSX workbook", async () => {

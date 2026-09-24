@@ -1,5 +1,14 @@
 import path from "node:path";
-import { test, expect, type APIRequestContext, type Page, type Response } from "@playwright/test";
+import { test, expect, type Page, type Response } from "@playwright/test";
+import {
+  BACKEND,
+  STAFF_EMAIL,
+  STAFF_PASSWORD,
+  deleteArchiveRow,
+  deactivateVehicle,
+  seedAvailableVehicle,
+  staffToken,
+} from "./helpers/e2e-api";
 
 // Playwright runs in Node; reuse backend exceljs for workbook inspection.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -12,13 +21,11 @@ const ExcelJSRuntime = require(path.resolve(process.cwd(), "../backend/node_modu
 test.use({ channel: "chrome" });
 test.describe.configure({ timeout: 300_000 });
 
-const email = process.env.PLAYWRIGHT_LOGIN_EMAIL ?? "admin@diamond.test";
-const password = process.env.PLAYWRIGHT_LOGIN_PASSWORD ?? "Diamond123!";
 
 const EXPECTED_HEADERS = [
+  "KM OUT",
   "KM IN",
   "KM",
-  "KM OUT",
   "تاريخ التسليم",
   "ساعة التسليم",
   "تاريخ الارجاع",
@@ -47,8 +54,8 @@ async function staffLogin(page: Page, locale: "ar" | "en") {
     await page.goto(`/${locale}/login`, { waitUntil: "domcontentloaded", timeout: 60_000 });
     if (!page.url().includes("/login")) return;
     await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
-    await page.locator("#email").fill(email);
-    await page.locator("#password").fill(password);
+    await page.locator("#email").fill(STAFF_EMAIL);
+    await page.locator("#password").fill(STAFF_PASSWORD);
     await page.getByRole("button", { name: /دخول|login|sign in/i }).click();
     try {
       await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 30_000 });
@@ -60,26 +67,20 @@ async function staffLogin(page: Page, locale: "ar" | "en") {
   }
 }
 
-async function openFirstVehicle(page: Page) {
+async function openVehicle(page: Page, plateNumber: string) {
   const select = page.getByTestId("archive-vehicle-select");
   await select.getByRole("combobox").click();
-  const option = page.getByRole("option").first();
+  const option = page.getByRole("option", { name: new RegExp(plateNumber, "i") });
   await expect(option).toBeVisible({ timeout: 30_000 });
   await option.click();
   await expect(page.getByTestId("archive-table")).toBeVisible({ timeout: 60_000 });
 }
 
-async function fleetVehicleCount(request: APIRequestContext): Promise<number> {
-  const apiUrl = process.env.PLAYWRIGHT_API_URL ?? "http://localhost:8000";
-  const login = await request.post(`${apiUrl}/auth/login`, {
-    data: { email, password },
-  });
-  expect(login.ok()).toBeTruthy();
-  const token = ((await login.json()) as { data: { accessToken: string } }).data.accessToken;
-  const response = await request.get(`${apiUrl}/archive/vehicles`, {
+async function fleetVehicleCount(token: string): Promise<number> {
+  const response = await fetch(`${BACKEND}/archive/vehicles`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  expect(response.ok()).toBeTruthy();
+  expect(response.ok).toBeTruthy();
   const body = (await response.json()) as { data: unknown[] };
   return body.data.length;
 }
@@ -102,7 +103,11 @@ async function inspectWorkbook(filePath: string, fleetCount: number) {
 }
 
 test.describe("Archive ARCHIVE-4 Excel export", () => {
-  test("downloads full-fleet workbook and preserves persisted values", async ({ page, request }) => {
+  test("downloads full-fleet workbook and preserves persisted values", async ({ page }) => {
+    const token = await staffToken();
+    const vehicle = await seedAvailableVehicle(token, { label: "Archive Export E2E" });
+    let createdRowId: number | null = null;
+
     const consoleErrors: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "error") consoleErrors.push(msg.text());
@@ -123,18 +128,18 @@ test.describe("Archive ARCHIVE-4 Excel export", () => {
       }
     });
 
+    try {
     await staffLogin(page, "ar");
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/ar/archive");
     await expect(page.getByTestId("archive-download-excel")).toBeVisible({ timeout: 60_000 });
 
-    const fleetCount = await fleetVehicleCount(request);
-    expect(fleetCount).toBeGreaterThan(0);
-
     const downloadNoVehiclePromise = page.waitForEvent("download");
     const exportNoVehiclePromise = page.waitForResponse(
       (res) => res.request().method() === "GET" && res.url().includes("/archive/export"),
     );
+    const fleetCountNoVehicle = await fleetVehicleCount(token);
+    expect(fleetCountNoVehicle).toBeGreaterThan(0);
     exportAuditActive = true;
     await page.getByTestId("archive-download-excel").click();
     const downloadNoVehicle = await downloadNoVehiclePromise;
@@ -147,12 +152,11 @@ test.describe("Archive ARCHIVE-4 Excel export", () => {
     let noVehicleBytes = 0;
     for await (const chunk of noVehicleStats) noVehicleBytes += (chunk as Buffer).length;
     expect(noVehicleBytes).toBeGreaterThan(0);
-    await inspectWorkbook(noVehiclePath!, fleetCount);
+    await inspectWorkbook(noVehiclePath!, fleetCountNoVehicle);
     exportAuditActive = false;
 
-    await openFirstVehicle(page);
+    await openVehicle(page, vehicle.plateNumber);
 
-    let createdRowId: number | null = null;
     const createResponsePromise = page.waitForResponse(
       (res) => res.request().method() === "POST" && res.url().includes("/archive/vehicles/") && res.url().includes("/rows"),
     );
@@ -181,13 +185,14 @@ test.describe("Archive ARCHIVE-4 Excel export", () => {
       { timeout: 60_000 },
     );
     await row.locator("[data-testid='archive-cell-customerName'] input").fill("ARCHIVE-4 LIVE SAVE");
+    const fleetCountUnsaved = await fleetVehicleCount(token);
     exportAuditActive = true;
     await page.getByTestId("archive-download-excel").click();
     await unsavedExportPromise;
     const unsavedDownload = await unsavedDownloadPromise;
     const unsavedPath = await unsavedDownload.path();
     expect(unsavedPath).toBeTruthy();
-    const { wb: unsavedWb } = await inspectWorkbook(unsavedPath!, fleetCount);
+    const { wb: unsavedWb } = await inspectWorkbook(unsavedPath!, fleetCountUnsaved);
     let foundLiveSave = false;
     for (const ws of unsavedWb.worksheets) {
       ws.eachRow((dataRow: { getCell: (index: number) => { value: unknown } }, rowNumber: number) => {
@@ -200,6 +205,7 @@ test.describe("Archive ARCHIVE-4 Excel export", () => {
     exportAuditActive = false;
 
     const downloadPromise = page.waitForEvent("download");
+    const fleetCountFinal = await fleetVehicleCount(token);
     exportAuditActive = true;
     await page.getByTestId("archive-download-excel").click();
     const download = await downloadPromise;
@@ -208,7 +214,7 @@ test.describe("Archive ARCHIVE-4 Excel export", () => {
     const filePath = await download.path();
     expect(filePath).toBeTruthy();
 
-    const { wb } = await inspectWorkbook(filePath!, fleetCount);
+    const { wb } = await inspectWorkbook(filePath!, fleetCountFinal);
     let foundPhone = false;
     let foundZero = false;
     let foundDescription = false;
@@ -216,7 +222,7 @@ test.describe("Archive ARCHIVE-4 Excel export", () => {
       ws.eachRow((dataRow: { getCell: (index: number) => { value: unknown } }, rowNumber: number) => {
         if (rowNumber < 3) return;
         if (dataRow.getCell(9).value === "0501234567") foundPhone = true;
-        if (dataRow.getCell(2).value === 0) foundZero = true;
+        if (dataRow.getCell(3).value === 0) foundZero = true;
         if (dataRow.getCell(10).value === "Excel export verification") foundDescription = true;
       });
     }
@@ -238,5 +244,11 @@ test.describe("Archive ARCHIVE-4 Excel export", () => {
 
     const archiveConsoleErrors = consoleErrors.filter((message) => message.toLowerCase().includes("archive"));
     expect(archiveConsoleErrors).toEqual([]);
+    } finally {
+      if (createdRowId != null) {
+        await deleteArchiveRow(token, createdRowId);
+      }
+      await deactivateVehicle(token, vehicle.id);
+    }
   });
 });

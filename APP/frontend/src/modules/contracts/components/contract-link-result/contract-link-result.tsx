@@ -46,7 +46,7 @@ export function ContractLinkResult({ link, onClose }: ContractLinkResultProps) {
         ) : null}
       </p>
       <div className={styles.linkbox}>
-        <code dir="ltr">{link.url}</code>
+        <code dir="ltr" data-testid="rental-link-url">{link.url}</code>
       </div>
       <div className={styles.actions}>
         <Button type="button" size="md" onClick={() => void handleCopy()}>
