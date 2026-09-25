@@ -42,7 +42,7 @@ Settlement linkage:
 | `POST /contracts/rental/:token/payment` | Public token | Start rental checkout |
 | `POST /contracts/rental/:token/card-link` | Public token | Start card setup checkout |
 | `GET /contracts/rental/:token/card-link/return` | Public token | Validate setup return and persist safe card metadata |
-| `GET /contracts/payments/status/:statusToken` | Public token | Poll attempt status |
+| `GET /contracts/payments/status/:statusToken` | Public token | Poll attempt status. An in-flight attempt also asks Stripe; a verified paid session confirms through the same settlement path as the webhook. The browser return URL is not proof. Repeated polls after confirmation are idempotent. Stripe `session.status = complete` alone is not enough; `payment_status = paid` is required before CONFIRMED. |
 | `POST /contracts/renew/:token/payment` | Public token | Start renewal checkout |
 | `POST /contracts/:id/reconciliation/payment` | `contracts.reconcile` | Reconciliation checkout |
 | `POST /contracts/:id/post-close-receivables/:receivableId/payment` | `violations.charge` | Post-close checkout |
@@ -77,6 +77,14 @@ Confirmed payments emit `payment.confirmed` on the contract outbox with `payment
 ## Finance integration
 
 On trusted collection confirmation (Stripe or explicit CASH), `recordTrustedCollectionLedger` appends one `FinancialLedgerEntry` (`dedupeKey = payment:<id>`) inside the same transaction as domain settlement. Historical `MANUAL` / `BANK_TRANSFER` rows never produce Finance Collected. See [finance-backend.md](./finance-backend.md).
+
+## Final reconciliation cash
+
+Staff `POST /contracts/:id/reconciliation/cash/settle` collects a positive REVIEW balance. `finalizedAt` locks editing and does not block cash. The handler recalculates `finalAmount` from stored lines, ignores any client total, and refuses while an unresolved road liability still needs charge review.
+
+Before cash is confirmed, active `RECONCILIATION` public links are revoked. An open Stripe Checkout is expired outside the database transaction. Cash proceeds only after that session is no longer payable. If Stripe reports the checkout already paid, the existing provider confirmation settles the reconciliation and cash is not taken. If the session cannot be expired, cash is refused with `ELECTRONIC_COLLECTION_ACTIVE`. A link with no Checkout needs no Stripe call.
+
+Successful cash creates one `ContractPayment` (`purpose = RECONCILIATION`, `method = CASH`), one ledger entry, sets `settledAt` / `settledPaymentId`, settles linked road liabilities, and closes REVIEW → CLOSED. It does not change `Vehicle.operationalStatus`. A repeat confirm returns the existing confirmed payment.
 
 ## Rental collection mode
 

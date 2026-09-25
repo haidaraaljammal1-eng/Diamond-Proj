@@ -1,244 +1,229 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Select } from "@/shared/components/ui/select";
-import { RECONCILIATION_LINE_TYPES } from "../../constants/inspection";
-import type { ReconciliationLineInput, ReconciliationLineType } from "../../types/contract.types";
-import { useContract } from "../../hooks/use-contract";
+import { useReconciliation } from "../../hooks/use-reconciliation";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
+import type { ReconciliationPreviewImage } from "../../types/reconciliation.types";
+import {
+  ReconciliationImagePairsSection,
+  ReconciliationImagePreviewDialog,
+} from "./reconciliation-images";
+import {
+  ReconciliationCustodySection,
+  ReconciliationReturnChargesSection,
+  ReconciliationFinancialSummary,
+  ReconciliationHeader,
+  ReconciliationHistoricalBanner,
+  ReconciliationRoadLiabilitiesSection,
+  ReconciliationSectionNav,
+} from "./reconciliation-sections";
+import { ReconciliationActionBar } from "./reconciliation-collection";
 import styles from "./reconcile-dialog.module.css";
 
 export interface ReconcileDialogProps {
   contractId: string | null;
   onClose: () => void;
-  onRequestClose: (id: string) => void;
+  onCompleted?: () => void;
 }
 
-interface DraftLine {
-  type: ReconciliationLineType;
-  description: string;
-  amount: string;
-  externalReference: string;
-}
-
-const emptyLine = (type: ReconciliationLineType = "OTHER"): DraftLine => ({
-  type,
-  description: "",
-  amount: "",
-  externalReference: "",
-});
-
-export function ReconcileDialog({
-  contractId,
-  onClose,
-  onRequestClose,
-}: ReconcileDialogProps) {
+export function ReconcileDialog({ contractId, onClose, onCompleted }: ReconcileDialogProps) {
   const t = useTranslations("Contracts");
   return (
     <Dialog
       open={contractId != null}
       onClose={onClose}
-      title={t("reconcile.title")}
-      description={t("reconcile.description")}
+      title={t("finalReconciliation.title")}
+      description={t("finalReconciliation.description")}
       closeLabel={t("detail.close")}
+      presentation="flush"
+      size="wide"
     >
       {contractId ? (
-        <ReconcileForm
-          key={contractId}
-          contractId={contractId}
-          onClose={onClose}
-          onRequestClose={onRequestClose}
-        />
+        <ReconcileDialogBody key={contractId} contractId={contractId} onClose={onClose} onCompleted={onCompleted} />
       ) : null}
     </Dialog>
   );
 }
 
-function ReconcileForm({
+function ReconciliationLoadingSkeleton() {
+  return (
+    <div className={styles.shell} aria-busy="true" data-testid="reconciliation-loading">
+      <div className={styles.skeletonHeader} />
+      <div className={styles.skeletonNav} />
+      <div className={styles.skeletonBlockTall} />
+      <div className={styles.skeletonBlock} />
+      <div className={styles.skeletonBlock} />
+    </div>
+  );
+}
+
+function ReconcileDialogBody({
   contractId,
   onClose,
-  onRequestClose,
+  onCompleted,
 }: {
   contractId: string;
   onClose: () => void;
-  onRequestClose: (id: string) => void;
+  onCompleted?: () => void;
 }) {
   const t = useTranslations("Contracts");
-  const format = useFormatter();
-  const {
-    detail,
-    reconcile,
-    reconcilePending,
-    reconcileError,
-    permissions,
-    loadContract,
-  } = useContract();
-  const [lines, setLines] = useState<DraftLine[]>([
-    emptyLine("SALIK"),
-    emptyLine("VIOLATION"),
-    emptyLine("OTHER"),
-  ]);
+  const reconciliation = useReconciliation();
+  const [preview, setPreview] = useState<ReconciliationPreviewImage | null>(null);
 
   useEffect(() => {
-    void loadContract(contractId);
-  }, [contractId, loadContract]);
+    void reconciliation.load(contractId);
+    return () => reconciliation.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed remount per contract
+  }, [contractId]);
 
-  const errorMessage = resolveContractsErrorMessage(t, reconcileError);
-  const saved = detail?.id === contractId ? detail.reconciliation : null;
+  const mutationError =
+    reconciliation.lineMutation.error ??
+    reconciliation.roadLiabilityMutation.error ??
+    reconciliation.finalizeMutation.error ??
+    reconciliation.cashMutation.error ??
+    reconciliation.linkMutation.error;
 
-  const handleSave = async () => {
-    const payload: ReconciliationLineInput[] = lines
-      .filter((line) => line.description.trim() && line.amount.trim())
-      .map((line) => ({
-        type: line.type,
-        description: line.description.trim(),
-        amount: Number.parseInt(line.amount, 10),
-        externalReference: line.externalReference.trim() || null,
-      }));
-    if (payload.length === 0) return;
-    await reconcile(contractId, { lines: payload });
+  const errorMessage =
+    resolveContractsErrorMessage(t, reconciliation.error) ??
+    resolveContractsErrorMessage(t, mutationError);
+
+  const handleCompletedClose = () => {
+    onCompleted?.();
+    if (reconciliation.data?.contract.status === "CLOSED" || reconciliation.data?.reconciliation.settled) {
+      onClose();
+    }
   };
 
-  return (
-    <>
-      {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
+  if (reconciliation.status === "loading" || reconciliation.status === "idle") {
+    return <ReconciliationLoadingSkeleton />;
+  }
 
-      <p className={styles.hint}>{t("reconcile.hint")}</p>
-
-      <ul className={styles.categories} aria-label={t("reconcile.categoriesLabel")}>
-        {RECONCILIATION_LINE_TYPES.map((type) => (
-          <li
-            key={type}
-            className={
-              type === "SALIK" || type === "VIOLATION" ? styles.categoryEmphasis : undefined
-            }
-          >
-            {t(`reconcile.type.${type}`)}
-          </li>
-        ))}
-      </ul>
-
-      {detail?.carOut && detail.carIn ? (
-        <div className={styles.compare}>
-          <p>
-            {t("carOut.mileage")}:{" "}
-            <span dir="ltr">
-              {format.number(detail.carOut.mileageOut)} → {format.number(detail.carIn.mileageIn)}
-            </span>
-          </p>
-          <p>
-            {t("carOut.fuel")}:{" "}
-            <span dir="ltr">
-              {detail.carOut.fuelOut} → {detail.carIn.fuelIn}
-            </span>
-          </p>
-        </div>
-      ) : null}
-
-      {lines.map((line, index) => (
-        <div
-          key={index}
-          className={styles.line}
-          data-testid={`reconcile-line-${line.type}`}
-        >
-          <Select
-            size="sm"
-            options={RECONCILIATION_LINE_TYPES.map((type) => ({
-              value: type,
-              label: t(`reconcile.type.${type}`),
-            }))}
-            value={line.type}
-            onChange={(value) => {
-              const next = [...lines];
-              next[index] = { ...line, type: value as ReconciliationLineType };
-              setLines(next);
-            }}
-            aria-label={t("reconcile.lineType")}
-          />
-          <Input
-            value={line.description}
-            placeholder={
-              line.type === "SALIK" || line.type === "VIOLATION"
-                ? t(`reconcile.placeholder.${line.type}`)
-                : t("reconcile.descriptionField")
-            }
-            onChange={(event) => {
-              const next = [...lines];
-              next[index] = { ...line, description: event.target.value };
-              setLines(next);
-            }}
-          />
-          <Input
-            inputMode="numeric"
-            value={line.amount}
-            placeholder={t("reconcile.amount")}
-            onChange={(event) => {
-              const next = [...lines];
-              next[index] = { ...line, amount: event.target.value };
-              setLines(next);
-            }}
-          />
-          <Input
-            value={line.externalReference}
-            placeholder={
-              line.type === "SALIK" || line.type === "VIOLATION"
-                ? t(`reconcile.referenceHint.${line.type}`)
-                : t("reconcile.reference")
-            }
-            onChange={(event) => {
-              const next = [...lines];
-              next[index] = { ...line, externalReference: event.target.value };
-              setLines(next);
-            }}
-          />
-        </div>
-      ))}
-
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => setLines((current) => [...current, emptyLine()])}
-      >
-        {t("reconcile.addLine")}
-      </Button>
-
-      {saved ? (
-        <div className={styles.totals}>
-          <p>{t("reconcile.charges")}: {format.number(saved.chargesTotal)}</p>
-          <p>{t("reconcile.final")}: {format.number(saved.finalAmount)}</p>
-        </div>
-      ) : null}
-
-      <div className={styles.actions}>
-        <Button
-          type="button"
-          size="md"
-          loading={reconcilePending}
-          onClick={() => void handleSave()}
-        >
-          {t("reconcile.submit")}
-        </Button>
-        {saved?.approvedAt && permissions.canClose ? (
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            onClick={() => {
-              if (contractId) onRequestClose(contractId);
-            }}
-          >
-            {t("actions.close")}
+  if (reconciliation.status === "error" || !reconciliation.data) {
+    return (
+      <div className={styles.shell} data-testid="reconciliation-load-error">
+        <p className={styles.error} role="alert">
+          {errorMessage ?? t("finalReconciliation.loadFailed")}
+        </p>
+        <div className={styles.dialogActions}>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            {t("common.cancel")}
           </Button>
-        ) : null}
-        <Button type="button" variant="ghost" size="md" onClick={onClose}>
-          {t("common.cancel")}
-        </Button>
+          <Button type="button" size="sm" onClick={() => void reconciliation.load(contractId)}>
+            {t("finalReconciliation.retry")}
+          </Button>
+        </div>
       </div>
-    </>
+    );
+  }
+
+  const data = reconciliation.data;
+  const hasPhotos = data.imagePairs.length > 0;
+  const hasLiabilities =
+    data.roadLiabilities.attached.length > 0 || data.roadLiabilities.available.length > 0;
+
+  return (
+    <div className={styles.shell} data-testid="final-reconciliation-dialog">
+      {errorMessage ? (
+        <p className={styles.error} role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      <ReconciliationHeader data={data} />
+      <ReconciliationHistoricalBanner data={data} />
+      <ReconciliationSectionNav hasPhotos={hasPhotos} hasLiabilities={hasLiabilities} />
+
+      <div className={styles.scrollMain}>
+        <ReconciliationImagePairsSection pairs={data.imagePairs} onPreview={setPreview} />
+        <ReconciliationCustodySection custody={data.custody} />
+        <ReconciliationRoadLiabilitiesSection
+          data={data}
+          confirmPending={reconciliation.roadLiabilityMutation.pending}
+          onConfirm={(roadLiabilityId, amount) => {
+            reconciliation.clearMutationErrors();
+            void reconciliation.confirmRoadLiability(contractId, roadLiabilityId, {
+              customerChargeAmount: amount,
+            });
+          }}
+        />
+        <ReconciliationReturnChargesSection
+          data={data}
+          linePending={reconciliation.lineMutation.pending}
+          onAddDamage={(location, amount) => {
+            reconciliation.clearMutationErrors();
+            void reconciliation.addDamageLine(contractId, { type: "DAMAGE", description: location, amount });
+          }}
+          onUpdateDamage={(line, location, amount) => {
+            reconciliation.clearMutationErrors();
+            void reconciliation.updateDamageLine(contractId, line.id, {
+              type: "DAMAGE",
+              description: location,
+              amount,
+            });
+          }}
+          onDeleteDamage={(lineId) => {
+            reconciliation.clearMutationErrors();
+            void reconciliation.deleteDamageLine(contractId, lineId);
+          }}
+          onAddFuel={(amount) => {
+            reconciliation.clearMutationErrors();
+            void reconciliation.addFuelLine(contractId, {
+              type: "FUEL",
+              description: t("finalReconciliation.fuelChargeLabel"),
+              amount,
+            });
+          }}
+          onUpdateFuel={(line, amount) => {
+            reconciliation.clearMutationErrors();
+            void reconciliation.updateFuelLine(contractId, line.id, {
+              type: "FUEL",
+              description: line.description || t("finalReconciliation.fuelChargeLabel"),
+              amount,
+            });
+          }}
+          onDeleteFuel={(lineId) => {
+            reconciliation.clearMutationErrors();
+            void reconciliation.deleteFuelLine(contractId, lineId);
+          }}
+        />
+        <ReconciliationFinancialSummary totals={data.totals} />
+      </div>
+
+      <ReconciliationActionBar
+        data={data}
+        issuedLink={reconciliation.issuedLink}
+        finalizePending={reconciliation.finalizeMutation.pending}
+        cashPending={reconciliation.cashMutation.pending}
+        linkPending={reconciliation.linkMutation.pending}
+        onFinalize={() => {
+          reconciliation.clearMutationErrors();
+          return reconciliation.finalize(contractId).then((ok) => {
+            if (ok) handleCompletedClose();
+            return ok;
+          });
+        }}
+        onSettleCash={() => {
+          reconciliation.clearMutationErrors();
+          return reconciliation.settleCash(contractId).then((ok) => {
+            if (ok) handleCompletedClose();
+            return ok;
+          });
+        }}
+        onGenerateLink={() => {
+          reconciliation.clearMutationErrors();
+          return reconciliation.generateLink(contractId);
+        }}
+      />
+
+      <ReconciliationImagePreviewDialog
+        pairs={data.imagePairs}
+        active={preview}
+        onClose={() => setPreview(null)}
+        onNavigate={setPreview}
+      />
+    </div>
   );
 }

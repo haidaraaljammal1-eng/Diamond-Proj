@@ -44,6 +44,15 @@ interface FleetSeedRow {
   isActive: boolean;
 }
 
+function fleetDerivedRates(dailyRate: number, monthlyRate: number) {
+  return {
+    hourlyRate: Math.round(dailyRate / 8),
+    dailyRate,
+    weeklyRate: Math.round(dailyRate * 7 * 0.88),
+    monthlyRate,
+  };
+}
+
 /** Exported for unit tests — distribution: 9 AVAILABLE, 7 RENTED, 4 SERVICE. */
 export const DEMO_FLEET: FleetSeedRow[] = [
   {
@@ -310,6 +319,7 @@ export async function runDemoFleetSeed(): Promise<void> {
       });
 
       if (existing) {
+        const rates = fleetDerivedRates(car.dailyRate, car.monthlyRate);
         await prisma.vehicle.update({
           where: { id: existing.id },
           data: {
@@ -318,13 +328,13 @@ export async function runDemoFleetSeed(): Promise<void> {
             modelYear: car.modelYear,
             color: car.color,
             plateNumber,
-            dailyRate: car.dailyRate,
-            monthlyRate: car.monthlyRate,
+            ...rates,
           },
         });
         continue;
       }
 
+      const rates = fleetDerivedRates(car.dailyRate, car.monthlyRate);
       await prisma.vehicle.create({
         data: {
           companyId,
@@ -333,8 +343,7 @@ export async function runDemoFleetSeed(): Promise<void> {
           modelYear: car.modelYear,
           color: car.color,
           plateNumber,
-          dailyRate: car.dailyRate,
-          monthlyRate: car.monthlyRate,
+          ...rates,
           operationalStatus: car.status,
           isActive: car.isActive,
         },

@@ -59,7 +59,7 @@ export async function resolveContractLink(
   }
   if (isExpired(link.expiresAt)) throw contractError.linkExpired();
   const allowCompleted =
-    (type === "RENTAL" || type === "RETURN" || type === "RENEWAL") &&
+    (type === "RENTAL" || type === "RETURN" || type === "RENEWAL" || type === "RECONCILIATION") &&
     options.allowCompleted;
   if (link.usedAt && !allowCompleted) throw contractError.linkUsed();
   return link;
@@ -82,6 +82,13 @@ export async function completeReturnLinks(tx: Db, contractId: string): Promise<v
 export async function revokeUnusedRenewalLinks(tx: Db, contractId: string): Promise<void> {
   await tx.contractLink.updateMany({
     where: { contractId, type: "RENEWAL", usedAt: null, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+export async function revokeReconciliationLinks(tx: Db, contractId: string): Promise<void> {
+  await tx.contractLink.updateMany({
+    where: { contractId, type: "RECONCILIATION", revokedAt: null },
     data: { revokedAt: new Date() },
   });
 }

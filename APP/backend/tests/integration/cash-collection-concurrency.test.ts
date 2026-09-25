@@ -68,6 +68,8 @@ if (!RUN) {
           createdByUserId: adminUserId,
           priceType: "DAILY",
           rentalDays: 2,
+          durationValue: 2,
+          durationUnit: "DAY",
           agreedAmount: 600,
           collectionMode: "CASH",
         },

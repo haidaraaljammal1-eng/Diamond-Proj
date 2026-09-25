@@ -51,6 +51,24 @@
   color: var(--diamond-ivory);
 }
 
+.modeHint {
+  margin: 0 0 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--diamond-muted);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.readOnlyValue {
+  color: var(--diamond-gold-hi);
+}
+
 .pending {
   margin: 12px 0 0;
   font-size: 11px;

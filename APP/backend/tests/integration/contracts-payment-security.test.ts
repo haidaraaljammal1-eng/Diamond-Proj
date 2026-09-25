@@ -17,10 +17,12 @@ import {
 } from "../helpers/payment-integration-helpers";
 import {
   confirmPaymentViaStatusToken,
+  confirmPaymentViaWebhook,
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
   sendTestStripeWebhook,
 } from "../helpers/fake-payment-provider";
+import { resetPaymentProviderReconcileCooldown } from "src/modules/contracts/payment/payment-reconcile-policy";
 import { UnconfiguredPaymentProvider } from "src/modules/contracts/payment/unconfigured-payment.provider";
 import { CAR_OUT_REQUIRED_ANGLES } from "src/modules/contracts/contracts.constants";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
@@ -293,6 +295,131 @@ if (!RUN) {
         where: { purpose: "RECONCILIATION", targetId: reconciliation.id, status: "CONFIRMED" },
       });
       assert.equal(confirmed, 1);
+    });
+
+    async function ledgerCount(contractId: string) {
+      return prisma.financialLedgerEntry.count({
+        where: { contractId, kind: "RECONCILIATION_PAYMENT" },
+      });
+    }
+
+    test("status poll confirms through GET when provider reports paid", async () => {
+      const { contract } = await setup570();
+      const started = await startReconciliationPayment(app, token, contract.id);
+      assert.ok(started.statusToken);
+      const statusToken = started.statusToken;
+      payments.confirm(payments.refForPayment(started.payment.id) ?? undefined);
+      resetPaymentProviderReconcileCooldown();
+
+      const poll = await app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${statusToken}`,
+      });
+      assert.equal(poll.statusCode, 200, poll.body);
+      assert.equal(poll.json().data.status, "CONFIRMED");
+      assert.equal(poll.json().data.contractStatus, "CLOSED");
+
+      const reconciliation = await prisma.contractReconciliation.findUniqueOrThrow({
+        where: { contractId: contract.id },
+      });
+      assert.ok(reconciliation.settledAt);
+      assert.equal(
+        await prisma.contractPayment.count({
+          where: { purpose: "RECONCILIATION", targetId: reconciliation.id, status: "CONFIRMED" },
+        }),
+        1,
+      );
+      assert.equal(await ledgerCount(contract.id), 1);
+    });
+
+    test("repeated status poll after success settles once", async () => {
+      const { contract } = await setup570();
+      const started = await startReconciliationPayment(app, token, contract.id);
+      assert.ok(started.statusToken);
+      const statusToken = started.statusToken;
+      payments.confirm(payments.refForPayment(started.payment.id) ?? undefined);
+      resetPaymentProviderReconcileCooldown();
+
+      const first = await app.inject({
+        method: "GET",
+        url: `/contracts/payments/status/${statusToken}`,
+      });
+      assert.equal(first.statusCode, 200, first.body);
+      assert.equal(first.json().data.status, "CONFIRMED");
+
+      for (let i = 0; i < 4; i++) {
+        const pollRes = await app.inject({
+          method: "GET",
+          url: `/contracts/payments/status/${statusToken}`,
+        });
+        assert.equal(pollRes.statusCode, 200, pollRes.body);
+        assert.equal(pollRes.json().data.status, "CONFIRMED");
+        assert.equal(pollRes.json().data.contractStatus, "CLOSED");
+      }
+
+      const reconciliation = await prisma.contractReconciliation.findUniqueOrThrow({
+        where: { contractId: contract.id },
+      });
+      assert.equal(
+        await prisma.contractPayment.count({
+          where: { purpose: "RECONCILIATION", targetId: reconciliation.id, status: "CONFIRMED" },
+        }),
+        1,
+      );
+      assert.equal(await ledgerCount(contract.id), 1);
+      assert.equal(
+        await prisma.domainOutboxEvent.count({
+          where: { aggregateId: contract.id, eventType: "contract.closed" },
+        }),
+        1,
+      );
+    });
+
+    test("invalid payment status token is rejected", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/contracts/payments/status/not-a-real-status-token",
+      });
+      assert.equal(res.statusCode, 401, res.body);
+      assert.equal(res.json().error.context.reason, "PAYMENT_STATUS_TOKEN_INVALID");
+    });
+
+    test("settled reconciliation public link cannot start another payment", async () => {
+      const { contract } = await setup570();
+      const link = await app.inject({
+        method: "POST",
+        url: `/contracts/${contract.id}/reconciliation/link`,
+        headers: auth(token),
+      });
+      assert.equal(link.statusCode, 200, link.body);
+      const rawToken = link.json().data.link.token as string;
+
+      const started = await startReconciliationPayment(app, token, contract.id);
+      await confirmPaymentViaWebhook(app, payments, started.payment.id);
+
+      const closed = await prisma.contract.findUniqueOrThrow({ where: { id: contract.id } });
+      assert.equal(closed.status, "CLOSED");
+
+      const publicGet = await app.inject({
+        method: "GET",
+        url: `/contracts/reconciliation/${rawToken}`,
+      });
+      assert.equal(publicGet.statusCode, 409, publicGet.body);
+      assert.equal(publicGet.json().error.context.reason, "PAYMENT_NOT_ALLOWED");
+
+      const publicPay = await app.inject({
+        method: "POST",
+        url: `/contracts/reconciliation/${rawToken}/payment`,
+        payload: {},
+      });
+      assert.equal(publicPay.statusCode, 409, publicPay.body);
+      assert.equal(publicPay.json().error.context.reason, "PAYMENT_NOT_ALLOWED");
+      assert.equal(
+        await prisma.contractPayment.count({
+          where: { contractId: contract.id, purpose: "RECONCILIATION", status: "CONFIRMED" },
+        }),
+        1,
+      );
     });
 
     test("webhook and status poll race settle once", async () => {

@@ -18,6 +18,17 @@ test("fresh checkout intent without error stays PROCESSING", () => {
   assert.equal(mapPaymentIntentStatus("requires_payment_method"), "PROCESSING");
 });
 
+test("completed checkout without paid status stays in flight", () => {
+  assert.equal(
+    resolveCheckoutPaymentStatus({ status: "complete", payment_status: "unpaid" }, null),
+    "PROCESSING",
+  );
+  assert.equal(
+    resolveCheckoutPaymentStatus({ status: "complete", payment_status: "paid" }, null),
+    "CONFIRMED",
+  );
+});
+
 test("open checkout session with failed intent reconciles to FAILED", () => {
   assert.equal(
     resolveCheckoutPaymentStatus(

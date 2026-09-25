@@ -403,10 +403,6 @@ export function VehiclesScreen() {
       <ReconcileDialog
         contractId={reconcileId}
         onClose={() => setReconcileId(null)}
-        onRequestClose={(id) => {
-          setReconcileId(null);
-          setCloseId(id);
-        }}
       />
       <CloseContractDialog contractId={closeId} onClose={() => setCloseId(null)} />
 

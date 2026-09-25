@@ -1,35 +1,72 @@
-/* Demo `.rtimer` — rental remaining-time strip on fleet cards. */
+/* Compact inline rental countdown on fleet cards. */
 .timer {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
   margin: 0 14px 13px;
-  padding: 7px 11px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(223, 169, 59, 0.1), rgba(255, 255, 255, 0.02));
-  border: 1px solid rgba(223, 169, 59, 0.25);
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(248, 241, 228, 0.72);
+  border: 1px solid rgba(223, 169, 59, 0.16);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: rgba(176, 127, 31, 0.82);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .label {
-  font-size: 9.5px;
-  color: var(--diamond-warn);
-  letter-spacing: 0.02em;
+  font-size: 9px;
+  line-height: 1.2;
+  color: rgba(176, 127, 31, 0.78);
+  letter-spacing: 0.01em;
 }
 
 .value {
-  font-size: 12px;
-  color: #b07f1f;
-  font-weight: 700;
-  line-height: 1.5;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #9a7020;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.urgent {
+  background: rgba(252, 236, 210, 0.82);
+  border-color: rgba(210, 145, 45, 0.28);
+}
+
+.urgent .icon,
+.urgent .label {
+  color: rgba(180, 105, 18, 0.88);
+}
+
+.urgent .value {
+  color: #b86a12;
 }
 
 .expired {
-  border-color: rgba(223, 91, 82, 0.4);
-  background: rgba(223, 91, 82, 0.07);
+  background: rgba(252, 236, 232, 0.72);
+  border-color: rgba(223, 91, 82, 0.22);
 }
 
-.expired .label,
-.expired .value {
+.expired .icon {
+  color: rgba(192, 82, 74, 0.88);
+}
+
+.expiredText {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.25;
   color: #c0524a;
 }

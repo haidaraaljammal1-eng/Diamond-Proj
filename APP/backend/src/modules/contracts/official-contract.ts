@@ -1,9 +1,10 @@
 import type { ContractStatus, OfficialContractSignatureSlot, Prisma } from "@prisma/client";
 import { buildContractIdentityDraft } from "src/modules/contracts/contract-identity-draft";
-import { derivedEndAt } from "src/modules/contracts/contracts-period";
+import { isPeriodConsistent } from "src/modules/contracts/contracts-duration";
 import type { OfficialContractView } from "src/modules/contracts/contracts.schema";
 import { formatStoredExpiry } from "src/modules/contracts/driving-license-policy";
 import { fleetVehicleTypeLabel } from "src/modules/vehicles/vehicles.mapper";
+import { resolveVehiclePlateFields } from "src/modules/vehicles/vehicle-plate";
 import {
   computePublicContractEditableFields,
 } from "src/modules/contracts/official-contract-editability";
@@ -48,7 +49,8 @@ export const OFFICIAL_CONTRACT_SYSTEM_LOCKED_FIELDS = [
   "driverLicenseExpiryDate",
   "plannedStartAt",
   "plannedEndAt",
-  "numberOfDays",
+  "durationValue",
+  "durationUnit",
   "includedKmPerDay",
   "extraKmRate",
   "vehicleOut",
@@ -128,7 +130,7 @@ export const OFFICIAL_CONTRACT_INFO_GRID: string[][][] = [
   [["vehicleOut.occurredAt|rental.plannedStartAt@time"], ["vehicleOut.occurredAt|rental.plannedStartAt@date"], ["hirer.address", "hirer.telephone"]],
   [["vehicleIn.occurredAt|rental.plannedEndAt@time"], ["vehicleIn.occurredAt|rental.plannedEndAt@date"], ["hirer.driverLicenseExpiryDate", "hirer.driverLicenseNumber"]],
   [["additionalDriver.driverLicenseNumber"], ["additionalDriver.name"], ["additionalDriver.nationality", "sponsor.name"]],
-  [[], ["rental.numberOfDays"], ["sponsor.idNumber"]],
+  [[], ["rental.duration"], ["sponsor.idNumber"]],
 ];
 
 interface Resolved<T> {
@@ -308,9 +310,18 @@ export function buildOfficialContractView(
       termsVersion: row.termsVersion,
     },
     vehicle: {
-      // No Vehicle plate-code column exists: staff-set official-contract term, never parsed from plate text.
-      plateCode: fixed("vehicle.plateCode", review?.plateCode, "OFFICIAL_CONTRACT_TERMS"),
-      plateNumber: fixed("vehicle.plateNumber", row.vehicle.plateNumber, "VEHICLE"),
+      ...(() => {
+        const vehiclePlate = resolveVehiclePlateFields({ plateNumber: row.vehicle.plateNumber });
+        const plateCodeFromReview = review?.plateCode?.trim() || null;
+        return {
+          plateCode: fixed(
+            "vehicle.plateCode",
+            plateCodeFromReview ?? vehiclePlate.plateCode,
+            plateCodeFromReview ? "OFFICIAL_CONTRACT_TERMS" : "VEHICLE",
+          ),
+          plateNumber: fixed("vehicle.plateNumber", vehiclePlate.plateNumber, "VEHICLE"),
+        };
+      })(),
       vehicleType: fixed(
         "vehicle.vehicleType",
         fleetVehicleTypeLabel(row.vehicle.vehicleName, row.vehicle.model?.name ?? null),
@@ -327,11 +338,14 @@ export function buildOfficialContractView(
     rental: {
       plannedStartAt: fixed("rental.plannedStartAt", row.startAt, "RENTAL_AGREEMENT"),
       plannedEndAt: fixed("rental.plannedEndAt", row.endAt, "RENTAL_AGREEMENT"),
-      numberOfDays: row.rentalDays,
-      periodConsistent:
-        row.startAt && row.endAt
-          ? derivedEndAt(row.startAt, row.rentalDays).getTime() === row.endAt.getTime()
-          : null,
+      durationValue: row.durationValue,
+      durationUnit: row.durationUnit,
+      periodConsistent: isPeriodConsistent(
+        row.startAt,
+        row.endAt,
+        row.durationValue,
+        row.durationUnit,
+      ),
       // No rental-agreement source exists: staff-set official-contract terms, never defaulted.
       includedKmPerDay: fixed("rental.includedKmPerDay", review?.includedKmPerDay, "OFFICIAL_CONTRACT_TERMS"),
       extraKmRate: fixed(
@@ -379,7 +393,7 @@ export function buildOfficialContractView(
     },
   };
   provenance["contract.agreementNumber"] = "CONTRACT";
-  provenance["rental.numberOfDays"] = "RENTAL_AGREEMENT";
+  provenance["rental.duration"] = "RENTAL_AGREEMENT";
   provenance["signatures.hirer"] = captured.has("HIRER")
     ? "OFFICIAL_SIGNATURE"
     : row.acceptance
@@ -426,6 +440,13 @@ export function applyFrozenOfficialContract(
       : null;
   if (!frozen || OFFICIAL_CONTRACT_REVIEWABLE_STATUSES.includes(live.contract.status)) return live;
   const date = (value: unknown) => (value ? new Date(value as string) : null);
+  const frozenRental = frozen.rental as OfficialContractView["rental"] & { numberOfDays?: number };
+  const rentalDuration =
+    frozenRental.durationValue != null && frozenRental.durationUnit
+      ? { durationValue: frozenRental.durationValue, durationUnit: frozenRental.durationUnit }
+      : frozenRental.numberOfDays != null
+        ? { durationValue: frozenRental.numberOfDays, durationUnit: "DAY" as const }
+        : { durationValue: live.rental.durationValue, durationUnit: live.rental.durationUnit };
   return {
     ...live,
     header: { ...live.header, company: officialContractCompany(frozen, live.header.company) },
@@ -435,6 +456,7 @@ export function applyFrozenOfficialContract(
     sponsor: frozen.sponsor,
     rental: {
       ...frozen.rental,
+      ...rentalDuration,
       plannedStartAt: date(frozen.rental.plannedStartAt),
       plannedEndAt: date(frozen.rental.plannedEndAt),
     },

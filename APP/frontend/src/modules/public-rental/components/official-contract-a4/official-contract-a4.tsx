@@ -2,6 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element -- print-faithful static contract logo */
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import type { ContractDurationUnit } from "@/modules/contracts/types/contract.types";
+import { formatRentalDuration } from "@/modules/contracts/utils/format-rental-duration";
 import type {
   DamageMark,
   DamageMarkType,
@@ -74,11 +77,16 @@ export function OfficialContractA4({
   onDamageOut,
   onSignature,
 }: OfficialContractA4Props) {
+  const td = useTranslations("Contracts.duration");
   const doc = buildOfficialContractDocument(contract, {
     mode,
     edits,
     damageOut,
     pendingSignatures,
+    formatDuration: (value: number, unit: ContractDurationUnit) =>
+      formatRentalDuration({ durationValue: value, durationUnit: unit }, (key, values) =>
+        td(key, values),
+      ),
   });
   const companyNames = officialContractCompanyNames(contract);
   const [tool, setTool] = useState<DamageMarkType>("SCRATCH");

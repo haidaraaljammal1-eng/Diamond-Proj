@@ -314,9 +314,8 @@ export function ContractsScreen() {
       <ReconcileDialog
         contractId={reconcileId}
         onClose={() => setReconcileId(null)}
-        onRequestClose={(id) => {
-          setReconcileId(null);
-          setCloseTarget({ id });
+        onCompleted={() => {
+          void refreshContracts();
         }}
       />
       <CloseContractDialog

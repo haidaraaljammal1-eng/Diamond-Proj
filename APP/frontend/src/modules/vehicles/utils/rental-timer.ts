@@ -17,6 +17,24 @@ export function getRentalDurationParts(endAt: string, now = Date.now()): RentalD
   return { days, hours, minutes, expired: false };
 }
 
+/** Locale-independent compact duration for fleet cards (always `d` / `h` / `m`). */
+export function formatRentalDurationCompact(parts: RentalDurationParts): string {
+  if (parts.expired) {
+    return "0d · 0h · 0m";
+  }
+
+  const segments: string[] = [];
+
+  if (parts.days > 0) {
+    segments.push(`${parts.days}d`);
+  }
+
+  segments.push(`${parts.hours}h`);
+  segments.push(`${parts.minutes}m`);
+
+  return segments.join(" · ");
+}
+
 export function shouldShowCurrentRental(
   status: "available" | "rented" | "service",
   currentRental: { endAt: string; customerName: string } | null,

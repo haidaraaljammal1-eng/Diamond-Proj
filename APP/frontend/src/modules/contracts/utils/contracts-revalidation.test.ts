@@ -163,7 +163,7 @@ describe("createListRequestGate", () => {
 
 describe("refreshed list row", () => {
   function dto(status: ContractListItemDto["status"], canCarOut: boolean) {
-    return { status, actions: { canCarOut, canCarIn: false } };
+    return { status, actions: { canCarOut, canCarIn: false, canReconcile: status === "REVIEW" } };
   }
 
   it("a PAID row from the refreshed list produces Car-Out", () => {

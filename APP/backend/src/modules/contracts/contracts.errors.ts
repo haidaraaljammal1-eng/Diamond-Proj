@@ -197,6 +197,12 @@ export const contractError = {
       "A payment attempt is already in progress",
       "PAYMENT_ALREADY_PROCESSING",
     ),
+  electronicCollectionActive: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Cash collection is blocked while an electronic checkout can still be paid",
+      "ELECTRONIC_COLLECTION_ACTIVE",
+    ),
   paymentAttemptNotFound: () =>
     err(ErrorCode.NOT_FOUND, "Payment attempt was not found", "PAYMENT_ATTEMPT_NOT_FOUND"),
   paymentStatusTokenInvalid: () =>
@@ -210,6 +216,25 @@ export const contractError = {
       ErrorCode.CONFLICT,
       "Reconciliation charges must be collected before closing",
       "RECONCILIATION_PAYMENT_REQUIRED",
+    ),
+  reconciliationLocked: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Reconciliation can no longer be edited after finalization or settlement",
+      "RECONCILIATION_LOCKED",
+    ),
+  reconciliationNotFinalized: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Reconciliation must be finalized before payment",
+      "RECONCILIATION_NOT_FINALIZED",
+    ),
+  roadLiabilitiesReviewRequired: (liabilities: Array<{ id: string; type: string; occurredAt: string }>) =>
+    err(
+      ErrorCode.CONFLICT,
+      "Confirmed road liabilities still require staff charge review",
+      "ROAD_LIABILITIES_REVIEW_REQUIRED",
+      { liabilities },
     ),
   manualPaymentDisabled: () =>
     err(

@@ -1,32 +1,35 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  defaultPriceForPeriod,
+  defaultRateForPriceType,
   deriveHourlyRate,
-  deriveMonthlyRate,
   deriveWeeklyRate,
+  isStandardPriceType,
 } from "./vehicle-pricing.ts";
 
+const vehicle = {
+  hourlyRate: 94,
+  dailyRate: 750,
+  weeklyRate: 4620,
+  monthlyRate: 14500,
+};
+
 describe("vehicle-pricing", () => {
-  it("derives weekly rate from daily using demo multiplier", () => {
+  it("reads stored default rates per price type", () => {
+    assert.equal(defaultRateForPriceType(vehicle, "HOURLY"), 94);
+    assert.equal(defaultRateForPriceType(vehicle, "DAILY"), 750);
+    assert.equal(defaultRateForPriceType(vehicle, "WEEKLY"), 4620);
+    assert.equal(defaultRateForPriceType(vehicle, "MONTHLY"), 14500);
+    assert.equal(defaultRateForPriceType(vehicle, "CUSTOM"), null);
+  });
+
+  it("keeps legacy derive helpers for fallback callers", () => {
     assert.equal(deriveWeeklyRate(1000), 6160);
-  });
-
-  it("prefers backend monthly rate when present", () => {
-    assert.equal(deriveMonthlyRate(1000, 24000), 24000);
-  });
-
-  it("derives monthly from daily when monthly is null", () => {
-    assert.equal(deriveMonthlyRate(1000, null), 30000);
-  });
-
-  it("derives hourly as daily divided by eight", () => {
     assert.equal(deriveHourlyRate(1200), 150);
   });
 
-  it("returns default prices per rental period", () => {
-    assert.equal(defaultPriceForPeriod(1000, 24000, "daily"), 1000);
-    assert.equal(defaultPriceForPeriod(1000, 24000, "weekly"), 6160);
-    assert.equal(defaultPriceForPeriod(1000, 24000, "monthly"), 24000);
+  it("identifies standard pricing modes", () => {
+    assert.equal(isStandardPriceType("WEEKLY"), true);
+    assert.equal(isStandardPriceType("CUSTOM"), false);
   });
 });

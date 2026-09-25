@@ -24,7 +24,8 @@ export const ContractStatusSchema = z.enum([
   "REVIEW",
   "CLOSED",
 ]);
-export const ContractPriceTypeSchema = z.enum(["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]);
+export const ContractPriceTypeSchema = z.enum(["HOURLY", "DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]);
+export const ContractDurationUnitSchema = z.enum(["HOUR", "DAY", "WEEK", "MONTH"]);
 export const ContractLinkTypeSchema = z.enum(["RENTAL", "RETURN", "RENEWAL"]);
 export const ContractPaymentMethodSchema = z.enum(["BANK_TRANSFER", "CARD", "CASH", "MANUAL"]);
 
@@ -87,18 +88,36 @@ export const ContractTokenParam = z.object({ token: z.string().min(16).max(128) 
 
 const MoneyAed = z.number().int().nonnegative();
 const Days = z.number().int().positive().max(3650);
+const DurationValue = z.number().int().positive().max(3650);
 
-export const CreateOfferSchema = z.object({
-  vehicleId: z.number().int().positive(),
-  priceType: ContractPriceTypeSchema,
-  rentalDays: Days,
-  agreedAmount: MoneyAed.min(1),
-  collectionMode: RentalCollectionModeSchema,
-  startAt: z.coerce.date().optional(),
-  endAt: z.coerce.date().optional(),
-  customerId: z.number().int().positive().optional(),
-  assignedEmployeeUserId: z.number().int().positive().optional(),
-});
+export const CreateOfferSchema = z
+  .object({
+    vehicleId: z.number().int().positive(),
+    priceType: ContractPriceTypeSchema,
+    rentalDays: Days.optional(),
+    durationValue: DurationValue.optional(),
+    durationUnit: ContractDurationUnitSchema.optional(),
+    agreedAmount: MoneyAed.min(1),
+    collectionMode: RentalCollectionModeSchema,
+    startAt: z.coerce.date().optional(),
+    endAt: z.coerce.date().optional(),
+    customerId: z.number().int().positive().optional(),
+    assignedEmployeeUserId: z.number().int().positive().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.priceType === "CUSTOM") {
+      if (data.durationValue == null) {
+        ctx.addIssue({ code: "custom", message: "durationValue required", path: ["durationValue"] });
+      }
+      if (!data.durationUnit) {
+        ctx.addIssue({ code: "custom", message: "durationUnit required", path: ["durationUnit"] });
+      }
+      return;
+    }
+    if (data.rentalDays == null) {
+      ctx.addIssue({ code: "custom", message: "rentalDays required", path: ["rentalDays"] });
+    }
+  });
 
 export const ListContractsQuerySchema = PaginationQuerySchema.extend({
   search: z.string().trim().min(1).optional(),
@@ -193,6 +212,145 @@ export const ReconciliationLineInputSchema = z.object({
   amount: z.number().int(),
   externalReference: z.string().trim().min(1).max(200).nullable().optional(),
   sourceDomain: z.string().trim().min(1).max(50).nullable().optional(),
+});
+
+export const ReconciliationLineParam = ContractIdParam.extend({
+  lineId: z.uuid(),
+});
+
+export const ReconciliationTotalsSchema = z.object({
+  damages: z.number().int(),
+  fuel: z.number().int(),
+  late: z.number().int(),
+  other: z.number().int(),
+  salik: z.number().int(),
+  violations: z.number().int(),
+  finalAmount: z.number().int(),
+});
+
+export const ReconciliationImagePairSchema = z.object({
+  angle: z.string(),
+  outPhoto: z.object({ id: z.string().uuid(), url: z.string() }).nullable(),
+  inPhoto: z.object({ id: z.string().uuid(), url: z.string() }).nullable(),
+});
+
+export const ReconciliationRoadLiabilityReadSchema = z.object({
+  id: z.string().uuid(),
+  type: z.enum(["RTA_VIOLATION", "SALIK_TOLL", "SALIK_VIOLATION"]),
+  occurredAt: z.date(),
+  officialAmount: z.number().int(),
+  adminFee: z.number().int(),
+  customerCharge: z.number().int(),
+  collectionStatus: z.string(),
+  externalReference: z.string().nullable(),
+  attached: z.boolean(),
+  reconciliationLineId: z.string().uuid().nullable(),
+});
+
+export const FullReconciliationReadSchema = z.object({
+  contract: z.object({
+    contractId: z.string().uuid(),
+    contractNumber: z.string(),
+    status: ContractStatusSchema,
+    vehicle: z.object({
+      id: z.number().int(),
+      displayName: z.string(),
+      plateNumber: z.string().nullable(),
+    }),
+  }),
+  custody: z.object({
+    mileageOut: z.number().int().nullable(),
+    mileageIn: z.number().int().nullable(),
+    mileageDifference: z.number().int().nullable(),
+    fuelOut: z.string().nullable(),
+    fuelIn: z.string().nullable(),
+    fuelDifference: z.number().int().nullable(),
+  }),
+  imagePairs: z.array(ReconciliationImagePairSchema),
+  lines: z.array(
+    z.object({
+      id: z.string().uuid(),
+      type: ReconciliationLineTypeSchema,
+      description: z.string(),
+      amount: z.number().int(),
+      roadLiabilityId: z.string().uuid().nullable(),
+      externalReference: z.string().nullable(),
+      officialAmountSnapshot: z.number().int().nullable(),
+      adjustmentAmount: z.number().int().nullable(),
+      adjustmentReason: z.string().nullable(),
+    }),
+  ),
+  roadLiabilities: z.object({
+    attached: z.array(ReconciliationRoadLiabilityReadSchema),
+    available: z.array(ReconciliationRoadLiabilityReadSchema),
+  }),
+  totals: ReconciliationTotalsSchema,
+  reconciliation: z.object({
+    id: z.string().uuid(),
+    approvedAt: z.date().nullable(),
+    finalizedAt: z.date().nullable(),
+    finalizedByUserId: z.number().int().nullable(),
+    settledAt: z.date().nullable(),
+    settled: z.boolean(),
+  }),
+  paymentLink: z.object({
+    active: z.boolean(),
+    expiresAt: z.date().nullable(),
+  }),
+  collection: z.object({
+    paymentStatus: z.string().nullable(),
+    paymentMethod: z.string().nullable(),
+  }),
+});
+
+export const PublicReconciliationReadSchema = z.object({
+  contractNumber: z.string(),
+  vehicle: z.object({
+    displayName: z.string(),
+    plateNumber: z.string().nullable(),
+  }),
+  totals: ReconciliationTotalsSchema,
+  lines: z.array(
+    z.object({
+      type: ReconciliationLineTypeSchema,
+      description: z.string(),
+      amount: z.number().int(),
+    }),
+  ),
+  finalAmount: z.number().int(),
+  payment: z.object({
+    required: z.boolean(),
+    settled: z.boolean(),
+    status: z.string().nullable(),
+    method: z.string().nullable(),
+  }),
+});
+
+export const ReconciliationLinkIssuedSchema = z.object({
+  contractId: z.string().uuid(),
+  contractNumber: z.string(),
+  link: z.object({
+    token: z.string(),
+    expiresAt: z.date(),
+    type: z.literal("RECONCILIATION"),
+  }),
+  publicUrl: z.string(),
+  finalAmount: z.number().int(),
+});
+
+export const FinalReconciliationDetailSchema = z.object({
+  custody: FullReconciliationReadSchema.shape.custody,
+  imagePairs: z.array(ReconciliationImagePairSchema),
+  lines: FullReconciliationReadSchema.shape.lines,
+  totals: ReconciliationTotalsSchema,
+  settlement: z.object({
+    method: z.string().nullable(),
+    paymentId: z.string().uuid().nullable(),
+    paymentStatus: z.string().nullable(),
+    settledAt: z.date().nullable(),
+  }),
+  finalizedAt: z.date().nullable(),
+  finalizedBy: z.object({ id: z.number().int(), name: z.string() }).nullable(),
 });
 
 export const ReconcileSchema = z.object({
@@ -338,13 +496,15 @@ export const ContractListItemSchema = z.object({
   customerName: z.string().nullable(),
   priceType: ContractPriceTypeSchema,
   rentalDays: z.number().int(),
+  durationValue: z.number().int(),
+  durationUnit: ContractDurationUnitSchema,
   agreedAmount: z.number().int(),
   currency: z.string(),
   startAt: z.date().nullable(),
   endAt: z.date().nullable(),
   createdAt: z.date(),
   hasSalikGpsSignal: z.boolean(),
-  actions: z.object({ canCarOut: z.boolean(), canCarIn: z.boolean() }),
+  actions: z.object({ canCarOut: z.boolean(), canCarIn: z.boolean(), canReconcile: z.boolean() }),
   carOutStatus: z.enum(["NOT_STARTED", "DRAFT", "READY", "COMPLETED"]),
 });
 
@@ -417,6 +577,8 @@ export const ContractDetailSchema = z.object({
   assignedEmployeeUserId: z.number().int().nullable(),
   priceType: ContractPriceTypeSchema,
   rentalDays: z.number().int(),
+  durationValue: z.number().int(),
+  durationUnit: ContractDurationUnitSchema,
   agreedAmount: z.number().int(),
   currency: z.string(),
   collectionMode: RentalCollectionModeSchema.nullable(),
@@ -482,8 +644,10 @@ export const ContractDetailSchema = z.object({
       id: z.string(),
       chargesTotal: z.number().int(),
       finalAmount: z.number().int(),
-      approvedAt: z.date().nullable(),
-      settledAt: z.date().nullable().optional(),
+          approvedAt: z.date().nullable(),
+          finalizedAt: z.date().nullable().optional(),
+          finalizedByUserId: z.number().int().nullable().optional(),
+          settledAt: z.date().nullable().optional(),
       settled: z.boolean().optional(),
           lines: z.array(
             z.object({
@@ -501,6 +665,7 @@ export const ContractDetailSchema = z.object({
           ),
     })
     .nullable(),
+  finalReconciliation: FinalReconciliationDetailSchema.nullable().optional(),
   renewals: z.array(
     z.object({
       id: z.string(),
@@ -550,6 +715,8 @@ export const PublicContractViewSchema = z.object({
   status: ContractStatusSchema,
   priceType: ContractPriceTypeSchema,
   rentalDays: z.number().int(),
+  durationValue: z.number().int(),
+  durationUnit: ContractDurationUnitSchema,
   agreedAmount: z.number().int(),
   currency: z.string(),
   startAt: z.date().nullable(),
@@ -643,6 +810,8 @@ export const PublicRentalContextSchema = z.object({
   }),
   rental: z.object({
     rentalDays: z.number().int(),
+    durationValue: z.number().int(),
+    durationUnit: ContractDurationUnitSchema,
     agreedAmount: z.number().int(),
     currency: z.string(),
     startAt: z.date().nullable(),
@@ -700,6 +869,8 @@ export const PublicPaymentContextSchema = z.object({
     plateNumber: z.string().nullable(),
   }),
   rentalDays: z.number().int(),
+  durationValue: z.number().int(),
+  durationUnit: ContractDurationUnitSchema,
   agreedAmount: z.number().int(),
   currency: z.string(),
   payment: z.object({
@@ -878,8 +1049,11 @@ export const OfficialContractViewSchema = z.object({
   rental: z.object({
     plannedStartAt: z.date().nullable(),
     plannedEndAt: z.date().nullable(),
-    numberOfDays: z.number().int(),
-    /** True when the planned end equals start + days under the contract period formula. */
+    durationValue: z.number().int(),
+    durationUnit: ContractDurationUnitSchema,
+    /** Legacy calendar-day count kept for frozen snapshots signed before structured duration. */
+    numberOfDays: z.number().int().optional(),
+    /** True when the planned end equals start + structured duration. */
     periodConsistent: z.boolean().nullable(),
     // Price policy: no rental price, rate amount or rate basis on the official contract.
     // Pricing stays internal (Contract, payment, Finance, staff APIs).

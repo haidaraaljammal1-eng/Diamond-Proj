@@ -5,10 +5,6 @@ import { Button } from "@/shared/components/ui/button";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehiclePhotoButton } from "../../forms/add-vehicle/vehicle-photo-button";
 import type { VehicleDetailDto } from "../../types/vehicle.types";
-import {
-  deriveHourlyRate,
-  deriveMonthlyRate,
-} from "../../utils/vehicle-pricing";
 import { getVehicleStatusPresentation } from "../../utils/vehicle-status";
 import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
 import { VehicleImage } from "../vehicle-image/vehicle-image";
@@ -148,15 +144,19 @@ export function VehicleDetail({
             <div className={styles.rates}>
               <div className={styles.rate}>
                 <span>{t("detail.hourly")}</span>
-                <b>{format.number(deriveHourlyRate(vehicle.dailyRate))}</b>
+                <b>{format.number(vehicle.hourlyRate ?? 0)}</b>
               </div>
               <div className={styles.rate}>
                 <span>{t("detail.daily")}</span>
                 <b>{format.number(vehicle.dailyRate ?? 0)}</b>
               </div>
               <div className={styles.rate}>
+                <span>{t("detail.weekly")}</span>
+                <b>{format.number(vehicle.weeklyRate ?? 0)}</b>
+              </div>
+              <div className={styles.rate}>
                 <span>{t("detail.monthly")}</span>
-                <b>{format.number(deriveMonthlyRate(vehicle.dailyRate, vehicle.monthlyRate))}</b>
+                <b>{format.number(vehicle.monthlyRate ?? 0)}</b>
               </div>
             </div>
           </>

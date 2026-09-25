@@ -50,6 +50,8 @@ if (!RUN) {
           createdByUserId: adminUserId,
           priceType: "DAILY",
           rentalDays: 2,
+          durationValue: 2,
+          durationUnit: "DAY",
           agreedAmount: 800,
           collectionMode: "ELECTRONIC",
           closedAt: new Date("2026-09-04T12:00:00.000Z"),

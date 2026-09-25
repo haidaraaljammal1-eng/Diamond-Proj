@@ -22,7 +22,7 @@ import {
   PAYMENT_STATUS_TOKEN_TTL_SECONDS,
 } from "src/modules/contracts/contracts.constants";
 import { assertTransition } from "src/modules/contracts/contracts-status";
-import { completeRentalLinks } from "src/modules/contracts/contracts-links";
+import { completeRentalLinks, revokeReconciliationLinks } from "src/modules/contracts/contracts-links";
 import { contractError } from "src/modules/contracts/contracts.errors";
 import { assertVehicleFreeForRental } from "src/modules/contracts/vehicle-rental-guard";
 import { assertPositiveAedAmount, assertAedCurrency, aedToStripeMinorUnits } from "src/modules/contracts/payment/money";
@@ -65,6 +65,14 @@ import {
   recordRoadLiabilityPaymentLedger,
   recordTrustedCollectionLedger,
 } from "src/modules/finance/finance-ledger.service";
+import {
+  assertNoPendingRoadLiabilities,
+  ensureReconciliationFinalizedInTx,
+  finalizeReconciliationAndCloseInTx,
+  recalculateReconciliationTotalsInTx,
+  settleReconciliationWithoutPaymentInTx,
+  settleRoadLiabilitiesForReconciliation,
+} from "src/modules/contracts/contracts-reconciliation";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import Stripe from "stripe";
 import { env } from "src/config/env";
@@ -265,19 +273,6 @@ function isCheckoutUsable(payment: ContractPayment): boolean {
   return true;
 }
 
-async function settleRoadLiabilitiesForReconciliation(tx: Tx, reconciliationId: string): Promise<void> {
-  const lines = await tx.contractReconciliationLine.findMany({
-    where: { reconciliationId, roadLiabilityId: { not: null } },
-    select: { roadLiabilityId: true },
-  });
-  const ids = lines.map((line) => line.roadLiabilityId).filter((id): id is string => Boolean(id));
-  if (ids.length === 0) return;
-  await tx.roadLiability.updateMany({
-    where: { id: { in: ids } },
-    data: { collectionStatus: "SETTLED" },
-  });
-}
-
 async function settleRoadLiabilityForPostClose(tx: Tx, receivableId: string): Promise<void> {
   const receivable = await tx.contractPostCloseReceivable.findUnique({
     where: { id: receivableId },
@@ -380,6 +375,7 @@ async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<
         });
         await settleRoadLiabilitiesForReconciliation(tx, reconciliation.id);
       }
+      await finalizeReconciliationAndCloseInTx(tx, reconciliation.contractId, payment.createdByUserId);
       break;
     }
     case "POST_CLOSE_RECEIVABLE": {
@@ -688,6 +684,17 @@ export function createContractPaymentService(prisma: PrismaClient) {
   ): Promise<ContractPayment> {
     if (payment.status === "CONFIRMED") return payment;
     if (result.status === "CONFIRMED") {
+      if (payment.status === "CANCELLED" || payment.status === "FAILED") {
+        const winner = await tx.contractPayment.findFirst({
+          where: {
+            purpose: payment.purpose,
+            targetId: payment.targetId,
+            status: "CONFIRMED",
+            id: { not: payment.id },
+          },
+        });
+        if (winner) return winner;
+      }
       const confirmed = await confirmPaymentAttempt(
         tx,
         payment,
@@ -1163,13 +1170,18 @@ export function createContractPaymentService(prisma: PrismaClient) {
     if (!created.ok) throw contractError.paymentCheckoutPreparationFailed();
     assertTrustedCheckoutUrl(created.checkoutUrl);
 
-    const updatedAttempt = await checkoutAttempts.persistStripeCheckoutResult(phase.attemptId, {
+    const persisted = await checkoutAttempts.persistStripeCheckoutResult(phase.attemptId, {
       provider: created.provider,
       providerReference: created.providerReference,
       providerStatus: created.providerStatus,
       checkoutUrl: created.checkoutUrl,
       checkoutExpiresAt: created.checkoutExpiresAt,
     });
+    if (persisted.superseded) {
+      await provider().expireCheckoutSession(created.providerReference);
+      throw contractError.paymentAlreadySettled();
+    }
+    const updatedAttempt = persisted.attempt;
 
     return withTransaction(prisma, async (tx) => {
       const updated = await tx.contractPayment.findUniqueOrThrow({ where: { id: phase.payment.id } });
@@ -1305,6 +1317,22 @@ export function createContractPaymentService(prisma: PrismaClient) {
 
   async function getPaymentStatusByToken(statusToken: string) {
     const digest = hashToken(statusToken);
+    const candidate = await prisma.contractPayment.findUnique({
+      where: { statusTokenHash: digest },
+    });
+    if (!candidate) throw contractError.paymentStatusTokenInvalid();
+    if (!candidate.statusTokenExpiresAt || candidate.statusTokenExpiresAt.getTime() <= Date.now()) {
+      throw contractError.paymentStatusTokenExpired();
+    }
+    // Webhook is primary. This status read is the documented provider poll fallback
+    // and must not treat the browser return URL itself as payment proof.
+    if (candidate.status === "PENDING" || candidate.status === "PROCESSING") {
+      try {
+        await reconcilePaymentWithProviderIfNeeded(candidate);
+      } catch {
+        // A failed Stripe lookup must not block the status read.
+      }
+    }
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         return await withTransaction(prisma, async (tx) => {
@@ -1377,10 +1405,8 @@ export function createContractPaymentService(prisma: PrismaClient) {
     if (purpose === "RECONCILIATION") {
       const reconciliation = await tx.contractReconciliation.findUnique({ where: { id: targetId } });
       if (reconciliation && !reconciliation.settledAt) {
-        await tx.contractReconciliation.update({
-          where: { id: targetId },
-          data: { settledAt: new Date() },
-        });
+        await settleReconciliationWithoutPaymentInTx(tx, targetId);
+        await finalizeReconciliationAndCloseInTx(tx, reconciliation.contractId);
       }
     }
   }
@@ -1467,6 +1493,177 @@ export function createContractPaymentService(prisma: PrismaClient) {
     return confirmPaymentAttempt(tx, payment);
   }
 
+  async function neutralizeProviderCheckout(
+    providerReference: string,
+  ): Promise<"SAFE" | "ALREADY_PAID" | "BLOCKED"> {
+    const payProvider = provider();
+    if (!payProvider.configured) return "BLOCKED";
+    const current = await payProvider.getPaymentStatus(providerReference);
+    if (current.status === "CONFIRMED") return "ALREADY_PAID";
+    if (current.status === "EXPIRED" || current.status === "CANCELLED" || current.status === "FAILED") {
+      return "SAFE";
+    }
+    if (current.status === "UNKNOWN") return "BLOCKED";
+    const expired = await payProvider.expireCheckoutSession(providerReference);
+    if (expired.status === "EXPIRED") return "SAFE";
+    if (expired.status === "CONFIRMED") return "ALREADY_PAID";
+    return "BLOCKED";
+  }
+
+  /**
+   * Expires payable reconciliation checkouts before cash settlement.
+   * Stripe calls stay outside the cash transaction.
+   */
+  async function prepareReconciliationCashCollection(contractId: string): Promise<
+    | { outcome: "already-settled" }
+    | { outcome: "proceed"; neutralizedProviderReferences: string[] }
+  > {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      include: { carIn: true, reconciliation: true },
+    });
+    if (!contract) throw contractError.notFound();
+    if (contract.reconciliation?.settledAt || contract.status === "CLOSED") {
+      return { outcome: "already-settled" };
+    }
+    if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
+    if (!contract.carIn) throw contractError.carInRequired();
+    if (!contract.reconciliation) throw contractError.reconciliationRequired();
+    await assertNoPendingRoadLiabilities(prisma, contractId);
+    if (contract.reconciliation.finalAmount <= 0) throw contractError.paymentRequired();
+
+    const active = await prisma.contractPayment.findMany({
+      where: {
+        purpose: "RECONCILIATION",
+        targetId: contract.reconciliation.id,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+    });
+    const neutralizedProviderReferences: string[] = [];
+    for (const payment of active) {
+      if (payment.method === "CASH" || !payment.providerReference) continue;
+      const outcome = await neutralizeProviderCheckout(payment.providerReference);
+      if (outcome === "ALREADY_PAID") {
+        const reconciled = await reconcilePaymentWithProvider(payment.id);
+        if (reconciled?.status === "CONFIRMED") return { outcome: "already-settled" };
+        throw contractError.electronicCollectionActive();
+      }
+      if (outcome === "BLOCKED") throw contractError.electronicCollectionActive();
+      neutralizedProviderReferences.push(payment.providerReference);
+    }
+    return { outcome: "proceed", neutralizedProviderReferences };
+  }
+
+  async function settleReconciliationCashInTx(
+    tx: Tx,
+    contractId: string,
+    actorUserId: number,
+    neutralizedProviderReferences: readonly string[] = [],
+  ): Promise<ContractPayment> {
+    await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RECONCILIATION:${contractId}`);
+    const contract = await tx.contract.findUnique({
+      where: { id: contractId },
+      include: { carIn: true, reconciliation: true },
+    });
+    if (!contract) throw contractError.notFound();
+    if (!contract.carIn) throw contractError.carInRequired();
+    if (!contract.reconciliation) throw contractError.reconciliationRequired();
+    await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RECONCILIATION:${contract.reconciliation.id}`);
+
+    if (contract.status === "CLOSED" || contract.reconciliation.settledAt) {
+      const settledPayment = await tx.contractPayment.findFirst({
+        where: { purpose: "RECONCILIATION", targetId: contract.reconciliation.id, status: "CONFIRMED" },
+        orderBy: { createdAt: "desc" },
+      });
+      if (settledPayment) return settledPayment;
+      throw contractError.paymentAlreadySettled();
+    }
+    if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
+
+    await assertNoPendingRoadLiabilities(tx, contractId);
+    await ensureReconciliationFinalizedInTx(tx, contractId, actorUserId);
+    const reconciliation = await tx.contractReconciliation.findUniqueOrThrow({
+      where: { contractId },
+    });
+    await recalculateReconciliationTotalsInTx(tx, reconciliation.id);
+    const fresh = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
+    if (fresh.finalAmount <= 0) throw contractError.paymentRequired();
+
+    await revokeReconciliationLinks(tx, contractId);
+
+    const existingConfirmed = await tx.contractPayment.findFirst({
+      where: { purpose: "RECONCILIATION", targetId: fresh.id, status: "CONFIRMED" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingConfirmed) return existingConfirmed;
+    if (fresh.settledAt) throw contractError.paymentAlreadySettled();
+
+    const activePayments = await tx.contractPayment.findMany({
+      where: {
+        purpose: "RECONCILIATION",
+        targetId: fresh.id,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+    });
+    const allowedRefs = new Set(neutralizedProviderReferences);
+    const electronic = activePayments.filter((payment) => payment.method !== "CASH");
+    for (const active of electronic) {
+      if (active.providerReference) {
+        if (!allowedRefs.has(active.providerReference)) throw contractError.electronicCollectionActive();
+        continue;
+      }
+      const materializing = await tx.contractPaymentAttempt.findFirst({
+        where: {
+          contractPaymentId: active.id,
+          status: { in: ["PREPARING", "RECOVERING"] },
+        },
+        select: { id: true },
+      });
+      if (materializing) throw contractError.electronicCollectionActive();
+    }
+    for (const active of electronic) {
+      await markPaymentTerminal(tx, active, "CANCELLED", "replaced_by_cash");
+      await tx.contractPaymentAttempt.updateMany({
+        where: {
+          contractPaymentId: active.id,
+          status: { in: ["PREPARING", "RECOVERING", "READY"] },
+        },
+        data: { status: "EXPIRED" },
+      });
+    }
+
+    const cashActive = activePayments.find((payment) => payment.method === "CASH");
+    if (cashActive) return confirmPaymentAttempt(tx, cashActive);
+
+    const obligation = await loadObligation(tx, "RECONCILIATION", fresh.id);
+    if (obligation.amount <= 0) throw contractError.paymentRequired();
+
+    try {
+      const payment = await tx.contractPayment.create({
+        data: {
+          contractId: obligation.contractId,
+          purpose: "RECONCILIATION",
+          targetId: obligation.targetId,
+          amount: obligation.amount,
+          currency: obligation.currency,
+          method: "CASH",
+          status: "PENDING",
+          createdByUserId: actorUserId,
+        },
+      });
+      return confirmPaymentAttempt(tx, payment);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        const existing = await tx.contractPayment.findFirst({
+          where: { purpose: "RECONCILIATION", targetId: fresh.id, status: "CONFIRMED" },
+          orderBy: { createdAt: "desc" },
+        });
+        if (existing) return existing;
+      }
+      throw error;
+    }
+  }
+
   async function settleCashRental(
     contractId: string,
     actorUserId?: number | null,
@@ -1492,6 +1689,8 @@ export function createContractPaymentService(prisma: PrismaClient) {
     settlePaymentFromProvider,
     settleCashRental,
     settleCashRentalInTx,
+    prepareReconciliationCashCollection,
+    settleReconciliationCashInTx,
     confirmTrustedPaymentInTx,
   };
 }

@@ -8,6 +8,13 @@ import {
   EMPTY_ROAD_LIABILITY_SIGNALS,
   type ContractRoadLiabilitySignals,
 } from "src/modules/contracts/contract-road-liability-signals";
+import {
+  buildFinalReconciliationDetail,
+  canStaffReconcileContract,
+  isReconciliationFinalized,
+  isReconciliationSettled,
+  type FullReconciliationRow,
+} from "src/modules/contracts/contracts-reconciliation";
 
 const DETAIL_INCLUDE = {
   company: { select: { id: true, code: true, displayName: true, accentColor: true } },
@@ -46,7 +53,14 @@ const DETAIL_INCLUDE = {
       include: { attachment: { select: { mimeType: true, createdAt: true, uploadedById: true, checksum: true } } },
     } },
   },
-  reconciliation: { include: { lines: { orderBy: { createdAt: "asc" as const } } } },
+  reconciliation: {
+    include: {
+      lines: { orderBy: { createdAt: "asc" as const } },
+      settledPayment: { select: { id: true, status: true, method: true, amount: true, currency: true, confirmedAt: true } },
+      finalizedBy: { select: { id: true, name: true } },
+      approvedBy: { select: { id: true, name: true } },
+    },
+  },
   renewals: { orderBy: { createdAt: "asc" as const } },
   postCloseReceivables: {
     orderBy: { createdAt: "desc" as const },
@@ -74,6 +88,8 @@ export function toListItem(row: {
   customerId: number | null;
   priceType: ContractDetail["priceType"];
   rentalDays: number;
+  durationValue: number;
+  durationUnit: ContractDetail["durationUnit"];
   agreedAmount: number;
   currency: string;
   startAt: Date | null;
@@ -84,6 +100,7 @@ export function toListItem(row: {
   customer: { name: string } | null;
   hasSalikGpsSignal?: boolean;
   canCarOut: boolean;
+  canReconcile: boolean;
   carOutStatus: ContractListItem["carOutStatus"];
   carIn?: { id: string } | null;
 }): ContractListItem {
@@ -99,22 +116,27 @@ export function toListItem(row: {
     customerName: row.customer?.name ?? null,
     priceType: row.priceType,
     rentalDays: row.rentalDays,
+    durationValue: row.durationValue,
+    durationUnit: row.durationUnit,
     agreedAmount: row.agreedAmount,
     currency: row.currency,
     startAt: row.startAt,
     endAt: row.endAt,
     createdAt: row.createdAt,
     hasSalikGpsSignal: row.hasSalikGpsSignal ?? false,
-    // Same rule as the detail `actions.canCarIn`.
-    actions: { canCarOut: row.canCarOut, canCarIn: row.status === "RETOUT" && !row.carIn && row.vehicle.operationalStatus === "RENTED" },
+    // Same rules as the detail `actions` flags.
+    actions: {
+      canCarOut: row.canCarOut,
+      canCarIn: row.status === "RETOUT" && !row.carIn && row.vehicle.operationalStatus === "RENTED",
+      canReconcile: row.canReconcile,
+    },
     carOutStatus: row.carOutStatus,
   };
 }
 
 function reconciliationSettled(row: ContractDetailRow): boolean {
   if (!row.reconciliation) return true;
-  if (row.reconciliation.finalAmount <= 0) return true;
-  return Boolean(row.reconciliation.settledAt);
+  return isReconciliationSettled(row.reconciliation);
 }
 
 function actionsFor(row: ContractDetailRow, canCarOut: boolean): ContractDetail["actions"] {
@@ -124,11 +146,17 @@ function actionsFor(row: ContractDetailRow, canCarOut: boolean): ContractDetail[
     canCarOut,
     canGenerateReturnLink: row.status === "ACTIVE",
     canCarIn: row.status === "RETOUT" && !row.carIn && row.vehicle.operationalStatus === "RENTED",
-    canReconcile: row.status === "REVIEW",
+    canReconcile: canStaffReconcileContract({
+      status: row.status,
+      reconciliation: row.reconciliation
+        ? { finalAmount: row.reconciliation.chargesTotal, settledAt: row.reconciliation.settledAt }
+        : null,
+    }),
     canClose:
       row.status === "REVIEW" &&
       !!row.carIn &&
-      !!row.reconciliation?.approvedAt &&
+      !!row.reconciliation &&
+      isReconciliationFinalized(row.reconciliation) &&
       reconciliationSettled(row),
     canRenew: row.status === "ACTIVE",
   };
@@ -216,6 +244,8 @@ export function toDetail(
     assignedEmployeeUserId: row.assignedEmployeeUserId,
     priceType: row.priceType,
     rentalDays: row.rentalDays,
+    durationValue: row.durationValue,
+    durationUnit: row.durationUnit,
     agreedAmount: row.agreedAmount,
     currency: row.currency,
     collectionMode: row.collectionMode,
@@ -334,6 +364,8 @@ export function toDetail(
           chargesTotal: row.reconciliation.chargesTotal,
           finalAmount: row.reconciliation.chargesTotal,
           approvedAt: row.reconciliation.approvedAt,
+          finalizedAt: row.reconciliation.finalizedAt,
+          finalizedByUserId: row.reconciliation.finalizedByUserId,
           settledAt: row.reconciliation.settledAt,
           settled: reconciliationSettled(row),
           lines: row.reconciliation.lines.map((l) => ({
@@ -350,6 +382,10 @@ export function toDetail(
           })),
         }
       : null,
+    finalReconciliation:
+      row.status === "CLOSED" && row.reconciliation && row.carOut && row.carIn
+        ? buildFinalReconciliationDetail(row as unknown as FullReconciliationRow)
+        : null,
     renewals: row.renewals.map((r) => ({
       id: r.id,
       additionalDays: r.additionalDays,

@@ -1,3 +1,5 @@
+import type { ContractDurationUnit } from "@/modules/contracts/types/contract.types";
+
 export type PublicRentalFlowStep =
   | "LICENSE_VERIFICATION"
   | "CONTRACT"
@@ -136,6 +138,8 @@ export interface PublicRentalContext {
   };
   rental: {
     rentalDays: number;
+    durationValue: number;
+    durationUnit: ContractDurationUnit;
     agreedAmount: number;
     currency: string;
     startAt: string | null;
@@ -190,6 +194,8 @@ export interface PublicPaymentContext {
   contractNumber: string;
   vehicle: { displayName: string; plateNumber: string | null };
   rentalDays: number;
+  durationValue: number;
+  durationUnit: ContractDurationUnit;
   agreedAmount: number;
   currency: string;
   payment: {

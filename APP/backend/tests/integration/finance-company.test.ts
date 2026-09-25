@@ -318,6 +318,8 @@ if (!RUN) {
         createdByUserId: adminUserId,
         priceType: "DAILY",
         rentalDays: 3,
+        durationValue: 3,
+        durationUnit: "DAY",
         agreedAmount: 1500,
           collectionMode: "ELECTRONIC",
         acceptance: {

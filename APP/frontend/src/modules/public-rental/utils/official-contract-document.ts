@@ -9,6 +9,7 @@ import type {
   OfficialSignatureSlot,
   OfficialSignatureSlotKey,
 } from "../types/official-contract.types";
+import type { ContractDurationUnit } from "@/modules/contracts/types/contract.types";
 import { CONTRACT_FIELD_CATALOG } from "./official-contract-template.ts";
 
 /**
@@ -86,6 +87,7 @@ export interface ContractInteractiveState {
   damageOut?: DamageMark[];
   /** Locally drawn ("DRAWN") or cleared ("CLEAR") signatures not yet saved. */
   pendingSignatures?: Partial<Record<OfficialSignatureSlot, "DRAWN" | "CLEAR">>;
+  formatDuration?: (value: number, unit: ContractDurationUnit) => string;
 }
 
 export const SIGNATURE_SLOT_KEYS: Record<OfficialSignatureSlot, OfficialSignatureSlotKey> = {
@@ -159,18 +161,39 @@ function isEditable(view: OfficialContractView, mode: OfficialContractMode, key:
   return mode === "REVIEW" && view.permissions.canEdit && view.permissions.editableFields.includes(key);
 }
 
+function rentalDurationDisplay(
+  view: OfficialContractView,
+  formatDuration?: ContractInteractiveState["formatDuration"],
+): string {
+  const rental = view.rental;
+  if (rental.durationValue != null && rental.durationUnit) {
+    return formatDuration?.(rental.durationValue, rental.durationUnit)
+      ?? `${rental.durationValue} ${rental.durationUnit}`;
+  }
+  if (rental.numberOfDays != null) {
+    return formatDuration?.(rental.numberOfDays, "DAY") ?? String(rental.numberOfDays);
+  }
+  return "";
+}
+
 function fieldModel(
   view: OfficialContractView,
   token: string,
   edits: OfficialContractEdits,
   mode: OfficialContractMode,
+  formatDuration?: ContractInteractiveState["formatDuration"],
 ): ContractFieldModel | null {
   const catalog = CONTRACT_FIELD_CATALOG[token];
   if (!catalog) return null;
   const reviewField = catalog.reviewField as OfficialContractReviewField | undefined;
   const editable = reviewField !== undefined && isEditable(view, mode, reviewField);
   const edited = reviewField ? edits[reviewField] : undefined;
-  const value = editable && edited !== undefined ? edited : resolveLayoutValue(view, token);
+  const value =
+    token === "rental.duration"
+      ? rentalDurationDisplay(view, formatDuration)
+      : editable && edited !== undefined
+        ? edited
+        : resolveLayoutValue(view, token);
   return {
     path: token,
     en: catalog.en,
@@ -222,7 +245,7 @@ export function buildOfficialContractDocument(
     const cells: ContractCellModel[] = [];
     for (const tokens of row) {
       const fields = tokens
-        .map((token) => fieldModel(view, token, edits, options.mode))
+        .map((token) => fieldModel(view, token, edits, options.mode, options.formatDuration))
         .filter((f): f is ContractFieldModel => f !== null);
       if (fields.length === 0) {
         // Empty paper cell (e.g. the removed Deposit): the next cell absorbs the column.

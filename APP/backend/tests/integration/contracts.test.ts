@@ -208,7 +208,7 @@ if (!RUN) {
       data: {
         companyId: await testCompanyId(prisma),
         contractNumber: `CT-RSV-PAID-${run}`, status: "PAID", vehicleId: reservedVehicleId,
-        createdByUserId: actor.id, priceType: "DAILY", rentalDays: 2, agreedAmount: 800,
+        createdByUserId: actor.id, priceType: "DAILY", rentalDays: 2, durationValue: 2, durationUnit: "DAY", agreedAmount: 800,
           collectionMode: "ELECTRONIC",
       },
     });
@@ -261,7 +261,7 @@ if (!RUN) {
     await prisma.vehicle.update({ where: { id: reservedVehicleId }, data: { operationalStatus: "AVAILABLE" } });
     const conflict = await prisma.contract.create({
       data: { companyId: await testCompanyId(prisma), contractNumber: `CT-RSV-CONFLICT-${run}`, status: "ACTIVE", vehicleId: reservedVehicleId,
-        createdByUserId: actor.id, priceType: "DAILY", rentalDays: 1, agreedAmount: 300 },
+        createdByUserId: actor.id, priceType: "DAILY", rentalDays: 1, durationValue: 1, durationUnit: "DAY", agreedAmount: 300 },
     });
     const contested = await app.inject({ method: "GET", url: `/contracts/${paidContract.id}`, headers: auth() });
     assert.equal(contested.json().data.actions.canCarOut, false);
@@ -366,7 +366,7 @@ if (!RUN) {
     const conflict = await prisma.contract.create({ data: {
       companyId: await testCompanyId(prisma),
       contractNumber: `CT-OUT-CONFLICT-${run}`, status: "ACTIVE", vehicleId: vehicleOutId,
-      createdByUserId: actor.id, priceType: "DAILY", rentalDays: 1, agreedAmount: 100,
+      createdByUserId: actor.id, priceType: "DAILY", rentalDays: 1, durationValue: 1, durationUnit: "DAY", agreedAmount: 100,
           collectionMode: "ELECTRONIC",
     } });
     const conflictBlocked = await app.inject({ method: "POST", url: `/contracts/${contractId}/car-out/complete`, headers: auth() });
@@ -1054,6 +1054,8 @@ if (!RUN) {
         createdByUserId: actor.id,
         priceType: "DAILY",
         rentalDays: 2,
+        durationValue: 2,
+        durationUnit: "DAY",
         agreedAmount: 800,
           collectionMode: "ELECTRONIC",
         depositAmount: 0,
@@ -1098,6 +1100,8 @@ if (!RUN) {
         createdByUserId: actor.id,
         priceType: "DAILY",
         rentalDays: 2,
+        durationValue: 2,
+        durationUnit: "DAY",
         agreedAmount: 900,
           collectionMode: "ELECTRONIC",
       },
@@ -1154,10 +1158,13 @@ if (!RUN) {
         vehicleId,
         priceType: "CUSTOM",
         rentalDays: 1,
+        durationValue: 1,
+        durationUnit: "DAY",
         agreedAmount: 100,
-          collectionMode: "ELECTRONIC",
+        collectionMode: "ELECTRONIC",
       },
     });
+    assert.equal(offer.statusCode, 201, offer.body);
     const id = offer.json().data.id as string;
     const first = await app.inject({
       method: "POST",
@@ -1212,6 +1219,8 @@ if (!RUN) {
         createdByUserId: actor.id,
         priceType: "DAILY",
         rentalDays: 2,
+        durationValue: 2,
+        durationUnit: "DAY",
         agreedAmount: 800,
           collectionMode: "ELECTRONIC",
         depositAmount: 500,

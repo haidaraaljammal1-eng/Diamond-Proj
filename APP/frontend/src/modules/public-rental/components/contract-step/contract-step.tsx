@@ -12,7 +12,8 @@ import {
 } from "../../schemas/public-rental-form.schema";
 import type { PublicRentalContext } from "../../types/public-rental.types";
 import { formatLicenseExpiry } from "../../utils/format-license-date";
-import { formatRentalAmount, formatRentalDays } from "../../utils/format-money";
+import { formatRentalAmount } from "../../utils/format-money";
+import { formatRentalDuration } from "@/modules/contracts/utils/format-rental-duration";
 import styles from "./contract-step.module.css";
 
 interface ContractStepProps {
@@ -54,6 +55,7 @@ export function ContractStep({
   onAccept,
 }: ContractStepProps) {
   const t = useTranslations("PublicRental.contract");
+  const td = useTranslations("Contracts.duration");
   const [accepted, setAccepted] = useState(false);
   const signed = context.contract.status !== "AWAITING" && context.contract.status !== "FORM";
   const canEdit = context.contract.status === "AWAITING" || context.contract.status === "FORM";
@@ -69,7 +71,13 @@ export function ContractStep({
     context.rental.agreedAmount,
     context.rental.currency,
   );
-  const duration = formatRentalDays(context.rental.rentalDays, t("days"));
+  const duration = formatRentalDuration(
+    {
+      durationValue: context.rental.durationValue,
+      durationUnit: context.rental.durationUnit,
+    },
+    (key, values) => td(key, values),
+  );
   const defaultValues: PublicRentalFormValues = {
     name: context.customer?.name ?? "",
     mobile: context.customer?.mobile ?? "",

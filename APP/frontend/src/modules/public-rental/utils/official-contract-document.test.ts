@@ -30,7 +30,7 @@ const INFO_GRID = [
   [["vehicleOut.occurredAt|rental.plannedStartAt@time"], ["vehicleOut.occurredAt|rental.plannedStartAt@date"], ["hirer.address", "hirer.telephone"]],
   [["vehicleIn.occurredAt|rental.plannedEndAt@time"], ["vehicleIn.occurredAt|rental.plannedEndAt@date"], ["hirer.driverLicenseExpiryDate", "hirer.driverLicenseNumber"]],
   [["additionalDriver.driverLicenseNumber"], ["additionalDriver.name"], ["additionalDriver.nationality", "sponsor.name"]],
-  [[], ["rental.numberOfDays"], ["sponsor.idNumber"]],
+  [[], ["rental.duration"], ["sponsor.idNumber"]],
 ];
 
 const EDITABLE = [
@@ -68,7 +68,7 @@ function view(overrides: Partial<OfficialContractView> = {}): OfficialContractVi
       },
     },
     contract: { agreementNumber: "DE-2026-000391", status: "FORM", templateVersion: "DIAMOND_CONTRACT_V1", termsVersion: "diamond-rental-terms-v1" },
-    vehicle: { plateCode: null, plateNumber: "Q 12345", vehicleType: "Nissan Patrol", yearMade: 2025, color: "White", notes: null },
+    vehicle: { plateCode: "Q", plateNumber: "12345", vehicleType: "Nissan Patrol", yearMade: 2025, color: "White", notes: null },
     hirer: {
       name: "TEST PERSON",
       nationality: "TEST",
@@ -83,7 +83,8 @@ function view(overrides: Partial<OfficialContractView> = {}): OfficialContractVi
     rental: {
       plannedStartAt: "2026-09-20T06:00:00.000Z",
       plannedEndAt: "2026-09-27T06:00:00.000Z",
-      numberOfDays: 7,
+      durationValue: 7,
+      durationUnit: "DAY",
       periodConsistent: true,
       includedKmPerDay: 250,
       extraKmRate: 0.75,
@@ -123,7 +124,8 @@ describe("official contract document — data", () => {
     const f = fields(doc);
     assert.equal(doc.agreementNumber, "DE-2026-000391");
     assert.equal(f["vehicle.vehicleType"]!.value, "Nissan Patrol");
-    assert.equal(f["vehicle.plateNumber"]!.value, "Q 12345");
+    assert.equal(f["vehicle.plateNumber"]!.value, "12345");
+    assert.equal(f["vehicle.plateCode"]!.value, "Q");
     assert.equal(f["vehicle.yearMade"]!.value, "2025");
     assert.equal(f["vehicle.color"]!.value, "White");
     assert.equal(f["hirer.name"]!.value, "TEST PERSON");
@@ -131,7 +133,7 @@ describe("official contract document — data", () => {
     assert.equal(f["hirer.passportNumber"]!.value, "TEST123456");
     assert.equal(f["hirer.driverLicenseNumber"]!.value, "DL-1");
     assert.equal(f["hirer.driverLicenseExpiryDate"]!.value, "01/06/2031");
-    assert.equal(f["rental.numberOfDays"]!.value, "7");
+    assert.equal(f["rental.duration"]!.value, "7 DAY");
     assert.equal(doc.mileageTerms.includedKmPerDay, "250");
     assert.equal(doc.mileageTerms.extraKmRate, "0.75");
     // Planned period shown in Dubai time until Car-Out/Car-In exist.
@@ -143,7 +145,7 @@ describe("official contract document — data", () => {
     const doc = buildOfficialContractDocument(
       view({
         vehicle: { plateCode: null, plateNumber: null, vehicleType: null, yearMade: null, color: null, notes: null },
-        rental: { plannedStartAt: null, plannedEndAt: null, numberOfDays: 3, periodConsistent: null, includedKmPerDay: null, extraKmRate: null },
+        rental: { plannedStartAt: null, plannedEndAt: null, durationValue: 3, durationUnit: "DAY", periodConsistent: null, includedKmPerDay: null, extraKmRate: null },
       }),
       { mode: "READONLY" },
     );
@@ -186,7 +188,7 @@ describe("official contract document — data", () => {
     const last = doc.grid.at(-1)!;
     assert.equal(last.length, 2);
     assert.equal(last[0]!.span, 2);
-    assert.equal(last[0]!.fields[0]!.path, "rental.numberOfDays");
+    assert.equal(last[0]!.fields[0]!.path, "rental.duration");
   });
 });
 
@@ -212,7 +214,7 @@ describe("official contract — rental price policy", () => {
     const doc = buildOfficialContractDocument(view(), { mode: "REVIEW" });
     assert.equal(doc.mileageTerms.extraKmRate, "0.75");
     assert.equal(doc.mileageTerms.includedKmPerDay, "250");
-    assert.equal(fields(doc)["rental.numberOfDays"]!.value, "7");
+    assert.equal(fields(doc)["rental.duration"]!.value, "7 DAY");
     const terms = JSON.stringify(CONTRACT_TERMS);
     assert.ok(terms.includes("50 AED for each violation received"));
     assert.ok(terms.includes("30 AED Administration charges"));
@@ -233,7 +235,7 @@ describe("official contract — editing", () => {
     const f = fields(buildOfficialContractDocument(view(), { mode: "REVIEW" }));
     assert.equal(f["hirer.name"]!.editableField, "hirerName");
     assert.equal(f["hirer.telephone"]!.editableField, "telephone");
-    for (const locked of ["vehicle.vehicleType", "vehicle.plateNumber", "rental.numberOfDays", "hirer.driverLicenseNumber", "hirer.driverLicenseExpiryDate"]) {
+    for (const locked of ["vehicle.vehicleType", "vehicle.plateNumber", "rental.duration", "hirer.driverLicenseNumber", "hirer.driverLicenseExpiryDate"]) {
       assert.equal(f[locked]!.editableField, null, locked);
     }
     const restricted = fields(

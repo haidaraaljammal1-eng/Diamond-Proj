@@ -17,6 +17,10 @@ import {
 } from "./edit-default-rate.schema";
 import styles from "./edit-default-rate-dialog.module.css";
 
+function rateDefault(value: number | null | undefined): string {
+  return value != null ? String(value) : "";
+}
+
 export interface EditDefaultRateDialogProps {
   vehicle: VehicleCardDto | null;
   onClose: () => void;
@@ -44,8 +48,20 @@ export function EditDefaultRateDialog({
     () => [
       {
         type: "text",
+        name: "hourlyRate",
+        placeholder: t("editRates.hourlyRateLabel"),
+        colSpan: 1,
+      },
+      {
+        type: "text",
         name: "dailyRate",
         placeholder: t("editRates.dailyRateLabel"),
+        colSpan: 1,
+      },
+      {
+        type: "text",
+        name: "weeklyRate",
+        placeholder: t("editRates.weeklyRateLabel"),
         colSpan: 1,
       },
       {
@@ -60,8 +76,10 @@ export function EditDefaultRateDialog({
 
   const defaultValues = useMemo<EditDefaultRateFormValues>(
     () => ({
-      dailyRate: vehicle?.dailyRate != null ? String(vehicle.dailyRate) : "",
-      monthlyRate: vehicle?.monthlyRate != null ? String(vehicle.monthlyRate) : "",
+      hourlyRate: rateDefault(vehicle?.hourlyRate),
+      dailyRate: rateDefault(vehicle?.dailyRate),
+      weeklyRate: rateDefault(vehicle?.weeklyRate),
+      monthlyRate: rateDefault(vehicle?.monthlyRate),
     }),
     [vehicle],
   );

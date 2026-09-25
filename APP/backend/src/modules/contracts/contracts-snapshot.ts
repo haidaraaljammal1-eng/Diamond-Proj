@@ -29,6 +29,8 @@ export interface ContractSnapshot {
     agreedAmount: number;
     priceType: string;
     rentalDays: number;
+    durationValue: number;
+    durationUnit: string;
     startAt: string | null;
     endAt: string | null;
     currency: string;
@@ -61,6 +63,8 @@ type CommercialSnapInput = {
   agreedAmount: number;
   priceType: string;
   rentalDays: number;
+  durationValue: number;
+  durationUnit: string;
   startAt: Date | null;
   endAt: Date | null;
   currency?: string;
@@ -106,6 +110,8 @@ export function buildContractSnapshot(input: {
       agreedAmount: input.commercial.agreedAmount,
       priceType: input.commercial.priceType,
       rentalDays: input.commercial.rentalDays,
+      durationValue: input.commercial.durationValue,
+      durationUnit: input.commercial.durationUnit,
       startAt: input.commercial.startAt?.toISOString() ?? null,
       endAt: input.commercial.endAt?.toISOString() ?? null,
       currency: input.commercial.currency ?? CONTRACT_CURRENCY,

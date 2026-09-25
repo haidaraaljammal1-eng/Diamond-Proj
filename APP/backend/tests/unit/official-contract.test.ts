@@ -28,6 +28,8 @@ function row(overrides: Partial<Record<keyof OfficialContractRow, unknown>> = {}
     assignedEmployeeUserId: null,
     priceType: "DAILY",
     rentalDays: 3,
+    durationValue: 3,
+    durationUnit: "DAY",
     agreedAmount: 900,
           collectionMode: "ELECTRONIC",
     currency: "AED",
@@ -98,10 +100,10 @@ test("source mapping: agreement, vehicle, passport hirer, license", () => {
   const { view, provenance } = build(row());
   assert.equal(view.contract.agreementNumber, "DE-2026-000391");
   assert.equal(view.vehicle.vehicleType, "Nissan Patrol");
-  assert.equal(view.vehicle.plateNumber, "Q 12345");
+  assert.equal(view.vehicle.plateNumber, "12345");
   assert.equal(view.vehicle.yearMade, 2025);
   assert.equal(view.vehicle.color, "White");
-  assert.equal(view.vehicle.plateCode, null, "plate code is never parsed from plate text");
+  assert.equal(view.vehicle.plateCode, "Q");
   assert.equal(view.vehicle.notes, null);
   assert.equal(view.hirer.name, "TEST PERSON");
   assert.equal(view.hirer.nationality, "TEST");
@@ -117,6 +119,23 @@ test("source mapping: agreement, vehicle, passport hirer, license", () => {
   assert.equal(provenance["hirer.name"], "PASSPORT_OCR");
   assert.equal(provenance["hirer.driverLicenseNumber"], "DRIVER_LICENSE_OCR");
   assert.equal(view.contract.templateVersion, "DIAMOND_CONTRACT_V1");
+});
+
+test("source mapping: splits Dubai combined vehicle plate into code and number", () => {
+  const { view } = build(row({
+    vehicle: {
+      id: 8,
+      vehicleName: "Toyota Camry",
+      plateNumber: "DUBAI W 44503",
+      modelYear: 2024,
+      color: "Black",
+      dailyRate: 200,
+      monthlyRate: 4000,
+      model: null,
+    },
+  }));
+  assert.equal(view.vehicle.plateCode, "W");
+  assert.equal(view.vehicle.plateNumber, "44503");
 });
 
 test("price policy: no rental price, rate amount, rate basis or vehicle rates in the official view", () => {
@@ -141,13 +160,15 @@ test("price policy: no rental price, rate amount, rate basis or vehicle rates in
   }
 });
 
-test("rental: server days and period; no invented km", () => {
+test("rental: server duration and period; no invented km", () => {
   const { view, provenance } = build(row());
-  assert.equal(view.rental.numberOfDays, 3);
+  assert.equal(view.rental.durationValue, 3);
+  assert.equal(view.rental.durationUnit, "DAY");
   assert.equal(view.rental.periodConsistent, true);
   assert.equal(view.rental.includedKmPerDay, null);
   assert.equal(view.rental.extraKmRate, null);
   assert.equal(provenance["rental.includedKmPerDay"], "NONE");
+  assert.equal(provenance["rental.duration"], "RENTAL_AGREEMENT");
   assert.equal(view.rental.plannedStartAt?.toISOString(), start.toISOString());
 
   const mismatched = build(row({ endAt: new Date(start.getTime() + 5 * 86_400_000) })).view;
@@ -252,7 +273,7 @@ test("patch schema rejects system-locked fields (mass assignment)", () => {
     { agreementNumber: "X" },
     { vehicleType: "X" },
     { rateAmount: 1 },
-    { numberOfDays: 999 },
+    { durationValue: 999 },
     { plannedStartAt: "2026-01-01" },
     { vehicleOut: { mileage: 1 } },
     { driverLicenseNumber: "X" },

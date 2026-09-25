@@ -85,6 +85,7 @@ model User {
   contractCarOutsPerformed             ContractCarOut[]              @relation("ContractCarOutPerformedBy")
   contractCarInsPerformed              ContractCarIn[]               @relation("ContractCarInPerformedBy")
   contractReconciliationsApproved      ContractReconciliation[]      @relation("ContractReconciliationApprovedBy")
+  contractReconciliationsFinalized     ContractReconciliation[]      @relation("ContractReconciliationFinalizedBy")
   contractReconciliationLinesConfirmed ContractReconciliationLine[]  @relation("ContractReconciliationLineConfirmedBy")
   roadLiabilityChargesConfirmed        RoadLiabilityCustomerCharge[] @relation("RoadLiabilityCustomerChargeConfirmedBy")
   roadLiabilityManualSelected          RoadLiabilityCustomerCharge[] @relation("RoadLiabilityManualSelectedBy")

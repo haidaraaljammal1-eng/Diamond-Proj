@@ -24,7 +24,11 @@ import {
   ListContractsQuerySchema,
   PaymentCheckoutSchema,
   ReconcileSchema,
+  ReconciliationLineInputSchema,
+  ReconciliationLineParam,
+  ReconciliationLinkIssuedSchema,
   ReconciliationRoadLiabilitiesSchema,
+  FullReconciliationReadSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
 import { ContractTarsResponseSchema } from "src/modules/integrations/tars/tars.schema";
@@ -596,6 +600,189 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       const data = await contracts.reconcile(request.params.id, request.body, actor.id);
       request.setAudit({
         action: "contracts.reconcile",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.get(
+    "/:id/reconciliation",
+    {
+      schema: {
+        summary: "Load full final reconciliation read model for staff",
+        operationId: "getContractFullReconciliation",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(FullReconciliationReadSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      return { data: await contracts.getFullReconciliation(request.params.id) };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/lines",
+    {
+      schema: {
+        summary: "Add a manual reconciliation line before finalization",
+        operationId: "addContractReconciliationLine",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        body: ReconciliationLineInputSchema,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.addReconciliationLine(request.params.id, request.body, actor.id);
+      request.setAudit({
+        action: "contracts.reconciliation_line_add",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.patch(
+    "/:id/reconciliation/lines/:lineId",
+    {
+      schema: {
+        summary: "Update a manual reconciliation line before finalization",
+        operationId: "updateContractReconciliationLine",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ReconciliationLineParam,
+        body: ReconciliationLineInputSchema,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.updateReconciliationLine(
+        request.params.id,
+        request.params.lineId,
+        request.body,
+        actor.id,
+      );
+      request.setAudit({
+        action: "contracts.reconciliation_line_update",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.delete(
+    "/:id/reconciliation/lines/:lineId",
+    {
+      schema: {
+        summary: "Delete a manual reconciliation line before finalization",
+        operationId: "deleteContractReconciliationLine",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ReconciliationLineParam,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.deleteReconciliationLine(
+        request.params.id,
+        request.params.lineId,
+        actor.id,
+      );
+      request.setAudit({
+        action: "contracts.reconciliation_line_delete",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/finalize",
+    {
+      schema: {
+        summary: "Finalize reconciliation; zero balance closes the contract",
+        operationId: "finalizeContractReconciliation",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.finalizeReconciliation(
+        request.params.id,
+        actor.id,
+        typeof key === "string" ? key : undefined,
+      );
+      request.setAudit({
+        action: "contracts.reconciliation_finalize",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/cash/settle",
+    {
+      schema: {
+        summary: "Confirm cash collection for a finalized reconciliation balance",
+        operationId: "settleContractReconciliationCash",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.settleReconciliationCash(
+        request.params.id,
+        actor.id,
+        typeof key === "string" ? key : undefined,
+      );
+      request.setAudit({
+        action: "contracts.reconciliation_cash_settle",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/reconciliation/link",
+    {
+      schema: {
+        summary: "Finalize reconciliation and issue a public payment link",
+        operationId: "generateContractReconciliationLink",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RECONCILE],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ReconciliationLinkIssuedSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.generateReconciliationLink(request.params.id, actor.id);
+      request.setAudit({
+        action: "contracts.reconciliation_link",
         entityType: "contract",
         entityId: request.params.id,
       });

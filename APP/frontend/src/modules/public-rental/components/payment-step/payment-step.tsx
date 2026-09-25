@@ -10,7 +10,8 @@ import type {
   ContractPaymentStatus,
   PublicRentalContext,
 } from "../../types/public-rental.types";
-import { formatRentalAmount, formatRentalDays } from "../../utils/format-money";
+import { formatRentalAmount } from "../../utils/format-money";
+import { formatRentalDuration } from "@/modules/contracts/utils/format-rental-duration";
 import {
   canRetryPayment,
   canStartCardPayment,
@@ -59,11 +60,18 @@ export function PaymentStep({
   onRefreshStatus,
 }: PaymentStepProps) {
   const t = useTranslations("PublicRental.payment");
+  const td = useTranslations("Contracts.duration");
   const [saveForFutureUse, setSaveForFutureUse] = useState(false);
   const status = paymentStatus ?? context.payment.status;
   const panel = paymentPanelFromStatus(context.payment.providerAvailable || simulationEnabled, status);
   const amount = formatRentalAmount(context.rental.agreedAmount, context.rental.currency);
-  const duration = formatRentalDays(context.rental.rentalDays, t("days"));
+  const duration = formatRentalDuration(
+    {
+      durationValue: context.rental.durationValue,
+      durationUnit: context.rental.durationUnit,
+    },
+    (key, values) => td(key, values),
+  );
   const canPay = canStartCardPayment({
     providerAvailable: context.payment.providerAvailable,
     paymentStatus: status,

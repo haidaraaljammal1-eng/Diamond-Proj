@@ -111,7 +111,10 @@ export interface OfficialContractView {
   rental: {
     plannedStartAt: string | null;
     plannedEndAt: string | null;
-    numberOfDays: number;
+    durationValue: number;
+    durationUnit: "HOUR" | "DAY" | "WEEK" | "MONTH";
+    /** Legacy frozen snapshots only — never used for new contracts. */
+    numberOfDays?: number;
     periodConsistent: boolean | null;
     includedKmPerDay: number | null;
     extraKmRate: number | null;

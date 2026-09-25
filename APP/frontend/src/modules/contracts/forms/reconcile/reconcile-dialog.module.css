@@ -1,69 +1,1073 @@
+/* Final Reconciliation — enterprise operations layout (Operate mode) */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 18px 22px 0;
+}
+
+.scrollMain {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-block-end: 16px;
+  scroll-behavior: smooth;
+}
+
 .error {
   margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
   font-size: 12px;
-  color: var(--diamond-warn);
+  color: var(--diamond-danger);
+  background: color-mix(in srgb, var(--diamond-danger) 8%, transparent);
 }
 
-.hint {
-  margin: 0 0 12px;
+.muted {
+  margin: 0;
   font-size: 12px;
   color: var(--diamond-muted);
-  line-height: 1.5;
 }
 
-.categories {
+.historicalNote {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--diamond-muted);
+  background: var(--diamond-onyx2);
+  border: 1px solid var(--diamond-hair);
+}
+
+/* ── Header ── */
+
+.header {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-block-end: 14px;
+  padding-block-end: 14px;
+  border-block-end: 1px solid var(--diamond-hair);
+}
+
+.headerMain {
+  min-width: 0;
+}
+
+.dialogTitle {
+  margin: 0 0 6px;
+  font-family: var(--diamond-font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.headerMetaLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin: 0 0 14px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--diamond-muted);
+}
+
+.headerMetaLine span[dir="ltr"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.headerStatus {
+  flex-shrink: 0;
+}
+
+/* ── Section navigation ── */
+
+.sectionNav {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-block-end: 20px;
+  padding-block: 8px;
+  overflow-x: auto;
+  background: linear-gradient(
+    180deg,
+    var(--diamond-onyx) 70%,
+    color-mix(in srgb, var(--diamond-onyx) 88%, transparent)
+  );
+  border-block-end: 1px solid var(--diamond-hair);
+  scrollbar-width: thin;
+}
+
+.sectionNavLink {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-family: var(--diamond-font-body);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--diamond-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: var(--diamond-transition);
+}
+
+.sectionNavLink:hover {
+  color: var(--diamond-gold-hi);
+  background: color-mix(in srgb, var(--diamond-gold) 8%, transparent);
+}
+
+.sectionNavLink:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
+/* ── Sections ── */
+
+.section {
+  margin-block-end: 28px;
+  scroll-margin-top: 52px;
+}
+
+.section:last-child {
+  margin-block-end: 8px;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block-end: 12px;
+}
+
+.sectionHead .sectionTitle {
+  margin: 0;
+}
+
+/* ── Image comparison grid ── */
+
+.angleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.categories li {
-  padding: 4px 9px;
-  border: 1px solid rgba(201, 161, 92, 0.28);
-  border-radius: 999px;
-  color: var(--diamond-muted);
-  font-size: 11px;
-  letter-spacing: 0.02em;
+.angleCell {
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--diamond-onyx2);
+  border: 1px solid var(--diamond-hair);
 }
 
-.categoryEmphasis {
-  border-color: rgba(201, 161, 92, 0.7) !important;
-  background: rgba(201, 161, 92, 0.12);
-  color: var(--diamond-champagne) !important;
+.pairAngle {
+  margin: 0 0 8px;
+  font-size: 11.5px;
   font-weight: 600;
+  color: var(--diamond-champagne);
 }
 
-.compare {
-  margin-bottom: 12px;
+/* OUT left, IN right — explicit LTR grid regardless of page direction */
+.pairCompare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  direction: ltr;
+}
+
+.pairCompareHeader {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-block-end: 6px;
+  direction: ltr;
+}
+
+.stageLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--diamond-muted);
+}
+
+.stageLabelOut {
+  composes: stageLabel;
+  padding-inline: 4px 0;
+}
+
+.stageLabelIn {
+  composes: stageLabel;
+  padding-inline: 4px 0;
+}
+
+.thumbButton,
+.thumbMissing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 88px;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid var(--diamond-hair);
+  background: var(--diamond-onyx);
+  transition: border-color var(--diamond-transition), box-shadow var(--diamond-transition);
+}
+
+.thumbButton {
+  cursor: pointer;
+  text-align: start;
+}
+
+.thumbButton:hover {
+  border-color: color-mix(in srgb, var(--diamond-gold) 45%, transparent);
+  box-shadow: var(--diamond-shadow-near);
+}
+
+.thumbButton:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
+.thumbButtonOut {
+  composes: thumbButton;
+  background: color-mix(in srgb, var(--diamond-gold) 5%, var(--diamond-onyx));
+}
+
+.thumbButtonIn {
+  composes: thumbButton;
+  background: color-mix(in srgb, var(--diamond-ok) 4%, var(--diamond-onyx));
+}
+
+.thumbMissing {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 11px;
+  color: var(--diamond-dim);
+}
+
+.thumbMissing p {
+  margin: 0;
+  font-size: 10.5px;
+}
+
+.thumbImage,
+.previewImage {
+  width: 100%;
+  height: auto;
+  max-height: 96px;
+  object-fit: contain;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--diamond-champagne) 4%, transparent);
+}
+
+.previewImage {
+  max-height: min(70vh, 720px);
+}
+
+.previewMeta,
+.previewNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.previewMeta {
+  margin-block-end: 10px;
   font-size: 12px;
   color: var(--diamond-muted);
 }
 
-.line {
-  display: grid;
-  grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.4fr) minmax(80px, 0.6fr) minmax(90px, 0.8fr);
-  gap: 8px;
-  margin-bottom: 8px;
+.previewNav {
+  margin-block-start: 12px;
 }
 
-.totals {
-  margin: 12px 0;
+.aiSlot {
+  display: none;
+}
+
+/* ── Custody comparison table ── */
+
+.metricTable {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
   font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricColLabel {
+  width: 22%;
+}
+
+.metricColNum {
+  width: calc(78% / 3);
+}
+
+.metricTable :is(th, td).numCol {
+  padding: 8px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.metricTable .metricValue {
+  display: inline-block;
+  min-width: 2ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricDifferenceHighlight {
+  color: var(--diamond-danger);
+}
+
+.returnChargeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-end: 12px;
+}
+
+.metricTable thead th {
+  padding: 6px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--diamond-dim);
+  border-block-end: 1px solid var(--diamond-hair);
+  vertical-align: bottom;
+}
+
+.metricTable thead th.labelCol {
+  text-align: start;
+}
+
+.metricTable tbody th[scope="row"] {
+  padding: 8px 10px;
+  font-weight: 500;
+  text-align: start;
+  vertical-align: middle;
+  color: var(--diamond-ivory);
+}
+
+.metricTable tbody td {
   color: var(--diamond-champagne);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  margin-top: 16px;
+.metricTable tbody td:last-child {
+  font-weight: 600;
+  color: var(--diamond-gold-hi);
 }
 
-@media (max-width: 560px) {
-  .line {
-    grid-template-columns: minmax(0, 1fr);
+.metricTable tbody tr + tr th,
+.metricTable tbody tr + tr td {
+  border-block-start: 1px solid var(--diamond-hair);
+}
+
+/* ── Road liabilities table ── */
+
+.reviewBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-block-end: 14px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--diamond-warn) 28%, transparent);
+  background: color-mix(in srgb, var(--diamond-warn) 8%, var(--diamond-onyx2));
+}
+
+.reviewBanner strong {
+  display: block;
+  margin-block-end: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.reviewBanner p {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--diamond-muted);
+}
+
+.reviewBannerIcon {
+  flex-shrink: 0;
+  margin-block-start: 2px;
+  color: var(--diamond-warn);
+}
+
+.groupLabel {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--diamond-dim);
+}
+
+.liabilityTableWrap {
+  overflow-x: auto;
+  margin-block-end: 16px;
+}
+
+.liabilityTable {
+  width: 100%;
+  min-width: 520px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.liabilityColType {
+  width: 18%;
+}
+
+.liabilityColDate {
+  width: 14%;
+}
+
+.liabilityColReference {
+  width: 18%;
+}
+
+.liabilityColAmount {
+  width: 12%;
+}
+
+.liabilityColActions {
+  width: 14%;
+}
+
+.liabilityTable thead th {
+  padding: 6px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: start;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--diamond-dim);
+  border-block-end: 1px solid var(--diamond-hair);
+  vertical-align: bottom;
+}
+
+.liabilityTable thead th.liabilityAmount {
+  text-align: center;
+}
+
+.liabilityTable tbody td {
+  padding: 8px;
+  vertical-align: middle;
+  color: var(--diamond-ivory);
+  border-block-end: 1px solid var(--diamond-hair);
+}
+
+.liabilityTable .liabilityNumeric {
+  display: inline-block;
+  min-width: 2ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.liabilityTable tbody tr:last-child td {
+  border-block-end: none;
+}
+
+.liabilityType {
+  font-weight: 500;
+  color: var(--diamond-champagne);
+}
+
+.needsReviewChip {
+  display: inline-block;
+  margin-inline-start: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--diamond-warn);
+}
+
+.liabilityAmount {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.liabilityActions {
+  text-align: end;
+  white-space: nowrap;
+}
+
+/* ── Damage list ── */
+
+.damageList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.damageItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--diamond-onyx2);
+}
+
+.damageItem + .damageItem {
+  border-block-start: 1px solid var(--diamond-hair);
+}
+
+.damageMain {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.damageMain strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--diamond-champagne);
+}
+
+.damageAmount {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-gold-hi);
+}
+
+.damageActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  align-items: center;
+}
+
+.iconAction {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  color: var(--diamond-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: var(--diamond-transition);
+}
+
+.iconAction:hover {
+  color: var(--diamond-gold-hi);
+  background: color-mix(in srgb, var(--diamond-gold) 10%, transparent);
+}
+
+.iconAction:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
+.iconActionDanger:hover {
+  color: var(--diamond-danger);
+  background: color-mix(in srgb, var(--diamond-danger) 8%, transparent);
+}
+
+.damageFormFields {
+  display: grid;
+  gap: 12px;
+}
+
+.damageFormActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-block-start: 4px;
+}
+
+/* ── Financial summary ── */
+
+.summaryList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: var(--diamond-onyx2);
+  border: 1px solid var(--diamond-hair);
+}
+
+.summaryList div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 7px;
+  font-size: 12.5px;
+}
+
+.summaryList div + div {
+  border-block-start: 1px solid var(--diamond-hair);
+}
+
+.summaryList dt {
+  margin: 0;
+  font-weight: 400;
+  color: var(--diamond-muted);
+}
+
+.summaryList dd {
+  margin: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-champagne);
+}
+
+.summaryDivider {
+  height: 1px;
+  margin: 4px 0 8px;
+  background: var(--diamond-line);
+}
+
+.finalAmountRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 10px 2px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.finalAmountValue {
+  font-family: var(--diamond-font-display);
+  font-size: 20px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-gold-hi);
+}
+
+.finalAmountCompact {
+  composes: finalAmountRow;
+  padding: 0;
+  font-size: 12px;
+}
+
+.finalAmountCompact .finalAmountValue {
+  font-size: 16px;
+}
+
+/* ── Sticky action bar ── */
+
+.actionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-block-start: auto;
+  padding: 14px 0 18px;
+  border-block-start: 1px solid var(--diamond-line);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--diamond-onyx) 92%, transparent),
+    var(--diamond-onyx) 24%
+  );
+}
+
+.actionBarMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.actionBarLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--diamond-dim);
+}
+
+.actionBarAmount {
+  margin: 0;
+  font-family: var(--diamond-font-display);
+  font-size: 22px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-gold-hi);
+}
+
+.actionBarNote {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--diamond-muted);
+}
+
+.actionBarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.linkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.linkDisplay {
+  flex: 1;
+  min-width: 160px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--diamond-hair);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-muted);
+  background: var(--diamond-onyx2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Collection method dialogs ── */
+
+.methodOptions {
+  display: grid;
+  gap: 10px;
+}
+
+.methodOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 6px;
+  text-align: start;
+  color: inherit;
+  background: var(--diamond-onyx2);
+  cursor: pointer;
+  transition: var(--diamond-transition);
+}
+
+.methodOption:hover {
+  border-color: color-mix(in srgb, var(--diamond-gold) 40%, transparent);
+  background: color-mix(in srgb, var(--diamond-gold) 6%, var(--diamond-onyx2));
+}
+
+.methodOption:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
+.methodOptionIcon {
+  flex-shrink: 0;
+  margin-block-start: 2px;
+  color: var(--diamond-gold-hi);
+}
+
+.methodOptionText strong {
+  display: block;
+  margin-block-end: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.methodOptionText span {
+  display: block;
+  font-size: 12px;
+  color: var(--diamond-muted);
+}
+
+.cashConfirmBody {
+  display: grid;
+  gap: 14px;
+}
+
+.cashConfirmNote {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--diamond-muted);
+  background: var(--diamond-onyx2);
+}
+
+.linkResultBody {
+  display: grid;
+  gap: 14px;
+}
+
+.linkResultSummary {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--diamond-onyx2);
+  border: 1px solid var(--diamond-hair);
+}
+
+.linkResultSummaryLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--diamond-dim);
+}
+
+.linkResultSummaryAmount {
+  margin: 0;
+  font-family: var(--diamond-font-display);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-gold-hi);
+}
+
+.linkResultField {
+  display: grid;
+  gap: 6px;
+}
+
+.linkResultFieldLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--diamond-dim);
+}
+
+.linkResultNote {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--diamond-muted);
+  background: color-mix(in srgb, var(--diamond-warn) 6%, var(--diamond-onyx2));
+  border: 1px solid color-mix(in srgb, var(--diamond-warn) 18%, transparent);
+}
+
+.awaitingPaymentBar {
+  composes: actionBar;
+}
+
+.awaitingPaymentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px 20px;
+  align-items: center;
+  width: 100%;
+}
+
+.awaitingPaymentLinkBlock {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.awaitingPaymentLinkLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--diamond-dim);
+}
+
+.completionBar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 20px;
+  align-items: center;
+  margin-block-start: auto;
+  padding: 14px 0 18px;
+  border-block-start: 1px solid var(--diamond-line);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--diamond-ok) 4%, transparent),
+    transparent 72%
+  );
+}
+
+.completionBarMain {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.completionIcon {
+  flex-shrink: 0;
+  margin-block-start: 2px;
+  color: var(--diamond-ok);
+}
+
+.completionTitle {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.completionNote {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--diamond-muted);
+}
+
+.completionAmount {
+  margin: 0;
+  font-family: var(--diamond-font-display);
+  font-size: 20px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-gold-hi);
+  white-space: nowrap;
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-block-start: 4px;
+}
+
+/* ── Loading skeleton ── */
+
+.skeletonPulse {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--diamond-hair) 80%, transparent) 25%,
+    color-mix(in srgb, var(--diamond-gold) 12%, transparent) 50%,
+    color-mix(in srgb, var(--diamond-hair) 80%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonHeader {
+  composes: skeletonPulse;
+  height: 52px;
+  margin-block-end: 16px;
+}
+
+.skeletonNav {
+  composes: skeletonPulse;
+  height: 36px;
+  margin-block-end: 20px;
+}
+
+.skeletonBlock {
+  composes: skeletonPulse;
+  height: 120px;
+  margin-block-end: 16px;
+}
+
+.skeletonBlockTall {
+  composes: skeletonPulse;
+  height: 200px;
+  margin-block-end: 16px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonPulse {
+    animation: none;
+  }
+
+  .scrollMain {
+    scroll-behavior: auto;
+  }
+}
+
+@media (min-width: 1100px) {
+  .angleGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .shell {
+    padding: 14px 16px 0;
+  }
+
+  .angleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pairCompare,
+  .pairCompareHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .actionBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actionBarActions {
+    justify-content: stretch;
+  }
+
+  .actionBarActions > * {
+    flex: 1;
+  }
+
+  .awaitingPaymentGrid,
+  .completionBar {
+    grid-template-columns: 1fr;
+  }
+
+  .completionAmount {
+    justify-self: start;
   }
 }

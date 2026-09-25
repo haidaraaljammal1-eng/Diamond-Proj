@@ -4,6 +4,7 @@ const LINK_PATH: Record<ContractLinkType, string> = {
   RENTAL: "rental",
   RETURN: "return",
   RENEWAL: "renew",
+  RECONCILIATION: "reconciliation",
 };
 
 /**

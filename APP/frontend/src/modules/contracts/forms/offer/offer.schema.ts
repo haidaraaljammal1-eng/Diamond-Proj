@@ -9,6 +9,7 @@ export const offerFormSchema = z.object({
 export type OfferFormValues = z.infer<typeof offerFormSchema>;
 
 export const PRICE_TYPES: readonly ContractPriceType[] = [
+  "HOURLY",
   "DAILY",
   "WEEKLY",
   "MONTHLY",
@@ -16,6 +17,7 @@ export const PRICE_TYPES: readonly ContractPriceType[] = [
 ];
 
 export function defaultDaysForPriceType(priceType: ContractPriceType): number {
+  if (priceType === "HOURLY") return 1;
   if (priceType === "DAILY") return 1;
   if (priceType === "WEEKLY") return 7;
   if (priceType === "MONTHLY") return 30;

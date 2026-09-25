@@ -179,6 +179,21 @@ describe("getContractActions", () => {
     assert.equal(actions.showClose, true);
   });
 
+  it("REVIEW with settled reconciliation hides reconcile", () => {
+    const actions = actionsFor("REVIEW", {
+      canGenerateRentalLink: false,
+      canConfirmPayment: false,
+      canCarOut: false,
+      canGenerateReturnLink: false,
+      canCarIn: false,
+      canReconcile: false,
+      canClose: true,
+      canRenew: false,
+    });
+    assert.equal(actions.showReconcile, false);
+    assert.equal(actions.showClose, true);
+  });
+
   it("CLOSED is read-only", () => {
     const actions = actionsFor("CLOSED");
     assert.deepEqual(actions, {

@@ -22,6 +22,8 @@ import {
   PublicPaymentContextSchema,
   PublicPaymentStartBodySchema,
   PublicPaymentStatusSchema,
+  PublicReconciliationReadSchema,
+  PaymentCheckoutSchema,
   PublicRentalContextSchema,
   TarsOtpPublicStateSchema,
   TarsOtpVerifyBodySchema,
@@ -132,6 +134,42 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.getPublicIdentityDraft(request.params.token) }),
+  );
+
+  app.get(
+    "/reconciliation/:token",
+    {
+      schema: {
+        summary: "Load sanitized public reconciliation breakdown by token",
+        operationId: "getPublicReconciliation",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: dataResponse(PublicReconciliationReadSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({ data: await contracts.getPublicReconciliation(request.params.token) }),
+  );
+
+  app.post(
+    "/reconciliation/:token/payment",
+    {
+      schema: {
+        summary: "Start Stripe checkout for a finalized reconciliation balance",
+        operationId: "startPublicReconciliationPayment",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        body: PublicPaymentStartBodySchema.optional(),
+        response: { 200: dataResponse(PaymentCheckoutSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => ({
+      data: await contracts.startReconciliationPaymentPublic(
+        request.params.token,
+        publicLocaleFromAcceptLanguage(request.headers["accept-language"]),
+      ),
+    }),
   );
 
   app.get(

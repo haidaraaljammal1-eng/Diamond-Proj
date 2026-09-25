@@ -113,6 +113,8 @@ function toVehiclePublic(row: VehicleCardRow): VehiclePublic {
     color: row.color,
     plateNumber: row.plateNumber,
     dailyRate: row.dailyRate,
+    hourlyRate: row.hourlyRate,
+    weeklyRate: row.weeklyRate,
     monthlyRate: row.monthlyRate,
     operationalStatus: operationalStatusToDto(row.operationalStatus),
     externalId: row.externalId,
@@ -345,7 +347,9 @@ export function createVehiclesService(fastify: FastifyInstance) {
           modelYear: input.modelYear ?? null,
           color: input.color ?? null,
           plateNumber,
+          hourlyRate: input.hourlyRate ?? null,
           dailyRate: input.dailyRate ?? null,
+          weeklyRate: input.weeklyRate ?? null,
           monthlyRate: input.monthlyRate ?? null,
           operationalStatus: "AVAILABLE",
           externalId,
@@ -393,7 +397,9 @@ export function createVehiclesService(fastify: FastifyInstance) {
         data.plateNumber = null;
       }
     }
+    if (input.hourlyRate !== undefined) data.hourlyRate = input.hourlyRate;
     if (input.dailyRate !== undefined) data.dailyRate = input.dailyRate;
+    if (input.weeklyRate !== undefined) data.weeklyRate = input.weeklyRate;
     if (input.monthlyRate !== undefined) data.monthlyRate = input.monthlyRate;
     if (input.operationalStatus !== undefined) {
       const requested = operationalStatusFromDto(input.operationalStatus);

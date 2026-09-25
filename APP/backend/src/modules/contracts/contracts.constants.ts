@@ -5,6 +5,7 @@ export const CONTRACT_LINK_TTL_SECONDS = {
   RENTAL: 72 * 60 * 60,
   RETURN: 24 * 60 * 60,
   RENEWAL: 48 * 60 * 60,
+  RECONCILIATION: 72 * 60 * 60,
 } as const;
 
 export const CONTRACT_CURRENCY = "AED";

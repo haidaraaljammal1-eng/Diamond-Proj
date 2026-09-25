@@ -97,6 +97,8 @@ export async function seedReviewContract(
       createdByUserId: input.adminUserId,
       priceType: "DAILY",
       rentalDays: 3,
+      durationValue: 3,
+      durationUnit: "DAY",
       agreedAmount: 1500,
           collectionMode: "ELECTRONIC",
       carOut: {
@@ -154,9 +156,18 @@ export async function approveReconciliation570(
   assert.equal(rec.statusCode, 200, rec.body);
   assert.equal(rec.json().data.reconciliation.chargesTotal, 570);
   assert.equal(rec.json().data.reconciliation.finalAmount, 570);
-  assert.ok(rec.json().data.reconciliation.approvedAt);
-  assert.equal(rec.json().data.reconciliation.settled, false);
-  return rec.json().data;
+  assert.equal(rec.json().data.reconciliation.approvedAt, null);
+
+  const fin = await app.inject({
+    method: "POST",
+    url: `/contracts/${contractId}/reconciliation/finalize`,
+    headers: auth(token),
+  });
+  assert.equal(fin.statusCode, 200, fin.body);
+  assert.ok(fin.json().data.reconciliation.finalizedAt);
+  assert.ok(fin.json().data.reconciliation.approvedAt);
+  assert.equal(fin.json().data.reconciliation.settled, false);
+  return fin.json().data;
 }
 
 export function installPaymentProvider(run: string) {

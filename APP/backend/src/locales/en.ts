@@ -262,6 +262,8 @@ export const en: Record<string, string> = {
   "Payment configuration is invalid": "Payment configuration is invalid",
   "Electronic payment is not allowed": "Electronic payment is not allowed",
   "A payment attempt is already in progress": "A payment attempt is already in progress",
+  "Cash collection is blocked while an electronic checkout can still be paid":
+    "Cash collection is blocked while an electronic checkout can still be paid",
   "Payment attempt was not found": "Payment attempt was not found",
   "Payment status token is invalid": "Payment status token is invalid",
   "Payment status token has expired": "Payment status token has expired",

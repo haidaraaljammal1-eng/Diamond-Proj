@@ -47,6 +47,7 @@ export function createFakePaymentProvider(run: string) {
   let n = 0;
   let eventSeq = 0;
   let getPaymentStatusCalls = 0;
+  let expireBlocked = false;
   let offSessionCallCount = 0;
   let checkoutCallCount = 0;
   type OffSessionBehavior =
@@ -135,9 +136,27 @@ export function createFakePaymentProvider(run: string) {
       const input = sessions.get(ref);
       return {
         status: statuses.get(ref) ?? "UNKNOWN",
+        providerStatus: statuses.get(ref),
         amountMinor: input ? input.amount * 100 : undefined,
         currency: input?.currency,
       };
+    },
+    async expireCheckoutSession(ref: string) {
+      const status = statuses.get(ref) ?? "UNKNOWN";
+      if (status === "CONFIRMED") {
+        const input = sessions.get(ref);
+        return {
+          status: "CONFIRMED" as const,
+          amountMinor: input ? input.amount * 100 : undefined,
+          currency: input?.currency,
+        };
+      }
+      if (status === "EXPIRED" || status === "CANCELLED" || status === "FAILED") {
+        return { status: "EXPIRED" as const };
+      }
+      if (expireBlocked || status === "UNKNOWN") return { status: "NOT_EXPIRABLE" as const };
+      statuses.set(ref, "EXPIRED");
+      return { status: "EXPIRED" as const };
     },
     async getPaymentIntentStatus(ref: string) {
       return { status: statuses.get(ref) ?? "UNKNOWN", providerReference: ref };
@@ -324,6 +343,9 @@ export function createFakePaymentProvider(run: string) {
     expire(ref?: string) {
       const key = ref ?? provider.lastRef;
       if (key) statuses.set(key, "EXPIRED");
+    },
+    blockCheckoutExpire(blocked = true) {
+      expireBlocked = blocked;
     },
     sessionFor(ref: string) {
       return sessions.get(ref);

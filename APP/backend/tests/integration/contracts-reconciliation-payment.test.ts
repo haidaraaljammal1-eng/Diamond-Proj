@@ -168,6 +168,9 @@ if (!RUN) {
       const road = await prisma.roadLiability.findUniqueOrThrow({ where: { id: liability.id } });
       assert.equal(road.collectionStatus, "SETTLED");
 
+      const closedContract = await prisma.contract.findUniqueOrThrow({ where: { id: contract.id } });
+      assert.equal(closedContract.status, "CLOSED");
+
       const vehicle = await app.inject({
         method: "GET",
         url: `/vehicles/${vehicleId}`,
@@ -176,7 +179,24 @@ if (!RUN) {
       assert.equal(vehicle.json().data.operationalStatus, "available");
     });
 
-    test("close succeeds after reconciliation settlement", async () => {
+    test("successful webhook closes contract exactly once", async () => {
+      const { contract } = await setup570Contract();
+      const started = await startReconciliationPayment(app, token, contract.id);
+      await settlePayment(app, payments, started.payment.id);
+
+      const row = await prisma.contract.findUniqueOrThrow({ where: { id: contract.id } });
+      assert.equal(row.status, "CLOSED");
+
+      const close = await app.inject({
+        method: "POST",
+        url: `/contracts/${contract.id}/close`,
+        headers: auth(token),
+      });
+      assert.equal(close.statusCode, 200);
+      assert.equal(close.json().data.status, "CLOSED");
+    });
+
+    test("close succeeds after reconciliation settlement when already closed is idempotent", async () => {
       const { contract } = await setup570Contract();
       const started = await startReconciliationPayment(app, token, contract.id);
       await settlePayment(app, payments, started.payment.id);
@@ -235,20 +255,140 @@ if (!RUN) {
       assert.equal(rec.statusCode, 200, rec.body);
       assert.equal(rec.json().data.reconciliation.finalAmount, 0);
 
-      const pay = await app.inject({
+      const fin = await app.inject({
         method: "POST",
-        url: `/contracts/${contract.id}/reconciliation/payment`,
+        url: `/contracts/${contract.id}/reconciliation/finalize`,
         headers: auth(token),
       });
-      assert.equal(pay.statusCode, 200);
-      assert.equal(pay.json().data.noPaymentRequired, true);
+      assert.equal(fin.statusCode, 200, fin.body);
+      assert.equal(fin.json().data.status, "CLOSED");
+    });
 
-      const close = await app.inject({
-        method: "POST",
-        url: `/contracts/${contract.id}/close`,
+    test("zero draft reconciliation stays unsettled until explicit finalize", async () => {
+      seq += 1;
+      const contract = await seedReviewContract(prisma, {
+        run,
+        seq,
+        vehicleId,
+        customerId,
+        adminUserId,
+        vehicleAvailable: true,
+      });
+      const detail = await app.inject({
+        method: "GET",
+        url: `/contracts/${contract.id}/reconciliation`,
         headers: auth(token),
       });
-      assert.equal(close.statusCode, 200, close.body);
+      assert.equal(detail.statusCode, 200, detail.body);
+      assert.equal(detail.json().data.totals.finalAmount, 0);
+      assert.equal(detail.json().data.reconciliation.settled, false);
+      assert.equal(detail.json().data.reconciliation.settledAt, null);
+      assert.equal(detail.json().data.custody.fuelDifference, -4);
+    });
+
+    test("FUEL line add, edit, delete recalculates totals", async () => {
+      seq += 1;
+      const contract = await seedReviewContract(prisma, {
+        run,
+        seq,
+        vehicleId,
+        customerId,
+        adminUserId,
+        vehicleAvailable: true,
+      });
+      await app.inject({
+        method: "GET",
+        url: `/contracts/${contract.id}/reconciliation`,
+        headers: auth(token),
+      });
+      const added = await app.inject({
+        method: "POST",
+        url: `/contracts/${contract.id}/reconciliation/lines`,
+        headers: auth(token),
+        payload: { type: "FUEL", description: "Fuel charge", amount: 150 },
+      });
+      assert.equal(added.statusCode, 200, added.body);
+      const afterAdd = await app.inject({
+        method: "GET",
+        url: `/contracts/${contract.id}/reconciliation`,
+        headers: auth(token),
+      });
+      assert.equal(afterAdd.json().data.totals.fuel, 150);
+      assert.equal(afterAdd.json().data.totals.finalAmount, 150);
+      assert.equal(afterAdd.json().data.reconciliation.settled, false);
+
+      const lineId = afterAdd.json().data.lines.find((line: { type: string }) => line.type === "FUEL")?.id as string;
+      assert.ok(lineId);
+
+      const updated = await app.inject({
+        method: "PATCH",
+        url: `/contracts/${contract.id}/reconciliation/lines/${lineId}`,
+        headers: auth(token),
+        payload: { type: "FUEL", description: "Fuel charge", amount: 180 },
+      });
+      assert.equal(updated.statusCode, 200, updated.body);
+      const afterUpdate = await app.inject({
+        method: "GET",
+        url: `/contracts/${contract.id}/reconciliation`,
+        headers: auth(token),
+      });
+      assert.equal(afterUpdate.json().data.totals.fuel, 180);
+      assert.equal(afterUpdate.json().data.totals.finalAmount, 180);
+
+      const removed = await app.inject({
+        method: "DELETE",
+        url: `/contracts/${contract.id}/reconciliation/lines/${lineId}`,
+        headers: auth(token),
+      });
+      assert.equal(removed.statusCode, 200, removed.body);
+      const afterRemove = await app.inject({
+        method: "GET",
+        url: `/contracts/${contract.id}/reconciliation`,
+        headers: auth(token),
+      });
+      assert.equal(afterRemove.json().data.totals.finalAmount, 0);
+      assert.equal(afterRemove.json().data.reconciliation.settled, false);
+    });
+
+    test("explicit zero finalize creates no payment or ledger entry", async () => {
+      seq += 1;
+      const contract = await seedReviewContract(prisma, {
+        run,
+        seq,
+        vehicleId,
+        customerId,
+        adminUserId,
+        vehicleAvailable: true,
+      });
+      await app.inject({
+        method: "GET",
+        url: `/contracts/${contract.id}/reconciliation`,
+        headers: auth(token),
+      });
+      const beforePayments = await prisma.contractPayment.count({
+        where: { contractId: contract.id },
+      });
+      const beforeLedger = await prisma.financialLedgerEntry.count({
+        where: { contractId: contract.id },
+      });
+
+      const fin = await app.inject({
+        method: "POST",
+        url: `/contracts/${contract.id}/reconciliation/finalize`,
+        headers: auth(token),
+      });
+      assert.equal(fin.statusCode, 200, fin.body);
+      assert.equal(fin.json().data.status, "CLOSED");
+      assert.ok(fin.json().data.reconciliation.settledAt);
+
+      const afterPayments = await prisma.contractPayment.count({
+        where: { contractId: contract.id },
+      });
+      const afterLedger = await prisma.financialLedgerEntry.count({
+        where: { contractId: contract.id },
+      });
+      assert.equal(afterPayments, beforePayments);
+      assert.equal(afterLedger, beforeLedger);
     });
   });
 }

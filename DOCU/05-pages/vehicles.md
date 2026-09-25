@@ -147,7 +147,7 @@ authoritative active-company lookup.
 ## Edit Default Rates
 
 Pencil on **AVAILABLE** active cards only (`vehicles.manage`). `PUT /vehicles/:id`
-partial `{ dailyRate, monthlyRate }`. Backend rejects rented vehicles. This dialog
+partial `{ hourlyRate, dailyRate, weeklyRate, monthlyRate }`. Backend rejects rented vehicles. This dialog
 is deliberately rate-only and shows Company as read-only context.
 
 The operating company is **write-once**: it is chosen in Add Vehicle and can never
@@ -161,7 +161,7 @@ Trash on **AVAILABLE** active cards only. Shared confirmation `Dialog` → `POST
 
 ## Fleet ↔ Contracts bridge
 
-- **Set Rental Price** — AVAILABLE with no `currentRental` → `POST /contracts/offers` then rental link. Default rates are suggestions only.
+- **Set Rental Price** — AVAILABLE with no `currentRental` → choose `HOURLY/DAILY/WEEKLY/MONTHLY` (read-only vehicle default rate) or `CUSTOM` (days + total amount for this offer only) → `POST /contracts/offers` then rental link.
 - **Car-Out** — AVAILABLE + `currentRental.status = paid` → Car-Out dialog for `currentRental.contractId`.
 - **Return Link** — RENTED + `active` generates a real return link; `retout` opens the contract drawer; `review` opens Reconciliation.
 - **GPS** — RENTED secondary action; temporary notice until GPS domain.

@@ -57,7 +57,8 @@ function view(overrides: Partial<OfficialContractView> = {}): OfficialContractVi
     rental: {
       plannedStartAt: null,
       plannedEndAt: null,
-      numberOfDays: 7,
+      durationValue: 7,
+      durationUnit: "DAY",
       periodConsistent: true,
       includedKmPerDay: null,
       extraKmRate: null,

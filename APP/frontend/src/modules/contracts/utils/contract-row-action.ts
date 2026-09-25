@@ -35,7 +35,7 @@ export function getContractRowAction(contract: Pick<ContractListItemDto, "status
     case "RETOUT":
       return contract.actions.canCarIn ? ACTIONS.carIn : null;
     case "REVIEW":
-      return ACTIONS.reconcile;
+      return contract.actions.canReconcile ? ACTIONS.reconcile : null;
     default:
       return null;
   }

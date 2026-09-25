@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  formatRentalDurationCompact,
   getRentalDurationParts,
   shouldShowCurrentRental,
   shouldShowRentalTimer,
@@ -44,6 +45,23 @@ describe("rental-timer", () => {
     assert.equal(
       shouldShowRentalTimer("rented", { endAt: "2026-12-01T00:00:00.000Z" }),
       true,
+    );
+  });
+
+  it("formats compact duration with English units regardless of locale", () => {
+    const parts = getRentalDurationParts("2026-09-08T15:30:00.000Z", Date.parse("2026-09-06T12:00:00.000Z"));
+    assert.equal(formatRentalDurationCompact(parts), "2d · 3h · 30m");
+  });
+
+  it("omits zero days and uses English units", () => {
+    const parts = getRentalDurationParts("2026-09-06T14:24:00.000Z", Date.parse("2026-09-06T12:00:00.000Z"));
+    assert.equal(formatRentalDurationCompact(parts), "2h · 24m");
+  });
+
+  it("formats expired duration in English units", () => {
+    assert.equal(
+      formatRentalDurationCompact(getRentalDurationParts("2020-01-01T00:00:00.000Z", Date.now())),
+      "0d · 0h · 0m",
     );
   });
 });

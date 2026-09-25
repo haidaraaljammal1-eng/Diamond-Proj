@@ -9,6 +9,7 @@ import {
   ROAD_LIABILITY_CHARGE_LOCK_NS,
 } from "src/modules/contracts/contracts.constants";
 import { contractError } from "src/modules/contracts/contracts.errors";
+import { assertReconciliationLinesEditable } from "src/modules/contracts/contracts-reconciliation";
 import {
   deriveCustomerChargeAdjustment,
   mapRoadLiabilityTypeToReconLineType,
@@ -299,6 +300,9 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
         throw contractError.roadLiabilityNotChargeable();
       }
       if (destination === "RECONCILIATION" && !contract.carIn) throw contractError.carInRequired();
+      if (destination === "RECONCILIATION") {
+        assertReconciliationLinesEditable(contract.status, contract.reconciliation);
+      }
       if (destination === "POST_CLOSE_RECEIVABLE") {
         if (!contract.carOut || !contract.carIn) throw contractError.roadLiabilityNotChargeable();
         const occurred = fresh.occurredAt.getTime();

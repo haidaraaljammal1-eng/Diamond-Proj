@@ -90,6 +90,8 @@ export function toPublicRentalContext(
     },
     rental: {
       rentalDays: row.rentalDays,
+      durationValue: row.durationValue,
+      durationUnit: row.durationUnit,
       agreedAmount: row.agreedAmount,
       currency: row.currency,
       startAt: row.startAt,

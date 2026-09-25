@@ -6,12 +6,29 @@ import type {
   CreateCheckoutResult,
   CreateCardSetupInput,
   CreateCardSetupResult,
+  ExpireCheckoutSessionResult,
   PaymentProvider,
   PaymentStatusResult,
   ProviderPaymentStatus,
   WebhookVerifyResult,
 } from "src/modules/contracts/payment/payment-provider.types";
 import { recordProviderStatusLookup } from "src/modules/contracts/payment/payment-provider-instrumentation";
+
+export function mapExpiredCheckoutSession(session: Stripe.Checkout.Session): ExpireCheckoutSessionResult {
+  const status = mapSessionStatus(session);
+  if (status === "CONFIRMED") {
+    return {
+      status: "CONFIRMED",
+      providerStatus: session.status ?? undefined,
+      amountMinor: session.amount_total ?? undefined,
+      currency: session.currency?.toUpperCase(),
+    };
+  }
+  if (status === "EXPIRED" || status === "CANCELLED" || status === "FAILED") {
+    return { status: "EXPIRED" };
+  }
+  return { status: "NOT_EXPIRABLE" };
+}
 
 export function mapSessionStatus(session: Stripe.Checkout.Session): ProviderPaymentStatus {
   switch (session.status) {
@@ -339,6 +356,28 @@ export class StripePaymentProvider implements PaymentProvider {
       amountMinor: session.amount_total ?? undefined,
       currency: session.currency?.toUpperCase(),
     };
+  }
+
+  async expireCheckoutSession(providerReference: string): Promise<ExpireCheckoutSessionResult> {
+    if (!this.configured) return { status: "NOT_EXPIRABLE" };
+    try {
+      const session = await this.client().checkout.sessions.expire(providerReference);
+      return mapExpiredCheckoutSession(session);
+    } catch {
+      const current = await this.getPaymentStatus(providerReference);
+      if (current.status === "CONFIRMED") {
+        return {
+          status: "CONFIRMED",
+          providerStatus: current.providerStatus,
+          amountMinor: current.amountMinor,
+          currency: current.currency,
+        };
+      }
+      if (current.status === "EXPIRED" || current.status === "CANCELLED" || current.status === "FAILED") {
+        return { status: "EXPIRED" };
+      }
+      return { status: "NOT_EXPIRABLE" };
+    }
   }
 
   async verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult> {

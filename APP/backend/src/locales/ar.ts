@@ -251,6 +251,8 @@ export const ar: Record<string, string> = {
   "Payment configuration is invalid": "إعدادات الدفع غير صالحة",
   "Electronic payment is not allowed": "الدفع الإلكتروني غير مسموح",
   "A payment attempt is already in progress": "توجد محاولة دفع قيد المعالجة",
+  "Cash collection is blocked while an electronic checkout can still be paid":
+    "لا يمكن التحصيل النقدي بينما لا يزال رابط الدفع الإلكتروني قابلاً للدفع",
   "Payment attempt was not found": "محاولة الدفع غير موجودة",
   "Payment status token is invalid": "رمز حالة الدفع غير صالح",
   "Payment status token has expired": "انتهت صلاحية رمز حالة الدفع",

@@ -28,6 +28,10 @@ export class UnconfiguredPaymentProvider implements PaymentProvider {
     return { status: "UNKNOWN" };
   }
 
+  async expireCheckoutSession() {
+    return { status: "NOT_EXPIRABLE" as const };
+  }
+
   async getPaymentIntentStatus(_providerReference: string) {
     return { status: "UNKNOWN" as const };
   }

@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
-import { getRentalDurationParts } from "../../utils/rental-timer";
+import { useMemo } from "react";
+import { useNow, useTranslations } from "next-intl";
+import { Icon } from "@/shared/components/ui/icon/icon";
+import {
+  formatRentalDurationCompact,
+  getRentalDurationParts,
+} from "../../utils/rental-timer";
 import styles from "./vehicle-rental-timer.module.css";
 
 export interface VehicleRentalTimerProps {
@@ -11,33 +15,43 @@ export interface VehicleRentalTimerProps {
 
 export function VehicleRentalTimer({ endAt }: VehicleRentalTimerProps) {
   const t = useTranslations("Vehicles");
-  const format = useFormatter();
-  const [parts, setParts] = useState(() => getRentalDurationParts(endAt));
+  const now = useNow({ updateInterval: 30_000 });
 
-  useEffect(() => {
-    const tick = () => setParts(getRentalDurationParts(endAt));
-    tick();
-    const id = window.setInterval(tick, 30_000);
-    return () => window.clearInterval(id);
-  }, [endAt]);
+  const parts = useMemo(
+    () => getRentalDurationParts(endAt, now.getTime()),
+    [endAt, now],
+  );
 
-  const durationLabel = parts.expired
-    ? t("timerExpiredValue")
-    : t("timerValue", {
-        days: format.number(parts.days),
-        hours: format.number(parts.hours),
-        minutes: format.number(parts.minutes),
-      });
+  const durationLabel = useMemo(() => formatRentalDurationCompact(parts), [parts]);
+  const isUrgent = !parts.expired && parts.days === 0;
 
   return (
     <div
-      className={[styles.timer, parts.expired ? styles.expired : ""].filter(Boolean).join(" ")}
+      className={[
+        styles.timer,
+        parts.expired ? styles.expired : "",
+        isUrgent ? styles.urgent : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-testid="vehicle-rental-timer"
     >
-      <span className={styles.label}>
-        {parts.expired ? t("timerExpiredLabel") : t("timerLabel")}
-      </span>
-      <b className={styles.value} dir="ltr">{durationLabel}</b>
+      <Icon
+        name={parts.expired ? "mdi:clock-alert-outline" : "mdi:timer-outline"}
+        size={14}
+        className={styles.icon}
+      />
+
+      {parts.expired ? (
+        <span className={styles.expiredText}>{t("timerExpiredLabel")}</span>
+      ) : (
+        <div className={styles.content}>
+          <span className={styles.label}>{t("timerLabel")}</span>
+          <span className={styles.value} dir="ltr">
+            {durationLabel}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

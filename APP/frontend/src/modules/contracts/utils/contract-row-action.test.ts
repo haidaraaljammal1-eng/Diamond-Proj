@@ -4,7 +4,10 @@ import type { ContractListItemDto } from "../types/contract.types";
 import { getContractRowAction } from "./contract-row-action.ts";
 
 function row(status: ContractListItemDto["status"], actions: Partial<ContractListItemDto["actions"]> = {}) {
-  return { status, actions: { canCarOut: false, canCarIn: false, ...actions } };
+  return {
+    status,
+    actions: { canCarOut: false, canCarIn: false, canReconcile: status === "REVIEW", ...actions },
+  };
 }
 
 describe("getContractRowAction", () => {
@@ -29,6 +32,7 @@ describe("getContractRowAction", () => {
     assert.equal(getContractRowAction(row("FORM"))?.kind, "rentalLink");
     assert.equal(getContractRowAction(row("SIGNED")), null);
     assert.equal(getContractRowAction(row("REVIEW"))?.kind, "reconcile");
-    assert.equal(getContractRowAction(row("CLOSED")), null);
+    assert.equal(getContractRowAction(row("REVIEW", { canReconcile: false })), null);
+    assert.equal(getContractRowAction(row("CLOSED", { canReconcile: false })), null);
   });
 });

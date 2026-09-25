@@ -6,25 +6,31 @@ import {
 } from "./edit-default-rate.schema.ts";
 
 describe("editDefaultRateFormSchema", () => {
-  it("requires both rates", () => {
+  it("requires all four rates", () => {
     const result = editDefaultRateFormSchema.safeParse({
+      hourlyRate: "90",
       dailyRate: "",
-      monthlyRate: "1000",
+      weeklyRate: "4500",
+      monthlyRate: "14500",
     });
     assert.equal(result.success, false);
   });
 
   it("rejects negative rates", () => {
     const result = editDefaultRateFormSchema.safeParse({
+      hourlyRate: "90",
       dailyRate: "-1",
-      monthlyRate: "1000",
+      weeklyRate: "4500",
+      monthlyRate: "14500",
     });
     assert.equal(result.success, false);
   });
 
-  it("accepts valid rates", () => {
+  it("accepts valid rates including zero", () => {
     const result = editDefaultRateFormSchema.safeParse({
+      hourlyRate: "0",
       dailyRate: "750",
+      weeklyRate: "4620",
       monthlyRate: "14500",
     });
     assert.equal(result.success, true);
@@ -34,8 +40,18 @@ describe("editDefaultRateFormSchema", () => {
 describe("toUpdateRatesPayload", () => {
   it("maps trimmed string values to numbers", () => {
     assert.deepEqual(
-      toUpdateRatesPayload({ dailyRate: " 750 ", monthlyRate: "14500" }),
-      { dailyRate: 750, monthlyRate: 14500 },
+      toUpdateRatesPayload({
+        hourlyRate: " 94 ",
+        dailyRate: " 750 ",
+        weeklyRate: "4620",
+        monthlyRate: "14500",
+      }),
+      {
+        hourlyRate: 94,
+        dailyRate: 750,
+        weeklyRate: 4620,
+        monthlyRate: 14500,
+      },
     );
   });
 });

@@ -1,0 +1,136 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--diamond-page-bg, #f7f1e6);
+}
+
+.card {
+  width: min(560px, 100%);
+  padding: 24px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: var(--diamond-champagne);
+}
+
+.header p {
+  margin: 0 0 4px;
+  color: var(--diamond-muted);
+}
+
+.breakdown {
+  margin-top: 20px;
+}
+
+.breakdown h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.lineList {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.lineList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 16px;
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.lineList li span:first-child {
+  min-width: 0;
+}
+
+.lineList li span:last-child {
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.finalAmount {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin: 0;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--diamond-hair, rgba(0, 0, 0, 0.08));
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.finalAmount span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.completedPanel {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #2e7d32 8%, transparent);
+  border: 1px solid color-mix(in srgb, #2e7d32 24%, transparent);
+}
+
+.completedHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.completedHeader h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.completedMessage {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--diamond-muted);
+}
+
+.completedAmount {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin: 0;
+  padding-block-start: 8px;
+  border-block-start: 1px solid color-mix(in srgb, #2e7d32 18%, transparent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.completedAmount span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.completed {
+  margin-top: 16px;
+  color: #2e7d32;
+}
+
+.error,
+.muted {
+  color: var(--diamond-warn);
+}
+
+.muted {
+  color: var(--diamond-muted);
+}

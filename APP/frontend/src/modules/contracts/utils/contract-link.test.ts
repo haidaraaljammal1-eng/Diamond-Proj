@@ -19,6 +19,10 @@ describe("buildPublicContractUrl", () => {
       buildPublicContractUrl("https://office.example", "en", "RENEWAL", "tok_n"),
       "https://office.example/en/renew/tok_n",
     );
+    assert.equal(
+      buildPublicContractUrl("https://office.example", "en", "RECONCILIATION", "tok_rec"),
+      "https://office.example/en/reconciliation/tok_rec",
+    );
   });
 });
 

@@ -159,6 +159,17 @@ export interface OffSessionPaymentResult {
   currency?: string;
 }
 
+/** Result of asking the provider to expire an open Checkout Session. */
+export type ExpireCheckoutSessionResult =
+  | { status: "EXPIRED" }
+  | {
+      status: "CONFIRMED";
+      providerStatus?: string;
+      amountMinor?: number;
+      currency?: string;
+    }
+  | { status: "NOT_EXPIRABLE" };
+
 export interface PaymentProvider {
   readonly name: string;
   readonly configured: boolean;
@@ -167,6 +178,11 @@ export interface PaymentProvider {
   getCardSetupSession(providerReference: string): Promise<CardSetupSessionResult>;
   getPaymentStatus(providerReference: string): Promise<PaymentStatusResult>;
   getPaymentIntentStatus(providerReference: string): Promise<PaymentStatusResult & { failureCode?: string | null; declineCode?: string | null; requiresAction?: boolean }>;
+  /**
+   * Expires an open Checkout Session so the customer can no longer pay it.
+   * Must not be called inside a database transaction.
+   */
+  expireCheckoutSession(providerReference: string): Promise<ExpireCheckoutSessionResult>;
   createOffSessionPaymentIntent(input: CreateOffSessionPaymentInput): Promise<OffSessionPaymentResult>;
   getPaymentSessionPaymentMethod(providerReference: string): Promise<PaymentSessionPaymentMethod | null>;
   verifyWebhook(payload: Buffer, signature: string): Promise<WebhookVerifyResult>;

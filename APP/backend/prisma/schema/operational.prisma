@@ -97,7 +97,9 @@ model Vehicle {
   // Registration plate for fleet display. Stored normalized (trim + collapsed spaces + UPPER).
   plateNumber       String?                  @unique
   // Default rental rates in whole AED (Diamond demo). Not the rental-offer final amount.
+  hourlyRate        Int?
   dailyRate         Int?
+  weeklyRate        Int?
   monthlyRate       Int?
   operationalStatus VehicleOperationalStatus @default(AVAILABLE)
   /// Integration id from the owning company's external system. Unique WITHIN a

@@ -8,6 +8,7 @@ import { Icon } from "@/shared/components/ui/icon";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import type { ContractListItemDto } from "../../types/contract.types";
 import { getContractRowAction } from "../../utils/contract-row-action";
+import { formatRentalDuration } from "../../utils/format-rental-duration";
 import { ContractStatusChip } from "../contract-status/contract-status";
 import styles from "./contracts-table.module.css";
 
@@ -30,6 +31,7 @@ export function ContractsTable({
   onRowAction,
 }: ContractsTableProps) {
   const t = useTranslations("Contracts");
+  const td = useTranslations("Contracts.duration");
   const format = useFormatter();
   const locale = useLocale();
   const router = useRouter();
@@ -94,7 +96,15 @@ export function ContractsTable({
                   ) : null}
                 </td>
                 <td className={styles.num}>
-                  <span className={styles.primaryLine}>{t("table.days", { count: contract.rentalDays })}</span>
+                  <span className={styles.primaryLine}>
+                    {formatRentalDuration(
+                      {
+                        durationValue: contract.durationValue,
+                        durationUnit: contract.durationUnit,
+                      },
+                      (key, values) => td(key, values),
+                    )}
+                  </span>
                   {contract.startAt ? (
                     <span className={styles.muted}>
                       {format.dateTime(new Date(contract.startAt), {

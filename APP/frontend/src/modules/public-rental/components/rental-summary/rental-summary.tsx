@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import { Card } from "@/shared/components/ui/card/card";
 import type { PublicRentalContext } from "../../types/public-rental.types";
-import { formatRentalAmount, formatRentalDays } from "../../utils/format-money";
+import { formatRentalAmount } from "../../utils/format-money";
+import { formatRentalDuration } from "@/modules/contracts/utils/format-rental-duration";
 import styles from "./rental-summary.module.css";
 
 interface RentalSummaryProps {
@@ -12,11 +13,18 @@ interface RentalSummaryProps {
 
 export function RentalSummary({ context }: RentalSummaryProps) {
   const t = useTranslations("PublicRental.summary");
+  const td = useTranslations("Contracts.duration");
   const amount = formatRentalAmount(
     context.rental.agreedAmount,
     context.rental.currency,
   );
-  const duration = formatRentalDays(context.rental.rentalDays, t("days"));
+  const duration = formatRentalDuration(
+    {
+      durationValue: context.rental.durationValue,
+      durationUnit: context.rental.durationUnit,
+    },
+    (key, values) => td(key, values),
+  );
   const vehicleLabel =
     context.vehicle.vehicleType &&
     context.vehicle.vehicleType !== context.vehicle.displayName

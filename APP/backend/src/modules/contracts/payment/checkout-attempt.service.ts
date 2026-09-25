@@ -187,8 +187,17 @@ export function createCheckoutAttemptService(prisma: PrismaClient) {
       checkoutUrl: string;
       checkoutExpiresAt: Date;
     },
-  ): Promise<ContractPaymentAttempt> {
+  ): Promise<{ attempt: ContractPaymentAttempt; superseded: boolean }> {
     return withTransaction(prisma, async (tx) => {
+      const existing = await tx.contractPaymentAttempt.findUniqueOrThrow({
+        where: { id: attemptId },
+        select: { contractPaymentId: true },
+      });
+      const payment = await tx.contractPayment.findUniqueOrThrow({
+        where: { id: existing.contractPaymentId },
+        select: { status: true },
+      });
+      const superseded = payment.status !== "PENDING" && payment.status !== "PROCESSING";
       const attempt = await tx.contractPaymentAttempt.update({
         where: { id: attemptId },
         data: {
@@ -196,24 +205,26 @@ export function createCheckoutAttemptService(prisma: PrismaClient) {
           providerReference: result.providerReference,
           checkoutUrl: result.checkoutUrl,
           checkoutExpiresAt: result.checkoutExpiresAt,
-          status: "READY",
-          lastErrorCode: null,
-          lastErrorAt: null,
+          status: superseded ? "EXPIRED" : "READY",
+          lastErrorCode: superseded ? "REPLACED_BY_CASH" : null,
+          lastErrorAt: superseded ? new Date() : null,
         },
       });
-      await tx.contractPayment.update({
-        where: { id: attempt.contractPaymentId },
-        data: {
-          provider: result.provider,
-          providerReference: result.providerReference,
-          providerStatus: result.providerStatus,
-          checkoutUrl: result.checkoutUrl,
-          checkoutExpiresAt: result.checkoutExpiresAt,
-          processingStartedAt: new Date(),
-          status: "PROCESSING",
-        },
-      });
-      return attempt;
+      if (!superseded) {
+        await tx.contractPayment.update({
+          where: { id: attempt.contractPaymentId },
+          data: {
+            provider: result.provider,
+            providerReference: result.providerReference,
+            providerStatus: result.providerStatus,
+            checkoutUrl: result.checkoutUrl,
+            checkoutExpiresAt: result.checkoutExpiresAt,
+            processingStartedAt: new Date(),
+            status: "PROCESSING",
+          },
+        });
+      }
+      return { attempt, superseded };
     });
   }
 

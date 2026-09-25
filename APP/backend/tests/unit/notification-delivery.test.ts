@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 function mockFetch(
-  impl: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
+  impl: (input: Parameters<typeof fetch>[0], init?: RequestInit) => Promise<Response>,
 ): void {
   globalThis.fetch = impl as typeof fetch;
 }

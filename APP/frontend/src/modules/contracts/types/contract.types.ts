@@ -1,4 +1,5 @@
 import type { DamageMark } from "@/modules/public-rental/types/official-contract.types";
+import type { FinalReconciliationDetailDto } from "./reconciliation.types";
 
 export type ContractStatus =
   | "AWAITING"
@@ -12,9 +13,11 @@ export type ContractStatus =
 
 export type ContractStatusFilter = "all" | ContractStatus;
 
-export type ContractPriceType = "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
+export type ContractPriceType = "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
 
-export type ContractLinkType = "RENTAL" | "RETURN" | "RENEWAL";
+export type ContractDurationUnit = "HOUR" | "DAY" | "WEEK" | "MONTH";
+
+export type ContractLinkType = "RENTAL" | "RETURN" | "RENEWAL" | "RECONCILIATION";
 
 export type ContractPaymentMethod = "BANK_TRANSFER" | "CARD" | "CASH" | "MANUAL";
 
@@ -76,13 +79,15 @@ export interface ContractListItemDto {
   customerName: string | null;
   priceType: ContractPriceType;
   rentalDays: number;
+  durationValue: number;
+  durationUnit: ContractDurationUnit;
   agreedAmount: number;
   currency: string;
   startAt: string | null;
   endAt: string | null;
   createdAt: string;
   hasSalikGpsSignal: boolean;
-  actions: { canCarOut: boolean; canCarIn: boolean };
+  actions: { canCarOut: boolean; canCarIn: boolean; canReconcile: boolean };
   carOutStatus: "NOT_STARTED" | "DRAFT" | "READY" | "COMPLETED";
   company: ContractCompanyRefDto;
 }
@@ -246,6 +251,8 @@ export interface ContractReconciliationDto {
   chargesTotal: number;
   finalAmount: number;
   approvedAt: string | null;
+  finalizedAt?: string | null;
+  finalizedByUserId?: number | null;
   settledAt?: string | null;
   settled?: boolean;
   lines: ContractReconciliationLineDto[];
@@ -296,6 +303,8 @@ export interface ContractDetailDto {
   assignedEmployeeUserId: number | null;
   priceType: ContractPriceType;
   rentalDays: number;
+  durationValue: number;
+  durationUnit: ContractDurationUnit;
   agreedAmount: number;
   currency: string;
   collectionMode: RentalCollectionMode | null;
@@ -316,6 +325,7 @@ export interface ContractDetailDto {
   carOut: ContractCarOutDto | null;
   carIn: ContractCarInDto | null;
   reconciliation: ContractReconciliationDto | null;
+  finalReconciliation?: FinalReconciliationDetailDto | null;
   renewals: ContractRenewalDto[];
   actions: ContractActionsDto;
   roadLiabilitySignals: ContractRoadLiabilitySignalsDto;
@@ -327,7 +337,9 @@ export type RentalCollectionMode = "ELECTRONIC" | "CASH";
 export interface CreateContractOfferPayload {
   vehicleId: number;
   priceType: ContractPriceType;
-  rentalDays: number;
+  rentalDays?: number;
+  durationValue?: number;
+  durationUnit?: ContractDurationUnit;
   agreedAmount: number;
   collectionMode: RentalCollectionMode;
   startAt?: string;

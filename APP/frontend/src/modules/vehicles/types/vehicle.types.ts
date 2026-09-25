@@ -43,7 +43,9 @@ export interface VehicleCardDto {
   modelYear: number | null;
   color: string | null;
   plateNumber: string | null;
+  hourlyRate: number | null;
   dailyRate: number | null;
+  weeklyRate: number | null;
   monthlyRate: number | null;
   operationalStatus: VehicleOperationalStatus;
   externalId: string | null;
@@ -94,13 +96,17 @@ export interface CreateVehiclePayload {
   modelYear?: number;
   color?: string;
   plateNumber?: string;
+  hourlyRate?: number;
   dailyRate?: number;
+  weeklyRate?: number;
   monthlyRate?: number;
 }
 
 /** Partial payload for `PUT /vehicles/:id` default-rate updates. */
 export interface UpdateVehicleRatesPayload {
+  hourlyRate: number;
   dailyRate: number;
+  weeklyRate: number;
   monthlyRate: number;
 }
 
@@ -112,7 +118,9 @@ export interface VehiclePublicDto {
   modelYear: number | null;
   color: string | null;
   plateNumber: string | null;
+  hourlyRate: number | null;
   dailyRate: number | null;
+  weeklyRate: number | null;
   monthlyRate: number | null;
   operationalStatus: VehicleOperationalStatus;
   externalId: string | null;

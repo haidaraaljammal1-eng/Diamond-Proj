@@ -71,7 +71,7 @@ Extended existing `Vehicle` domain in `prisma/schema/operational.prisma` (no dup
 - `vehicleName` — direct free-text fleet name (Diamond Add Vehicle)
 - `modelId` — optional legacy/import link to `VehicleModel` (nullable)
 - `plateNumber` — normalized registration plate (unique when set)
-- `dailyRate`, `monthlyRate` — whole AED default rates (not rental-offer amounts)
+- `hourlyRate`, `dailyRate`, `weeklyRate`, `monthlyRate` — whole AED default rates (not rental-offer amounts)
 - `operationalStatus` — `AVAILABLE | RENTED | SERVICE` (distinct from `isActive`)
 - `VehiclePhoto` — links `Vehicle` → shared `Attachment` with `sortOrder` / `isPrimary`
 
@@ -162,7 +162,7 @@ All under `/vehicles` (admin route access), permission-gated:
 - `isActive` defaults to `true` (master-data lifecycle; distinct from operational status).
 - No VehicleModel is auto-created.
 
-Optional create fields: `vin`, `modelYear`, `color`, `plateNumber`, `dailyRate`, `monthlyRate`, `externalId`.
+Optional create fields: `vin`, `modelYear`, `color`, `plateNumber`, `hourlyRate`, `dailyRate`, `weeklyRate`, `monthlyRate`, `externalId`.
 
 **Optional photo (frontend only in current scope):** binary is **not** sent on `POST /vehicles`. After create, the client may upload one image via `POST /vehicles/:id/photos`. The first photo is marked `isPrimary` and surfaces as `primaryImage` on list/detail. No seed or bulk photo backfill for existing fleet rows.
 
@@ -170,15 +170,16 @@ Optional create fields: `vin`, `modelYear`, `color`, `plateNumber`, `dailyRate`,
 
 ### Default pricing
 
-- `dailyRate` / `monthlyRate` are **Vehicle default rates** (Demo card footer).
+- `hourlyRate`, `dailyRate`, `weeklyRate`, `monthlyRate` are **Vehicle default rates** (Demo card footer / edit dialog).
 - They are not rental-offer amounts, contract prices, or current rental prices.
+- Existing rows backfill `hourlyRate` / `weeklyRate` from `dailyRate` on migration when null.
 
 ### Price editing
 
 `PUT /vehicles/:id` supports partial updates. Example:
 
 ```json
-{ "dailyRate": 850, "monthlyRate": 16000 }
+{ "hourlyRate": 110, "dailyRate": 850, "weeklyRate": 5236, "monthlyRate": 16000 }
 ```
 
 Requires `vehicles.manage`. Rejected when `operationalStatus = RENTED`. Updating rates does not change `vehicleName`, `plateNumber`, `operationalStatus`, `isActive`, or photos.
@@ -239,7 +240,9 @@ Implemented in `vehicles-sort.ts` → `buildVehicleListOrderBy`:
 
 **Detail (`VehicleDetail`)** — list fields + `gallery[]`
 
-Weekly price in Demo (`daily × 7 × 0.88`) stays derived on the client; no `weeklyRate` column.
+Weekly price is stored on the vehicle (`weeklyRate`); standard Generate Rental Link modes read all four default rates from the backend.
+
+Contract offer `priceType` includes `HOURLY | DAILY | WEEKLY | MONTHLY | CUSTOM`. Standard modes send the stored vehicle default amount; `CUSTOM` sends staff-entered `rentalDays` + `agreedAmount` only for that offer.
 
 ## Current rental (Contracts)
 

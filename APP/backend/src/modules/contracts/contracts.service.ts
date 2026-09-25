@@ -68,6 +68,7 @@ import {
 import { analyzeDocument } from "src/modules/document-ocr/document-ocr.service";
 import { createSimulationDocumentOcrProvider } from "src/modules/document-ocr/simulation-document-ocr.provider";
 import { derivedEndAt } from "src/modules/contracts/contracts-period";
+import { resolveOfferPeriod } from "src/modules/contracts/contracts-duration";
 import {
   buildOfficialContractView,
   OFFICIAL_CONTRACT_EDITABLE_FIELDS,
@@ -105,12 +106,28 @@ import type {
   PublicAcceptSchema,
   PublicFormSchema,
   ReconcileSchema,
+  ReconciliationLineInputSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
 import {
   isManualExternalReconLineType,
-  reconciliationTotalsFromLines,
 } from "src/modules/contracts/contracts-road-liability-charge";
+import {
+  assertManualReconciliationLineType,
+  assertReconciliationLinesEditable,
+  assembleFullReconciliationRead,
+  buildPublicReconciliationRead,
+  ensureReconciliationFinalizedInTx,
+  ensureReconciliationShellInTx,
+  finalizeReconciliationAndCloseInTx,
+  FULL_RECONCILIATION_INCLUDE,
+  canStaffReconcileContract,
+  isReconciliationFinalized,
+  isReconciliationSettled,
+  persistManualReconciliationLinesInTx,
+  recalculateReconciliationTotalsInTx,
+  settleReconciliationWithoutPaymentInTx,
+} from "src/modules/contracts/contracts-reconciliation";
 import {
   buildRoadLiabilityChargeProposal,
   COLLECTIBLE_WHERE,
@@ -348,8 +365,7 @@ export function createContractsService(fastify: FastifyInstance) {
       if (!customer) throw contractError.customerNotFound();
     }
 
-    const startAt = input.startAt ?? new Date();
-    const endAt = input.endAt ?? derivedEndAt(startAt, input.rentalDays, startAt);
+    const period = resolveOfferPeriod(input);
 
     return withTransaction(prisma, async (tx) => {
       await assertVehicleBookableForRental(tx, input.vehicleId);
@@ -366,14 +382,16 @@ export function createContractsService(fastify: FastifyInstance) {
           createdByUserId: actorUserId,
           assignedEmployeeUserId: input.assignedEmployeeUserId ?? null,
           priceType: input.priceType,
-          rentalDays: input.rentalDays,
+          rentalDays: period.rentalDays,
+          durationValue: period.durationValue,
+          durationUnit: period.durationUnit,
           agreedAmount: input.agreedAmount,
           currency: CONTRACT_CURRENCY,
           collectionMode: input.collectionMode,
           collectionModeSelectedAt: new Date(),
           collectionModeSelectedByUserId: actorUserId,
-          startAt,
-          endAt,
+          startAt: period.startAt,
+          endAt: period.endAt,
         },
       });
       await emit(tx, "contract.created", created.id, { vehicleId: input.vehicleId });
@@ -431,6 +449,7 @@ export function createContractsService(fastify: FastifyInstance) {
             customer: { select: { name: true } },
             carOut: { select: { id: true } },
             carIn: { select: { id: true } },
+            reconciliation: { select: { chargesTotal: true, settledAt: true } },
             carOutDraft: { select: {
               mileageOut: true, fuelOut: true, hirerSignatureAttachmentId: true,
               photos: { select: { angle: true } },
@@ -472,6 +491,12 @@ export function createContractsService(fastify: FastifyInstance) {
               vehicleStatus: row.vehicle.operationalStatus,
               hasCarOut: Boolean(row.carOut),
               hasConflictingContract: (blockingByVehicle.get(row.vehicleId) ?? []).some((id) => id !== row.id),
+            }),
+            canReconcile: canStaffReconcileContract({
+              status: row.status,
+              reconciliation: row.reconciliation
+                ? { finalAmount: row.reconciliation.chargesTotal, settledAt: row.reconciliation.settledAt }
+                : null,
             }),
           }),
         );
@@ -1192,6 +1217,8 @@ export function createContractsService(fastify: FastifyInstance) {
           agreedAmount: contract.agreedAmount,
           priceType: contract.priceType,
           rentalDays: contract.rentalDays,
+          durationValue: contract.durationValue,
+          durationUnit: contract.durationUnit,
           startAt: contract.startAt,
           endAt: contract.endAt,
           currency: contract.currency,
@@ -1398,48 +1425,264 @@ export function createContractsService(fastify: FastifyInstance) {
       if (!contract) throw contractError.notFound();
       assertStatus(contract.status, "REVIEW");
       if (!contract.carIn) throw contractError.carInRequired();
+      assertReconciliationLinesEditable(contract.status, contract.reconciliation);
 
-      const preservedLiabilityLines = contract.reconciliation
-        ? await tx.contractReconciliationLine.findMany({
-            where: { reconciliationId: contract.reconciliation.id, roadLiabilityId: { not: null } },
-          })
-        : [];
-      const totals = reconciliationTotalsFromLines([
-        ...preservedLiabilityLines,
-        ...input.lines,
-      ]);
-      const now = new Date();
+      await persistManualReconciliationLinesInTx(tx, contractId, input.lines);
+      return detailFromTx(tx, contractId);
+    });
+  }
 
-      if (contract.reconciliation) {
-        await tx.contractReconciliationLine.deleteMany({
-          where: { reconciliationId: contract.reconciliation.id, roadLiabilityId: null },
-        });
-        await tx.contractReconciliation.update({
-          where: { id: contract.reconciliation.id },
-          data: {
-            ...totals,
-            depositAmount: 0,
-            deductions: 0,
-            approvedAt: now,
-            approvedByUserId: actorUserId,
-            lines: { create: input.lines },
-          },
-        });
-      } else {
+  async function getFullReconciliation(contractId: string) {
+    const head = await prisma.contract.findUnique({
+      where: { id: contractId },
+      select: { status: true },
+    });
+    if (!head) throw contractError.notFound();
+
+    if (head.status === "REVIEW") {
+      await withTransaction(prisma, async (tx) => {
+        await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
+        await ensureReconciliationShellInTx(tx, contractId);
+      });
+    }
+
+    const row = await prisma.contract.findUnique({
+      where: { id: contractId },
+      include: FULL_RECONCILIATION_INCLUDE,
+    });
+    if (!row) throw contractError.notFound();
+    const data = await assembleFullReconciliationRead(prisma, row);
+    if (!data) throw contractError.reconciliationRequired();
+    return data;
+  }
+
+  async function addReconciliationLine(
+    contractId: string,
+    input: z.infer<typeof ReconciliationLineInputSchema>,
+    _actorUserId: number,
+  ) {
+    assertManualReconciliationLineType(input.type);
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
+      const contract = await tx.contract.findUnique({
+        where: { id: contractId },
+        include: { carIn: true, reconciliation: true },
+      });
+      if (!contract) throw contractError.notFound();
+      assertStatus(contract.status, "REVIEW");
+      if (!contract.carIn) throw contractError.carInRequired();
+      assertReconciliationLinesEditable(contract.status, contract.reconciliation);
+
+      if (!contract.reconciliation) {
         await tx.contractReconciliation.create({
           data: {
             contractId,
-            ...totals,
+            chargesTotal: input.amount,
+            finalAmount: input.amount,
             depositAmount: 0,
             deductions: 0,
-            approvedAt: now,
-            approvedByUserId: actorUserId,
-            lines: { create: input.lines },
+            lines: { create: input },
           },
         });
+      } else {
+        await tx.contractReconciliationLine.create({
+          data: { reconciliationId: contract.reconciliation.id, ...input },
+        });
+        await recalculateReconciliationTotalsInTx(tx, contract.reconciliation.id);
       }
       return detailFromTx(tx, contractId);
     });
+  }
+
+  async function updateReconciliationLine(
+    contractId: string,
+    lineId: string,
+    input: z.infer<typeof ReconciliationLineInputSchema>,
+    _actorUserId: number,
+  ) {
+    assertManualReconciliationLineType(input.type);
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
+      const line = await tx.contractReconciliationLine.findFirst({
+        where: { id: lineId, reconciliation: { contractId } },
+        include: { reconciliation: { include: { contract: true } } },
+      });
+      if (!line) throw contractError.notFound();
+      if (line.roadLiabilityId) throw contractError.reconciliationLocked();
+      assertReconciliationLinesEditable(line.reconciliation.contract.status, line.reconciliation);
+
+      await tx.contractReconciliationLine.update({
+        where: { id: lineId },
+        data: input,
+      });
+      await recalculateReconciliationTotalsInTx(tx, line.reconciliationId);
+      return detailFromTx(tx, contractId);
+    });
+  }
+
+  async function deleteReconciliationLine(contractId: string, lineId: string, _actorUserId: number) {
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
+      const line = await tx.contractReconciliationLine.findFirst({
+        where: { id: lineId, reconciliation: { contractId } },
+        include: { reconciliation: { include: { contract: true } } },
+      });
+      if (!line) throw contractError.notFound();
+      if (line.roadLiabilityId) throw contractError.reconciliationLocked();
+      assertReconciliationLinesEditable(line.reconciliation.contract.status, line.reconciliation);
+
+      await tx.contractReconciliationLine.delete({ where: { id: lineId } });
+      await recalculateReconciliationTotalsInTx(tx, line.reconciliationId);
+      return detailFromTx(tx, contractId);
+    });
+  }
+
+  async function finalizeReconciliation(contractId: string, actorUserId: number, idempotencyKey?: string) {
+    const run = async () =>
+      withTransaction(prisma, async (tx) => {
+        await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
+        const contract = await tx.contract.findUnique({
+          where: { id: contractId },
+          include: { carIn: true, reconciliation: true },
+        });
+        if (!contract) throw contractError.notFound();
+        assertStatus(contract.status, "REVIEW");
+        if (!contract.carIn) throw contractError.carInRequired();
+        if (!contract.reconciliation) throw contractError.reconciliationRequired();
+
+        await ensureReconciliationFinalizedInTx(tx, contractId, actorUserId);
+        const reconciliation = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
+        if (reconciliation.finalAmount <= 0) {
+          await settleReconciliationWithoutPaymentInTx(tx, reconciliation.id);
+          await finalizeReconciliationAndCloseInTx(tx, contractId, actorUserId);
+        }
+        return detailFromTx(tx, contractId);
+      });
+
+    if (!idempotencyKey) return run();
+    const outcome = await runIdempotent(
+      prisma,
+      {
+        scope: `contract:reconciliation:finalize:${contractId}`,
+        key: idempotencyKey,
+        fingerprint: fingerprintIdempotentPayload({ action: "finalize_reconciliation" }),
+      },
+      run,
+    );
+    if (outcome.deduped) return get(contractId);
+    return outcome.result!;
+  }
+
+  async function settleReconciliationCash(contractId: string, actorUserId: number, idempotencyKey?: string) {
+    const run = async () => {
+      const gate = await paymentService.prepareReconciliationCashCollection(contractId);
+      if (gate.outcome === "already-settled") return get(contractId);
+      return withTransaction(prisma, async (tx) => {
+        await paymentService.settleReconciliationCashInTx(
+          tx,
+          contractId,
+          actorUserId,
+          gate.neutralizedProviderReferences,
+        );
+        return detailFromTx(tx, contractId);
+      });
+    };
+
+    if (!idempotencyKey) return run();
+    const outcome = await runIdempotent(
+      prisma,
+      {
+        scope: `contract:reconciliation:cash:${contractId}`,
+        key: idempotencyKey,
+        fingerprint: fingerprintIdempotentPayload({ action: "reconciliation_cash" }),
+      },
+      run,
+    );
+    if (outcome.deduped) return get(contractId);
+    return outcome.result!;
+  }
+
+  async function generateReconciliationLink(contractId: string, actorUserId: number) {
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
+      const contract = await tx.contract.findUnique({
+        where: { id: contractId },
+        include: { carIn: true, reconciliation: true },
+      });
+      if (!contract) throw contractError.notFound();
+      assertStatus(contract.status, "REVIEW");
+      if (!contract.carIn) throw contractError.carInRequired();
+      if (!contract.reconciliation) throw contractError.reconciliationRequired();
+
+      await ensureReconciliationFinalizedInTx(tx, contractId, actorUserId);
+      const reconciliation = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
+      await recalculateReconciliationTotalsInTx(tx, reconciliation.id);
+      const fresh = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
+      if (fresh.finalAmount <= 0) throw contractError.paymentRequired();
+
+      const issued = await issueContractLink(tx, {
+        contractId,
+        type: "RECONCILIATION",
+        createdByUserId: actorUserId,
+      });
+      return {
+        contractId,
+        contractNumber: contract.contractNumber,
+        link: { token: issued.token, expiresAt: issued.expiresAt, type: "RECONCILIATION" as const },
+        publicUrl: buildPublicFrontendUrl("en", `/reconciliation/${issued.token}`),
+        finalAmount: fresh.finalAmount,
+      };
+    });
+  }
+
+  async function getPublicReconciliation(token: string) {
+    const link = await resolveContractLink(prisma, token, "RECONCILIATION", { allowCompleted: true });
+    const row = await prisma.contract.findUnique({
+      where: { id: link.contractId },
+      include: FULL_RECONCILIATION_INCLUDE,
+    });
+    if (!row) throw contractError.notFound();
+    if (row.status !== "REVIEW") throw contractError.paymentNotAllowed();
+    const full = await assembleFullReconciliationRead(prisma, row);
+    if (!full) throw contractError.reconciliationRequired();
+    if (!isReconciliationFinalized(full.reconciliation)) throw contractError.reconciliationNotFinalized();
+    return buildPublicReconciliationRead(row, full);
+  }
+
+  async function startReconciliationPaymentPublic(token: string, locale: PublicFrontendLocale = "en") {
+    const link = await resolveContractLink(prisma, token, "RECONCILIATION", { allowCompleted: true });
+    const contract = await prisma.contract.findUnique({
+      where: { id: link.contractId },
+      include: { reconciliation: true },
+    });
+    if (!contract) throw contractError.notFound();
+    if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
+    if (!contract.reconciliation) throw contractError.reconciliationRequired();
+    if (!isReconciliationFinalized(contract.reconciliation)) throw contractError.reconciliationNotFinalized();
+    if (contract.reconciliation.finalAmount <= 0) throw contractError.paymentNotAllowed();
+    if (isReconciliationSettled(contract.reconciliation)) throw contractError.paymentAlreadySettled();
+
+    const result = await paymentService.startPayment({
+      purpose: "RECONCILIATION",
+      targetId: contract.reconciliation.id,
+      locale,
+      validate: async (tx) => {
+        const row = await tx.contract.findUnique({
+          where: { id: contract.id },
+          include: { reconciliation: true },
+        });
+        if (row?.status !== "REVIEW") throw contractError.paymentNotAllowed();
+        if (!row?.reconciliation?.finalizedAt) throw contractError.reconciliationNotFinalized();
+        if (row.reconciliation.finalAmount <= 0) throw contractError.paymentNotAllowed();
+        if (row.reconciliation.settledAt) throw contractError.paymentAlreadySettled();
+      },
+    });
+    return {
+      payment: result.payment,
+      checkoutUrl: result.payment.checkoutUrl,
+      statusToken: result.statusToken,
+      providerAvailable: result.providerAvailable,
+    };
   }
 
   async function listReconciliationRoadLiabilities(contractId: string) {
@@ -1558,7 +1801,9 @@ export function createContractsService(fastify: FastifyInstance) {
         }
         assertTransition(contract.status, "CLOSED");
         if (!contract.carIn) throw contractError.carInRequired();
-        if (!contract.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+        if (!contract.reconciliation || !isReconciliationFinalized(contract.reconciliation)) {
+          throw contractError.reconciliationRequired();
+        }
         if (
           contract.reconciliation.finalAmount > 0 &&
           !contract.reconciliation.settledAt
@@ -1566,15 +1811,7 @@ export function createContractsService(fastify: FastifyInstance) {
           throw contractError.reconciliationPaymentRequired();
         }
 
-        const now = new Date();
-        await tx.contract.update({
-          where: { id: contractId },
-          data: { status: "CLOSED", closedAt: now, revision: { increment: 1 } },
-        });
-        await emit(tx, "contract.closed", contractId, {
-          vehicleId: contract.vehicleId,
-          actorUserId,
-        });
+        await finalizeReconciliationAndCloseInTx(tx, contractId, actorUserId);
         return decorateDetail(
           await tx.contract.findUniqueOrThrow({
             where: { id: contractId },
@@ -1746,6 +1983,8 @@ export function createContractsService(fastify: FastifyInstance) {
       status: z.infer<typeof import("./contracts.schema").ContractStatusSchema>;
       priceType: z.infer<typeof import("./contracts.schema").ContractPriceTypeSchema>;
       rentalDays: number;
+      durationValue: number;
+      durationUnit: z.infer<typeof import("./contracts.schema").ContractDurationUnitSchema>;
       agreedAmount: number;
       currency: string;
       startAt: Date | null;
@@ -1777,6 +2016,8 @@ export function createContractsService(fastify: FastifyInstance) {
       status: row.status,
       priceType: row.priceType,
       rentalDays: row.rentalDays,
+      durationValue: row.durationValue,
+      durationUnit: row.durationUnit,
       agreedAmount: row.agreedAmount,
       currency: row.currency,
       startAt: row.startAt,
@@ -2319,6 +2560,8 @@ export function createContractsService(fastify: FastifyInstance) {
             agreedAmount: row.agreedAmount,
             priceType: row.priceType,
             rentalDays: row.rentalDays,
+            durationValue: row.durationValue,
+            durationUnit: row.durationUnit,
             startAt: row.startAt,
             endAt: row.endAt,
             currency: row.currency,
@@ -2440,6 +2683,8 @@ export function createContractsService(fastify: FastifyInstance) {
           plateNumber: ctx.vehicle.plateNumber,
         },
         rentalDays: ctx.rental.rentalDays,
+        durationValue: ctx.rental.durationValue,
+        durationUnit: ctx.rental.durationUnit,
         agreedAmount: ctx.rental.agreedAmount,
         currency: ctx.rental.currency,
         payment: {
@@ -2579,24 +2824,30 @@ export function createContractsService(fastify: FastifyInstance) {
   async function startReconciliationPayment(contractId: string, actorUserId: number) {
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
-      include: { reconciliation: true },
+      include: { reconciliation: true, carIn: true },
     });
     if (!contract) throw contractError.notFound();
     if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
-    if (!contract.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
-    if (contract.reconciliation.finalAmount <= 0) {
-      await withTransaction(prisma, async (tx) => {
-        await paymentService.applyZeroAmountSettlement(
-          tx,
-          "RECONCILIATION",
-          contract.reconciliation!.id,
-        );
-      });
+    if (!contract.carIn) throw contractError.carInRequired();
+    if (!contract.reconciliation) throw contractError.reconciliationRequired();
+
+    await withTransaction(prisma, async (tx) => {
+      await ensureReconciliationFinalizedInTx(tx, contractId, actorUserId);
+    });
+
+    const refreshed = await prisma.contract.findUnique({
+      where: { id: contractId },
+      include: { reconciliation: true },
+    });
+    if (!refreshed?.reconciliation) throw contractError.reconciliationRequired();
+
+    if (refreshed.reconciliation.finalAmount <= 0) {
+      await finalizeReconciliation(contractId, actorUserId);
       return {
         payment: {
           status: "CONFIRMED" as const,
           amount: 0,
-          currency: contract.currency,
+          currency: refreshed.currency,
           purpose: "RECONCILIATION" as const,
           checkoutUrl: null,
           checkoutExpiresAt: null,
@@ -2607,16 +2858,18 @@ export function createContractsService(fastify: FastifyInstance) {
         noPaymentRequired: true,
       };
     }
+
     const result = await paymentService.startPayment({
       purpose: "RECONCILIATION",
-      targetId: contract.reconciliation.id,
+      targetId: refreshed.reconciliation.id,
       createdByUserId: actorUserId,
       validate: async (tx) => {
         const row = await tx.contract.findUnique({
           where: { id: contractId },
           include: { reconciliation: true },
         });
-        if (!row?.reconciliation?.approvedAt) throw contractError.reconciliationRequired();
+        if (!row?.reconciliation?.finalizedAt) throw contractError.reconciliationNotFinalized();
+        if (row.reconciliation.settledAt) throw contractError.paymentAlreadySettled();
       },
     });
     return {
@@ -2786,6 +3039,15 @@ export function createContractsService(fastify: FastifyInstance) {
     openCarInSignatureStream,
     completeCarInStaff,
     reconcile,
+    getFullReconciliation,
+    addReconciliationLine,
+    updateReconciliationLine,
+    deleteReconciliationLine,
+    finalizeReconciliation,
+    settleReconciliationCash,
+    generateReconciliationLink,
+    getPublicReconciliation,
+    startReconciliationPaymentPublic,
     listReconciliationRoadLiabilities,
     confirmRoadLiabilityCharge,
     close,

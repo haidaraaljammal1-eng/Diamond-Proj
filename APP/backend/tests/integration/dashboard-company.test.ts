@@ -104,6 +104,8 @@ if (!INTEGRATION_ENABLED) {
           status: "PAID",
           priceType: "DAILY",
           rentalDays: 2,
+          durationValue: 2,
+          durationUnit: "DAY",
           agreedAmount: 400,
           collectionMode: "ELECTRONIC",
           startAt: input.startAt,

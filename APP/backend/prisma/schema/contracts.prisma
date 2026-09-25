@@ -17,16 +17,27 @@ enum ContractStatus {
 }
 
 enum ContractPriceType {
+  HOURLY
   DAILY
   WEEKLY
   MONTHLY
   CUSTOM
 }
 
+/// Structured rental duration. Custom offers store staff-entered value+unit;
+/// standard modes store the canonical unit for the selected price type.
+enum ContractDurationUnit {
+  HOUR
+  DAY
+  WEEK
+  MONTH
+}
+
 enum ContractLinkType {
   RENTAL
   RETURN
   RENEWAL
+  RECONCILIATION
 }
 
 enum ContractPaymentMethod {
@@ -180,6 +191,9 @@ model Contract {
 
   priceType     ContractPriceType
   rentalDays    Int
+  /// Staff/customer-facing duration value (e.g. 2 hours, 3 days). Never free text.
+  durationValue Int
+  durationUnit  ContractDurationUnit
   /// Contractual amount in whole AED. Vehicle dailyRate/monthlyRate are defaults only.
   agreedAmount  Int
   currency      String            @default("AED")
@@ -730,6 +744,9 @@ model ContractReconciliation {
   approvedAt       DateTime?
   approvedByUserId Int?
   approvedBy       User?            @relation("ContractReconciliationApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  finalizedAt      DateTime?
+  finalizedByUserId Int?
+  finalizedBy      User?            @relation("ContractReconciliationFinalizedBy", fields: [finalizedByUserId], references: [id], onDelete: SetNull)
   settledAt        DateTime?
   settledPaymentId String?          @unique
   settledPayment   ContractPayment? @relation("ReconciliationSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)

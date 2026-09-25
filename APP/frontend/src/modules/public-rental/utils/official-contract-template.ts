@@ -136,6 +136,6 @@ export const CONTRACT_FIELD_CATALOG: Record<
     dir: "auto",
   },
   "sponsor.name": { en: "Sponsor Name", ar: "اسم الكفيل", reviewField: "sponsorName", dir: "auto" },
-  "rental.numberOfDays": { en: "No. of Days", ar: "عدد الأيام", dir: "ltr" },
+  "rental.duration": { en: "Rental Duration", ar: "مدة الإيجار", dir: "ltr" },
   "sponsor.idNumber": { en: "Passport NO. / I.D.", ar: "جواز سفر / بطاقة", reviewField: "sponsorIdNumber", dir: "ltr" },
 };

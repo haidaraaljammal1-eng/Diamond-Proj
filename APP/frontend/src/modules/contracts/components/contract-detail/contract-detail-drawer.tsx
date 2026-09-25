@@ -7,10 +7,7 @@ import { Drawer } from "@/shared/components/ui/drawer";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import { StripePaymentActions } from "@/modules/payments/components/stripe-payment-actions";
 import { useStripeCheckout } from "@/modules/payments/hooks/use-stripe-checkout";
-import {
-  startPostCloseReceivablePayment,
-  startReconciliationPayment,
-} from "@/modules/payments/api/payments.api";
+import { startPostCloseReceivablePayment } from "@/modules/payments/api/payments.api";
 import { useContract } from "../../hooks/use-contract";
 import { ContractStatusChip } from "../contract-status/contract-status";
 import { ContractTimeline } from "../contract-timeline/contract-timeline";
@@ -18,7 +15,14 @@ import { ContractInspectionImage } from "../contract-inspection-image/contract-i
 import { ContractTarsStatus } from "../contract-tars/contract-tars-status";
 import { ContractTarsInlineStatus } from "../contract-tars/contract-tars-inline-status";
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
+import { formatRentalDuration } from "../../utils/format-rental-duration";
+import { contractPaymentMethodLabel } from "../../utils/contract-payment-method";
 import { renewalHistoryState } from "../../utils/renewal-history";
+import {
+  ReconciliationCustodySection,
+  ReconciliationFinancialSummary,
+} from "../../forms/reconcile/reconciliation-sections";
+import { ReconciliationImagePairsSection } from "../../forms/reconcile/reconciliation-images";
 import styles from "./contract-detail-drawer.module.css";
 
 export interface ContractDetailDrawerProps {
@@ -55,6 +59,7 @@ export function ContractDetailDrawer({
   onCloseContract,
 }: ContractDetailDrawerProps) {
   const t = useTranslations("Contracts");
+  const td = useTranslations("Contracts.duration");
   const tPay = useTranslations("Payments");
   const format = useFormatter();
   const checkout = useStripeCheckout();
@@ -109,8 +114,11 @@ export function ContractDetailDrawer({
               <Kv label={t("detail.plate")} value={detail.vehicle.plateNumber} />
             ) : null}
             <Kv
-              label={t("detail.days")}
-              value={t("table.days", { count: detail.rentalDays })}
+              label={t("detail.rentalDuration")}
+              value={formatRentalDuration(
+                { durationValue: detail.durationValue, durationUnit: detail.durationUnit },
+                (key, values) => td(key, values),
+              )}
             />
             <Kv
               label={t("detail.amount")}
@@ -137,7 +145,10 @@ export function ContractDetailDrawer({
                 label={t("detail.paidAmount")}
                 value={money(detail.payment.amount, detail.payment.currency)}
               />
-              <Kv label={t("detail.method")} value={t(`payment.method.${detail.payment.method}`)} />
+              <Kv
+                label={t("detail.method")}
+                value={contractPaymentMethodLabel(detail.payment.method, t)}
+              />
             </section>
           ) : null}
 
@@ -255,7 +266,51 @@ export function ContractDetailDrawer({
             </section>
           ) : null}
 
-          {detail.reconciliation ? (
+          {detail.status === "REVIEW" && detail.reconciliation ? (
+            <section className={styles.section} data-testid="contract-review-reconciliation">
+              <p className={styles.sectionTitle}>{t("finalReconciliation.title")}</p>
+              <p className={styles.muted}>{t("finalReconciliation.openDialogHint")}</p>
+              <Kv
+                label={t("finalReconciliation.finalAmountDue")}
+                value={money(detail.reconciliation.finalAmount, detail.currency)}
+              />
+            </section>
+          ) : null}
+
+          {detail.finalReconciliation ? (
+            <section className={styles.section} data-testid="contract-final-reconciliation">
+              <p className={styles.sectionTitle}>{t("finalReconciliation.title")}</p>
+              <ReconciliationImagePairsSection pairs={detail.finalReconciliation.imagePairs} />
+              <ReconciliationCustodySection custody={detail.finalReconciliation.custody} />
+              <ReconciliationFinancialSummary totals={detail.finalReconciliation.totals} currency={detail.currency} />
+              {detail.finalReconciliation.finalizedAt ? (
+                <Kv
+                  label={t("finalReconciliation.finalizedAt")}
+                  value={format.dateTime(new Date(detail.finalReconciliation.finalizedAt), {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                />
+              ) : null}
+              {detail.finalReconciliation.finalizedBy ? (
+                <Kv label={t("finalReconciliation.finalizedBy")} value={detail.finalReconciliation.finalizedBy.name} />
+              ) : null}
+              {detail.finalReconciliation.settlement.method ? (
+                <Kv
+                  label={t("detail.method")}
+                  value={
+                    detail.finalReconciliation.settlement.method === "CASH"
+                      ? t("payment.method.CASH")
+                      : detail.finalReconciliation.settlement.method === "CARD"
+                        ? t("payment.method.CARD")
+                        : detail.finalReconciliation.settlement.method
+                  }
+                />
+              ) : null}
+            </section>
+          ) : null}
+
+          {detail.reconciliation && !detail.finalReconciliation && detail.status !== "REVIEW" ? (
             <section className={styles.section}>
               <p className={styles.sectionTitle}>{t("detail.reconciliation")}</p>
               <Kv
@@ -265,29 +320,6 @@ export function ContractDetailDrawer({
               <Kv
                 label={t("reconcile.final")}
                 value={money(detail.reconciliation.finalAmount, detail.currency)}
-              />
-              <StripePaymentActions
-                providerAvailable={providerAvailable}
-                settled={Boolean(detail.reconciliation.settled)}
-                amountDue={detail.reconciliation.finalAmount}
-                currency={detail.currency}
-                pending={checkout.pending}
-                checkoutUrl={checkout.lastCheckoutUrl}
-                onCreateLink={() => {
-                  void checkout
-                    .runCheckout(() => startReconciliationPayment(detail.id))
-                    .then((result) => {
-                      setProviderAvailable(result.providerAvailable);
-                      void loadContract(detail.id);
-                    })
-                    .catch(() => setProviderAvailable(false));
-                }}
-                onCopyLink={() => void checkout.copyCheckoutLink()}
-                onOpenLink={() => {
-                  if (checkout.lastCheckoutUrl) {
-                    window.open(checkout.lastCheckoutUrl, "_blank", "noopener,noreferrer");
-                  }
-                }}
               />
             </section>
           ) : null}
