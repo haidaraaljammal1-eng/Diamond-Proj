@@ -3,10 +3,8 @@
  * Usage: npx tsx scripts/cash-rental-db-audit.ts --token=<rentalToken>
  *        npx tsx scripts/cash-rental-db-audit.ts --contract=<uuid|DE-2026-000123>
  */
-import dotenv from "dotenv";
-
-dotenv.config({ override: true });
-
+import "./e2e-script-env";
+import { hashToken } from "src/lib/security/tokens";
 import { buildApp } from "src/app";
 
 function arg(name: string): string | undefined {
@@ -26,16 +24,24 @@ async function main() {
   let contractId = contractKey;
   if (token) {
     const ctx = await app.inject({ method: "GET", url: `/contracts/rental/${token}` });
-    if (ctx.statusCode !== 200) {
-      throw new Error(`Rental context failed (${ctx.statusCode}): ${ctx.body}`);
+    if (ctx.statusCode === 200) {
+      const contractNumber = ctx.json().data.contract.contractNumber as string;
+      const row = await prisma.contract.findFirst({
+        where: { contractNumber },
+        select: { id: true },
+      });
+      if (!row) throw new Error(`Contract not found for token: ${contractNumber}`);
+      contractId = row.id;
+    } else {
+      const link = await prisma.contractLink.findUnique({
+        where: { tokenHash: hashToken(token) },
+        select: { contractId: true },
+      });
+      if (!link) {
+        throw new Error(`Rental context failed (${ctx.statusCode}): ${ctx.body}`);
+      }
+      contractId = link.contractId;
     }
-    const contractNumber = ctx.json().data.contract.contractNumber as string;
-    const row = await prisma.contract.findFirst({
-      where: { contractNumber },
-      select: { id: true },
-    });
-    if (!row) throw new Error(`Contract not found for token: ${contractNumber}`);
-    contractId = row.id;
   }
 
   const contract = await prisma.contract.findFirst({

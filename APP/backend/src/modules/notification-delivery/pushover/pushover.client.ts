@@ -106,7 +106,7 @@ export class PushoverClient {
       statusCode: response.status,
       providerStatus: payload.status,
       requestId: typeof payload.request === "string" ? payload.request : undefined,
-      errors: payload.errors,
+      errors: "errors" in payload ? payload.errors : undefined,
     };
   }
 }

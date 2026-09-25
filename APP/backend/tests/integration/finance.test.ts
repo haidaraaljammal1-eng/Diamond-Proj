@@ -105,6 +105,7 @@ if (!RUN) {
   }
 
   test("legacy MANUAL and BANK_TRANSFER confirmed payments do not increase Collected", async () => {
+    const baselineCollected = (await financeSummary()).collected;
     const manualContract = await prisma.contract.create({
       data: {
         companyId: await testCompanyId(prisma),
@@ -158,7 +159,20 @@ if (!RUN) {
       },
     });
 
-    const before = await financeSummary();
+    const ledgerBefore = await prisma.financialLedgerEntry.count({
+      where: {
+        kind: {
+          in: [
+            "RENTAL_PAYMENT",
+            "RENEWAL_PAYMENT",
+            "RECONCILIATION_PAYMENT",
+            "POST_CLOSE_RECEIVABLE_PAYMENT",
+            "ROAD_LIABILITY_PAYMENT",
+          ],
+        },
+        occurredAt: { gte: period.from, lt: period.to },
+      },
+    });
     assert.equal(
       await prisma.financialLedgerEntry.count({ where: { contractPaymentId: manualPayment.id } }),
       0,
@@ -167,8 +181,23 @@ if (!RUN) {
       await prisma.financialLedgerEntry.count({ where: { contractPaymentId: bankPayment.id } }),
       0,
     );
-    const after = await financeSummary();
-    assert.equal(after.collected, before.collected);
+    const ledgerAfter = await prisma.financialLedgerEntry.count({
+      where: {
+        kind: {
+          in: [
+            "RENTAL_PAYMENT",
+            "RENEWAL_PAYMENT",
+            "RECONCILIATION_PAYMENT",
+            "POST_CLOSE_RECEIVABLE_PAYMENT",
+            "ROAD_LIABILITY_PAYMENT",
+          ],
+        },
+        occurredAt: { gte: period.from, lt: period.to },
+      },
+    });
+    assert.equal(ledgerAfter, ledgerBefore);
+    const afterCollected = (await financeSummary()).collected;
+    assert.equal(afterCollected, baselineCollected);
   });
 
   test("confirmed Stripe rental creates one collected ledger movement", async () => {

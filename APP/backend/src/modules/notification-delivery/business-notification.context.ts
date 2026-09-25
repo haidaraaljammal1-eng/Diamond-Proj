@@ -2,6 +2,22 @@ import type { PrismaClient } from "@prisma/client";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import type { BusinessActor } from "src/modules/notification-delivery/business-notification.messages";
 
+type NotificationVehicle = {
+  vehicleName: string | null;
+  modelYear: number | null;
+  plateNumber: string | null;
+  model: { name: string } | null;
+};
+
+function notificationVehicleDisplayName(vehicle: NotificationVehicle): string {
+  return vehicleDisplayName({
+    vehicleName: vehicle.vehicleName,
+    modelName: vehicle.model?.name ?? null,
+    modelYear: vehicle.modelYear,
+    plateNumber: vehicle.plateNumber,
+  });
+}
+
 const CONTRACT_INCLUDE = {
   customer: { select: { name: true } },
   vehicle: { include: { model: { select: { name: true } } } },
@@ -42,7 +58,7 @@ export async function loadContractBasics(prisma: PrismaClient, contractId: strin
   return {
     contractNumber: contract.contractNumber,
     customerName: contract.customer?.name ?? "Unknown customer",
-    vehicleName: vehicleDisplayName(contract.vehicle),
+    vehicleName: notificationVehicleDisplayName(contract.vehicle),
     amountDue: contract.agreedAmount,
     currency: contract.currency,
     paymentState: contract.payments.length > 0 ? "Paid" : "Pending",
@@ -67,7 +83,7 @@ export async function loadPaymentContext(prisma: PrismaClient, paymentId: string
     payment,
     contractNumber: payment.contract.contractNumber,
     customerName: payment.contract.customer?.name ?? "Unknown customer",
-    vehicleName: vehicleDisplayName(payment.contract.vehicle),
+    vehicleName: notificationVehicleDisplayName(payment.contract.vehicle),
     paymentSource: payment.provider === "stripe" ? "Stripe" : payment.method,
   };
 }
@@ -86,7 +102,7 @@ export async function loadCarOutContext(prisma: PrismaClient, contractId: string
   return {
     contractNumber: contract.contractNumber,
     customerName: contract.customer?.name ?? "Unknown customer",
-    vehicleName: vehicleDisplayName(contract.vehicle),
+    vehicleName: notificationVehicleDisplayName(contract.vehicle),
     mileageOut: contract.carOut.mileageOut,
     fuelOut: contract.carOut.fuelOut,
     actor,
@@ -128,7 +144,7 @@ export async function loadRenewalContext(
   return {
     contractNumber: renewal.contract.contractNumber,
     customerName: renewal.contract.customer?.name ?? "Unknown customer",
-    vehicleName: vehicleDisplayName(renewal.contract.vehicle),
+    vehicleName: notificationVehicleDisplayName(renewal.contract.vehicle),
     previousEndAt: renewal.previousEndAt,
     newEndAt: renewal.newEndAt,
     additionalAmount: renewal.additionalAmount,
@@ -159,7 +175,7 @@ export async function loadCarInContext(prisma: PrismaClient, contractId: string)
   return {
     contractNumber: contract.contractNumber,
     customerName: contract.customer?.name ?? "Unknown customer",
-    vehicleName: vehicleDisplayName(contract.vehicle),
+    vehicleName: notificationVehicleDisplayName(contract.vehicle),
     mileageIn: contract.carIn.mileageIn,
     fuelIn: contract.carIn.fuelIn,
     damageSummary: summarizeDamageMarks(contract.officialReviewDraft?.damageIn),
@@ -195,7 +211,7 @@ export async function loadRoadLiabilityContext(prisma: PrismaClient, liabilityId
   const totalDue = liability.customerCharge?.customerChargeAmount ?? officialAmount;
 
   return {
-    vehicleName: liability.vehicle ? vehicleDisplayName(liability.vehicle) : null,
+    vehicleName: liability.vehicle ? notificationVehicleDisplayName(liability.vehicle) : null,
     customerName: liability.attributedContract?.customer?.name ?? null,
     contractNumber: liability.attributedContract?.contractNumber ?? null,
     reference:
@@ -208,6 +224,25 @@ export async function loadRoadLiabilityContext(prisma: PrismaClient, liabilityId
     source: liability.authoritativeSourceKey ?? "System",
     occurredAt: liability.occurredAt,
   };
+}
+
+export async function resolveRoadLiabilityCollectionChannel(
+  prisma: PrismaClient,
+  payment: {
+    id: string;
+    method: string;
+    provider: string | null;
+  },
+): Promise<string> {
+  if (payment.method === "CASH") return "Cash";
+
+  const offSession = await prisma.contractPaymentOffSessionAttempt.findFirst({
+    where: { contractPaymentId: payment.id },
+    select: { id: true },
+  });
+  if (offSession) return "Stripe off-session";
+  if (payment.provider === "stripe") return "Stripe Checkout";
+  return payment.method;
 }
 
 export async function loadRoadLiabilityCollectionContext(
@@ -235,6 +270,23 @@ export async function loadRoadLiabilityCollectionContext(
         totalCollected: number;
       }
     | null = null;
+
+  if (payment.purpose === "ROAD_LIABILITY") {
+    const charge = await prisma.roadLiabilityCustomerCharge.findUnique({
+      where: { id: payment.targetId },
+      include: { roadLiability: true },
+    });
+    if (charge) {
+      liability = {
+        reference:
+          charge.roadLiability.authoritativeExternalReference?.trim() ||
+          charge.roadLiabilityId.slice(0, 8).toUpperCase(),
+        officialAmount: charge.officialAmountSnapshot,
+        adminFee: charge.adjustmentAmount,
+        totalCollected: charge.customerChargeAmount,
+      };
+    }
+  }
 
   if (payment.purpose === "RECONCILIATION") {
     const line = await prisma.contractReconciliationLine.findFirst({
@@ -265,12 +317,12 @@ export async function loadRoadLiabilityCollectionContext(
     const receivable = await prisma.contractPostCloseReceivable.findUnique({
       where: { id: payment.targetId },
       include: {
-        roadLiabilityCustomerCharge: {
+        customerCharge: {
           include: { roadLiability: true },
         },
       },
     });
-    const charge = receivable?.roadLiabilityCustomerCharge;
+    const charge = receivable?.customerCharge;
     if (charge) {
       liability = {
         reference:
@@ -283,16 +335,18 @@ export async function loadRoadLiabilityCollectionContext(
     }
   }
 
+  const collectionChannel = await resolveRoadLiabilityCollectionChannel(prisma, payment);
+
   return {
     contractNumber: payment.contract.contractNumber,
     customerName: payment.contract.customer?.name ?? "Unknown customer",
-    vehicleName: vehicleDisplayName(payment.contract.vehicle),
+    vehicleName: notificationVehicleDisplayName(payment.contract.vehicle),
     amount: payment.amount,
     currency: payment.currency,
     purpose: payment.purpose,
     liability,
     occurredAt: payment.confirmedAt ?? new Date(),
-    collectionChannel: payment.provider === "stripe" ? "Stripe" : payment.method,
+    collectionChannel,
   };
 }
 
@@ -306,7 +360,7 @@ export async function loadMaintenanceContext(prisma: PrismaClient, maintenanceOr
   if (!order) return null;
   const actor = await loadActorLabel(prisma, order.createdByUserId, "Staff");
   return {
-    vehicleName: vehicleDisplayName(order.vehicle),
+    vehicleName: notificationVehicleDisplayName(order.vehicle),
     orderReference: `MO-${order.id}`,
     actualCost: order.cost,
     currency: "AED",

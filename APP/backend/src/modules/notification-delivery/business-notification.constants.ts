@@ -8,7 +8,6 @@ export const BUSINESS_NOTIFICATION_OUTBOX_TYPES = [
   "contract.activated",
   "contract.renewed",
   "contract.return_submitted",
-  "road_liability.chargeable",
   "maintenance.started",
   "maintenance.completed",
   "manual_expense.created",

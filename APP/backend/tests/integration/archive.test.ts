@@ -381,6 +381,30 @@ if (!RUN) {
     });
     assert.equal(readerDenied.statusCode, 200);
 
+    const fleetRes = await app.inject({
+      method: "GET",
+      url: "/archive/vehicles",
+      headers: auth(adminToken),
+    });
+    assert.equal(fleetRes.statusCode, 200, fleetRes.body);
+    const vehicles = fleetRes.json().data as Array<{
+      id: number;
+      displayName: string;
+      plateNumber: string | null;
+    }>;
+    const fixtureIds = [vehicleAId, vehicleBId];
+    for (const fixtureId of fixtureIds) {
+      assert.ok(
+        vehicles.some((vehicle) => vehicle.id === fixtureId),
+        `fixture vehicle ${fixtureId} must be in active archive fleet`,
+      );
+    }
+    assert.equal(
+      vehicles.some((vehicle) => vehicle.id === inactiveVehicleId),
+      false,
+      "inactive fixture vehicle must not appear in archive fleet",
+    );
+
     const res = await app.inject({
       method: "GET",
       url: "/archive/export",
@@ -394,14 +418,13 @@ if (!RUN) {
     const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(res.rawPayload as unknown as Parameters<typeof wb.xlsx.load>[0]);
-    const vehicles = (
-      await app.inject({
-        method: "GET",
-        url: "/archive/vehicles",
-        headers: auth(adminToken),
-      })
-    ).json().data as Array<{ id: number; displayName: string; plateNumber: string | null }>;
     assert.equal(wb.worksheets.length, vehicles.length);
+    const sheetNames = wb.worksheets.map((ws) => ws.name);
+    assert.equal(
+      new Set(sheetNames).size,
+      sheetNames.length,
+      "export must not collapse distinct vehicles into duplicate worksheet names",
+    );
     for (const vehicle of vehicles) {
       const sheet = wb.worksheets.find((ws) =>
         String(ws.getCell("A1").value ?? "").includes(vehicle.displayName),

@@ -6,6 +6,10 @@ import {
   staffToken,
   deactivateVehicle,
 } from "./helpers/e2e-api";
+import {
+  completeContractReviewAndSign,
+  continueAfterContractSign,
+} from "./helpers/rental-contract";
 
 /**
  * Cash rental E2E — requires live backend (:3000) + frontend (:3100) with
@@ -88,24 +92,6 @@ async function generateCashLink(page: Page, locale: "ar" | "en", vehicleId: numb
   return href;
 }
 
-async function drawRequiredSignatures(page: Page) {
-  const canvases = page.getByTestId("signatures").locator("canvas");
-  const count = await canvases.count();
-  for (let index = 0; index < count; index += 1) {
-    const canvas = canvases.nth(index);
-    if (!(await canvas.isVisible())) continue;
-    const box = await canvas.boundingBox();
-    if (!box) continue;
-    const startX = box.x + box.width * 0.2;
-    const endX = box.x + box.width * 0.8;
-    const y = box.y + box.height * 0.55;
-    await page.mouse.move(startX, y);
-    await page.mouse.down();
-    await page.mouse.move(endX, y, { steps: 12 });
-    await page.mouse.up();
-  }
-}
-
 async function completeIdentitySimulation(rentalPage: Page) {
   await expect(rentalPage.getByTestId("license-step")).toBeVisible({ timeout: 60_000 });
   await rentalPage.getByTestId("simulate-license-valid").click();
@@ -142,35 +128,8 @@ for (const locale of ["en", "ar"] as const) {
       await rentalPage.goto(link);
       await completeIdentitySimulation(rentalPage);
       await expect(rentalPage.getByTestId("contract-review")).toBeVisible({ timeout: 120_000 });
-      const fillTest = rentalPage.getByTestId("contract-review-fill-test-data");
-      if (await fillTest.isVisible()) await fillTest.click();
-      await drawRequiredSignatures(rentalPage);
-      const saveReview = rentalPage.getByRole("button", {
-        name: locale === "ar" ? /تأكيد المراجعة|حفظ/i : /confirm review|save/i,
-      });
-      if (await saveReview.isVisible()) {
-        const saveResponse = rentalPage.waitForResponse(
-          (response) =>
-            response.request().method() === "POST" &&
-            response.url().includes("/official-contract"),
-          { timeout: 60_000 },
-        );
-        await saveReview.click();
-        await saveResponse;
-      }
-      const signResponse = rentalPage.waitForResponse(
-        (response) =>
-          response.request().method() === "POST" &&
-          response.url().includes("/official-contract/sign"),
-        { timeout: 60_000 },
-      );
-      await rentalPage.getByTestId("contract-review-sign").click();
-      await signResponse;
-      const continueButton = rentalPage.getByTestId("contract-review-continue");
-      await expect(continueButton.or(rentalPage.getByTestId("handover-step"))).toBeVisible({
-        timeout: 60_000,
-      });
-      if (await continueButton.isVisible()) await continueButton.click();
+      await completeContractReviewAndSign(rentalPage);
+      await continueAfterContractSign(rentalPage);
       await expect(rentalPage.getByTestId("handover-step")).toBeVisible({ timeout: 60_000 });
       await expect(rentalPage.getByTestId("payment-step")).toHaveCount(0);
       await expect(rentalPage.getByText(/payment successful/i)).toHaveCount(0);

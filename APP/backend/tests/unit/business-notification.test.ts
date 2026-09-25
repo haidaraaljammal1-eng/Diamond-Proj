@@ -17,6 +17,7 @@ import {
 } from "src/modules/notification-delivery/business-notification.messages";
 import {
   loadCarInContext,
+  resolveRoadLiabilityCollectionChannel,
   UNKNOWN_STAFF_ACTOR_LABEL,
 } from "src/modules/notification-delivery/business-notification.context";
 import { createBusinessNotificationService } from "src/modules/notification-delivery/business-notification.service";
@@ -68,6 +69,107 @@ test("attention summary message consolidates outstanding categories", () => {
   assert.match(message.message, /Overdue rentals:/);
   assert.match(message.message, /Outstanding financial total:/);
   assert.match(message.message, /AED 9,650/);
+});
+
+test("resolveRoadLiabilityCollectionChannel distinguishes cash, off-session, and checkout", async () => {
+  const prisma = {
+    contractPaymentOffSessionAttempt: {
+      findFirst: async ({ where }: { where: { contractPaymentId: string } }) =>
+        where.contractPaymentId === "pay-offsession" ? { id: "attempt-1" } : null,
+    },
+  } as never;
+
+  assert.equal(
+    await resolveRoadLiabilityCollectionChannel(prisma, {
+      id: "pay-cash",
+      method: "CASH",
+      provider: null,
+    }),
+    "Cash",
+  );
+  assert.equal(
+    await resolveRoadLiabilityCollectionChannel(prisma, {
+      id: "pay-offsession",
+      method: "CARD",
+      provider: "stripe",
+    }),
+    "Stripe off-session",
+  );
+  assert.equal(
+    await resolveRoadLiabilityCollectionChannel(prisma, {
+      id: "pay-checkout",
+      method: "CARD",
+      provider: "stripe",
+    }),
+    "Stripe Checkout",
+  );
+});
+
+test("payment.confirmed ROAD_LIABILITY sends road liability collected message once", async () => {
+  const sends: string[] = [];
+  const createdKeys: string[] = [];
+  const prisma = {
+    idempotencyKey: {
+      create: async ({ data }: { data: { scope: string; key: string } }) => {
+        const full = `${data.scope}:${data.key}`;
+        if (createdKeys.includes(full)) {
+          const error = new Error("unique") as Error & { code?: string };
+          error.code = "P23505";
+          throw error;
+        }
+        createdKeys.push(full);
+        return data;
+      },
+      findUnique: async () => null,
+    },
+    contractPayment: {
+      findUnique: async () => ({
+        id: "pay-rl-1",
+        purpose: "ROAD_LIABILITY",
+        targetId: "charge-1",
+        amount: 480,
+        currency: "AED",
+        method: "CASH",
+        provider: null,
+        confirmedAt: new Date("2026-09-24T09:00:00.000Z"),
+        contract: {
+          contractNumber: "DR-RL-1",
+          customer: { name: "Ahmad" },
+          vehicle: { vehicleName: "Camry", model: null, plateNumber: "A 1" },
+        },
+      }),
+    },
+    roadLiabilityCustomerCharge: {
+      findUnique: async () => ({
+        roadLiabilityId: "rl-1",
+        officialAmountSnapshot: 400,
+        adjustmentAmount: 80,
+        customerChargeAmount: 480,
+        roadLiability: { authoritativeExternalReference: "RTA-123" },
+      }),
+    },
+    contractPaymentOffSessionAttempt: { findFirst: async () => null },
+    contractReconciliationLine: { findFirst: async () => null },
+    contractPostCloseReceivable: { findUnique: async () => null },
+  } as never;
+
+  const service = createBusinessNotificationService(prisma, async (payload) => {
+    sends.push(payload.message);
+    return { success: true, provider: "pushover" };
+  });
+
+  await service.handleOutboxEvent("payment.confirmed", {
+    paymentId: "pay-rl-1",
+    purpose: "ROAD_LIABILITY",
+  });
+  await service.handleOutboxEvent("payment.confirmed", {
+    paymentId: "pay-rl-1",
+    purpose: "ROAD_LIABILITY",
+  });
+
+  assert.equal(sends.length, 1);
+  assert.match(sends[0] ?? "", /Road Liability Collected/);
+  assert.match(sends[0] ?? "", /Collection Channel: Cash/);
 });
 
 test("business notification deliverOnce dedupes repeated immediate events", async () => {
