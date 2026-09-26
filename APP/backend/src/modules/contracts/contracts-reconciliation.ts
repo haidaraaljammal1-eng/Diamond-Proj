@@ -12,6 +12,12 @@ import { isExpired } from "src/lib/security/tokens";
 import { FUEL_LEVELS } from "src/modules/contracts/contracts.constants";
 import { contractError } from "src/modules/contracts/contracts.errors";
 import {
+  assertNoOutstandingOfficeRenewals,
+  listOutstandingOfficeRenewals,
+  mapOutstandingRenewalRead,
+} from "src/modules/contracts/contracts-renewal-collection";
+import { computeSettlementAmounts } from "src/modules/contracts/contracts-final-settlement";
+import {
   isManualExternalReconLineType,
   reconciliationTotalsFromLines,
 } from "src/modules/contracts/contracts-road-liability-charge";
@@ -106,6 +112,18 @@ export type FullReconciliationRead = {
   };
   paymentLink: ReconciliationPaymentLinkRead;
   collection: ReconciliationCollectionRead;
+  outstandingRenewals: Array<{
+    id: string;
+    createdAt: Date;
+    previousEndAt: Date;
+    newEndAt: Date;
+    additionalDays: number;
+    amount: number;
+    state: "OFFICE_UNPAID";
+  }>;
+  outstandingRenewalAmount: number;
+  reconciliationChargesAmount: number;
+  settlementAmountDue: number;
 };
 
 export type PublicReconciliationRead = {
@@ -118,6 +136,9 @@ export type PublicReconciliationRead = {
     amount: number;
   }>;
   finalAmount: number;
+  reconciliationChargesAmount: number;
+  outstandingRenewalAmount: number;
+  settlementAmountDue: number;
   payment: {
     required: boolean;
     settled: boolean;
@@ -392,6 +413,7 @@ export async function finalizeReconciliationAndCloseInTx(
   if (reconciliation.finalAmount > 0 && !reconciliation.settledAt) {
     throw contractError.reconciliationPaymentRequired();
   }
+  await assertNoOutstandingOfficeRenewals(tx, contractId);
   assertTransition(contract.status, "CLOSED");
   if (!contract.carIn) throw contractError.carInRequired();
 
@@ -591,6 +613,10 @@ export function buildFullReconciliationRead(row: FullReconciliationRow): FullRec
     },
     paymentLink: { active: false, expiresAt: null },
     collection: { paymentStatus: null, paymentMethod: null },
+    outstandingRenewals: [],
+    outstandingRenewalAmount: 0,
+    reconciliationChargesAmount: 0,
+    settlementAmountDue: 0,
   };
 }
 
@@ -601,16 +627,22 @@ export async function assembleFullReconciliationRead(
   const base = buildFullReconciliationRead(row);
   if (!base) return null;
   const reconciliationId = row.reconciliation?.id ?? null;
-  const [roadLiabilities, paymentLink, collection] = await Promise.all([
+  const [roadLiabilities, paymentLink, collection, outstandingRenewals] = await Promise.all([
     loadRoadLiabilitiesForRead(db, row.id, reconciliationId),
     loadActiveReconciliationPaymentLink(db, row.id),
     reconciliationId
       ? loadReconciliationCollectionStatus(db, reconciliationId)
       : Promise.resolve({ paymentStatus: null, paymentMethod: null }),
+    listOutstandingOfficeRenewals(db, row.id),
   ]);
   base.roadLiabilities = roadLiabilities;
   base.paymentLink = paymentLink;
   base.collection = collection;
+  base.outstandingRenewals = outstandingRenewals.map(mapOutstandingRenewalRead);
+  base.outstandingRenewalAmount = outstandingRenewals.reduce((sum, row) => sum + row.additionalAmount, 0);
+  const settlement = computeSettlementAmounts(base.totals.finalAmount, base.outstandingRenewalAmount);
+  base.reconciliationChargesAmount = settlement.reconciliationChargesAmount;
+  base.settlementAmountDue = settlement.settlementAmountDue;
   return base;
 }
 
@@ -619,6 +651,7 @@ export function buildPublicReconciliationRead(
   full: FullReconciliationRead,
 ): PublicReconciliationRead {
   const payment = row.reconciliation?.settledPayment ?? null;
+  const settlementAmountDue = full.settlementAmountDue;
   return {
     contractNumber: row.contractNumber,
     vehicle: {
@@ -631,9 +664,12 @@ export function buildPublicReconciliationRead(
       description: line.description,
       amount: line.amount,
     })),
-    finalAmount: full.totals.finalAmount,
+    finalAmount: settlementAmountDue,
+    reconciliationChargesAmount: full.reconciliationChargesAmount,
+    outstandingRenewalAmount: full.outstandingRenewalAmount,
+    settlementAmountDue,
     payment: {
-      required: full.totals.finalAmount > 0,
+      required: settlementAmountDue > 0,
       settled: full.reconciliation.settled,
       status: payment?.status ?? null,
       method: payment?.method ?? null,
@@ -713,12 +749,18 @@ export type FinalReconciliationDetail = {
   };
   finalizedAt: Date | null;
   finalizedBy: { id: number; name: string } | null;
+  reconciliationChargesAmount: number;
+  outstandingRenewalAmount: number;
+  settlementAmountDue: number;
 };
 
 export function buildFinalReconciliationDetail(row: FullReconciliationRow): FinalReconciliationDetail | null {
   const full = buildFullReconciliationRead(row);
   if (!full) return null;
   const payment = row.reconciliation?.settledPayment ?? null;
+  const reconciliationChargesAmount = full.totals.finalAmount;
+  const settlementAmountDue = payment?.amount ?? reconciliationChargesAmount;
+  const outstandingRenewalAmount = Math.max(0, settlementAmountDue - reconciliationChargesAmount);
   return {
     custody: full.custody,
     imagePairs: full.imagePairs,
@@ -736,5 +778,8 @@ export function buildFinalReconciliationDetail(row: FullReconciliationRow): Fina
       : row.reconciliation?.approvedBy
         ? { id: row.reconciliation.approvedBy.id, name: row.reconciliation.approvedBy.name ?? "" }
         : null,
+    reconciliationChargesAmount,
+    outstandingRenewalAmount,
+    settlementAmountDue,
   };
 }

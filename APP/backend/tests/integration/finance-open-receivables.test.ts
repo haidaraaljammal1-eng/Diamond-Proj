@@ -86,7 +86,8 @@ if (!RUN) {
           previousEndAt: new Date("2026-06-05T10:00:00.000Z"),
           newEndAt: new Date("2026-06-07T10:00:00.000Z"),
           approvedAt: new Date("2026-06-05T11:00:00.000Z"),
-          appliedAt: null,
+          appliedAt: new Date("2026-06-05T11:05:00.000Z"),
+          settledPaymentId: null,
         },
       });
       return {

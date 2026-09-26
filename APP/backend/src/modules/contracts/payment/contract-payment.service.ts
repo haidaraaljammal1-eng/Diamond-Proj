@@ -68,11 +68,18 @@ import {
 import {
   assertNoPendingRoadLiabilities,
   ensureReconciliationFinalizedInTx,
+  ensureReconciliationShellInTx,
   finalizeReconciliationAndCloseInTx,
   recalculateReconciliationTotalsInTx,
   settleReconciliationWithoutPaymentInTx,
   settleRoadLiabilitiesForReconciliation,
 } from "src/modules/contracts/contracts-reconciliation";
+import {
+  applyCombinedFinalSettlementInTx,
+  applyLegacyReconciliationSettlementInTx,
+  buildFinalSettlementAllocations,
+  ensureFinalSettlementAllocationsForPayment,
+} from "src/modules/contracts/contracts-final-settlement";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import Stripe from "stripe";
 import { env } from "src/config/env";
@@ -179,7 +186,12 @@ async function loadObligation(
       const contract = await tx.contract.findUnique({ where: { id: reconciliation.contractId } });
       if (!contract) throw contractError.notFound();
       assertAedCurrency(contract.currency);
-      if (reconciliation.finalAmount <= 0) {
+      const { settlementAmountDue } = await buildFinalSettlementAllocations(
+        tx,
+        reconciliation.id,
+        reconciliation.contractId,
+      );
+      if (settlementAmountDue <= 0) {
         return {
           contractId: reconciliation.contractId,
           purpose,
@@ -188,12 +200,12 @@ async function loadObligation(
           currency: contract.currency,
         };
       }
-      assertPositiveAedAmount(reconciliation.finalAmount);
+      assertPositiveAedAmount(settlementAmountDue);
       return {
         contractId: reconciliation.contractId,
         purpose,
         targetId: reconciliation.id,
-        amount: reconciliation.finalAmount,
+        amount: settlementAmountDue,
         currency: contract.currency,
       };
     }
@@ -259,7 +271,9 @@ async function isObligationSettled(
   }
   if (purpose === "RENEWAL") {
     const renewal = await tx.contractRenewal.findUnique({ where: { id: targetId } });
-    return Boolean(renewal?.appliedAt);
+    if (!renewal) return false;
+    if (renewal.additionalAmount <= 0) return Boolean(renewal.appliedAt);
+    return Boolean(renewal.settledPaymentId);
   }
   return false;
 }
@@ -293,10 +307,9 @@ async function settleRoadLiabilityForPostClose(tx: Tx, receivableId: string): Pr
  * Returns false (nothing applied) in that case when `onIneligible` is "skip";
  * direct callers keep the default and get CONTRACT_INVALID_TRANSITION.
  */
-async function applyRenewal(
+async function applyRenewalExtensionInTx(
   tx: Tx,
   renewalId: string,
-  paymentId?: string | null,
   onIneligible: "throw" | "skip" = "throw",
 ): Promise<boolean> {
   const renewal = await tx.contractRenewal.findUnique({ where: { id: renewalId } });
@@ -317,7 +330,6 @@ async function applyRenewal(
     data: {
       approvedAt: renewal.approvedAt ?? new Date(),
       appliedAt: new Date(),
-      ...(paymentId ? { settledPaymentId: paymentId } : {}),
     },
   });
   await tx.contract.update({
@@ -346,6 +358,35 @@ async function applyRenewal(
   return true;
 }
 
+async function linkRenewalSettlementInTx(tx: Tx, renewalId: string, paymentId: string): Promise<void> {
+  const renewal = await tx.contractRenewal.findUnique({ where: { id: renewalId } });
+  if (!renewal) throw contractError.notFound();
+  if (renewal.settledPaymentId) {
+    if (renewal.settledPaymentId === paymentId) return;
+    throw contractError.paymentAlreadySettled();
+  }
+  await tx.contractRenewal.update({
+    where: { id: renewalId },
+    data: { settledPaymentId: paymentId },
+  });
+}
+
+async function settleRenewalFromPaymentInTx(
+  tx: Tx,
+  renewalId: string,
+  paymentId: string,
+  onIneligible: "throw" | "skip" = "skip",
+): Promise<boolean> {
+  const renewal = await tx.contractRenewal.findUnique({ where: { id: renewalId } });
+  if (!renewal) throw contractError.notFound();
+  if (!renewal.appliedAt) {
+    const applied = await applyRenewalExtensionInTx(tx, renewalId, onIneligible);
+    if (!applied) return false;
+  }
+  await linkRenewalSettlementInTx(tx, renewalId, paymentId);
+  return true;
+}
+
 async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<void> {
   switch (payment.purpose) {
     case "RENTAL": {
@@ -364,18 +405,14 @@ async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<
       break;
     }
     case "RECONCILIATION": {
-      const reconciliation = await tx.contractReconciliation.findUnique({
-        where: { id: payment.targetId },
+      const allocations = await tx.contractPaymentAllocation.findMany({
+        where: { contractPaymentId: payment.id },
       });
-      if (!reconciliation) throw contractError.notFound();
-      if (!reconciliation.settledAt) {
-        await tx.contractReconciliation.update({
-          where: { id: reconciliation.id },
-          data: { settledAt: new Date(), settledPaymentId: payment.id },
-        });
-        await settleRoadLiabilitiesForReconciliation(tx, reconciliation.id);
+      if (allocations.length > 0) {
+        await applyCombinedFinalSettlementInTx(tx, payment);
+      } else {
+        await applyLegacyReconciliationSettlementInTx(tx, payment);
       }
-      await finalizeReconciliationAndCloseInTx(tx, reconciliation.contractId, payment.createdByUserId);
       break;
     }
     case "POST_CLOSE_RECEIVABLE": {
@@ -441,10 +478,8 @@ async function applyDomainSettlement(tx: Tx, payment: ContractPayment): Promise<
       break;
     }
     case "RENEWAL": {
-      // The provider already captured the money, so the payment itself stays
-      // CONFIRMED; only the extension is withheld and staff are told to settle it.
-      const applied = await applyRenewal(tx, payment.targetId, payment.id, "skip");
-      if (!applied) {
+      const settled = await settleRenewalFromPaymentInTx(tx, payment.targetId, payment.id, "skip");
+      if (!settled) {
         await emitPayment(tx, "contract.renewal_not_applied", payment.contractId, {
           paymentId: payment.id,
           renewalId: payment.targetId,
@@ -648,6 +683,13 @@ export function createContractPaymentService(prisma: PrismaClient) {
       await applyDomainSettlement(tx, updated);
       if (payment.purpose === "ROAD_LIABILITY") {
         await recordRoadLiabilityPaymentLedger(tx, updated);
+      } else if (payment.purpose === "RECONCILIATION") {
+        const allocations = await tx.contractPaymentAllocation.findMany({
+          where: { contractPaymentId: payment.id },
+        });
+        if (allocations.length === 0) {
+          await recordTrustedCollectionLedger(tx, updated);
+        }
       } else {
         await recordTrustedCollectionLedger(tx, updated);
       }
@@ -1044,6 +1086,10 @@ export function createContractPaymentService(prisma: PrismaClient) {
             },
           });
 
+      if (obligation.purpose === "RECONCILIATION") {
+        await ensureFinalSettlementAllocationsForPayment(tx, payment);
+      }
+
       const contractCompany = await tx.contract.findUnique({
         where: { id: obligation.contractId },
         select: { company: { select: { code: true } } },
@@ -1399,7 +1445,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
     const obligation = await loadObligation(tx, purpose, targetId);
     if (obligation.amount > 0) throw contractError.paymentRequired();
     if (purpose === "RENEWAL") {
-      await applyRenewal(tx, targetId, null);
+      await applyRenewalExtensionInTx(tx, targetId);
       return;
     }
     if (purpose === "RECONCILIATION") {
@@ -1518,6 +1564,21 @@ export function createContractPaymentService(prisma: PrismaClient) {
     | { outcome: "already-settled" }
     | { outcome: "proceed"; neutralizedProviderReferences: string[] }
   > {
+    const head = await prisma.contract.findUnique({
+      where: { id: contractId },
+      select: {
+        status: true,
+        carIn: { select: { id: true } },
+        reconciliation: { select: { id: true, settledAt: true } },
+      },
+    });
+    if (!head) throw contractError.notFound();
+    if (head.reconciliation?.settledAt || head.status === "CLOSED") {
+      return { outcome: "already-settled" };
+    }
+    await withTransaction(prisma, async (tx) => {
+      await ensureReconciliationShellInTx(tx, contractId);
+    });
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
       include: { carIn: true, reconciliation: true },
@@ -1530,7 +1591,12 @@ export function createContractPaymentService(prisma: PrismaClient) {
     if (!contract.carIn) throw contractError.carInRequired();
     if (!contract.reconciliation) throw contractError.reconciliationRequired();
     await assertNoPendingRoadLiabilities(prisma, contractId);
-    if (contract.reconciliation.finalAmount <= 0) throw contractError.paymentRequired();
+    const { settlementAmountDue } = await buildFinalSettlementAllocations(
+      prisma,
+      contract.reconciliation.id,
+      contractId,
+    );
+    if (settlementAmountDue <= 0) throw contractError.paymentRequired();
 
     const active = await prisma.contractPayment.findMany({
       where: {
@@ -1561,16 +1627,16 @@ export function createContractPaymentService(prisma: PrismaClient) {
     neutralizedProviderReferences: readonly string[] = [],
   ): Promise<ContractPayment> {
     await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RECONCILIATION:${contractId}`);
-    const contract = await tx.contract.findUnique({
+    let contract = await tx.contract.findUnique({
       where: { id: contractId },
       include: { carIn: true, reconciliation: true },
     });
     if (!contract) throw contractError.notFound();
     if (!contract.carIn) throw contractError.carInRequired();
-    if (!contract.reconciliation) throw contractError.reconciliationRequired();
-    await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RECONCILIATION:${contract.reconciliation.id}`);
 
-    if (contract.status === "CLOSED" || contract.reconciliation.settledAt) {
+    if (contract.status === "CLOSED" || contract.reconciliation?.settledAt) {
+      if (!contract.reconciliation) throw contractError.reconciliationRequired();
+      await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RECONCILIATION:${contract.reconciliation.id}`);
       const settledPayment = await tx.contractPayment.findFirst({
         where: { purpose: "RECONCILIATION", targetId: contract.reconciliation.id, status: "CONFIRMED" },
         orderBy: { createdAt: "desc" },
@@ -1578,6 +1644,16 @@ export function createContractPaymentService(prisma: PrismaClient) {
       if (settledPayment) return settledPayment;
       throw contractError.paymentAlreadySettled();
     }
+
+    await ensureReconciliationShellInTx(tx, contractId);
+    contract = await tx.contract.findUnique({
+      where: { id: contractId },
+      include: { carIn: true, reconciliation: true },
+    });
+    if (!contract) throw contractError.notFound();
+    if (!contract.reconciliation) throw contractError.reconciliationRequired();
+    await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RECONCILIATION:${contract.reconciliation.id}`);
+
     if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
 
     await assertNoPendingRoadLiabilities(tx, contractId);
@@ -1587,7 +1663,12 @@ export function createContractPaymentService(prisma: PrismaClient) {
     });
     await recalculateReconciliationTotalsInTx(tx, reconciliation.id);
     const fresh = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
-    if (fresh.finalAmount <= 0) throw contractError.paymentRequired();
+    const { settlementAmountDue } = await buildFinalSettlementAllocations(
+      tx,
+      fresh.id,
+      contractId,
+    );
+    if (settlementAmountDue <= 0) throw contractError.paymentRequired();
 
     await revokeReconciliationLinks(tx, contractId);
 
@@ -1633,7 +1714,10 @@ export function createContractPaymentService(prisma: PrismaClient) {
     }
 
     const cashActive = activePayments.find((payment) => payment.method === "CASH");
-    if (cashActive) return confirmPaymentAttempt(tx, cashActive);
+    if (cashActive) {
+      await ensureFinalSettlementAllocationsForPayment(tx, cashActive);
+      return confirmPaymentAttempt(tx, cashActive);
+    }
 
     const obligation = await loadObligation(tx, "RECONCILIATION", fresh.id);
     if (obligation.amount <= 0) throw contractError.paymentRequired();
@@ -1651,6 +1735,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
           createdByUserId: actorUserId,
         },
       });
+      await ensureFinalSettlementAllocationsForPayment(tx, payment);
       return confirmPaymentAttempt(tx, payment);
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -1671,6 +1756,131 @@ export function createContractPaymentService(prisma: PrismaClient) {
     return withTransaction(prisma, (tx) => settleCashRentalInTx(tx, contractId, actorUserId));
   }
 
+  async function prepareOfficeRenewalRegistration(contractId: string): Promise<void> {
+    const unapplied = await prisma.contractRenewal.findMany({
+      where: { contractId, appliedAt: null },
+      select: { id: true },
+    });
+    for (const renewal of unapplied) {
+      const active = await prisma.contractPayment.findMany({
+        where: {
+          purpose: "RENEWAL",
+          targetId: renewal.id,
+          status: { in: ["PENDING", "PROCESSING"] },
+        },
+      });
+      for (const payment of active) {
+        if (payment.method === "CASH" || !payment.providerReference) {
+          await withTransaction(prisma, async (tx) => {
+            const fresh = await tx.contractPayment.findUnique({ where: { id: payment.id } });
+            if (fresh && (fresh.status === "PENDING" || fresh.status === "PROCESSING")) {
+              await markPaymentTerminal(tx, fresh, "CANCELLED", "superseded_by_office_renewal");
+            }
+          });
+          continue;
+        }
+        const outcome = await neutralizeProviderCheckout(payment.providerReference);
+        if (outcome === "ALREADY_PAID") {
+          const reconciled = await reconcilePaymentWithProvider(payment.id);
+          if (reconciled?.status === "CONFIRMED") {
+            throw contractError.paymentAlreadySettled();
+          }
+          throw contractError.electronicRenewalCollectionActive();
+        }
+        if (outcome === "BLOCKED") throw contractError.electronicRenewalCollectionActive();
+        await withTransaction(prisma, async (tx) => {
+          const fresh = await tx.contractPayment.findUnique({ where: { id: payment.id } });
+          if (fresh && (fresh.status === "PENDING" || fresh.status === "PROCESSING")) {
+            await markPaymentTerminal(tx, fresh, "CANCELLED", "superseded_by_office_renewal");
+          }
+        });
+      }
+    }
+  }
+
+  async function settleRenewalCashInTx(
+    tx: Tx,
+    contractId: string,
+    renewalId: string,
+    actorUserId: number,
+  ): Promise<ContractPayment> {
+    const { renewalCollectableStatuses } = await import("../contracts-renewal-collection");
+    await acquireAdvisoryLock(tx, CONTRACT_PAYMENT_LOCK_NS, `RENEWAL:${renewalId}`);
+    const renewal = await tx.contractRenewal.findUnique({ where: { id: renewalId } });
+    if (!renewal || renewal.contractId !== contractId) throw contractError.notFound();
+    if (renewal.additionalAmount <= 0) throw contractError.paymentNotAllowed();
+    if (!renewal.appliedAt) throw contractError.paymentNotAllowed();
+    if (renewal.settledPaymentId) {
+      const settled = await tx.contractPayment.findUnique({ where: { id: renewal.settledPaymentId } });
+      if (settled) return settled;
+      throw contractError.paymentAlreadySettled();
+    }
+
+    const contract = await tx.contract.findUnique({ where: { id: contractId }, select: { status: true } });
+    if (contract?.status === "REVIEW") {
+      throw contractError.renewalIncludedInFinalSettlement();
+    }
+    if (!contract || !renewalCollectableStatuses().includes(contract.status)) {
+      throw contractError.paymentNotAllowed();
+    }
+
+    const existingConfirmed = await tx.contractPayment.findFirst({
+      where: { purpose: "RENEWAL", targetId: renewalId, status: "CONFIRMED" },
+    });
+    if (existingConfirmed) {
+      await linkRenewalSettlementInTx(tx, renewalId, existingConfirmed.id);
+      return existingConfirmed;
+    }
+
+    const active = await tx.contractPayment.findFirst({
+      where: {
+        purpose: "RENEWAL",
+        targetId: renewalId,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+    });
+    if (active?.method === "CASH") {
+      return confirmPaymentAttempt(tx, active);
+    }
+    if (active) throw contractError.paymentAlreadyProcessing();
+
+    const obligation = await loadObligation(tx, "RENEWAL", renewalId);
+    try {
+      const payment = await tx.contractPayment.create({
+        data: {
+          contractId: obligation.contractId,
+          purpose: "RENEWAL",
+          targetId: renewalId,
+          amount: obligation.amount,
+          currency: obligation.currency,
+          method: "CASH",
+          status: "PENDING",
+          createdByUserId: actorUserId,
+        },
+      });
+      return confirmPaymentAttempt(tx, payment);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        const existing = await tx.contractPayment.findFirst({
+          where: { purpose: "RENEWAL", targetId: renewalId, status: "CONFIRMED" },
+        });
+        if (existing) {
+          await linkRenewalSettlementInTx(tx, renewalId, existing.id);
+          return existing;
+        }
+      }
+      throw error;
+    }
+  }
+
+  async function settleRenewalCash(
+    contractId: string,
+    renewalId: string,
+    actorUserId: number,
+  ): Promise<ContractPayment> {
+    return withTransaction(prisma, (tx) => settleRenewalCashInTx(tx, contractId, renewalId, actorUserId));
+  }
+
   return {
     startPayment,
     applyProviderPaymentStatus,
@@ -1685,7 +1895,10 @@ export function createContractPaymentService(prisma: PrismaClient) {
     loadObligation,
     isObligationSettled,
     applyZeroAmountSettlement,
-    applyRenewal,
+    applyRenewalExtensionInTx,
+    prepareOfficeRenewalRegistration,
+    settleRenewalCash,
+    settleRenewalCashInTx,
     settlePaymentFromProvider,
     settleCashRental,
     settleCashRentalInTx,

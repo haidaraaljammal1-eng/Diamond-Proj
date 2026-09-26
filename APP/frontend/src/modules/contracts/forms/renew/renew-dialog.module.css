@@ -35,3 +35,13 @@
 .linkRow {
   margin-top: 10px;
 }
+
+.officeConfirm {
+  display: grid;
+  gap: 12px;
+}
+
+.officeList {
+  margin: 0;
+  padding-inline-start: 1.2rem;
+}

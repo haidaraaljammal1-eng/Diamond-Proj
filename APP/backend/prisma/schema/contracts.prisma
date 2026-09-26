@@ -332,7 +332,8 @@ model ContractPayment {
 
   reconciliationSettlement ContractReconciliation?       @relation("ReconciliationSettlement")
   postCloseSettlement      ContractPostCloseReceivable?  @relation("PostCloseSettlement")
-  renewalSettlement        ContractRenewal?              @relation("RenewalSettlement")
+  renewalSettlements       ContractRenewal[]             @relation("RenewalSettlement")
+  allocations              ContractPaymentAllocation[]
   roadLiabilitySettlement  RoadLiabilityCustomerCharge?  @relation("RoadLiabilitySettlement")
   ledgerEntries            FinancialLedgerEntry[]
   paymentAuthorization     ContractPaymentAuthorization?
@@ -798,13 +799,34 @@ model ContractRenewal {
   /// Customer accepted the offer. Contract extension applies only after payment (or zero amount).
   approvedAt       DateTime?
   appliedAt        DateTime?
-  settledPaymentId String?          @unique
+  settledPaymentId String?
   settledPayment   ContractPayment? @relation("RenewalSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdByUserId  Int?
   createdBy        User?            @relation("ContractRenewalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([contractId, createdAt])
+  @@index([settledPaymentId])
   @@map("contract_renewals")
+}
+
+enum ContractPaymentAllocationPurpose {
+  RECONCILIATION
+  RENEWAL
+}
+
+model ContractPaymentAllocation {
+  id                String                           @id @default(uuid())
+  contractPaymentId String
+  contractPayment   ContractPayment                  @relation(fields: [contractPaymentId], references: [id], onDelete: Cascade)
+  allocationPurpose ContractPaymentAllocationPurpose
+  targetId          String
+  amount            Int
+  createdAt         DateTime                         @default(now())
+
+  @@unique([contractPaymentId, allocationPurpose, targetId])
+  @@index([contractPaymentId])
+  @@index([targetId])
+  @@map("contract_payment_allocations")
 }
 
 model CustomerDocument {

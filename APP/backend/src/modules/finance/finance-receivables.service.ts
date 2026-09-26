@@ -12,6 +12,7 @@ import {
   contractCompanyScopeWhere,
   type FinanceCompanyScope,
 } from "src/modules/finance/finance-company-scope";
+import { OUTSTANDING_OFFICE_RENEWAL_FILTER } from "src/modules/contracts/contracts-renewal-collection";
 
 const ALL_COMPANIES: FinanceCompanyScope = { kind: "ALL" };
 
@@ -112,12 +113,10 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
   ): Promise<OpenReceivableRow[]> {
     const renewals = await prisma.contractRenewal.findMany({
       where: {
-        ...(contractWhere ? { contract: contractWhere } : {}),
-        approvedAt: { not: null },
-        appliedAt: null,
-        additionalAmount: { gt: 0 },
-        NOT: {
-          settledPayment: TRUSTED_CUSTOMER_COLLECTION,
+        ...OUTSTANDING_OFFICE_RENEWAL_FILTER,
+        contract: {
+          ...(contractWhere ?? {}),
+          status: { not: "REVIEW" },
         },
       },
       include: {
@@ -149,7 +148,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         amountPaid: 0,
         outstandingAmount: amountDue,
         currency: contract.currency,
-        obligationCreatedAt: renewal.approvedAt!,
+        obligationCreatedAt: renewal.appliedAt!,
         paymentState: paymentMeta.paymentState,
         paymentPurpose: "RENEWAL",
         latestPaymentId: paymentMeta.latestPaymentId,
@@ -160,29 +159,45 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
   async function fetchReconciliationOutstanding(
     contractWhere: Prisma.ContractWhereInput | undefined,
   ): Promise<OpenReceivableRow[]> {
-    const reconciliations = await prisma.contractReconciliation.findMany({
-      where: {
-        ...(contractWhere ? { contract: contractWhere } : {}),
-        approvedAt: { not: null },
-        settledAt: null,
-        finalAmount: { gt: 0 },
+    const approvedWhere: Prisma.ContractReconciliationWhereInput = {
+      settledAt: null,
+      approvedAt: { not: null },
+      ...(contractWhere ? { contract: contractWhere } : {}),
+    };
+    const reviewCombinedWhere: Prisma.ContractReconciliationWhereInput = {
+      settledAt: null,
+      contract: {
+        ...(contractWhere ?? {}),
+        status: "REVIEW",
       },
+    };
+    const reconciliations = await prisma.contractReconciliation.findMany({
+      where: { OR: [approvedWhere, reviewCombinedWhere] },
       include: {
         contract: {
-          include: CONTRACT_INCLUDE,
+          include: {
+            ...CONTRACT_INCLUDE,
+            renewals: {
+              where: OUTSTANDING_OFFICE_RENEWAL_FILTER,
+              select: { additionalAmount: true },
+            },
+          },
         },
         settledPayment: { select: { id: true, status: true } },
       },
     });
 
-    return reconciliations.map((reconciliation) => {
+    return reconciliations.flatMap((reconciliation) => {
       const contract = reconciliation.contract;
+      const renewalTotal = contract.renewals.reduce((sum, row) => sum + row.additionalAmount, 0);
+      const amountDue = reconciliation.finalAmount + renewalTotal;
+      if (amountDue <= 0) return [];
       const latestPayments = reconciliation.settledPayment
         ? [{ id: reconciliation.settledPayment.id, status: reconciliation.settledPayment.status }]
         : [];
       const paymentMeta = latestPaymentState(latestPayments);
-      const amountDue = reconciliation.finalAmount;
-      return {
+      const amountDueValue = amountDue;
+      return [{
         sourceType: "RECONCILIATION" as const,
         sourceId: reconciliation.id,
         contractId: contract.id,
@@ -190,15 +205,15 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         customer: toCustomerSummary(contract.customer),
         vehicle: toVehicleSummary(contract.vehicle),
         company: toFinanceCompanyRef(contract.company),
-        amountDue,
+        amountDue: amountDueValue,
         amountPaid: 0,
-        outstandingAmount: amountDue,
+        outstandingAmount: amountDueValue,
         currency: contract.currency,
-        obligationCreatedAt: reconciliation.approvedAt!,
+        obligationCreatedAt: reconciliation.approvedAt ?? reconciliation.updatedAt,
         paymentState: paymentMeta.paymentState,
         paymentPurpose: "RECONCILIATION",
         latestPaymentId: paymentMeta.latestPaymentId,
-      };
+      }];
     });
   }
 

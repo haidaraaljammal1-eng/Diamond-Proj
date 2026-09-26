@@ -203,6 +203,33 @@ export const contractError = {
       "Cash collection is blocked while an electronic checkout can still be paid",
       "ELECTRONIC_COLLECTION_ACTIVE",
     ),
+  electronicRenewalCollectionActive: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Office renewal is blocked while an electronic renewal checkout can still be paid",
+      "ELECTRONIC_RENEWAL_COLLECTION_ACTIVE",
+    ),
+  renewalPaymentRequired: (
+    renewals: Array<{
+      id: string;
+      additionalDays: number;
+      additionalAmount: number;
+      previousEndAt: string;
+      newEndAt: string;
+    }>,
+  ) =>
+    err(
+      ErrorCode.CONFLICT,
+      "An outstanding renewal amount must be collected before reconciliation can complete",
+      "RENEWAL_PAYMENT_REQUIRED",
+      { renewals },
+    ),
+  renewalIncludedInFinalSettlement: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Outstanding renewals at review are collected only through final reconciliation settlement",
+      "RENEWAL_INCLUDED_IN_FINAL_SETTLEMENT",
+    ),
   paymentAttemptNotFound: () =>
     err(ErrorCode.NOT_FOUND, "Payment attempt was not found", "PAYMENT_ATTEMPT_NOT_FOUND"),
   paymentStatusTokenInvalid: () =>

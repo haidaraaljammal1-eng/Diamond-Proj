@@ -286,6 +286,19 @@ export async function renewContract(
   return response.data;
 }
 
+/** `POST /contracts/:id/renewals/:renewalId/cash/settle` */
+export async function settleRenewalCash(
+  contractId: string,
+  renewalId: string,
+  idempotencyKey?: string,
+): Promise<ContractDetailDto> {
+  const response = await apiRequest<ContractDetailDto>(
+    `${CONTRACTS_PATH}/${contractId}/renewals/${renewalId}/cash/settle`,
+    { method: "POST", headers: withIdempotency(idempotencyKey) },
+  );
+  return response.data;
+}
+
 /** `POST /contracts/:id/reconcile` (`contracts.reconcile`). */
 export async function reconcileContract(
   id: string,

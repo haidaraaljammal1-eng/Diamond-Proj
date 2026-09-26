@@ -69,6 +69,10 @@ const base: FullReconciliationReadDto = {
   },
   paymentLink: { active: false, expiresAt: null },
   collection: { paymentStatus: null, paymentMethod: null },
+  outstandingRenewals: [],
+  outstandingRenewalAmount: 0,
+  reconciliationChargesAmount: 200,
+  settlementAmountDue: 200,
 };
 
 describe("reconciliation.utils", () => {
@@ -138,11 +142,45 @@ describe("reconciliation.utils", () => {
         violations: 0,
         finalAmount: 0,
       },
+      reconciliationChargesAmount: 0,
+      settlementAmountDue: 0,
       reconciliation: { ...base.reconciliation, settled: false },
     };
     assert.equal(isReconciliationEditable(zeroDraft), true);
     assert.equal(canCollectReconciliation(zeroDraft), false);
     assert.equal(fuelLines(zeroDraft.lines).length, 0);
     assert.equal(manualChargeLines(zeroDraft.lines).length, 0);
+  });
+
+  it("requires collect when reconciliation lines are zero but unpaid renewals remain", () => {
+    const withRenewal = {
+      ...base,
+      lines: [],
+      totals: {
+        damages: 0,
+        fuel: 0,
+        late: 0,
+        other: 0,
+        salik: 0,
+        violations: 0,
+        finalAmount: 0,
+      },
+      reconciliationChargesAmount: 0,
+      settlementAmountDue: 500,
+      outstandingRenewalAmount: 500,
+      outstandingRenewals: [
+        {
+          id: "ren-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          previousEndAt: "2026-10-01T00:00:00.000Z",
+          newEndAt: "2026-10-08T00:00:00.000Z",
+          additionalDays: 7,
+          amount: 500,
+          state: "OFFICE_UNPAID" as const,
+        },
+      ],
+    };
+    assert.equal(canCollectReconciliation(withRenewal), true);
+    assert.equal(withRenewal.settlementAmountDue, 500);
   });
 });

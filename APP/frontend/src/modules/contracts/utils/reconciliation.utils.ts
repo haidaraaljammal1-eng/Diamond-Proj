@@ -16,15 +16,19 @@ export function isReconciliationEditable(data: FullReconciliationReadDto): boole
 export function canCollectReconciliation(data: FullReconciliationReadDto): boolean {
   if (data.contract.status !== "REVIEW") return false;
   if (data.reconciliation.settled) return false;
-  return data.totals.finalAmount > 0;
+  return data.settlementAmountDue > 0;
+}
+
+export function settlementAmountDue(data: FullReconciliationReadDto): number {
+  return data.settlementAmountDue;
 }
 
 export function isReconciliationAwaitingPayment(data: FullReconciliationReadDto): boolean {
-  const { reconciliation, totals } = data;
+  const { reconciliation } = data;
   return Boolean(
     reconciliation.finalizedAt &&
       !reconciliation.settled &&
-      totals.finalAmount > 0,
+      data.settlementAmountDue > 0,
   );
 }
 

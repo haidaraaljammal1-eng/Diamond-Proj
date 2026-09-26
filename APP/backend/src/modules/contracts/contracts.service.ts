@@ -128,6 +128,7 @@ import {
   recalculateReconciliationTotalsInTx,
   settleReconciliationWithoutPaymentInTx,
 } from "src/modules/contracts/contracts-reconciliation";
+import { buildFinalSettlementAllocations } from "src/modules/contracts/contracts-final-settlement";
 import {
   buildRoadLiabilityChargeProposal,
   COLLECTIBLE_WHERE,
@@ -1548,11 +1549,21 @@ export function createContractsService(fastify: FastifyInstance) {
         if (!contract) throw contractError.notFound();
         assertStatus(contract.status, "REVIEW");
         if (!contract.carIn) throw contractError.carInRequired();
-        if (!contract.reconciliation) throw contractError.reconciliationRequired();
+        await ensureReconciliationShellInTx(tx, contractId);
+        const contractWithShell = await tx.contract.findUnique({
+          where: { id: contractId },
+          include: { carIn: true, reconciliation: true },
+        });
+        if (!contractWithShell?.reconciliation) throw contractError.reconciliationRequired();
 
         await ensureReconciliationFinalizedInTx(tx, contractId, actorUserId);
         const reconciliation = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
-        if (reconciliation.finalAmount <= 0) {
+        const { settlementAmountDue } = await buildFinalSettlementAllocations(
+          tx,
+          reconciliation.id,
+          contractId,
+        );
+        if (settlementAmountDue <= 0) {
           await settleReconciliationWithoutPaymentInTx(tx, reconciliation.id);
           await finalizeReconciliationAndCloseInTx(tx, contractId, actorUserId);
         }
@@ -1602,6 +1613,30 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  async function settleRenewalCash(
+    contractId: string,
+    renewalId: string,
+    actorUserId: number,
+    idempotencyKey?: string,
+  ) {
+    const run = async () => {
+      await paymentService.settleRenewalCash(contractId, renewalId, actorUserId);
+      return get(contractId);
+    };
+    if (!idempotencyKey) return run();
+    const outcome = await runIdempotent(
+      prisma,
+      {
+        scope: `contract:renewal:cash:${renewalId}`,
+        key: idempotencyKey,
+        fingerprint: fingerprintIdempotentPayload({ action: "renewal_cash", renewalId }),
+      },
+      run,
+    );
+    if (outcome.deduped) return get(contractId);
+    return outcome.result!;
+  }
+
   async function generateReconciliationLink(contractId: string, actorUserId: number) {
     return withTransaction(prisma, async (tx) => {
       await acquireAdvisoryLock(tx, CONTRACT_RECONCILE_LOCK_NS, contractId);
@@ -1618,7 +1653,8 @@ export function createContractsService(fastify: FastifyInstance) {
       const reconciliation = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
       await recalculateReconciliationTotalsInTx(tx, reconciliation.id);
       const fresh = await tx.contractReconciliation.findUniqueOrThrow({ where: { contractId } });
-      if (fresh.finalAmount <= 0) throw contractError.paymentRequired();
+      const { settlementAmountDue } = await buildFinalSettlementAllocations(tx, fresh.id, contractId);
+      if (settlementAmountDue <= 0) throw contractError.paymentRequired();
 
       const issued = await issueContractLink(tx, {
         contractId,
@@ -1630,7 +1666,7 @@ export function createContractsService(fastify: FastifyInstance) {
         contractNumber: contract.contractNumber,
         link: { token: issued.token, expiresAt: issued.expiresAt, type: "RECONCILIATION" as const },
         publicUrl: buildPublicFrontendUrl("en", `/reconciliation/${issued.token}`),
-        finalAmount: fresh.finalAmount,
+        finalAmount: settlementAmountDue,
       };
     });
   }
@@ -1659,7 +1695,12 @@ export function createContractsService(fastify: FastifyInstance) {
     if (contract.status !== "REVIEW") throw contractError.paymentNotAllowed();
     if (!contract.reconciliation) throw contractError.reconciliationRequired();
     if (!isReconciliationFinalized(contract.reconciliation)) throw contractError.reconciliationNotFinalized();
-    if (contract.reconciliation.finalAmount <= 0) throw contractError.paymentNotAllowed();
+    const { settlementAmountDue } = await buildFinalSettlementAllocations(
+      prisma,
+      contract.reconciliation.id,
+      contract.id,
+    );
+    if (settlementAmountDue <= 0) throw contractError.paymentNotAllowed();
     if (isReconciliationSettled(contract.reconciliation)) throw contractError.paymentAlreadySettled();
 
     const result = await paymentService.startPayment({
@@ -1673,7 +1714,12 @@ export function createContractsService(fastify: FastifyInstance) {
         });
         if (row?.status !== "REVIEW") throw contractError.paymentNotAllowed();
         if (!row?.reconciliation?.finalizedAt) throw contractError.reconciliationNotFinalized();
-        if (row.reconciliation.finalAmount <= 0) throw contractError.paymentNotAllowed();
+        const due = await buildFinalSettlementAllocations(
+          tx,
+          row.reconciliation.id,
+          contract.id,
+        );
+        if (due.settlementAmountDue <= 0) throw contractError.paymentNotAllowed();
         if (row.reconciliation.settledAt) throw contractError.paymentAlreadySettled();
       },
     });
@@ -1840,8 +1886,9 @@ export function createContractsService(fastify: FastifyInstance) {
     actorUserId: number | null,
     idempotencyKey?: string,
   ) {
-    const run = async () =>
-      withTransaction(prisma, async (tx) => {
+    const run = async () => {
+      await paymentService.prepareOfficeRenewalRegistration(contractId);
+      return withTransaction(prisma, async (tx) => {
         await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, contractId);
         const contract = await tx.contract.findUnique({ where: { id: contractId } });
         if (!contract) throw contractError.notFound();
@@ -1865,6 +1912,8 @@ export function createContractsService(fastify: FastifyInstance) {
         });
         if (input.additionalAmount <= 0) {
           await paymentService.applyZeroAmountSettlement(tx, "RENEWAL", renewal.id);
+        } else {
+          await paymentService.applyRenewalExtensionInTx(tx, renewal.id);
         }
         return decorateDetail(
           await tx.contract.findUniqueOrThrow({
@@ -1873,6 +1922,7 @@ export function createContractsService(fastify: FastifyInstance) {
           }),
         );
       });
+    };
 
     if (!idempotencyKey) return run();
     const outcome = await runIdempotent(
@@ -2841,7 +2891,12 @@ export function createContractsService(fastify: FastifyInstance) {
     });
     if (!refreshed?.reconciliation) throw contractError.reconciliationRequired();
 
-    if (refreshed.reconciliation.finalAmount <= 0) {
+    const { settlementAmountDue } = await buildFinalSettlementAllocations(
+      prisma,
+      refreshed.reconciliation.id,
+      contractId,
+    );
+    if (settlementAmountDue <= 0) {
       await finalizeReconciliation(contractId, actorUserId);
       return {
         payment: {
@@ -3052,6 +3107,7 @@ export function createContractsService(fastify: FastifyInstance) {
     confirmRoadLiabilityCharge,
     close,
     renew,
+    settleRenewalCash,
     confirmReturnPublic,
     confirmRenewalPublic,
     getPublic,

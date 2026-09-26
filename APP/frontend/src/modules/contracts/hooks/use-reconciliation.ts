@@ -14,6 +14,7 @@ import {
   settleReconciliationCash,
   updateReconciliationLine,
 } from "../api/reconciliation.api";
+import { settleRenewalCash as settleRenewalCashRequest } from "../api/contracts.api";
 import type {
   ConfirmReconciliationRoadLiabilityPayload,
   FullReconciliationReadDto,
@@ -43,6 +44,7 @@ export interface UseReconciliationResult {
   roadLiabilityMutation: MutationSlot;
   finalizeMutation: MutationSlot;
   cashMutation: MutationSlot;
+  renewalCashMutation: MutationSlot;
   linkMutation: MutationSlot;
   load: (contractId: string) => Promise<void>;
   refresh: (contractId: string) => Promise<void>;
@@ -76,6 +78,7 @@ export interface UseReconciliationResult {
   ) => Promise<boolean>;
   finalize: (contractId: string) => Promise<boolean>;
   settleCash: (contractId: string) => Promise<boolean>;
+  settleRenewalCash: (contractId: string, renewalId: string) => Promise<boolean>;
   generateLink: (contractId: string) => Promise<boolean>;
 }
 
@@ -93,8 +96,10 @@ export function useReconciliation(): UseReconciliationResult {
   const [roadLiabilityMutation, setRoadLiabilityMutation] = useState<MutationSlot>(idleMutation());
   const [finalizeMutation, setFinalizeMutation] = useState<MutationSlot>(idleMutation());
   const [cashMutation, setCashMutation] = useState<MutationSlot>(idleMutation());
+  const [renewalCashMutation, setRenewalCashMutation] = useState<MutationSlot>(idleMutation());
   const [linkMutation, setLinkMutation] = useState<MutationSlot>(idleMutation());
   const loadGeneration = useRef(0);
+  const renewalCashKeyRef = useRef(createIdempotencyKey());
 
   const load = useCallback(async (contractId: string) => {
     const generation = ++loadGeneration.current;
@@ -151,6 +156,7 @@ export function useReconciliation(): UseReconciliationResult {
     setRoadLiabilityMutation(idleMutation());
     setFinalizeMutation(idleMutation());
     setCashMutation(idleMutation());
+    setRenewalCashMutation(idleMutation());
     setLinkMutation(idleMutation());
   }, []);
 
@@ -333,6 +339,22 @@ export function useReconciliation(): UseReconciliationResult {
     [refreshAfterFinancialSuccess],
   );
 
+  const settleRenewalCash = useCallback(
+    async (contractId: string, renewalId: string) => {
+      setRenewalCashMutation({ pending: true, error: null });
+      try {
+        await settleRenewalCashRequest(contractId, renewalId, renewalCashKeyRef.current);
+        setRenewalCashMutation(idleMutation());
+        await refreshAfterFinancialSuccess(contractId);
+        return true;
+      } catch (cause) {
+        setRenewalCashMutation({ pending: false, error: normalizeApiError(cause) });
+        return false;
+      }
+    },
+    [refreshAfterFinancialSuccess],
+  );
+
   const generateLink = useCallback(
     async (contractId: string) => {
       setLinkMutation({ pending: true, error: null });
@@ -360,6 +382,7 @@ export function useReconciliation(): UseReconciliationResult {
     roadLiabilityMutation,
     finalizeMutation,
     cashMutation,
+    renewalCashMutation,
     linkMutation,
     load,
     refresh,
@@ -375,6 +398,7 @@ export function useReconciliation(): UseReconciliationResult {
       setRoadLiabilityMutation(idleMutation());
       setFinalizeMutation(idleMutation());
       setCashMutation(idleMutation());
+      setRenewalCashMutation(idleMutation());
       setLinkMutation(idleMutation());
     },
     addDamageLine,
@@ -386,6 +410,7 @@ export function useReconciliation(): UseReconciliationResult {
     confirmRoadLiability,
     finalize,
     settleCash,
+    settleRenewalCash,
     generateLink,
   };
 }

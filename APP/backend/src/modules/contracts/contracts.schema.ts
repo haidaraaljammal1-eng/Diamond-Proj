@@ -301,6 +301,20 @@ export const FullReconciliationReadSchema = z.object({
     paymentStatus: z.string().nullable(),
     paymentMethod: z.string().nullable(),
   }),
+  outstandingRenewals: z.array(
+    z.object({
+      id: z.string().uuid(),
+      createdAt: z.date(),
+      previousEndAt: z.date(),
+      newEndAt: z.date(),
+      additionalDays: z.number().int(),
+      amount: z.number().int(),
+      state: z.literal("OFFICE_UNPAID"),
+    }),
+  ),
+  outstandingRenewalAmount: z.number().int(),
+  reconciliationChargesAmount: z.number().int(),
+  settlementAmountDue: z.number().int(),
 });
 
 export const PublicReconciliationReadSchema = z.object({
@@ -318,6 +332,9 @@ export const PublicReconciliationReadSchema = z.object({
     }),
   ),
   finalAmount: z.number().int(),
+  reconciliationChargesAmount: z.number().int(),
+  outstandingRenewalAmount: z.number().int(),
+  settlementAmountDue: z.number().int(),
   payment: z.object({
     required: z.boolean(),
     settled: z.boolean(),
@@ -351,6 +368,9 @@ export const FinalReconciliationDetailSchema = z.object({
   }),
   finalizedAt: z.date().nullable(),
   finalizedBy: z.object({ id: z.number().int(), name: z.string() }).nullable(),
+  reconciliationChargesAmount: z.number().int(),
+  outstandingRenewalAmount: z.number().int(),
+  settlementAmountDue: z.number().int(),
 });
 
 export const ReconcileSchema = z.object({
@@ -676,7 +696,22 @@ export const ContractDetailSchema = z.object({
       createdAt: z.date(),
       approvedAt: z.date().nullable(),
       appliedAt: z.date().nullable().optional(),
+      settledPaymentId: z.string().nullable().optional(),
+      collectionState: z.enum([
+        "PENDING",
+        "AWAITING_PAYMENT",
+        "OFFICE_UNPAID",
+        "PAID",
+        "COMPLETED_NO_CHARGE",
+      ]),
+      extensionApplied: z.boolean(),
+      collectable: z.boolean(),
       awaitingPayment: z.boolean().optional(),
+      paymentMethod: z.enum(["BANK_TRANSFER", "CARD", "CASH", "MANUAL"]).nullable().optional(),
+      paymentStatus: z
+        .enum(["PENDING", "PROCESSING", "CONFIRMED", "FAILED", "CANCELLED"])
+        .nullable()
+        .optional(),
     }),
   ),
   actions: z.object({

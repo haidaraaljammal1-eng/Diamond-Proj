@@ -628,17 +628,20 @@ function summaryLineKey(key: string): string {
 }
 
 export function ReconciliationFinancialSummary({
-  totals,
+  data,
   currency = "AED",
   variant = "full",
 }: {
-  totals: FullReconciliationReadDto["totals"];
+  data: Pick<
+    FullReconciliationReadDto,
+    "totals" | "reconciliationChargesAmount" | "outstandingRenewalAmount" | "settlementAmountDue"
+  >;
   currency?: string;
   variant?: "full" | "compact";
 }) {
   const t = useTranslations("Contracts");
   const format = useFormatter();
-  const entries = totalsEntries(totals);
+  const entries = totalsEntries(data.totals);
 
   const breakdown = (
     <>
@@ -656,10 +659,26 @@ export function ReconciliationFinancialSummary({
       ) : (
         <p className={styles.muted}>{t("finalReconciliation.noCharges")}</p>
       )}
+      <dl className={styles.summaryList}>
+        <div>
+          <dt>{t("finalReconciliation.reconciliationCharges")}</dt>
+          <dd dir="ltr">
+            {format.number(data.reconciliationChargesAmount)} {currency}
+          </dd>
+        </div>
+        {data.outstandingRenewalAmount > 0 ? (
+          <div>
+            <dt>{t("finalReconciliation.unpaidRenewalsSubtotal")}</dt>
+            <dd dir="ltr">
+              {format.number(data.outstandingRenewalAmount)} {currency}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
       <div className={variant === "compact" ? styles.finalAmountCompact : styles.finalAmountRow} data-testid="reconciliation-final-amount">
         <span>{t("finalReconciliation.finalAmountDue")}</span>
         <span className={styles.finalAmountValue} dir="ltr">
-          {format.number(totals.finalAmount)} {currency}
+          {format.number(data.settlementAmountDue)} {currency}
         </span>
       </div>
     </>
@@ -671,6 +690,42 @@ export function ReconciliationFinancialSummary({
     <section id={SECTION_IDS.summary} className={styles.section} data-testid="reconciliation-summary">
       <h3 className={styles.sectionTitle}>{t("finalReconciliation.financialSummary")}</h3>
       {breakdown}
+    </section>
+  );
+}
+
+export function ReconciliationOutstandingRenewalsSection({
+  data,
+}: {
+  data: FullReconciliationReadDto;
+}) {
+  const t = useTranslations("Contracts");
+  const format = useFormatter();
+  if (data.outstandingRenewals.length === 0) return null;
+
+  return (
+    <section
+      className={styles.section}
+      data-testid="reconciliation-unpaid-renewals"
+    >
+      <h3 className={styles.sectionTitle}>{t("finalReconciliation.unpaidRenewalsTitle")}</h3>
+      <ul className={styles.renewalOutstandingList}>
+        {data.outstandingRenewals.map((row) => (
+          <li key={row.id} className={styles.renewalOutstandingItem}>
+            <p>
+              {format.dateTime(new Date(row.previousEndAt), { dateStyle: "medium" })}
+              {" → "}
+              {format.dateTime(new Date(row.newEndAt), { dateStyle: "medium" })}
+            </p>
+            <p className={styles.muted}>
+              +{format.number(row.additionalDays)} · {format.number(row.amount)} AED
+            </p>
+            <p className={styles.muted} data-testid="renewal-auto-included">
+              {t("finalReconciliation.autoIncludedInSettlement")}
+            </p>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

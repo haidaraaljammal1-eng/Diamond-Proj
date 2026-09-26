@@ -18,6 +18,7 @@ import {
   ReconciliationHeader,
   ReconciliationHistoricalBanner,
   ReconciliationRoadLiabilitiesSection,
+  ReconciliationOutstandingRenewalsSection,
   ReconciliationSectionNav,
 } from "./reconciliation-sections";
 import { ReconciliationActionBar } from "./reconciliation-collection";
@@ -149,6 +150,7 @@ function ReconcileDialogBody({
             });
           }}
         />
+        <ReconciliationOutstandingRenewalsSection data={data} />
         <ReconciliationReturnChargesSection
           data={data}
           linePending={reconciliation.lineMutation.pending}
@@ -189,7 +191,7 @@ function ReconcileDialogBody({
             void reconciliation.deleteFuelLine(contractId, lineId);
           }}
         />
-        <ReconciliationFinancialSummary totals={data.totals} />
+        <ReconciliationFinancialSummary data={data} />
       </div>
 
       <ReconciliationActionBar

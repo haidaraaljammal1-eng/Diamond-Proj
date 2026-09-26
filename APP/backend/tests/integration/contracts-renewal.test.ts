@@ -544,6 +544,45 @@ if (!RUN) {
       assert.equal(vehicle.json().data.operationalStatus, "rented");
     });
 
+    test("office registration applies extension without payment; cash collect settles once", async () => {
+      const { contractId, vehicleId } = await createActiveContract();
+      const before = await app.inject({ method: "GET", url: `/contracts/${contractId}`, headers: auth() });
+      const endBefore = before.json().data.endAt as string;
+      const staffRenew = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renew`,
+        headers: auth(),
+        payload: { additionalDays: 3, additionalAmount: 450 },
+      });
+      assert.equal(staffRenew.statusCode, 200, staffRenew.body);
+      assert.equal(staffRenew.json().data.rentalDays, 6);
+      assert.notEqual(staffRenew.json().data.endAt, endBefore);
+      const history = staffRenew.json().data.renewals as Array<{
+        id: string;
+        collectionState: string;
+        appliedAt: string | null;
+        settledPaymentId: string | null;
+      }>;
+      assert.equal(history.length, 1);
+      assert.equal(history[0]?.collectionState, "OFFICE_UNPAID");
+      assert.ok(history[0]?.appliedAt);
+      assert.equal(history[0]?.settledPaymentId, null);
+      assert.equal(await prisma.contractPayment.count({ where: { contractId, purpose: "RENEWAL" } }), 0);
+
+      const renewalId = history[0]?.id ?? (await prisma.contractRenewal.findFirst({ where: { contractId } }))!.id;
+      const cash = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renewals/${renewalId}/cash/settle`,
+        headers: auth(),
+      });
+      assert.equal(cash.statusCode, 200, cash.body);
+      const paidHistory = cash.json().data.renewals as Array<{ collectionState: string }>;
+      assert.equal(paidHistory[0]?.collectionState, "PAID");
+      assert.equal(await prisma.contractPayment.count({ where: { contractId, purpose: "RENEWAL", status: "CONFIRMED" } }), 1);
+      const vehicle = await app.inject({ method: "GET", url: `/vehicles/${vehicleId}`, headers: auth() });
+      assert.equal(vehicle.json().data.operationalStatus, "rented");
+    });
+
     test("a renewal applied first is kept when the return is confirmed afterwards", async () => {
       const { contractId } = await createActiveContract();
       const { payments, statusToken } = await startRenewalPayment(contractId, "race-renewal-first");

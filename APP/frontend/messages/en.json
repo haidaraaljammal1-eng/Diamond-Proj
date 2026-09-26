@@ -848,6 +848,8 @@
       "RECONCILIATION_LOCKED": "This reconciliation is already finalized and can no longer be edited.",
       "RECONCILIATION_NOT_FINALIZED": "Finalize the reconciliation before continuing.",
       "ROAD_LIABILITIES_REVIEW_REQUIRED": "Confirmed Salik or traffic violation items still need staff review.",
+      "RENEWAL_PAYMENT_REQUIRED": "An outstanding renewal amount must be collected before reconciliation can complete.",
+      "ELECTRONIC_RENEWAL_COLLECTION_ACTIVE": "Office renewal is blocked while an electronic renewal checkout is still active.",
       "PAYMENT_ALREADY_PROCESSING": "A payment attempt is already in progress.",
       "ALREADY_PAID": "This amount is already settled.",
       "ELECTRONIC_COLLECTION_ACTIVE": "Cash cannot be collected while the electronic checkout can still be paid.",
@@ -883,9 +885,20 @@
       "gpsSalikBody": "A possible crossing was detected during the rental. This is informational only and is not a confirmed charge.",
       "gpsSalikClosed": "No official Salik charge confirmed yet.",
       "renewals": "Renewals",
-      "renewalState": {
-        "pending": "Pending",
-        "confirmed": "Confirmed"
+      "renewalDatesPlanned": "Planned extension",
+      "renewalDatesApplied": "Applied extension",
+      "renewalAmountDue": "Amount due: {amount}",
+      "renewalCollect": "Collect",
+      "renewalCollectTitle": "Collect renewal (cash)",
+      "renewalCollectBody": "Confirm that cash was received for this renewal extension.",
+      "renewalCollectMethod": "Payment method: Cash",
+      "renewalCollectConfirm": "Confirm collection",
+      "renewalCollectionState": {
+        "PENDING": "Pending",
+        "AWAITING_PAYMENT": "Awaiting payment",
+        "OFFICE_UNPAID": "Unpaid",
+        "PAID": "Paid / confirmed",
+        "COMPLETED_NO_CHARGE": "Completed (no charge)"
       }
     },
     "timeline": {
@@ -1190,7 +1203,12 @@
       "amount": "Additional amount (AED)",
       "submit": "Renew",
       "link": "Generate renewal link",
-      "applyOffice": "Apply in office"
+      "applyOffice": "Register in office for cash collection",
+      "officeConfirmTitle": "Register renewal for cash collection",
+      "officeConfirmLead": "The contract will extend now. Payment stays unpaid until cash is collected.",
+      "officeConfirmBody": "Review the extension before registering this renewal as an office cash receivable.",
+      "officeConfirmSubmit": "Register renewal",
+      "officeCurrentEnd": "Current contract end"
     },
     "reconcile": {
       "title": "Reconciliation",
@@ -1261,6 +1279,9 @@
       "previousImage": "Previous",
       "nextImage": "Next",
       "roadLiabilities": "Road liabilities",
+      "unpaidRenewalsTitle": "Unpaid renewals",
+      "unpaidRenewalsAlert": "An outstanding renewal amount must be collected before final reconciliation can complete.",
+      "collectRenewal": "Collect renewal",
       "attachedLiabilities": "Attached to reconciliation",
       "pendingLiabilities": "Requires review",
       "salik": "Salik",
@@ -1288,6 +1309,9 @@
       "noDamages": "No damage entries yet.",
       "financialSummary": "Financial summary",
       "noCharges": "No charge categories yet.",
+      "reconciliationCharges": "Reconciliation charges",
+      "unpaidRenewalsSubtotal": "Unpaid renewals",
+      "autoIncludedInSettlement": "Automatically included in final settlement",
       "finalAmountDue": "Final amount due",
       "collect": "Collect",
       "cashPayment": "Cash payment",

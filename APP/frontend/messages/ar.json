@@ -848,6 +848,8 @@
       "RECONCILIATION_LOCKED": "المطابقة معتمدة نهائيًا ولا يمكن تعديلها.",
       "RECONCILIATION_NOT_FINALIZED": "اعتمد المطابقة النهائية قبل المتابعة.",
       "ROAD_LIABILITIES_REVIEW_REQUIRED": "لا تزال بنود سالك أو المخالفات المؤكدة تحتاج مراجعة.",
+      "RENEWAL_PAYMENT_REQUIRED": "يجب تحصيل مبلغ التجديد المستحق قبل إكمال المطابقة.",
+      "ELECTRONIC_RENEWAL_COLLECTION_ACTIVE": "تسجيل التجديد في المكتب محظور بينما رابط الدفع الإلكتروني ما زال نشطاً.",
       "PAYMENT_ALREADY_PROCESSING": "توجد محاولة دفع قيد المعالجة.",
       "ALREADY_PAID": "هذا المبلغ مسوّى بالفعل.",
       "ELECTRONIC_COLLECTION_ACTIVE": "لا يمكن التحصيل النقدي بينما لا يزال الدفع الإلكتروني قابلاً للدفع.",
@@ -883,9 +885,20 @@
       "gpsSalikBody": "تم رصد عبور محتمل خلال فترة الإيجار. هذا تنبيه معلوماتي فقط ولا يمثل رسماً مؤكداً.",
       "gpsSalikClosed": "لم يُؤكد رسم سالك رسمي بعد.",
       "renewals": "التجديدات",
-      "renewalState": {
-        "pending": "قيد الانتظار",
-        "confirmed": "مؤكد"
+      "renewalDatesPlanned": "تمديد مخطط",
+      "renewalDatesApplied": "تمديد مطبّق",
+      "renewalAmountDue": "المبلغ المستحق: {amount}",
+      "renewalCollect": "تحصيل",
+      "renewalCollectTitle": "تحصيل التجديد (كاش)",
+      "renewalCollectBody": "أكّد استلام مبلغ التجديد نقداً.",
+      "renewalCollectMethod": "طريقة الدفع: كاش",
+      "renewalCollectConfirm": "تأكيد التحصيل",
+      "renewalCollectionState": {
+        "PENDING": "قيد الانتظار",
+        "AWAITING_PAYMENT": "بانتظار الدفع",
+        "OFFICE_UNPAID": "غير محصل",
+        "PAID": "مؤكد ومدفوع",
+        "COMPLETED_NO_CHARGE": "مكتمل (بدون رسوم)"
       }
     },
     "timeline": {
@@ -1190,7 +1203,12 @@
       "amount": "مبلغ إضافي (درهم)",
       "submit": "تجديد",
       "link": "إنشاء رابط التجديد",
-      "applyOffice": "تطبيق في المكتب"
+      "applyOffice": "تسجيل في المكتب للتحصيل كاش",
+      "officeConfirmTitle": "تسجيل التجديد للتحصيل كاش",
+      "officeConfirmLead": "سيُمدّد العقد الآن. يبقى المبلغ غير محصل حتى يتم التحصيل نقداً.",
+      "officeConfirmBody": "راجع التمديد قبل تسجيل هذا التجديد كمستحق كاش في المكتب.",
+      "officeConfirmSubmit": "تسجيل التجديد",
+      "officeCurrentEnd": "نهاية العقد الحالية"
     },
     "reconcile": {
       "title": "المطابقة",
@@ -1261,6 +1279,9 @@
       "previousImage": "السابق",
       "nextImage": "التالي",
       "roadLiabilities": "الالتزامات المرورية",
+      "unpaidRenewalsTitle": "تجديدات غير محصلة",
+      "unpaidRenewalsAlert": "يوجد مبلغ تجديد غير محصل. قم بتحصيله قبل إنهاء المطابقة.",
+      "collectRenewal": "تحصيل التجديد",
       "attachedLiabilities": "مرفقة بالمطابقة",
       "pendingLiabilities": "تحتاج مراجعة",
       "salik": "سالك",
@@ -1288,6 +1309,9 @@
       "noDamages": "لا توجد أضرار بعد.",
       "financialSummary": "الملخص المالي",
       "noCharges": "لا توجد فئات رسوم بعد.",
+      "reconciliationCharges": "رسوم المطابقة",
+      "unpaidRenewalsSubtotal": "التجديدات غير المحصلة",
+      "autoIncludedInSettlement": "مضاف تلقائيًا إلى التسوية",
       "finalAmountDue": "المبلغ النهائي المستحق",
       "collect": "تحصيل",
       "cashPayment": "الدفع النقدي",
