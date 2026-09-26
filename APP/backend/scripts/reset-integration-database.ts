@@ -14,6 +14,21 @@ if (!url) {
 assertTestDatabaseUrl(url);
 process.env.DATABASE_URL = url;
 
+/** Serialize integration resets so parallel prepares cannot truncate mid-seed. */
+const INTEGRATION_RESET_LOCK_KEY = 0x48414944; // "HAID"
+
+async function withIntegrationResetLock<T>(
+  prisma: PrismaClient,
+  fn: () => Promise<T>,
+): Promise<T> {
+  await prisma.$executeRawUnsafe(`SELECT pg_advisory_lock(${INTEGRATION_RESET_LOCK_KEY})`);
+  try {
+    return await fn();
+  } finally {
+    await prisma.$executeRawUnsafe(`SELECT pg_advisory_unlock(${INTEGRATION_RESET_LOCK_KEY})`);
+  }
+}
+
 async function truncateIntegrationDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(`
     DO $$
@@ -31,13 +46,43 @@ async function truncateIntegrationDatabase(prisma: PrismaClient): Promise<void> 
   `);
 }
 
+function isRetryableSeedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /deadlock|could not obtain lock|connection terminated|foreign key constraint|P2003/i.test(
+    message,
+  );
+}
+
+async function seedWithRetry(maxAttempts = 3): Promise<void> {
+  const { runBaseSeed } = await import("../prisma/seed/index");
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await runBaseSeed();
+      if (attempt > 1) {
+        console.log(`Base seed succeeded on attempt ${attempt}`);
+      }
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableSeedError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+      console.warn(`Base seed attempt ${attempt} failed (retryable); retrying...`);
+      await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+    }
+  }
+  throw lastError;
+}
+
 async function main(): Promise<void> {
   const adapter = new PrismaPg({ connectionString: url });
   const prisma = new PrismaClient({ adapter });
   try {
-    await truncateIntegrationDatabase(prisma);
-    const { runBaseSeed } = await import("../prisma/seed/index");
-    await runBaseSeed();
+    await withIntegrationResetLock(prisma, async () => {
+      await truncateIntegrationDatabase(prisma);
+      await seedWithRetry();
+    });
     console.log("Integration database reset complete (haidara_test).");
   } finally {
     await prisma.$disconnect();

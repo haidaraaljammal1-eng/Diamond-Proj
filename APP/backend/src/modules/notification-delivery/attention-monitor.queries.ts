@@ -1,10 +1,14 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
-const TRUSTED_STRIPE_PAYMENT = {
-  status: "CONFIRMED" as const,
-  method: "CARD" as const,
-  provider: "stripe" as const,
+/** Matches Finance Collected: trusted Stripe CARD or explicit CASH collections. */
+const TRUSTED_RENTAL_PAYMENT: Prisma.ContractPaymentWhereInput = {
+  purpose: "RENTAL",
+  status: "CONFIRMED",
   confirmedAt: { not: null },
+  OR: [
+    { method: "CARD", provider: "stripe" },
+    { method: "CASH", provider: null },
+  ],
 };
 
 export interface AttentionMonitorSnapshot {
@@ -27,10 +31,7 @@ export async function loadAttentionMonitorSnapshot(
       status: "SIGNED",
       NOT: {
         payments: {
-          some: {
-            purpose: "RENTAL",
-            ...TRUSTED_STRIPE_PAYMENT,
-          },
+          some: TRUSTED_RENTAL_PAYMENT,
         },
       },
     },
@@ -40,7 +41,11 @@ export async function loadAttentionMonitorSnapshot(
   const unpaidRoadLiabilities = await prisma.roadLiability.findMany({
     where: {
       collectionStatus: "OPEN",
-      customerCharge: { isNot: null },
+      customerCharge: {
+        is: {
+          operationalState: { not: "PAID" },
+        },
+      },
     },
     select: {
       customerCharge: {

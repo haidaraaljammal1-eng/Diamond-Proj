@@ -43,6 +43,8 @@ function purposeLabel(purpose: string): string {
       return "Road liability collection";
     case "POST_CLOSE_RECEIVABLE":
       return "Post-close road liability collection";
+    case "ROAD_LIABILITY":
+      return "Road liability collection";
     default:
       return purpose;
   }
@@ -101,7 +103,11 @@ export function createBusinessNotificationService(
           return;
         }
 
-        if (purpose === "RECONCILIATION" || purpose === "POST_CLOSE_RECEIVABLE") {
+        if (
+          purpose === "RECONCILIATION" ||
+          purpose === "POST_CLOSE_RECEIVABLE" ||
+          purpose === "ROAD_LIABILITY"
+        ) {
           const collection = await loadRoadLiabilityCollectionContext(prisma, paymentId);
           if (!collection?.liability) return;
           await deliverOnce(
@@ -137,7 +143,11 @@ export function createBusinessNotificationService(
           occurredAt: ctx.payment.failedAt ?? new Date(),
         });
 
-        if (purpose === "RECONCILIATION" || purpose === "POST_CLOSE_RECEIVABLE") {
+        if (
+          purpose === "RECONCILIATION" ||
+          purpose === "POST_CLOSE_RECEIVABLE" ||
+          purpose === "ROAD_LIABILITY"
+        ) {
           const collection = await loadRoadLiabilityCollectionContext(prisma, paymentId);
           await deliverOnce(
             `road-liability.collection-failed:${paymentId}`,
