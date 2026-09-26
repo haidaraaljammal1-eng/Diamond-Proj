@@ -1,6 +1,6 @@
 import type { PassportExtractionStatus } from "@prisma/client";
 import { calendarDateToStoredUtc, parseCalendarDate } from "src/modules/contracts/license-calendar";
-import type { DocumentOcrOutcome } from "src/modules/document-ocr/document-ocr.types";
+import type { IdentityDocumentAnalysisOutcome } from "src/modules/vision-ai/identity-document.types";
 
 export interface EvaluatedPassportExtraction {
   status: Exclude<PassportExtractionStatus, "PROCESSING">;
@@ -44,14 +44,14 @@ function storedDate(value: string | null): Date | null {
  * Passport success rule: recognized document with at least a full name or a
  * passport number. No passport-expiry hard gate (license validity is the gate).
  */
-export function evaluatePassportOcr(outcome: DocumentOcrOutcome): EvaluatedPassportExtraction {
+export function evaluatePassportOcr(outcome: IdentityDocumentAnalysisOutcome): EvaluatedPassportExtraction {
   const meta = { provider: outcome.provider, providerVersion: outcome.providerVersion };
 
   if (!outcome.ok) {
     const status =
-      outcome.reason === "DOCUMENT_OCR_PROVIDER_NOT_CONFIGURED"
+      outcome.reason === "IDENTITY_PROVIDER_NOT_CONFIGURED"
         ? "PROVIDER_UNAVAILABLE"
-        : outcome.reason === "DOCUMENT_OCR_NOT_RECOGNIZED"
+        : outcome.reason === "IDENTITY_NOT_RECOGNIZED"
           ? "NOT_RECOGNIZED"
           : "FAILED";
     return { ...EMPTY_FIELDS, ...meta, status };

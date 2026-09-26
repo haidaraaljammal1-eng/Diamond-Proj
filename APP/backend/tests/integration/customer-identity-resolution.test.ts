@@ -2,7 +2,7 @@ import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { createFakeDocumentOcrProvider } from "../helpers/fake-document-ocr-provider";
+import { createFakeVisionAIProvider } from "../helpers/fake-vision-ai-provider";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 function isIdentityAmbiguous(error: unknown): boolean {
@@ -47,14 +47,14 @@ if (!RUN) {
     let token = "";
 
     const auth = () => ({ authorization: `Bearer ${token}` });
-    const ocr = createFakeDocumentOcrProvider();
+    const ocr = createFakeVisionAIProvider();
 
     async function fakeOcr(input: { licenseNumber?: string; expiryDate?: string }) {
       ocr.setLicense(input);
-      const { setDocumentOcrProviderForTests } = await import(
-        "src/modules/document-ocr/document-ocr-provider.factory"
+      const { setVisionAIProviderForTests } = await import(
+        "src/modules/vision-ai/vision-ai-provider.factory"
       );
-      setDocumentOcrProviderForTests(ocr.provider);
+      setVisionAIProviderForTests(ocr.provider);
     }
 
     async function seedIdentity(rentalToken: string, licenseNumber: string) {
@@ -196,10 +196,10 @@ if (!RUN) {
     });
 
     after(async () => {
-      const { setDocumentOcrProviderForTests } = await import(
-        "src/modules/document-ocr/document-ocr-provider.factory"
+      const { setVisionAIProviderForTests } = await import(
+        "src/modules/vision-ai/vision-ai-provider.factory"
       );
-      setDocumentOcrProviderForTests(undefined);
+      setVisionAIProviderForTests(undefined);
       if (app) await app.close();
     });
 

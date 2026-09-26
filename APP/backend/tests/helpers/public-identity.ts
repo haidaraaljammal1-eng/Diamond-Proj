@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import {
-  createFakeDocumentOcrProvider,
+  createFakeVisionAIProvider,
   type FakeLicenseInput,
-} from "./fake-document-ocr-provider";
+} from "./fake-vision-ai-provider";
 
 export const TEST_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 
@@ -37,30 +37,27 @@ export function uploadPublicDocument(
   });
 }
 
-/**
- * Loaded lazily: the OCR factory reads validated env at import time, and test
- * modules redirect DATABASE_URL in their body.
- */
-export async function injectDocumentOcr(
+export async function injectVisionAI(
   provider: Parameters<
-    typeof import("src/modules/document-ocr/document-ocr-provider.factory").setDocumentOcrProviderForTests
+    typeof import("src/modules/vision-ai/vision-ai-provider.factory").setVisionAIProviderForTests
   >[0],
 ) {
-  const { setDocumentOcrProviderForTests } = await import(
-    "src/modules/document-ocr/document-ocr-provider.factory"
-  );
-  setDocumentOcrProviderForTests(provider);
+  const { setVisionAIProviderForTests } = await import("src/modules/vision-ai/vision-ai-provider.factory");
+  setVisionAIProviderForTests(provider);
 }
 
-/** VALID license + READY passport through the real public endpoints (synthetic OCR). */
+/** @deprecated Use injectVisionAI */
+export const injectDocumentOcr = injectVisionAI;
+
+/** VALID license + READY passport through the real public endpoints (synthetic Vision AI). */
 export async function seedReadyIdentity(
   app: FastifyInstance,
   rentalToken: string,
   license: FakeLicenseInput = {},
 ) {
-  const fake = createFakeDocumentOcrProvider();
+  const fake = createFakeVisionAIProvider();
   fake.setLicense(license);
-  await injectDocumentOcr(fake.provider);
+  await injectVisionAI(fake.provider);
   const licenseUpload = await uploadPublicDocument(app, rentalToken, "driving-license");
   assert.equal(licenseUpload.statusCode, 200, licenseUpload.body);
   const passportUpload = await uploadPublicDocument(app, rentalToken, "passport");

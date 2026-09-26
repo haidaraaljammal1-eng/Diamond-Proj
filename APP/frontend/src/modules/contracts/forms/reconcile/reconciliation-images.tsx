@@ -34,8 +34,9 @@ export function ReconciliationImagePairsSection({
       className={styles.section}
       data-testid="reconciliation-image-pairs"
     >
-      <h3 className={styles.sectionTitle}>{t("finalReconciliation.imageComparison")}</h3>
-      <ul className={styles.angleGrid}>
+      <div className={styles.sectionCard}>
+        <h3 className={styles.sectionTitle}>{t("finalReconciliation.imageComparison")}</h3>
+        <ul className={styles.angleGrid}>
         {pairs.map((pair) => (
           <li key={pair.angle} className={styles.angleCell} data-testid={`image-pair-${pair.angle}`}>
             <p className={styles.pairAngle}>{angleLabel(t, pair.angle)}</p>
@@ -62,6 +63,7 @@ export function ReconciliationImagePairsSection({
           </li>
         ))}
       </ul>
+      </div>
     </section>
   );
 }
@@ -81,11 +83,14 @@ function ImageThumb({
 }) {
   const t = useTranslations("Contracts");
   const stageClass = stage === "OUT" ? styles.thumbButtonOut : styles.thumbButtonIn;
+  const presentClass = styles.thumbPresent;
 
   if (!photo) {
     return (
-      <div className={styles.thumbMissing} data-testid={`image-missing-${stage}-${angle}`}>
-        <span className={styles.stageLabel}>{label}</span>
+      <div
+        className={`${styles.thumbMissing} ${styles.thumbMissingCompact}`}
+        data-testid={`image-missing-${stage}-${angle}`}
+      >
         <p>{t("finalReconciliation.missingPhoto")}</p>
       </div>
     );
@@ -97,8 +102,7 @@ function ImageThumb({
 
   if (!onPreview) {
     return (
-      <div className={stageClass}>
-        <span className={styles.stageLabel}>{label}</span>
+      <div className={`${stageClass} ${presentClass}`}>
         {image}
       </div>
     );
@@ -107,12 +111,11 @@ function ImageThumb({
   return (
     <button
       type="button"
-      className={stageClass}
+      className={`${stageClass} ${presentClass}`}
       data-testid={`image-thumb-${stage}-${angle}`}
       aria-label={`${label} — ${angleLabel(t, angle)}`}
       onClick={() => onPreview({ id: photo.id, url: photo.url, angle, stage })}
     >
-      <span className={styles.stageLabel}>{label}</span>
       {image}
     </button>
   );

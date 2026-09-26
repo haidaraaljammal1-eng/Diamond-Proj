@@ -1,25 +1,24 @@
-import { analyzeDocument } from "src/modules/document-ocr/document-ocr.service";
+import { analyzeIdentityDocument } from "src/modules/vision-ai/identity-analysis.service";
 import type {
   DrivingLicenseOcrInput,
   DrivingLicenseOcrResult,
 } from "src/modules/contracts/ocr/driving-license-ocr.types";
 
 /**
- * Maps the provider-neutral Document OCR outcome into the existing
- * driving-license policy input. The expiry/confidence rules in
- * `driving-license-policy.ts` stay the single validity authority.
+ * Maps Vision AI identity analysis into the existing driving-license policy input.
+ * Expiry/confidence rules in `driving-license-policy.ts` remain the validity authority.
  */
 export async function analyzeDrivingLicenseDocument(
   input: DrivingLicenseOcrInput,
 ): Promise<DrivingLicenseOcrResult> {
-  const outcome = await analyzeDocument("DRIVER_LICENSE", input);
+  const outcome = await analyzeIdentityDocument("DRIVER_LICENSE", input);
   const provider = outcome.provider;
   const providerVersion = outcome.providerVersion ?? undefined;
 
   if (!outcome.ok) {
     return {
       ok: false,
-      reason: outcome.reason === "DOCUMENT_OCR_PROVIDER_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "UNREADABLE",
+      reason: outcome.reason === "IDENTITY_PROVIDER_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "UNREADABLE",
       provider,
       providerVersion,
     };

@@ -39,7 +39,7 @@ export function ReconcileDialog({ contractId, onClose, onCompleted }: ReconcileD
       description={t("finalReconciliation.description")}
       closeLabel={t("detail.close")}
       presentation="flush"
-      size="wide"
+      size="2xl"
     >
       {contractId ? (
         <ReconcileDialogBody key={contractId} contractId={contractId} onClose={onClose} onCompleted={onCompleted} />
@@ -136,7 +136,7 @@ function ReconcileDialogBody({
       <ReconciliationHistoricalBanner data={data} />
       <ReconciliationSectionNav hasPhotos={hasPhotos} hasLiabilities={hasLiabilities} />
 
-      <div className={styles.scrollMain}>
+      <div className={`${styles.scrollMain} ${styles.contentCanvas}`}>
         <ReconciliationImagePairsSection pairs={data.imagePairs} onPreview={setPreview} />
         <ReconciliationCustodySection custody={data.custody} />
         <ReconciliationRoadLiabilitiesSection

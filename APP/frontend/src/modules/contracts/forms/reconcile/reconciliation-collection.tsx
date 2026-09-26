@@ -210,7 +210,7 @@ export function ReconciliationActionBar({
   if (data.reconciliation.settled) {
     return (
       <>
-        <footer className={styles.completionBar} data-testid="reconciliation-completed">
+        <footer className={`${styles.completionBar} ${styles.actionBarShell}`} data-testid="reconciliation-completed">
           <div className={styles.completionBarMain}>
             <Icon name="mdi:check-circle-outline" size={22} className={styles.completionIcon} />
             <div>
@@ -238,7 +238,7 @@ export function ReconciliationActionBar({
   if (editable && data.totals.finalAmount === 0) {
     return (
       <>
-        <footer className={styles.actionBar} data-testid="reconciliation-zero-draft">
+        <footer className={`${styles.actionBar} ${styles.actionBarShell}`} data-testid="reconciliation-zero-draft">
           <div className={styles.actionBarMain}>
             <p className={styles.actionBarLabel}>{amountLabel}</p>
             <p className={styles.actionBarAmount} dir="ltr">
@@ -271,7 +271,7 @@ export function ReconciliationActionBar({
   return (
     <>
       <footer
-        className={awaitingPayment ? styles.awaitingPaymentBar : styles.actionBar}
+        className={`${awaitingPayment ? styles.awaitingPaymentBar : styles.actionBar} ${styles.actionBarShell}`}
         data-testid={footerTestId}
       >
         <div className={styles.actionBarMain}>

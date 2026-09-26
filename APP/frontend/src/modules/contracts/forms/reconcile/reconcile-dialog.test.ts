@@ -16,9 +16,9 @@ describe("final reconciliation frontend wiring", () => {
     assert.ok(api.includes("generateReconciliationLink"));
   });
 
-  it("renders wide final reconciliation dialog sections", () => {
+  it("renders focused final reconciliation dialog sections", () => {
     const dialog = readFileSync(join(root, "forms/reconcile/reconcile-dialog.tsx"), "utf8");
-    assert.ok(dialog.includes('size="wide"'));
+    assert.ok(dialog.includes('size="2xl"'));
     assert.ok(dialog.includes("ReconciliationImagePairsSection"));
     assert.ok(
       dialog.includes("ReconciliationActionBar") || dialog.includes("ReconciliationCollectionSection"),

@@ -3,13 +3,15 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import {
-  createFakeDocumentOcrProvider,
-  fakePassportResult,
+  createFakeVisionAIProvider,
+  fakePassportExtraction,
+  fakeUnrecognizedPassportExtraction,
   SYNTHETIC_PASSPORT,
-} from "../helpers/fake-document-ocr-provider";
+} from "../helpers/fake-vision-ai-provider";
+import type { VisionAIProvider } from "src/modules/vision-ai/vision-ai.types";
 import {
   imageMultipart,
-  injectDocumentOcr,
+  injectVisionAI,
   TEST_PNG,
   uploadPublicDocument,
 } from "../helpers/public-identity";
@@ -32,7 +34,7 @@ if (!RUN) {
     const run = `PID${Date.now().toString(36).toUpperCase()}`;
     const admin = { email: `pid-admin-${run}@example.test`, password: "pid-admin-pass-123" };
     let staffToken = "";
-    const ocr = createFakeDocumentOcrProvider();
+    const ocr = createFakeVisionAIProvider();
     const auth = () => ({ authorization: `Bearer ${staffToken}` });
 
     let seq = 0;
@@ -119,11 +121,11 @@ if (!RUN) {
       await prisma.userRole.create({ data: { userId: user.id, roleId: role.id } });
       const login = await app.inject({ method: "POST", url: "/auth/login", payload: admin });
       staffToken = login.json().data.accessToken;
-      await injectDocumentOcr(ocr.provider);
+      await injectVisionAI(ocr.provider);
     });
 
     after(async () => {
-      await injectDocumentOcr(undefined);
+      await injectVisionAI(undefined);
       if (app) await app.close();
     });
 
@@ -183,7 +185,7 @@ if (!RUN) {
       await validLicense(ctx.token);
       const customersBefore = await prisma.customer.count();
       ocr.setPassport(() => ({
-        ...fakePassportResult({ ...SYNTHETIC_PASSPORT, VendorSurname: "LEAK" }),
+        ...fakePassportExtraction({ ...SYNTHETIC_PASSPORT, VendorSurname: "LEAK" }),
         rawVendorResponse: { secretKey: "must-not-leak" },
       }) as never);
 
@@ -254,19 +256,19 @@ if (!RUN) {
       const ctx = await offerAndToken();
       await validLicense(ctx.token);
 
-      await injectDocumentOcr(undefined);
+      await injectVisionAI(undefined);
       const unconfigured = await passport(ctx.token);
-      await injectDocumentOcr(ocr.provider);
+      await injectVisionAI(ocr.provider);
       assert.equal(unconfigured.statusCode, 200, unconfigured.body);
       assert.equal(unconfigured.json().data.identity.passport.status, "PROVIDER_UNAVAILABLE");
       assert.equal(unconfigured.json().data.identity.identityReady, false);
       assert.equal(unconfigured.body.includes("DOCUMENT_OCR_PROVIDER_NOT_CONFIGURED"), false);
 
-      ocr.setPassport(() => ({ ok: false, reason: "DOCUMENT_OCR_NOT_RECOGNIZED" }));
+      ocr.setPassport(() => fakeUnrecognizedPassportExtraction());
       const notRecognized = await passport(ctx.token);
       assert.equal(notRecognized.json().data.identity.passport.status, "NOT_RECOGNIZED");
 
-      ocr.setPassport(() => fakePassportResult({ nationality: "TEST" }));
+      ocr.setPassport(() => fakePassportExtraction({ nationality: "TEST" }));
       const unreadable = await passport(ctx.token);
       assert.equal(unreadable.json().data.identity.passport.status, "FAILED");
       assert.equal(unreadable.json().data.identity.passport.fields, null);
@@ -301,9 +303,9 @@ if (!RUN) {
         calls += 1;
         if (calls === 1) {
           await gate;
-          return fakePassportResult({ fullName: "STALE PERSON", passportNumber: "STALE0001" });
+          return fakePassportExtraction({ fullName: "STALE PERSON", passportNumber: "STALE0001" });
         }
-        return fakePassportResult({ fullName: "TEST PERSON", passportNumber: "TEST123456" });
+        return fakePassportExtraction({ fullName: "TEST PERSON", passportNumber: "TEST123456" });
       });
 
       const slowA = passport(ctx.token);
@@ -327,17 +329,17 @@ if (!RUN) {
     test("retaking passport replaces the authoritative attempt; retaking an invalid license revokes readiness", async () => {
       const ctx = await offerAndToken();
       await validLicense(ctx.token);
-      ocr.setPassport(() => fakePassportResult());
+      ocr.setPassport(() => fakePassportExtraction());
       const first = await passport(ctx.token);
       assert.equal(first.json().data.identity.identityReady, true);
 
-      ocr.setPassport(() => ({ ok: false, reason: "DOCUMENT_OCR_NOT_RECOGNIZED" }));
+      ocr.setPassport(() => fakeUnrecognizedPassportExtraction());
       const retake = await passport(ctx.token);
       assert.equal(retake.json().data.identity.passport.status, "NOT_RECOGNIZED");
       assert.equal(retake.json().data.identity.identityReady, false);
       assert.equal(retake.json().data.flow.step, "LICENSE_VERIFICATION");
 
-      ocr.setPassport(() => fakePassportResult());
+      ocr.setPassport(() => fakePassportExtraction());
       assert.equal((await passport(ctx.token)).json().data.identity.identityReady, true);
 
       ocr.setLicense({ licenseNumber: "DL-OLD", expiryDate: "2020-01-01" });
@@ -351,11 +353,18 @@ if (!RUN) {
 
     test("license validation works independently while passport OCR is unavailable", async () => {
       // A provider that reads licenses only: passport stays unavailable.
-      const licenseOnly = createFakeDocumentOcrProvider();
-      await injectDocumentOcr({
+      const licenseOnly = createFakeVisionAIProvider();
+      const licenseOnlyProvider: VisionAIProvider = {
         ...licenseOnly.provider,
-        capabilities: { supportsDriverLicense: true, supportsPassport: false },
-      });
+        async extractPassport() {
+          return {
+            ok: false,
+            code: "VISION_AI_PROVIDER_UNAVAILABLE",
+            message: "Passport extraction unavailable",
+          };
+        },
+      };
+      await injectVisionAI(licenseOnlyProvider);
       try {
         const ctx = await offerAndToken();
         licenseOnly.setLicense({ licenseNumber: "DL-IND-1", expiryDate: "2031-06-01" });
@@ -380,12 +389,12 @@ if (!RUN) {
         assert.equal(expired.json().data.licenseVerification.status, "EXPIRED");
         assert.equal((await passport(other.token)).statusCode, 409);
       } finally {
-        await injectDocumentOcr(ocr.provider);
+        await injectVisionAI(ocr.provider);
       }
     });
 
     test("fully unconfigured runtime: license and passport both report provider unavailable", async () => {
-      await injectDocumentOcr(undefined);
+      await injectVisionAI(undefined);
       try {
         const ctx = await offerAndToken();
         const res = await license(ctx.token);
@@ -393,7 +402,7 @@ if (!RUN) {
         assert.equal(res.json().data.licenseVerification.status, "PROVIDER_UNAVAILABLE");
         assert.equal((await passport(ctx.token)).json().error.context.reason, "PASSPORT_LICENSE_REQUIRED");
       } finally {
-        await injectDocumentOcr(ocr.provider);
+        await injectVisionAI(ocr.provider);
       }
     });
 

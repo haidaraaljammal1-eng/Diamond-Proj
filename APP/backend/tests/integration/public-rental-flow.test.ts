@@ -2,8 +2,8 @@ import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { setDocumentOcrProviderForTests } from "src/modules/document-ocr/document-ocr-provider.factory";
-import { createFakeDocumentOcrProvider } from "../helpers/fake-document-ocr-provider";
+import { setVisionAIProviderForTests } from "src/modules/vision-ai/vision-ai-provider.factory";
+import { createFakeVisionAIProvider } from "../helpers/fake-vision-ai-provider";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import { UnconfiguredPaymentProvider } from "src/modules/contracts/payment/unconfigured-payment.provider";
 import {
@@ -56,7 +56,7 @@ if (!RUN) {
 
     const auth = () => ({ authorization: `Bearer ${token}` });
 
-    const ocr = createFakeDocumentOcrProvider();
+    const ocr = createFakeVisionAIProvider();
 
     function fakeOcr(input: {
       licenseNumber?: string | null;
@@ -64,7 +64,7 @@ if (!RUN) {
       confidence?: number;
     }) {
       ocr.setLicense(input);
-      setDocumentOcrProviderForTests(ocr.provider);
+      setVisionAIProviderForTests(ocr.provider);
     }
 
     function fakePayments() {
@@ -212,7 +212,7 @@ if (!RUN) {
     });
 
     after(async () => {
-      setDocumentOcrProviderForTests(undefined);
+      setVisionAIProviderForTests(undefined);
       setPaymentProviderForTests(undefined);
       if (app) await app.close();
     });

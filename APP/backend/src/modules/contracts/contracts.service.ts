@@ -65,8 +65,9 @@ import {
   buildContractIdentityDraft,
   toPublicIdentityDraft,
 } from "src/modules/contracts/contract-identity-draft";
-import { analyzeDocument } from "src/modules/document-ocr/document-ocr.service";
-import { createSimulationDocumentOcrProvider } from "src/modules/document-ocr/simulation-document-ocr.provider";
+import { analyzeIdentityDocument } from "src/modules/vision-ai/identity-analysis.service";
+import { createSimulationVisionAIProvider } from "src/modules/vision-ai/providers/simulation-vision-ai.provider";
+import type { VisionAIProvider } from "src/modules/vision-ai/vision-ai.types";
 import { derivedEndAt } from "src/modules/contracts/contracts-period";
 import { resolveOfferPeriod } from "src/modules/contracts/contracts-duration";
 import {
@@ -2136,9 +2137,7 @@ export function createContractsService(fastify: FastifyInstance) {
       const document = await tx.contractDocument.create({
         data: { contractId: contract.id, type: "DRIVING_LICENSE", attachmentId },
       });
-      const ocr = await analyzeDrivingLicenseDocumentWithProvider(
-        createSimulationDocumentOcrProvider(),
-      );
+      const ocr = await analyzeDrivingLicenseDocumentWithProvider(createSimulationVisionAIProvider());
       const evaluated = evaluateDrivingLicenseOcr(
         ocr,
         new Date(),
@@ -2163,12 +2162,16 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
-  async function analyzeDrivingLicenseDocumentWithProvider(provider: ReturnType<typeof createSimulationDocumentOcrProvider>) {
+  async function analyzeDrivingLicenseDocumentWithProvider(provider: VisionAIProvider) {
     return analyzeDrivingLicenseDocumentWithBytes(provider);
   }
 
-  async function analyzeDrivingLicenseDocumentWithBytes(provider: ReturnType<typeof createSimulationDocumentOcrProvider>) {
-    const outcome = await analyzeDocument("DRIVER_LICENSE", { bytes: SIMULATION_PNG, mimeType: "image/png" }, provider);
+  async function analyzeDrivingLicenseDocumentWithBytes(provider: VisionAIProvider) {
+    const outcome = await analyzeIdentityDocument(
+      "DRIVER_LICENSE",
+      { bytes: SIMULATION_PNG, mimeType: "image/png" },
+      provider,
+    );
     if (!outcome.ok) {
       return { ok: false as const, reason: "UNREADABLE" as const, provider: outcome.provider, providerVersion: outcome.providerVersion ?? undefined };
     }
@@ -2241,7 +2244,7 @@ export function createContractsService(fastify: FastifyInstance) {
     });
 
     const evaluated = evaluatePassportOcr(
-      await analyzeDocument("PASSPORT", { bytes, mimeType: attachment.mimeType }),
+      await analyzeIdentityDocument("PASSPORT", { bytes, mimeType: attachment.mimeType }),
     );
 
     return withTransaction(prisma, async (tx) => {
@@ -2293,10 +2296,10 @@ export function createContractsService(fastify: FastifyInstance) {
         data: { contractId: contract.id, documentId: document.id, attachmentId, status: "PROCESSING" },
       });
       const evaluated = evaluatePassportOcr(
-        await analyzeDocument(
+        await analyzeIdentityDocument(
           "PASSPORT",
           { bytes: SIMULATION_PNG, mimeType: "image/png" },
-          createSimulationDocumentOcrProvider(),
+          createSimulationVisionAIProvider(),
         ),
       );
       const { status, ...fields } = evaluated;
