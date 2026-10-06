@@ -1,0 +1,53 @@
+# Paths excluded from the proposed DOCUMENT-ENGINE Git manifest (local files remain on disk).
+candidate-git-manifest.txt
+# Used by scripts/list-git-candidate-manifest.ps1 — not consumed by git directly.
+
+# Local runtime (also .gitignore)
+# (.venv / .venv_ppocrv5 also enforced in list-git-candidate-manifest.ps1)
+**/.venv/
+**/.venv_*/
+**/venv/
+**/site-packages/
+LICENSE/jobs/
+LICENSE/output/
+LICENSE/frozen/ocr_v1_1/output/
+LICENSE/frozen/ocr_v1_2/output/
+LICENSE/frozen/ocr_v1_1/vendor/
+PASSPORT/results/
+PASSPORT/.paddle-home/
+PASSPORT/pip-api-install.log
+PASSPORT/pip-install-log.txt
+
+# Caches
+**/__pycache__/
+**/.pytest_cache/
+LICENSE/.pytest_cache/
+LICENSE/frozen/ocr_v1_1/.pytest_cache/
+PASSPORT/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/*.pyc
+
+# Large OCR research corpora (not required to run APIs)
+LICENSE/frozen/ocr_v1_1/pilot_subset/
+LICENSE/frozen/ocr_v1_1/ground_truth/
+LICENSE/frozen/ocr_v1_1/scripts/
+
+# Licence offline benchmarks / audits
+LICENSE/scripts/a5_license_number_benchmark.py
+LICENSE/scripts/a6_license_number_recovery_benchmark.py
+LICENSE/scripts/a6_labelled_manifest.json
+LICENSE/scripts/a6_labelled_manifest.example.json
+LICENSE/scripts/a7_clear_license_rejection_audit.py
+LICENSE/scripts/stage_a_v12h_diagnostic.py
+LICENSE/scripts/probe_fixture_v12.py
+LICENSE/scripts/v13_corpus_benchmark.py
+
+# Passport R&D / diagnostics (runtime keeps scripts/passport_number + mrz_detect chain)
+PASSPORT/scripts/diagnostics/
+PASSPORT/scripts/run_mrz_a1.py
+PASSPORT/scripts/run_mrz_a3_diagnose.py
+PASSPORT/scripts/run_mrz_a4_verify.py
+PASSPORT/scripts/diamond_mrz_acceptance.py
+PASSPORT/scripts/passport_number/run_argentina_blind.py
+PASSPORT/reports/

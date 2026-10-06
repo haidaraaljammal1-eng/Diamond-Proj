@@ -1,0 +1,34 @@
+{
+  "policy": "Validators never invent correct answers; outputs ACCEPT | REJECT | FLAG_UNCERTAIN",
+  "fields": {
+    "date_of_birth": [
+      "shape_DD/MM/YYYY",
+      "calendar_valid"
+    ],
+    "issue_date": [
+      "shape_DD/MM/YYYY",
+      "calendar_valid"
+    ],
+    "expiry_date": [
+      "shape_DD/MM/YYYY",
+      "calendar_valid"
+    ],
+    "license_number": [
+      "allowed_charset",
+      "length_range_from_corpus"
+    ],
+    "name_en": [
+      "latin_script_spaces"
+    ],
+    "name_ar": [
+      "arabic_script"
+    ],
+    "nationality": [
+      "latin_text"
+    ],
+    "place_of_issue": [
+      "latin_text_spaces"
+    ]
+  },
+  "date_fields_advantage": "Highly constrained; whitelist + regex + calendar check; never guess digits"
+}

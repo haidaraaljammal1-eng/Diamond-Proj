@@ -1,0 +1,13 @@
+{
+  "architecture": "Crop V1 PNG (read-only) -> copy -> preprocess -> OCR -> normalize -> validate",
+  "never_overwrite_source_crop": true,
+  "variants": {
+    "P0_RAW": "original crop unchanged",
+    "P1_PAD": "canvas padding only on copy",
+    "P2_GRAY_PAD": "grayscale + padding on copy",
+    "P3_CONTRAST_PAD": "contrast normalization + padding on copy",
+    "P4_UPSCALE_GRAY_PAD": "2x/3x scale + grayscale + padding on copy",
+    "P5_BINARIZED": "thresholded copy",
+    "P6_SHARPENED": "light sharpen on copy"
+  }
+}

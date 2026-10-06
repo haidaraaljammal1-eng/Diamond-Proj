@@ -38,11 +38,27 @@ APP/backend/prisma/generated/
 
 # Document Engine (Python) — track source; ignore local env and caches
 DOCUMENT-ENGINE/**/.venv/
-DOCUMENT-ENGINE/**/.venv_ppocrv5/
+DOCUMENT-ENGINE/**/.venv_*/
+DOCUMENT-ENGINE/**/venv/
+DOCUMENT-ENGINE/**/site-packages/
 DOCUMENT-ENGINE/LICENSE/jobs/
 DOCUMENT-ENGINE/LICENSE/output/
 DOCUMENT-ENGINE/LICENSE/frozen/ocr_v1_1/vendor/
+DOCUMENT-ENGINE/LICENSE/frozen/ocr_v1_1/output/
+DOCUMENT-ENGINE/LICENSE/frozen/ocr_v1_2/output/
+DOCUMENT-ENGINE/PASSPORT/results/
+DOCUMENT-ENGINE/PASSPORT/pip-install-log.txt
+DOCUMENT-ENGINE/PASSPORT/pip-api-install.log
+DOCUMENT-ENGINE/PASSPORT/.paddle-home/
 DOCUMENT-ENGINE/**/__pycache__/
+DOCUMENT-ENGINE/**/*.pyc
 DOCUMENT-ENGINE/**/.pytest_cache/
 DOCUMENT-ENGINE/**/.mypy_cache/
 DOCUMENT-ENGINE/**/.ruff_cache/
+DOCUMENT-ENGINE/**/*.downloading
+# Local real-document fixtures (do not use broad *.png/*.jpg — crop label_templates are tracked)
+DOCUMENT-ENGINE/**/samples/
+DOCUMENT-ENGINE/**/fixtures/private/
+DOCUMENT-ENGINE/**/captures/
+DOCUMENT-ENGINE/**/real_data/
+DOCUMENT-ENGINE/**/diagnostics/output/

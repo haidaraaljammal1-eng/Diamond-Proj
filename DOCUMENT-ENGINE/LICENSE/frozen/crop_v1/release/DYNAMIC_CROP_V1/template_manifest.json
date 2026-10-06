@@ -1,0 +1,105 @@
+{
+  "templates": [
+    {
+      "filename": "date_of_birth_ar.png",
+      "relative_path": "label_templates/date_of_birth_ar.png",
+      "sha256": "f87aea883ab62da37ed92ba187222aa1ffd51b0612ec57c31018cf4e279f6895",
+      "width": 133,
+      "height": 21
+    },
+    {
+      "filename": "date_of_birth_en.png",
+      "relative_path": "label_templates/date_of_birth_en.png",
+      "sha256": "d421e2c91f9dd02416d3a9ae4b55fd0f803f12465b1ccafd19aea695b8ba5dec",
+      "width": 98,
+      "height": 13
+    },
+    {
+      "filename": "expiry_date_ar.png",
+      "relative_path": "label_templates/expiry_date_ar.png",
+      "sha256": "01071800d4cce3a00624fd5f7bb9a786a52d324babaabb0d4f7e74f3cd85eec4",
+      "width": 133,
+      "height": 22
+    },
+    {
+      "filename": "expiry_date_en.png",
+      "relative_path": "label_templates/expiry_date_en.png",
+      "sha256": "1c8cb226add2c46871bd5ea316f348d2dfe5629c747bfa69ec05d93c9042a3ea",
+      "width": 75,
+      "height": 14
+    },
+    {
+      "filename": "issue_date_ar.png",
+      "relative_path": "label_templates/issue_date_ar.png",
+      "sha256": "d70ddbd7cf766b6970c1e0d8abb1b5b2afd802ed1ec409a0814e97b5882ad10a",
+      "width": 133,
+      "height": 21
+    },
+    {
+      "filename": "issue_date_en.png",
+      "relative_path": "label_templates/issue_date_en.png",
+      "sha256": "e1414ff57d2e2e3499b3109460fd55b82f0bf887e683d3c0bf89e999d4555df4",
+      "width": 85,
+      "height": 17
+    },
+    {
+      "filename": "license_number_ar.png",
+      "relative_path": "label_templates/license_number_ar.png",
+      "sha256": "849560f9ef7ccb283d9b553d078f43d077a649a89b5005d050a1f320f8fbbaa7",
+      "width": 123,
+      "height": 22
+    },
+    {
+      "filename": "license_number_en.png",
+      "relative_path": "label_templates/license_number_en.png",
+      "sha256": "2dfa45db4e2ac8ef1676b0bd702d41eb0258ae9975dc41e4fd8b819a9747a246",
+      "width": 88,
+      "height": 22
+    },
+    {
+      "filename": "name_ar_label.png",
+      "relative_path": "label_templates/name_ar_label.png",
+      "sha256": "5f6553b428b55c22554ae45bb6f1b52da7c99a27a03336162910cc823cf8bcf8",
+      "width": 92,
+      "height": 21
+    },
+    {
+      "filename": "name_en_label.png",
+      "relative_path": "label_templates/name_en_label.png",
+      "sha256": "c25369fcacdff9a35053147e3faecf9e0aea5e971382680eca5e1723b3b318c7",
+      "width": 46,
+      "height": 15
+    },
+    {
+      "filename": "nationality_ar.png",
+      "relative_path": "label_templates/nationality_ar.png",
+      "sha256": "21f69c709ea55f4e1014c8f7a4a845eb8629ce5b93599a35a09c3d402db309a8",
+      "width": 123,
+      "height": 21
+    },
+    {
+      "filename": "nationality_en.png",
+      "relative_path": "label_templates/nationality_en.png",
+      "sha256": "dcea41460d00830c586c144de6f6a3083a80423903d8485a3c0b2203c089d00b",
+      "width": 80,
+      "height": 15
+    },
+    {
+      "filename": "place_of_issue_ar.png",
+      "relative_path": "label_templates/place_of_issue_ar.png",
+      "sha256": "3aac1c0930c6853577669353d1f2f6172ae44bb2d613e815e79ed7896a46065b",
+      "width": 133,
+      "height": 21
+    },
+    {
+      "filename": "place_of_issue_en.png",
+      "relative_path": "label_templates/place_of_issue_en.png",
+      "sha256": "e5be8c8fe461fcd357d03f39033a9464c8991fefdc8c6b0077c2b426a9ec7aff",
+      "width": 99,
+      "height": 16
+    }
+  ],
+  "aggregate_sha256": "ec4ebb31dc1887d298bbd961ec01cc0bf04a219b203ff9160a1bfb5f0d88b39a",
+  "release": "DYNAMIC_CROP_V1",
+  "release_date": "2026-10-04"
+}

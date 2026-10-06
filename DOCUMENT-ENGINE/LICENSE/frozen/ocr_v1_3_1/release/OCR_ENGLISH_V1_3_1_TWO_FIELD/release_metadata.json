@@ -1,0 +1,8 @@
+{
+  "release_id": "OCR_ENGLISH_V1_3_1_TWO_FIELD",
+  "supersedes": "OCR_ENGLISH_V1_3_TWO_FIELD",
+  "license_number_engine": "ppocrv5_en_stability_veto_rapid_no_digits_fallback",
+  "expiry_engine": "OCR_ENGLISH_V1_2_TWO_FIELD",
+  "crop_release": "DYNAMIC_CROP_V1",
+  "notes": "V1.3 PP-primary unchanged; adds 2-of-3 RapidOCR consensus only when PP returns LICENSE_NUMBER_PP_NO_DIGITS."
+}

@@ -1,0 +1,13 @@
+# Main licence OCR + Crop runtime (pinned from OCR_ENGLISH_V1_1 lock + Crop V1)
+# Crop V1 frozen against OpenCV 4.x; OCR verified with 4.10+ (5.x breaks Crop deskew).
+# Pinned to verified Crop V1 + OCR main runtime (OpenCV 5.x breaks Crop deskew).
+opencv-python==4.14.0.94
+numpy==2.5.3
+onnxruntime==1.30.0
+rapidocr-onnxruntime==1.4.4
+pytesseract==0.3.13
+pillow==12.3.0
+PyYAML==6.0.3
+python-dateutil==2.9.0.post0
+shapely==2.1.2
+pyclipper==1.4.0

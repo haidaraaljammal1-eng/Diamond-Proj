@@ -1,0 +1,5 @@
+{
+  "release_id": "OCR_ENGLISH_V1_3_TWO_FIELD",
+  "inherits_from": "OCR_ENGLISH_V1_2_TWO_FIELD",
+  "note": "Label zone ratios unchanged; see frozen/ocr_v1_2/config/two_field_label_zones.json"
+}

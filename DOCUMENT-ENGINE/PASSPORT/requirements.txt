@@ -1,0 +1,4 @@
+# MRZ-A1 pinned CPU stack (see reports/pip_versions.txt for full freeze)
+opencv-python-headless==5.0.0.93
+paddleocr==3.7.0
+paddlepaddle==3.3.1

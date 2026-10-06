@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-10-04T14:46:35.060685+00:00",
+  "separation": "main_ocr and name_ppocrv5 remain separate; not merged",
+  "main_ocr_venv": {
+    "path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\venv",
+    "python": "Python 3.12.10",
+    "opencv": "5.0.0.93",
+    "onnxruntime": "1.30.0",
+    "rapidocr_onnxruntime": "1.4.4",
+    "pytesseract": "0.3.13"
+  },
+  "name_ppocrv5_venv": {
+    "path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\venv_ppocrv5",
+    "python": "Python 3.12.10",
+    "rapidocr": "3.9.2",
+    "onnxruntime": "1.30.0",
+    "opencv_python": "5.0.0.93",
+    "opencv_python_headless": "5.0.0.93"
+  },
+  "tesseract_version_note": "Run tesseract --version on host; executable path in model_manifest"
+}

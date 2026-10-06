@@ -1,0 +1,8 @@
+{
+  "description": "MRZ-A14 fallback post-selection crop geometry (pair-relative only).",
+  "min_pair_crop_height_ratio_to_trigger": 0.7,
+  "min_glyph_median_height_ratio_for_normalize": 0.55,
+  "min_pair_crop_height_ratio_after_gate": 0.7,
+  "inter_row_boundary_margin_frac_of_gap": 0.25,
+  "min_inter_row_gap_px": 1
+}

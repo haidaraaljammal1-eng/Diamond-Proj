@@ -1,0 +1,35 @@
+{
+  "release": "DYNAMIC_CROP_V1",
+  "release_date": "2026-10-04",
+  "version": "1.0.0-pre-ocr-hardening",
+  "field_order": [
+    "license_number",
+    "name_ar",
+    "name_en",
+    "nationality",
+    "date_of_birth",
+    "issue_date",
+    "expiry_date",
+    "place_of_issue"
+  ],
+  "output_contract": {
+    "required_files": [
+      "pipeline_report.json",
+      "ocr_handoff.json",
+      "run_metadata.json"
+    ],
+    "ocr_eligibility": "crop_geometry_status == VALUE_OK AND content_sanity_status != CONTENT_EMPTY_OR_UNRELIABLE",
+    "helper": "src.ocr_handoff.is_field_ocr_eligible",
+    "never_trust_png_alone": true
+  },
+  "config_hashes": {
+    "config/crop_layout.json": "8a098dedfff9097d9c09e31f9d3d9a6f65482136fbf1a5fe792378a65d19b35a",
+    "config/value_fields.json": "71268a5bd730f03acf1349436e0465a3badf764ac792b2414458cbc4e3c64f7d"
+  },
+  "known_limitations": [
+    "Very low-resolution images may be INPUT_OK_FOR_CROP_BUT_LOW_RES_FOR_OCR or uncertain value boundaries.",
+    "Blank licences are not valid OCR inputs; content sanity may mark fields non-eligible.",
+    "OCR preprocessing and recognition are downstream of Crop V1.",
+    "Template pixels change only via python -m src.build_label_templates or --build-templates."
+  ]
+}

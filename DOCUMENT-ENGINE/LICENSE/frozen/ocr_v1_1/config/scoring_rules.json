@@ -1,0 +1,40 @@
+{
+  "metrics": [
+    "EXACT_MATCH",
+    "NORMALIZED_EXACT_MATCH",
+    "CHARACTER_ERROR_RATE",
+    "FIELD_SUCCESS_RATE",
+    "PER_FIELD_ACCURACY",
+    "DOCUMENT_COMPLETE_ACCURACY",
+    "OCR_REJECT_PRECISION"
+  ],
+  "normalization": {
+    "dates": {
+      "canonical": "DD/MM/YYYY",
+      "preserve_digits": true,
+      "normalize_whitespace": true,
+      "separator_normalization_tracked_separately": true
+    },
+    "name_en": {
+      "case_insensitive_secondary_score": true,
+      "preserve_word_order": true,
+      "collapse_spaces": true,
+      "do_not_strip_real_characters": true
+    },
+    "name_ar": {
+      "unicode_normalize": "NFC",
+      "collapse_spaces": true,
+      "diacritics_ignored_in_secondary_score": true,
+      "no_transliteration": true
+    },
+    "nationality_place": {
+      "case_insensitive_secondary_score": true,
+      "collapse_spaces": true
+    },
+    "license_number": {
+      "strip_surrounding_whitespace_only": true,
+      "preserve_all_characters": true
+    }
+  },
+  "do_not_use_average_confidence_alone": true
+}

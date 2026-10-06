@@ -1,0 +1,9 @@
+{
+  "dates": ">= 99% normalized exact accuracy",
+  "license_number": ">= 99% normalized exact accuracy",
+  "name_en": ">= 95% normalized exact or very low CER",
+  "nationality": ">= 98%",
+  "place_of_issue": ">= 98%",
+  "name_ar": "report separately; Arabic expected hardest",
+  "document_complete_accuracy": "report explicitly; do not lower targets preemptively"
+}

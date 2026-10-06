@@ -1,0 +1,138 @@
+{
+  "release_id": "OCR_ENGLISH_V1",
+  "version": "1.0.0",
+  "phase": "OCR-10",
+  "scope": {
+    "ocr_fields": [
+      "license_number",
+      "name_en",
+      "nationality",
+      "date_of_birth",
+      "issue_date",
+      "expiry_date",
+      "place_of_issue"
+    ],
+    "excluded_fields": ["name_ar"],
+    "name_ar_status": "NOT_OCR_PROCESSED"
+  },
+  "environments": {
+    "main_ocr": {
+      "path": "venv",
+      "role": "Tesseract + RapidOCR PP-OCRv4 EN (dates, place, license, nationality)"
+    },
+    "name_ppocrv5": {
+      "path": "venv_ppocrv5",
+      "role": "PP-OCRv5 English recognition-only for name_en"
+    }
+  },
+  "field_routing": {
+    "license_number": {
+      "engine": "tesseract",
+      "environment": "main_ocr",
+      "lang": "eng",
+      "preprocessing": "P0_RAW",
+      "psm": 7,
+      "whitelist": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "postprocess": ["trim", "strip_non_whitelist_alnum_upper"],
+      "validator": "license_alnum_length",
+      "model": "tessdata/eng.traineddata"
+    },
+    "date_of_birth": {
+      "engine": "date_policy",
+      "environment": "main_ocr",
+      "primary": {
+        "engine": "rapidocr_en",
+        "preprocessing": "P0_RAW",
+        "model": "vendor/rapidocr_en/en_PP-OCRv4_rec_infer.onnx"
+      },
+      "fallback_chain": [
+        {
+          "id": "date_fb_A",
+          "engine": "tesseract",
+          "preprocessing": "P0_RAW",
+          "psm": 7,
+          "whitelist": "0123456789/"
+        },
+        {
+          "id": "date_fb_B",
+          "engine": "tesseract",
+          "preprocessing": "P0_RAW",
+          "psm": 13,
+          "whitelist": "0123456789/"
+        },
+        {
+          "id": "date_fb_C",
+          "engine": "rapidocr_en",
+          "preprocessing": "P1_PAD"
+        },
+        {
+          "id": "date_fb_D",
+          "engine": "rapidocr_en",
+          "preprocessing": "P3_UP2_GRAY_PAD"
+        }
+      ],
+      "validator": "date_dd_mm_yyyy_calendar",
+      "selection": "ocr7_frozen_fallback"
+    },
+    "issue_date": "@date_of_birth",
+    "expiry_date": "@date_of_birth",
+    "name_en": {
+      "engine": "rapidocr_ppocrv5_en",
+      "environment": "name_ppocrv5",
+      "preprocessing": "P0_RAW",
+      "recognition_only": true,
+      "use_det": false,
+      "use_cls": false,
+      "use_rec": true,
+      "rec_width": 640,
+      "model": "vendor/ppocrv5_en/en_PP-OCRv5_rec_mobile.onnx",
+      "model_sha256": "c3461add59bb4323ecba96a492ab75e06dda42467c9e3d0c18db5d1d21924be8",
+      "dictionary": "vendor/ppocrv5_en/ppocrv5_en_dict.txt",
+      "dictionary_sha256": "e025a66d31f327ba0c232e03f407ae8d105e1e709e7ccb3f408aa778c24e70d6",
+      "validator": "name_en_latin",
+      "fallback": "none"
+    },
+    "nationality": {
+      "engine": "tesseract",
+      "environment": "main_ocr",
+      "lang": "eng",
+      "preprocessing": "P0_RAW",
+      "psm": 13,
+      "whitelist": null,
+      "validator": "nationality_latin",
+      "model": "tessdata/eng.traineddata"
+    },
+    "place_of_issue": {
+      "engine": "rapidocr_en",
+      "environment": "main_ocr",
+      "preprocessing": "P1_PAD",
+      "model": "vendor/rapidocr_en/en_PP-OCRv4_rec_infer.onnx",
+      "model_sha256": "e8770c967605983d1570cdf5352041dfb68fa0c21664f49f47b155abd3e0e318",
+      "validator": "place_latin"
+    }
+  },
+  "date_calibration_frozen": {
+    "source": "median of OCR-7 LOO calibration folds (frozen, not recomputed at runtime)",
+    "rapid_min_confidence": 0.7993242180347443,
+    "tesseract_min_confidence": 0.522,
+    "rapid_median_correct": 0.9404892981052398,
+    "tesseract_median_correct": 0.84
+  },
+  "runtime": {
+    "ppocrv5_worker": {
+      "enabled": true,
+      "protocol": "jsonlines",
+      "venv": "venv_ppocrv5",
+      "rollback_note": "Set enabled false to require legacy per-call CLI (not shipped in v1.1 default)"
+    },
+    "date_short_circuit": {
+      "enabled": true,
+      "rule": "validate_date_text(primary)==ACCEPT skips fallback OCR"
+    }
+  },
+  "licensing": {
+    "tesseract": "APPROVED_FOR_PILOT_INTERNAL_USE",
+    "rapidocr_models": "LICENCE_REVIEW_REQUIRED_FOR_REDISTRIBUTION",
+    "ppocrv5_model": "LICENCE_REVIEW_REQUIRED_FOR_REDISTRIBUTION"
+  }
+}

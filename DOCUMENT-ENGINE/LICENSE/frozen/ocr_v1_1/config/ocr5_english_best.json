@@ -1,0 +1,235 @@
+{
+  "phase": "OCR-5",
+  "english_only": true,
+  "generated_at": "2026-10-04T13:27:24.001882+00:00",
+  "sample_count": 20,
+  "excluded_fields": [
+    "name_ar"
+  ],
+  "excluded_rows": [
+    "pilot_04/license_number (UNREADABLE)"
+  ],
+  "field_groups": {
+    "NAME_EN": {
+      "winner_engine": "rapidocr_en",
+      "config": {
+        "engine": "rapidocr_en",
+        "preprocessing": "P0_RAW",
+        "psm": null,
+        "whitelist_label": "none",
+        "whitelist": null,
+        "config_id": "rapidocr_en|P0_RAW"
+      },
+      "metrics": {
+        "n": 4,
+        "exact_correct": 3,
+        "normalized_correct": 3,
+        "exact_accuracy": 0.75,
+        "normalized_accuracy": 0.75,
+        "mean_cer": 0.008928571428571428,
+        "mean_runtime_ms": 258.71397501032334
+      },
+      "tesseract_best": {
+        "config_id": "tesseract|P0_RAW|psm7|wl_none",
+        "metrics": {
+          "n": 4,
+          "exact_correct": 1,
+          "normalized_correct": 1,
+          "exact_accuracy": 0.25,
+          "normalized_accuracy": 0.25,
+          "mean_cer": 0.10368663594470046,
+          "mean_runtime_ms": 368.78090001118835
+        }
+      },
+      "rapidocr_best": {
+        "config_id": "rapidocr_en|P0_RAW",
+        "metrics": {
+          "n": 4,
+          "exact_correct": 3,
+          "normalized_correct": 3,
+          "exact_accuracy": 0.75,
+          "normalized_accuracy": 0.75,
+          "mean_cer": 0.008928571428571428,
+          "mean_runtime_ms": 258.71397501032334
+        }
+      }
+    },
+    "LICENSE": {
+      "winner_engine": "tesseract",
+      "config": {
+        "engine": "tesseract",
+        "preprocessing": "P0_RAW",
+        "psm": 7,
+        "whitelist_label": "alnum",
+        "whitelist": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        "config_id": "tesseract|P0_RAW|psm7|wl_alnum"
+      },
+      "metrics": {
+        "n": 2,
+        "exact_correct": 2,
+        "normalized_correct": 2,
+        "exact_accuracy": 1.0,
+        "normalized_accuracy": 1.0,
+        "mean_cer": 0.0,
+        "mean_runtime_ms": 320.1681000064127
+      },
+      "tesseract_best": {
+        "config_id": "tesseract|P0_RAW|psm7|wl_alnum",
+        "metrics": {
+          "n": 2,
+          "exact_correct": 2,
+          "normalized_correct": 2,
+          "exact_accuracy": 1.0,
+          "normalized_accuracy": 1.0,
+          "mean_cer": 0.0,
+          "mean_runtime_ms": 320.1681000064127
+        }
+      },
+      "rapidocr_best": {
+        "config_id": "rapidocr_en|P0_RAW",
+        "metrics": {
+          "n": 2,
+          "exact_correct": 2,
+          "normalized_correct": 2,
+          "exact_accuracy": 1.0,
+          "normalized_accuracy": 1.0,
+          "mean_cer": 0.0,
+          "mean_runtime_ms": 140.69914998253807
+        }
+      }
+    },
+    "NATIONALITY": {
+      "winner_engine": "tesseract",
+      "config": {
+        "engine": "tesseract",
+        "preprocessing": "P0_RAW",
+        "psm": 13,
+        "whitelist_label": "none",
+        "whitelist": null,
+        "config_id": "tesseract|P0_RAW|psm13|wl_none"
+      },
+      "metrics": {
+        "n": 2,
+        "exact_correct": 2,
+        "normalized_correct": 2,
+        "exact_accuracy": 1.0,
+        "normalized_accuracy": 1.0,
+        "mean_cer": 0.0,
+        "mean_runtime_ms": 316.486649971921
+      },
+      "tesseract_best": {
+        "config_id": "tesseract|P0_RAW|psm13|wl_none",
+        "metrics": {
+          "n": 2,
+          "exact_correct": 2,
+          "normalized_correct": 2,
+          "exact_accuracy": 1.0,
+          "normalized_accuracy": 1.0,
+          "mean_cer": 0.0,
+          "mean_runtime_ms": 316.486649971921
+        }
+      },
+      "rapidocr_best": {
+        "config_id": "rapidocr_en|P0_RAW",
+        "metrics": {
+          "n": 2,
+          "exact_correct": 2,
+          "normalized_correct": 2,
+          "exact_accuracy": 1.0,
+          "normalized_accuracy": 1.0,
+          "mean_cer": 0.0,
+          "mean_runtime_ms": 56.27680002362467
+        }
+      }
+    },
+    "DATES": {
+      "winner_engine": "rapidocr_en",
+      "config": {
+        "engine": "rapidocr_en",
+        "preprocessing": "P0_RAW",
+        "psm": null,
+        "whitelist_label": "none",
+        "whitelist": null,
+        "config_id": "rapidocr_en|P0_RAW"
+      },
+      "metrics": {
+        "n": 9,
+        "exact_correct": 9,
+        "normalized_correct": 9,
+        "exact_accuracy": 1.0,
+        "normalized_accuracy": 1.0,
+        "mean_cer": 0.0,
+        "mean_runtime_ms": 104.23481109966006
+      },
+      "tesseract_best": {
+        "config_id": "tesseract|P0_RAW|psm7|wl_date",
+        "metrics": {
+          "n": 9,
+          "exact_correct": 7,
+          "normalized_correct": 7,
+          "exact_accuracy": 0.7777777777777778,
+          "normalized_accuracy": 0.7777777777777778,
+          "mean_cer": 0.06666666666666667,
+          "mean_runtime_ms": 350.64114443957806
+        }
+      },
+      "rapidocr_best": {
+        "config_id": "rapidocr_en|P0_RAW",
+        "metrics": {
+          "n": 9,
+          "exact_correct": 9,
+          "normalized_correct": 9,
+          "exact_accuracy": 1.0,
+          "normalized_accuracy": 1.0,
+          "mean_cer": 0.0,
+          "mean_runtime_ms": 104.23481109966006
+        }
+      }
+    },
+    "PLACE_OF_ISSUE": {
+      "winner_engine": "rapidocr_en",
+      "config": {
+        "engine": "rapidocr_en",
+        "preprocessing": "P1_PAD",
+        "psm": null,
+        "whitelist_label": "none",
+        "whitelist": null,
+        "config_id": "rapidocr_en|P1_PAD"
+      },
+      "metrics": {
+        "n": 3,
+        "exact_correct": 3,
+        "normalized_correct": 3,
+        "exact_accuracy": 1.0,
+        "normalized_accuracy": 1.0,
+        "mean_cer": 0.0,
+        "mean_runtime_ms": 55.080566671676934
+      },
+      "tesseract_best": {
+        "config_id": "tesseract|P1_PAD|psm13|wl_none",
+        "metrics": {
+          "n": 3,
+          "exact_correct": 2,
+          "normalized_correct": 2,
+          "exact_accuracy": 0.6666666666666666,
+          "normalized_accuracy": 0.6666666666666666,
+          "mean_cer": 0.3333333333333333,
+          "mean_runtime_ms": 307.07336667304236
+        }
+      },
+      "rapidocr_best": {
+        "config_id": "rapidocr_en|P1_PAD",
+        "metrics": {
+          "n": 3,
+          "exact_correct": 3,
+          "normalized_correct": 3,
+          "exact_accuracy": 1.0,
+          "normalized_accuracy": 1.0,
+          "mean_cer": 0.0,
+          "mean_runtime_ms": 55.080566671676934
+        }
+      }
+    }
+  },
+  "rapidocr_model": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\vendor\\rapidocr_en\\en_PP-OCRv4_rec_infer.onnx"
+}
