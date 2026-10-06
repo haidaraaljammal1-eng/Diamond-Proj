@@ -1,0 +1,55 @@
+﻿.\.venv\Scripts\python.exe : test_composite_digit_matches_ocr 
+(tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_composite_digit_matches_ocr) ... FAIL
+At C:\Users\Rw\AppData\Local\Temp\ps-script-99b0f488-6fdc-40a7-9fca-6142a910bfc4.ps1:104 char:41
++ ... AMOND MRZ"; .\.venv\Scripts\python.exe -m unittest tests.test_icao_td ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (test_composite_...s_ocr) ... FAIL:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+test_composite_source_length_invariant (tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_composite_source_length_invariant) 
+... ok
+test_extraction_from_mrz_structure (tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_extraction_from_mrz_structure) ... ok
+test_individual_checksums_pass (tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_individual_checksums_pass) ... ok
+test_line_lengths (tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_line_lengths) ... ok
+test_parser_composite_passes (tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_parser_composite_passes) ... FAIL
+test_independent_icao_composite_passes (tests.test_icao_td3_mrz_a4.TestBaselineBugEvidence.test_independent_icao_composite_passes) 
+... ok
+test_alpha_values (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_alpha_values) ... ok
+test_composite_39_char_source (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_composite_39_char_source) ... ok
+test_digit_values (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_digit_values) ... ok
+test_dob_substring (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_dob_substring) ... ok
+test_document_number_substring (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_document_number_substring) ... ok
+test_expiry_substring (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_expiry_substring) ... ok
+test_filler_value (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_filler_value) ... ok
+test_weights_repeat (tests.test_icao_td3_mrz_a4.TestChecksumPrimitive.test_weights_repeat) ... ok
+test_invalid_character_structure (tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_invalid_character_structure) ... ok
+test_line2_length_43_invalid (tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_line2_length_43_invalid) ... ok
+test_line2_length_45_invalid (tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_line2_length_45_invalid) ... ok
+test_mutated_dob_fails (tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_mutated_dob_fails) ... ok
+test_mutated_document_number_fails (tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_mutated_document_number_fails) ... ok
+test_mutated_expiry_fails (tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_mutated_expiry_fails) ... ok
+test_mutated_final_composite_digit_fails (tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_mutated_final_composite_digit_fails) 
+... ok
+test_mutated_optional_data_fails_composite 
+(tests.test_icao_td3_mrz_a4.TestNegativeMutations.test_mutated_optional_data_fails_composite) ... ok
+
+======================================================================
+FAIL: test_composite_digit_matches_ocr (tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_composite_digit_matches_ocr)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Rw\DIAMOND MRZ\tests\test_icao_td3_mrz_a4.py", line 93, in test_composite_digit_matches_ocr
+    self.assertIs(val.composite_check, True)
+AssertionError: False is not True
+
+======================================================================
+FAIL: test_parser_composite_passes (tests.test_icao_td3_mrz_a4.TestA2SavedRawRegression.test_parser_composite_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Rw\DIAMOND MRZ\tests\test_icao_td3_mrz_a4.py", line 87, in test_parser_composite_passes
+    self.assertIs(val.composite_check, True)
+AssertionError: False is not True
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.010s
+
+FAILED (failures=2)

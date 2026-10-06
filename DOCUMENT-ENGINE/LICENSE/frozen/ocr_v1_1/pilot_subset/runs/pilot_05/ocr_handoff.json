@@ -1,0 +1,175 @@
+{
+  "run_id": "e017ea8f36dc4ee18061e2b895719993",
+  "input_sha256": "443075f3fb398f22270f6e1bf9dca7f56a93f6a9e301c2591d6bdfd4c2e48858",
+  "pipeline_status": "PIPELINE_COMPLETE",
+  "input_handoff_quality": "INPUT_OK_FOR_CROP_AND_OCR",
+  "fields": [
+    {
+      "field_name": "license_number",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\01_license_number.png",
+      "crop_geometry_status": "VALUE_BOUNDARY_UNCERTAIN",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "field_name": "name_ar",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\02_name_ar.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 541.0,
+        "height": 44.0,
+        "ink_pixels": 3487.0,
+        "ink_ratio": 0.1464879852125693,
+        "glyph_area": 2525.0,
+        "largest_cc": 656.0,
+        "tall_components": 6.0,
+        "small_area_ratio": 0.09377688557499284,
+        "active_col_ratio": 0.9094269870609981,
+        "laplacian_var": 592.8977114423029
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 541,
+      "height": 44
+    },
+    {
+      "field_name": "name_en",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\03_name_en.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 624.0,
+        "height": 41.0,
+        "ink_pixels": 6429.0,
+        "ink_ratio": 0.25128986866791747,
+        "glyph_area": 5670.0,
+        "largest_cc": 824.0,
+        "tall_components": 24.0,
+        "small_area_ratio": 0.016487789702908696,
+        "active_col_ratio": 0.844551282051282,
+        "laplacian_var": 540.9885024232918
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 624,
+      "height": 41
+    },
+    {
+      "field_name": "nationality",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\04_nationality.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 160.0,
+        "height": 43.0,
+        "ink_pixels": 1732.0,
+        "ink_ratio": 0.2517441860465116,
+        "glyph_area": 1586.0,
+        "largest_cc": 362.0,
+        "tall_components": 7.0,
+        "small_area_ratio": 0.04041570438799076,
+        "active_col_ratio": 0.88125,
+        "laplacian_var": 670.8564081091131
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 160,
+      "height": 43
+    },
+    {
+      "field_name": "date_of_birth",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\05_date_of_birth.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 385.0,
+        "height": 43.0,
+        "ink_pixels": 2295.0,
+        "ink_ratio": 0.1386288130474177,
+        "glyph_area": 1944.0,
+        "largest_cc": 913.0,
+        "tall_components": 8.0,
+        "small_area_ratio": 0.034858387799564274,
+        "active_col_ratio": 0.7896103896103897,
+        "laplacian_var": 411.9788515497202
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 385,
+      "height": 43
+    },
+    {
+      "field_name": "issue_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\06_issue_date.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 406.0,
+        "height": 43.0,
+        "ink_pixels": 2408.0,
+        "ink_ratio": 0.13793103448275862,
+        "glyph_area": 2142.0,
+        "largest_cc": 278.0,
+        "tall_components": 10.0,
+        "small_area_ratio": 0.010382059800664452,
+        "active_col_ratio": 0.6724137931034483,
+        "laplacian_var": 487.4221321194269
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 406,
+      "height": 43
+    },
+    {
+      "field_name": "expiry_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\07_expiry_date.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 402.0,
+        "height": 43.0,
+        "ink_pixels": 2514.0,
+        "ink_ratio": 0.14543561263450192,
+        "glyph_area": 2199.0,
+        "largest_cc": 687.0,
+        "tall_components": 7.0,
+        "small_area_ratio": 0.026252983293556086,
+        "active_col_ratio": 0.6965174129353234,
+        "laplacian_var": 394.1298201725645
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 402,
+      "height": 43
+    },
+    {
+      "field_name": "place_of_issue",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\value_crops\\08_place_of_issue.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 142.0,
+        "height": 43.0,
+        "ink_pixels": 1190.0,
+        "ink_ratio": 0.19489027186374058,
+        "glyph_area": 1122.0,
+        "largest_cc": 298.0,
+        "tall_components": 6.0,
+        "small_area_ratio": 0.05714285714285714,
+        "active_col_ratio": 0.823943661971831,
+        "laplacian_var": 484.01878927569487
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 142,
+      "height": 43
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "run_id": "84293a8379d74f04b1b30ef8e2092b85",
+  "input_sha256": "fb7cf7fb63e32571785da8e0c09d951b552c1bb63651da6cd2dd6be373a6705e",
+  "pipeline_status": "PIPELINE_COMPLETE",
+  "input_handoff_quality": "INPUT_OK_FOR_CROP_AND_OCR",
+  "fields": [
+    {
+      "field_name": "license_number",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\01_license_number.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 262.0,
+        "height": 29.0,
+        "ink_pixels": 634.0,
+        "ink_ratio": 0.08344301131876809,
+        "glyph_area": 632.0,
+        "largest_cc": 112.0,
+        "tall_components": 7.0,
+        "small_area_ratio": 0.0031545741324921135,
+        "active_col_ratio": 0.26717557251908397,
+        "laplacian_var": 936.2306409723511
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 262,
+      "height": 29
+    },
+    {
+      "field_name": "name_ar",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\02_name_ar.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 374.0,
+        "height": 27.0,
+        "ink_pixels": 1076.0,
+        "ink_ratio": 0.10655575361457714,
+        "glyph_area": 855.0,
+        "largest_cc": 199.0,
+        "tall_components": 6.0,
+        "small_area_ratio": 0.13382899628252787,
+        "active_col_ratio": 0.732620320855615,
+        "laplacian_var": 1252.0183818013063
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 374,
+      "height": 27
+    },
+    {
+      "field_name": "name_en",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\03_name_en.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 424.0,
+        "height": 27.0,
+        "ink_pixels": 2413.0,
+        "ink_ratio": 0.2107791754018169,
+        "glyph_area": 2123.0,
+        "largest_cc": 183.0,
+        "tall_components": 28.0,
+        "small_area_ratio": 0.04434314131786158,
+        "active_col_ratio": 0.6580188679245284,
+        "laplacian_var": 2117.041817555552
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 424,
+      "height": 27
+    },
+    {
+      "field_name": "nationality",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\04_nationality.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 135.0,
+        "height": 29.0,
+        "ink_pixels": 873.0,
+        "ink_ratio": 0.22298850574712645,
+        "glyph_area": 871.0,
+        "largest_cc": 132.0,
+        "tall_components": 10.0,
+        "small_area_ratio": 0.002290950744558992,
+        "active_col_ratio": 0.7407407407407407,
+        "laplacian_var": 2592.0055395546165
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 135,
+      "height": 29
+    },
+    {
+      "field_name": "date_of_birth",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\05_date_of_birth.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 259.0,
+        "height": 27.0,
+        "ink_pixels": 730.0,
+        "ink_ratio": 0.10439010439010439,
+        "glyph_area": 730.0,
+        "largest_cc": 108.0,
+        "tall_components": 10.0,
+        "small_area_ratio": 0.0,
+        "active_col_ratio": 0.305019305019305,
+        "laplacian_var": 1188.2668662411263
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 259,
+      "height": 27
+    },
+    {
+      "field_name": "issue_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\06_issue_date.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 273.0,
+        "height": 29.0,
+        "ink_pixels": 767.0,
+        "ink_ratio": 0.09688013136288999,
+        "glyph_area": 723.0,
+        "largest_cc": 107.0,
+        "tall_components": 9.0,
+        "small_area_ratio": 0.05736636245110821,
+        "active_col_ratio": 0.34065934065934067,
+        "laplacian_var": 1160.387767530468
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 273,
+      "height": 29
+    },
+    {
+      "field_name": "expiry_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\07_expiry_date.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 273.0,
+        "height": 29.0,
+        "ink_pixels": 961.0,
+        "ink_ratio": 0.1213843627636731,
+        "glyph_area": 828.0,
+        "largest_cc": 112.0,
+        "tall_components": 10.0,
+        "small_area_ratio": 0.1383975026014568,
+        "active_col_ratio": 0.6959706959706959,
+        "laplacian_var": 1500.606643490442
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 273,
+      "height": 29
+    },
+    {
+      "field_name": "place_of_issue",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\08_place_of_issue.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 72.0,
+        "height": 30.0,
+        "ink_pixels": 466.0,
+        "ink_ratio": 0.21574074074074073,
+        "glyph_area": 444.0,
+        "largest_cc": 127.0,
+        "tall_components": 5.0,
+        "small_area_ratio": 0.04721030042918455,
+        "active_col_ratio": 0.7083333333333334,
+        "laplacian_var": 2006.0480418381342
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 72,
+      "height": 30
+    }
+  ]
+}

@@ -1,0 +1,175 @@
+{
+  "run_id": "11454d228b1a4c4a9cf47cbb34ed5344",
+  "input_sha256": "33252114f253de98b9f1d877c117d290926687fd8fd0079350779f5013453264",
+  "pipeline_status": "PIPELINE_COMPLETE",
+  "input_handoff_quality": "INPUT_OK_FOR_CROP_AND_OCR",
+  "fields": [
+    {
+      "field_name": "license_number",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\01_license_number.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 243.0,
+        "height": 27.0,
+        "ink_pixels": 1339.0,
+        "ink_ratio": 0.20408474317939337,
+        "glyph_area": 848.0,
+        "largest_cc": 848.0,
+        "tall_components": 1.0,
+        "small_area_ratio": 0.36669156086631816,
+        "active_col_ratio": 0.8641975308641975,
+        "laplacian_var": 2926.0431986910226
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 243,
+      "height": 27
+    },
+    {
+      "field_name": "name_ar",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\02_name_ar.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 338.0,
+        "height": 24.0,
+        "ink_pixels": 731.0,
+        "ink_ratio": 0.09011341222879685,
+        "glyph_area": 660.0,
+        "largest_cc": 147.0,
+        "tall_components": 6.0,
+        "small_area_ratio": 0.09712722298221614,
+        "active_col_ratio": 0.4940828402366864,
+        "laplacian_var": 7610.76301940486
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 338,
+      "height": 24
+    },
+    {
+      "field_name": "name_en",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\03_name_en.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 358.0,
+        "height": 17.0,
+        "ink_pixels": 1320.0,
+        "ink_ratio": 0.21689122576404862,
+        "glyph_area": 1221.0,
+        "largest_cc": 65.0,
+        "tall_components": 27.0,
+        "small_area_ratio": 0.075,
+        "active_col_ratio": 0.6787709497206704,
+        "laplacian_var": 16021.457301841532
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 358,
+      "height": 17
+    },
+    {
+      "field_name": "nationality",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\04_nationality.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 146,
+      "height": 24
+    },
+    {
+      "field_name": "date_of_birth",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\05_date_of_birth.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 236.0,
+        "height": 22.0,
+        "ink_pixels": 276.0,
+        "ink_ratio": 0.053158705701078585,
+        "glyph_area": 143.0,
+        "largest_cc": 37.0,
+        "tall_components": 4.0,
+        "small_area_ratio": 0.48188405797101447,
+        "active_col_ratio": 0.2457627118644068,
+        "laplacian_var": 6690.626570471995
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 236,
+      "height": 22
+    },
+    {
+      "field_name": "issue_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\06_issue_date.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 247.0,
+        "height": 26.0,
+        "ink_pixels": 763.0,
+        "ink_ratio": 0.11881033945811274,
+        "glyph_area": 307.0,
+        "largest_cc": 404.0,
+        "tall_components": 8.0,
+        "small_area_ratio": 0.06815203145478375,
+        "active_col_ratio": 1.0,
+        "laplacian_var": 8008.81025469033
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 247,
+      "height": 26
+    },
+    {
+      "field_name": "expiry_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\07_expiry_date.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 246.0,
+        "height": 26.0,
+        "ink_pixels": 594.0,
+        "ink_ratio": 0.09287054409005628,
+        "glyph_area": 275.0,
+        "largest_cc": 144.0,
+        "tall_components": 7.0,
+        "small_area_ratio": 0.12121212121212122,
+        "active_col_ratio": 1.0,
+        "laplacian_var": 9707.343674771717
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 246,
+      "height": 26
+    },
+    {
+      "field_name": "place_of_issue",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\08_place_of_issue.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 122.0,
+        "height": 27.0,
+        "ink_pixels": 349.0,
+        "ink_ratio": 0.10595021250758956,
+        "glyph_area": 242.0,
+        "largest_cc": 50.0,
+        "tall_components": 6.0,
+        "small_area_ratio": 0.30659025787965616,
+        "active_col_ratio": 0.5901639344262295,
+        "laplacian_var": 8731.332163702913
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 122,
+      "height": 27
+    }
+  ]
+}

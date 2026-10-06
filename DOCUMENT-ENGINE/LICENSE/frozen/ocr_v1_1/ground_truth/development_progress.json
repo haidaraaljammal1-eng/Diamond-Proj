@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-10-04T11:58:22.891899+00:00",
+  "development_documents": [
+    "real10",
+    "real11",
+    "real12",
+    "real14",
+    "real3",
+    "real5",
+    "real6",
+    "real7",
+    "real8",
+    "real_01",
+    "real_02"
+  ],
+  "development_document_count": 11,
+  "total_field_slots": 88,
+  "status_counts": {
+    "VERIFIED": 0,
+    "EMPTY": 0,
+    "UNREADABLE": 0,
+    "UNCERTAIN": 0,
+    "UNVERIFIED": 88
+  },
+  "remaining_unverified": 88,
+  "fully_verified_documents": 0,
+  "verified_ocr_eligible_crops": 0,
+  "verified_ocr_eligible_by_field": {},
+  "benchmark_minimum_verified_ocr_eligible": 60,
+  "benchmark_development_ready": false
+}

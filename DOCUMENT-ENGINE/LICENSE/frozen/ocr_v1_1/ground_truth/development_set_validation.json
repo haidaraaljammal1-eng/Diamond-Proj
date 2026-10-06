@@ -1,0 +1,85 @@
+{
+  "generated_at": "2026-10-04T11:58:17.830514+00:00",
+  "all_ok": true,
+  "development_set": [
+    "real3",
+    "real5",
+    "real6",
+    "real7",
+    "real8",
+    "real10",
+    "real11",
+    "real12",
+    "real14",
+    "real_01",
+    "real_02"
+  ],
+  "excluded": {
+    "holdout": [
+      "real4"
+    ],
+    "negative_control": [
+      "real9"
+    ],
+    "hard_case": [
+      "real13"
+    ]
+  },
+  "results": [
+    {
+      "test_id": "real3",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real5",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real6",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real7",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real8",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real10",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real11",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real12",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real14",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real_01",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "test_id": "real_02",
+      "ok": true,
+      "issues": []
+    }
+  ]
+}

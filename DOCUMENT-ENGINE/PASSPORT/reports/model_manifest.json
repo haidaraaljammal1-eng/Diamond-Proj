@@ -1,0 +1,13 @@
+{
+  "model_name": "en_PP-OCRv4_mobile_rec",
+  "source": "https://huggingface.co/PaddlePaddle/en_PP-OCRv4_mobile_rec",
+  "license": "Apache-2.0",
+  "dictionary_supports_lt": true,
+  "dictionary_source": "https://github.com/PaddlePaddle/PaddleOCR/blob/main/ppocr/utils/en_dict.txt",
+  "local_path": "C:\\Users\\Rw\\.paddlex\\official_models\\en_PP-OCRv4_mobile_rec",
+  "weights_file": "inference.pdiparams",
+  "weights_size_bytes": 7607269,
+  "weights_sha256": "75f64a1ffb70c56b7a25655963ca16f5bf3286202e3f52ac972bee05cdee2f56",
+  "total_model_storage_bytes_approx": 7820000,
+  "note": "PaddleX auto-download cache; not copied into workspace models/ in MRZ-A1."
+}

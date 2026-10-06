@@ -1,0 +1,595 @@
+{
+  "verification": {
+    "valid": true,
+    "results": [
+      {
+        "test_id": "pilot_01",
+        "sha256_match": true,
+        "expected": "4683979815aa417f273e5f1b324702d3a80a7051f1f593bd5c535dc6e15f9e89",
+        "actual": "4683979815aa417f273e5f1b324702d3a80a7051f1f593bd5c535dc6e15f9e89"
+      },
+      {
+        "test_id": "pilot_02",
+        "sha256_match": true,
+        "expected": "b2846030259e49735ce1a56293d70911b244b0dca923e742e6e1321337286355",
+        "actual": "b2846030259e49735ce1a56293d70911b244b0dca923e742e6e1321337286355"
+      },
+      {
+        "test_id": "pilot_03",
+        "sha256_match": true,
+        "expected": "fb7cf7fb63e32571785da8e0c09d951b552c1bb63651da6cd2dd6be373a6705e",
+        "actual": "fb7cf7fb63e32571785da8e0c09d951b552c1bb63651da6cd2dd6be373a6705e"
+      },
+      {
+        "test_id": "pilot_04",
+        "sha256_match": true,
+        "expected": "33252114f253de98b9f1d877c117d290926687fd8fd0079350779f5013453264",
+        "actual": "33252114f253de98b9f1d877c117d290926687fd8fd0079350779f5013453264"
+      }
+    ]
+  },
+  "crop_reports": {
+    "pilot_01": {
+      "stopped_reason": null,
+      "recommendation": "NEEDS_ANOTHER_REAL01_BOUNDARY_FIX",
+      "table_status": "TABLE_OK",
+      "structure_mode": "DIRECT_STRUCTURE",
+      "rows_status": "DIRECT_STRUCTURE",
+      "row_count": 8,
+      "fields": {
+        "license_number": {
+          "field_status": "LABEL_BOUNDARY_CONFLICT",
+          "value_bbox": null
+        },
+        "name_ar": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            2,
+            2,
+            327,
+            20
+          ]
+        },
+        "name_en": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            75,
+            0,
+            419,
+            45
+          ]
+        },
+        "nationality": {
+          "field_status": "LABEL_BOUNDARY_CONFLICT",
+          "value_bbox": null
+        },
+        "date_of_birth": {
+          "field_status": "LABEL_BOUNDARY_CONFLICT",
+          "value_bbox": null
+        },
+        "issue_date": {
+          "field_status": "LABEL_BOUNDARY_CONFLICT",
+          "value_bbox": null
+        },
+        "expiry_date": {
+          "field_status": "LABEL_BOUNDARY_CONFLICT",
+          "value_bbox": null
+        },
+        "place_of_issue": {
+          "field_status": "VALUE_BOUNDARY_UNCERTAIN",
+          "value_bbox": null
+        }
+      },
+      "ocr_handoff": {
+        "license_number": {
+          "ocr_eligible": false,
+          "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+          "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\01_license_number.png",
+          "width": 200,
+          "height": 40
+        },
+        "name_ar": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\02_name_ar.png",
+          "width": 325,
+          "height": 18
+        },
+        "name_en": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\03_name_en.png",
+          "width": 344,
+          "height": 45
+        },
+        "nationality": {
+          "ocr_eligible": false,
+          "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+          "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\04_nationality.png",
+          "width": 200,
+          "height": 40
+        },
+        "date_of_birth": {
+          "ocr_eligible": false,
+          "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+          "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\05_date_of_birth.png",
+          "width": 200,
+          "height": 40
+        },
+        "issue_date": {
+          "ocr_eligible": false,
+          "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+          "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\06_issue_date.png",
+          "width": 200,
+          "height": 40
+        },
+        "expiry_date": {
+          "ocr_eligible": false,
+          "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+          "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\07_expiry_date.png",
+          "width": 200,
+          "height": 40
+        },
+        "place_of_issue": {
+          "ocr_eligible": false,
+          "crop_geometry_status": "VALUE_BOUNDARY_UNCERTAIN",
+          "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\08_place_of_issue.png",
+          "width": 200,
+          "height": 40
+        }
+      }
+    },
+    "pilot_02": {
+      "stopped_reason": null,
+      "recommendation": "READY_FOR_MULTI_LICENCE_DYNAMIC_CROP_TEST",
+      "table_status": "TABLE_OK",
+      "structure_mode": "DIRECT_STRUCTURE",
+      "rows_status": "DIRECT_STRUCTURE",
+      "row_count": 8,
+      "fields": {
+        "license_number": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            120,
+            4,
+            417,
+            33
+          ]
+        },
+        "name_ar": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            2,
+            4,
+            417,
+            30
+          ]
+        },
+        "name_en": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            76,
+            0,
+            519,
+            31
+          ]
+        },
+        "nationality": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            107,
+            0,
+            290,
+            29
+          ]
+        },
+        "date_of_birth": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            126,
+            0,
+            414,
+            32
+          ]
+        },
+        "issue_date": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            111,
+            0,
+            414,
+            30
+          ]
+        },
+        "expiry_date": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            115,
+            0,
+            413,
+            33
+          ]
+        },
+        "place_of_issue": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            126,
+            0,
+            205,
+            33
+          ]
+        }
+      },
+      "ocr_handoff": {
+        "license_number": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\01_license_number.png",
+          "width": 297,
+          "height": 29
+        },
+        "name_ar": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\02_name_ar.png",
+          "width": 415,
+          "height": 26
+        },
+        "name_en": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\03_name_en.png",
+          "width": 443,
+          "height": 31
+        },
+        "nationality": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\04_nationality.png",
+          "width": 183,
+          "height": 29
+        },
+        "date_of_birth": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\05_date_of_birth.png",
+          "width": 288,
+          "height": 32
+        },
+        "issue_date": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\06_issue_date.png",
+          "width": 303,
+          "height": 30
+        },
+        "expiry_date": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\07_expiry_date.png",
+          "width": 298,
+          "height": 33
+        },
+        "place_of_issue": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_02\\value_crops\\08_place_of_issue.png",
+          "width": 79,
+          "height": 33
+        }
+      }
+    },
+    "pilot_03": {
+      "stopped_reason": null,
+      "recommendation": "READY_FOR_MULTI_LICENCE_DYNAMIC_CROP_TEST",
+      "table_status": "TABLE_OK",
+      "structure_mode": "TEXT_BAND_ROW_FALLBACK",
+      "rows_status": "STRUCTURE_RECOVERED",
+      "row_count": 8,
+      "fields": {
+        "license_number": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            112,
+            0,
+            374,
+            29
+          ]
+        },
+        "name_ar": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            2,
+            0,
+            376,
+            27
+          ]
+        },
+        "name_en": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            76,
+            0,
+            500,
+            27
+          ]
+        },
+        "nationality": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            105,
+            0,
+            240,
+            29
+          ]
+        },
+        "date_of_birth": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            118,
+            0,
+            377,
+            27
+          ]
+        },
+        "issue_date": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            105,
+            0,
+            378,
+            29
+          ]
+        },
+        "expiry_date": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            106,
+            0,
+            379,
+            29
+          ]
+        },
+        "place_of_issue": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            120,
+            0,
+            192,
+            30
+          ]
+        }
+      },
+      "ocr_handoff": {
+        "license_number": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\01_license_number.png",
+          "width": 262,
+          "height": 29
+        },
+        "name_ar": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\02_name_ar.png",
+          "width": 374,
+          "height": 27
+        },
+        "name_en": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\03_name_en.png",
+          "width": 424,
+          "height": 27
+        },
+        "nationality": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\04_nationality.png",
+          "width": 135,
+          "height": 29
+        },
+        "date_of_birth": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\05_date_of_birth.png",
+          "width": 259,
+          "height": 27
+        },
+        "issue_date": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\06_issue_date.png",
+          "width": 273,
+          "height": 29
+        },
+        "expiry_date": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\07_expiry_date.png",
+          "width": 273,
+          "height": 29
+        },
+        "place_of_issue": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_03\\value_crops\\08_place_of_issue.png",
+          "width": 72,
+          "height": 30
+        }
+      }
+    },
+    "pilot_04": {
+      "stopped_reason": null,
+      "recommendation": "READY_FOR_MULTI_LICENCE_DYNAMIC_CROP_TEST",
+      "table_status": "TABLE_OK",
+      "structure_mode": "TEXT_BAND_ROW_FALLBACK",
+      "rows_status": "STRUCTURE_RECOVERED",
+      "row_count": 8,
+      "fields": {
+        "license_number": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            96,
+            0,
+            339,
+            27
+          ]
+        },
+        "name_ar": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            2,
+            2,
+            340,
+            26
+          ]
+        },
+        "name_en": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            61,
+            3,
+            419,
+            20
+          ]
+        },
+        "nationality": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            89,
+            2,
+            235,
+            26
+          ]
+        },
+        "date_of_birth": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            104,
+            2,
+            340,
+            24
+          ]
+        },
+        "issue_date": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            93,
+            0,
+            340,
+            26
+          ]
+        },
+        "expiry_date": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            94,
+            0,
+            340,
+            26
+          ]
+        },
+        "place_of_issue": {
+          "field_status": "VALUE_OK",
+          "value_bbox": [
+            106,
+            0,
+            228,
+            27
+          ]
+        }
+      },
+      "ocr_handoff": {
+        "license_number": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\01_license_number.png",
+          "width": 243,
+          "height": 27
+        },
+        "name_ar": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\02_name_ar.png",
+          "width": 338,
+          "height": 24
+        },
+        "name_en": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\03_name_en.png",
+          "width": 358,
+          "height": 17
+        },
+        "nationality": {
+          "ocr_eligible": false,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\04_nationality.png",
+          "width": 146,
+          "height": 24
+        },
+        "date_of_birth": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\05_date_of_birth.png",
+          "width": 236,
+          "height": 22
+        },
+        "issue_date": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\06_issue_date.png",
+          "width": 247,
+          "height": 26
+        },
+        "expiry_date": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\07_expiry_date.png",
+          "width": 246,
+          "height": 26
+        },
+        "place_of_issue": {
+          "ocr_eligible": true,
+          "crop_geometry_status": "VALUE_OK",
+          "content_sanity_status": "CONTENT_PRESENT",
+          "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_04\\value_crops\\08_place_of_issue.png",
+          "width": 122,
+          "height": 27
+        }
+      }
+    }
+  }
+}

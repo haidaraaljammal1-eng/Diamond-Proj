@@ -1,0 +1,130 @@
+{
+  "run_id": "13e982e63ab34f6c9f005b30705e372e",
+  "input_sha256": "4683979815aa417f273e5f1b324702d3a80a7051f1f593bd5c535dc6e15f9e89",
+  "pipeline_status": "PIPELINE_COMPLETE",
+  "input_handoff_quality": "INPUT_OK_FOR_CROP_AND_OCR",
+  "fields": [
+    {
+      "field_name": "license_number",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\01_license_number.png",
+      "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "field_name": "name_ar",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\02_name_ar.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 325.0,
+        "height": 18.0,
+        "ink_pixels": 729.0,
+        "ink_ratio": 0.12461538461538461,
+        "glyph_area": 333.0,
+        "largest_cc": 333.0,
+        "tall_components": 1.0,
+        "small_area_ratio": 0.13305898491083676,
+        "active_col_ratio": 0.8923076923076924,
+        "laplacian_var": 2303.923361092848
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 325,
+      "height": 18
+    },
+    {
+      "field_name": "name_en",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\03_name_en.png",
+      "crop_geometry_status": "VALUE_OK",
+      "content_sanity_status": "CONTENT_PRESENT",
+      "content_sanity_metrics": {
+        "width": 344.0,
+        "height": 45.0,
+        "ink_pixels": 3838.0,
+        "ink_ratio": 0.2479328165374677,
+        "glyph_area": 3212.0,
+        "largest_cc": 557.0,
+        "tall_components": 17.0,
+        "small_area_ratio": 0.0286607608129234,
+        "active_col_ratio": 0.997093023255814,
+        "laplacian_var": 3002.753093760224
+      },
+      "source_readability": "READABLE",
+      "ocr_eligible": true,
+      "width": 344,
+      "height": 45
+    },
+    {
+      "field_name": "nationality",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\04_nationality.png",
+      "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "field_name": "date_of_birth",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\05_date_of_birth.png",
+      "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "field_name": "issue_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\06_issue_date.png",
+      "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "field_name": "expiry_date",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\07_expiry_date.png",
+      "crop_geometry_status": "LABEL_BOUNDARY_CONFLICT",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "field_name": "place_of_issue",
+      "crop_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_01\\value_crops\\08_place_of_issue.png",
+      "crop_geometry_status": "VALUE_BOUNDARY_UNCERTAIN",
+      "content_sanity_status": "CONTENT_EMPTY_OR_UNRELIABLE",
+      "content_sanity_metrics": {
+        "placeholder": 1.0
+      },
+      "source_readability": "SOURCE_UNREADABLE",
+      "ocr_eligible": false,
+      "width": 200,
+      "height": 40
+    }
+  ]
+}

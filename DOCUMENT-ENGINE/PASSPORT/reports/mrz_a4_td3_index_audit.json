@@ -1,0 +1,32 @@
+{
+  "phase": "MRZ-A4",
+  "reference": "ICAO Doc 9303 TD3 MRZ line 2 (0-based indexing)",
+  "line2_field_map": {
+    "0:9": {"field": "document_number", "length": 9},
+    "9": {"field": "document_number_check_digit"},
+    "10:12": {"field": "nationality", "length": 3, "excluded_from_composite": true},
+    "13:18": {"field": "date_of_birth", "length": 6},
+    "19": {"field": "date_of_birth_check_digit"},
+    "20": {"field": "sex", "excluded_from_composite": true},
+    "21:26": {"field": "date_of_expiry", "length": 6},
+    "27": {"field": "date_of_expiry_check_digit"},
+    "28:41": {"field": "optional_data", "length": 14},
+    "42": {"field": "optional_data_check_digit"},
+    "43": {"field": "composite_check_digit"}
+  },
+  "parser_implementation_audit": {
+    "document_number_extraction": "line2[0:9] — matches map",
+    "nationality_extraction": "line2[10:13] — matches map",
+    "document_number_checksum_source": "line2[0:9] vs line2[9] — matches map",
+    "dob_checksum_source": "line2[13:19] vs line2[19] — matches map",
+    "expiry_checksum_source": "line2[21:27] vs line2[27] — matches map",
+    "optional_data_extraction": "not exposed as separate field in parse_td3 return (only used in composite)",
+    "optional_data_checksum": "not invoked in validate_td3 (only composite/doc/dob/exp)",
+    "composite_checksum_source_before_fix": "line2[0:10]+line2[13:20]+line2[21:28] — MISSING line2[28:43]",
+    "composite_check_digit_position": "line2[43] — matches map",
+    "line1_name_parsing": "line1[5:44] with << separator — standard TD3 name field (OCR may affect line1[0:5] document code/state)"
+  },
+  "additional_parser_bugs_found": false,
+  "additional_parser_bugs_detail": "Only confirmed composite concatenation omission. No other indexing mismatch found relative to documented TD3 map.",
+  "patch_allowed": true
+}

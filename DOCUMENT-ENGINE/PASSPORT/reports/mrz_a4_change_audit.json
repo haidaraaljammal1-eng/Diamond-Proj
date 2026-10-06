@@ -1,0 +1,30 @@
+{
+  "phase": "MRZ-A4",
+  "production_files_modified": [
+    "scripts/icao_td3.py"
+  ],
+  "test_files_added": [
+    "tests/test_icao_td3_mrz_a4.py"
+  ],
+  "scripts_added_for_verification": [
+    "scripts/run_mrz_a4_verify.py"
+  ],
+  "reports_added": [
+    "reports/mrz_a4_prepatch_audit.json",
+    "reports/mrz_a4_td3_index_audit.json",
+    "reports/mrz_a4_baseline_unittest_before_patch.txt",
+    "reports/mrz_a4_unittest_after_patch.txt"
+  ],
+  "icao_td3_py_sha256_before": "16ed87bc0cc7df5a309f6529c04e8dd801ef406f72d5f4cede2fa205061a0ddc",
+  "icao_td3_py_sha256_after": "5b1e114d28d997d1ee3dcaf817b89e6b5d0ca1570776e9d14a17ae4ebed057db",
+  "only_production_semantic_change": true,
+  "semantic_change_description": "TD3 composite checksum source now includes line2[28:43] (optional data + optional check digit), 39 characters total.",
+  "unrelated_refactor": false,
+  "packages_changed": false,
+  "models_changed": false,
+  "detector_changed": false,
+  "segmentation_changed": false,
+  "ocr_changed": false,
+  "source_image_changed": false,
+  "files_deleted": 0
+}

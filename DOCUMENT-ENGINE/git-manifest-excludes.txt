@@ -28,10 +28,13 @@ PASSPORT/.pytest_cache/
 **/.ruff_cache/
 **/*.pyc
 
-# Large OCR research corpora (not required to run APIs)
-LICENSE/frozen/ocr_v1_1/pilot_subset/
-LICENSE/frozen/ocr_v1_1/ground_truth/
-LICENSE/frozen/ocr_v1_1/scripts/
+# Document / diagnostic images (metadata and scripts are tracked; PNGs stay local)
+LICENSE/frozen/ocr_v1_1/ground_truth/**/*.png
+LICENSE/frozen/ocr_v1_1/ground_truth/**/assets/
+LICENSE/frozen/ocr_v1_1/ground_truth/review_sheets/
+LICENSE/frozen/ocr_v1_1/ground_truth/development_review_pack/*.png
+LICENSE/frozen/ocr_v1_1/pilot_subset/**/runs/
+LICENSE/frozen/ocr_v1_1/pilot_subset/**/*.png
 
 # Licence offline benchmarks / audits
 LICENSE/scripts/a5_license_number_benchmark.py
