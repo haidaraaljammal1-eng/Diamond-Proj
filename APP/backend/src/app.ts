@@ -26,7 +26,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     // process); the compiled prod build boots in well under a second. Give avvio a
     // generous ceiling so a slow cold start never trips the plugin-timeout guard —
     // a genuinely hung plugin still surfaces via the caller's own timeout.
-    pluginTimeout: 60_000,
+    pluginTimeout: 120_000,
     routerOptions: {
       ignoreTrailingSlash: true,
       maxParamLength: 500,

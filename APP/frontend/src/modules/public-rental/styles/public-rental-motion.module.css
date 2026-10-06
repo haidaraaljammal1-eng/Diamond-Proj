@@ -1,0 +1,24 @@
+/* Shared motion + spacing for public rental (luxury, restrained). */
+.shell {
+  --pr-duration: 220ms;
+  --pr-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --pr-lift: -3px;
+  --pr-tilt: 0.6deg;
+  --pr-gap-section: 20px;
+  --pr-gap-card: 16px;
+  --diamond-progress-gold-base: rgb(142 100 36 / 58%);
+  --diamond-progress-gold-muted: rgb(142 100 36 / 28%);
+  --diamond-progress-gold-active: rgb(168 124 48 / 88%);
+  --diamond-progress-gold-comet: rgb(212 175 108 / 96%);
+  --diamond-progress-cycle: 2.4s;
+  --diamond-sub-progress-cycle: 2.8s;
+  --diamond-success-duration: 2000ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell {
+    --pr-duration: 0ms;
+    --pr-lift: 0;
+    --pr-tilt: 0;
+  }
+}

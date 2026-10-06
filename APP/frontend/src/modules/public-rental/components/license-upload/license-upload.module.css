@@ -6,6 +6,23 @@
   border: 1px dashed var(--diamond-line);
   border-radius: 16px;
   background: var(--diamond-onyx2);
+  transition:
+    transform var(--pr-duration, 220ms) var(--pr-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--pr-duration, 220ms) ease,
+    background-color var(--pr-duration, 220ms) ease,
+    box-shadow var(--pr-duration, 220ms) ease;
+}
+
+.drop:hover {
+  transform: translateY(-2px);
+  border-color: rgb(201 161 92 / 38%);
+  background: rgb(201 161 92 / 04%);
+  box-shadow: 0 10px 22px rgb(122 96 48 / 10%);
+}
+
+.drop:focus-within {
+  border-color: var(--diamond-gold-lo);
+  box-shadow: 0 0 0 3px rgb(201 161 92 / 12%);
 }
 
 .preview {
@@ -28,6 +45,17 @@
   gap: 8px;
 }
 
+.replaceAction {
+  display: grid;
+  gap: 0;
+  justify-items: start;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
 .hiddenInput {
   position: absolute;
   width: 1px;
@@ -35,4 +63,10 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop:hover {
+    transform: none;
+  }
 }

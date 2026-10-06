@@ -1,6 +1,6 @@
 # Official Contract — Phase 1: Document Capture + Provider-Agnostic OCR
 
-> **No OCR vendor is selected yet.** Runtime is `DOCUMENT_OCR_PROVIDER=UNCONFIGURED`. Real passport/license OCR returns "unavailable" until a provider adapter is added. This is intentional.
+> **Vision AI (Gemini)** handles passport and driving-licence extraction when `AI_VISION_PROVIDER=gemini` and `GEMINI_API_KEY` are configured. Otherwise analysis returns provider unavailable (fail-closed). See `DOCU/00-system-overview/vision-ai-foundation.md`.
 
 ## Customer flow
 

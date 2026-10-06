@@ -16,6 +16,8 @@ describe("licensePanelFromStatus", () => {
     assert.equal(licensePanelFromStatus("VALID", false), "valid");
     assert.equal(licensePanelFromStatus("EXPIRED", false), "expired");
     assert.equal(licensePanelFromStatus("UNREADABLE", false), "unreadable");
+    assert.equal(licensePanelFromStatus("UNREADABLE", false, "BAD_FRAME"), "bad_frame");
+    assert.equal(licensePanelFromStatus("PENDING", false, null, true), "bad_frame");
     assert.equal(licensePanelFromStatus("REVIEW_REQUIRED", false), "review");
     assert.equal(licensePanelFromStatus("PROVIDER_UNAVAILABLE", false), "unavailable");
   });

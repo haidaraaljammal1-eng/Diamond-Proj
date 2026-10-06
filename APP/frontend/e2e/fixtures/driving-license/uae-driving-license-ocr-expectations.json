@@ -1,0 +1,17 @@
+{
+  "fixtureFile": "uae-driving-license-ocr-test.png",
+  "expiredFixtureFile": "uae-driving-license-expired-corpus.jpg",
+  "sourceNote": "Fictional/internal OCR corpus samples only; no Diamond customer PII.",
+  "engineRelease": "OCR_ENGLISH_V1_3_1_TWO_FIELD",
+  "partialReadExpectation": {
+    "verificationStatus": "UNREADABLE",
+    "engineDocumentStatus": "REJECT",
+    "expiryOcr": "24/08/2028"
+  },
+  "expiredExpectation": {
+    "verificationStatus": "EXPIRED",
+    "licenseNumber": "2608080",
+    "expiryIso": "2020-07-02"
+  },
+  "recordedAt": "2026-10-05"
+}

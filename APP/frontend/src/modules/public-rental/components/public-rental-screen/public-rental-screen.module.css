@@ -2,24 +2,62 @@
   position: relative;
   z-index: 1;
   min-height: 100%;
+  min-height: 100dvh;
   padding: 16px 16px 40px;
+  background: transparent;
 }
 
 .shell {
   display: grid;
-  gap: 16px;
+  gap: var(--pr-gap-section, 20px);
   width: min(1080px, 100%);
   margin: 0 auto;
 }
 
 .layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-gap-card, 16px);
+}
+
+.stageWorkflow {
   display: grid;
-  gap: 16px;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.stage1SubProgressSlot {
+  width: 100%;
+  min-width: 0;
+}
+
+.stage1CompletedStack {
+  display: grid;
+  gap: var(--pr-gap-card, 16px);
+  min-width: 0;
+}
+
+.activeStageCard {
+  width: 100%;
+  min-width: 0;
+}
+
+.renterStageStack {
+  display: grid;
+  gap: var(--pr-gap-card, 16px);
+  min-width: 0;
+}
+
+.columns {
+  display: grid;
+  gap: var(--pr-gap-card, 16px);
+  align-items: start;
 }
 
 .main {
   display: grid;
-  gap: 16px;
+  gap: var(--pr-gap-card, 16px);
   min-width: 0;
 }
 
@@ -38,6 +76,18 @@
   min-width: 0;
 }
 
+/* Keeps booking summary top-aligned with the active verification card (sub-progress is main-column only). */
+.asideProgressOffset {
+  display: none;
+  height: 46px;
+}
+
+@media (min-width: 900px) {
+  .asideProgressOffset {
+    display: block;
+  }
+}
+
 .loading {
   display: grid;
   place-items: center;
@@ -51,13 +101,11 @@
     padding: 28px 24px 56px;
   }
 
-  .layout {
+  .columns {
     grid-template-columns: minmax(0, 1fr) 300px;
-    align-items: start;
   }
 
-  /* Official contract review: the A4 agreement uses the full page width. */
-  .layout[data-full-width] {
+  .layout[data-full-width] .columns {
     grid-template-columns: minmax(0, 1fr);
   }
 

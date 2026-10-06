@@ -9,13 +9,30 @@ Every developer laptop has its own development database. After clone or after a 
 npm run dev:bootstrap
 ```
 
+## Local PostgreSQL (Windows, no service)
+
+If `npm run dev:check` shows **DISCONNECTED** and login shows “Invalid credentials” while the Backend returns `INTERNAL_ERROR`, PostgreSQL is not running.
+
+From `APP/backend`:
+
+```bash
+npm run dev:postgres:start
+npm run dev:postgres:setup-db
+npm run dev:bootstrap
+```
+
+Data lives in `APP/backend/.local/postgresql-data` (gitignored). `npm run dev` (backend) starts this cluster automatically when port 5432 is down. Manual `dev:postgres:start` remains available. Use `npm run dev:stack` in `APP/backend` to start PostgreSQL, backend, and frontend together.
+
+Development admin (when `SEED_DEV_ADMIN=true`): use `DEV_ADMIN_EMAIL` and `DEV_ADMIN_PASSWORD` from `.env` (see `.env.example`).
+
 ## New laptop
 
 1. `git pull` / clone
 2. Copy `APP/backend/.env.example` → `.env` and fill secrets
 3. `npm install` (in `APP/backend`)
-4. `npm run dev:bootstrap`
-5. `npm run dev`
+4. Ensure PostgreSQL is running (`dev:postgres:start` if needed)
+5. `npm run dev:bootstrap`
+6. `npm run dev`
 
 ## Existing laptop (after a DB-related pull)
 

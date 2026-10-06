@@ -9,14 +9,21 @@ import { usePublicRental } from "../../hooks/use-public-rental";
 import type { PublicRentalUiStage } from "../../types/public-rental.types";
 import { canEnterStage, isLinkGoneReason, uiStageFromFlowStep } from "../../utils/flow-step";
 import { isAcceptedLicenseFile } from "../../utils/license-file";
+import { evaluateLicenseFramePreflight } from "../../utils/license-frame";
+import { readLicenseImageMeta } from "../../utils/read-license-image-meta";
 import {
   publicRentalErrorReason,
   resolvePublicRentalErrorMessage,
 } from "../../utils/resolve-public-rental-error";
 import { ContractReviewStep } from "../contract-review-step/contract-review-step";
+import { DocumentVerificationProgress } from "../document-verification-progress/document-verification-progress";
+import { toPublicRentalFormPayload } from "../../utils/to-form-payload";
+import { resolveDocumentVerificationSubStage } from "../../utils/document-verification-substage";
+import { resolvePassportPreviewUrl } from "../../utils/resolve-passport-preview-url";
 import { HandoverStep } from "../handover-step/handover-step";
 import { LicenseStep } from "../license-step/license-step";
 import { PassportStep } from "../passport-step/passport-step";
+import { RenterDetailsStep } from "../renter-details-step/renter-details-step";
 import { PaymentStep } from "../payment-step/payment-step";
 import { RentalHeader } from "../rental-header/rental-header";
 import { RentalLinkError } from "../rental-link-error/rental-link-error";
@@ -24,6 +31,12 @@ import { RentalProgress } from "../rental-progress/rental-progress";
 import { RentalSummary } from "../rental-summary/rental-summary";
 import { SimulationAction } from "@/modules/demo-simulation";
 import { isProviderSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
+import {
+  STAGE_SUCCESS_DURATION_MS,
+  type StageSuccessKind,
+} from "../../constants/stage-success";
+import motion from "../../styles/public-rental-motion.module.css";
+import { StageSuccessTransition } from "../stage-success-transition/stage-success-transition";
 import styles from "./public-rental-screen.module.css";
 
 interface PublicRentalScreenProps {
@@ -46,10 +59,21 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   const [viewStage, setViewStage] = useState<PublicRentalUiStage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileHint, setFileHint] = useState<string | null>(null);
+  const [clientBadFrame, setClientBadFrame] = useState(false);
   const [passportPreviewUrl, setPassportPreviewUrl] = useState<string | null>(null);
   const [passportHint, setPassportHint] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const [paymentCancelNotice, setPaymentCancelNotice] = useState<string | null>(null);
+  const [stageSuccess, setStageSuccess] = useState<StageSuccessKind | null>(null);
+
+  const playStageSuccess = (kind: StageSuccessKind) =>
+    new Promise<void>((resolve) => {
+      setStageSuccess(kind);
+      window.setTimeout(() => {
+        setStageSuccess(null);
+        resolve();
+      }, STAGE_SUCCESS_DURATION_MS);
+    });
 
   if (boundToken !== token) {
     setBoundToken(token);
@@ -100,7 +124,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   if (rental.status === "error") {
     return (
       <div className={styles.root}>
-        <div className={styles.shell}>
+        <div className={`${styles.shell} ${motion.shell}`}>
           <RentalHeader officeName={t("fallbackOffice")} />
           <Card>
             <p>{resolvePublicRentalErrorMessage(errorTranslator(t), rental.error)}</p>
@@ -116,7 +140,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   if (rental.status !== "ready" || !rental.context) {
     return (
       <div className={styles.root}>
-        <div className={styles.shell}>
+        <div className={`${styles.shell} ${motion.shell}`}>
           <RentalHeader officeName={t("fallbackOffice")} />
           <p className={styles.loading}>{t("loading")}</p>
         </div>
@@ -142,17 +166,45 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     errorTranslator(t),
     rental.error,
   );
+  const documentsReadOnly =
+    context.contract.status !== "AWAITING" && context.contract.status !== "FORM";
+  const documentSubStage =
+    current === "license" ? resolveDocumentVerificationSubStage(context) : null;
+  const passportPreviewResolved = resolvePassportPreviewUrl(token, context, passportPreviewUrl);
+  const passportReady =
+    context.identity?.passport.status === "READY" &&
+    (context.identity.passport.fields?.passportNumber?.trim().length ?? 0) >= 3;
+  const showPassportStep =
+    documentSubStage === "PASSPORT" ||
+    (documentSubStage === "RENTER_DETAILS" && passportReady);
 
   const handleFile = (file: File) => {
     setFileHint(null);
+    setClientBadFrame(false);
     if (!isAcceptedLicenseFile(file)) {
       setFileHint(t("license.invalidFile"));
       return;
     }
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(URL.createObjectURL(file));
-    goToStage("license");
-    void rental.uploadLicense(file);
+    void (async () => {
+      try {
+        const meta = await readLicenseImageMeta(file);
+        const preflight = evaluateLicenseFramePreflight(meta.width, meta.height);
+        if (!preflight.ok) {
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(URL.createObjectURL(file));
+          setClientBadFrame(true);
+          goToStage("license");
+          return;
+        }
+      } catch {
+        setFileHint(t("license.invalidFile"));
+        return;
+      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(file));
+      goToStage("license");
+      await rental.uploadLicense(file);
+    })();
   };
 
   // Passport preview is an in-memory object URL only; never persisted.
@@ -174,7 +226,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
 
   return (
     <div className={styles.root}>
-      <div className={styles.shell}>
+      <div className={`${styles.shell} ${motion.shell}`}>
         <RentalHeader officeName={context.office.company.displayName} />
         {allowed !== "handover" ? (
           <RentalProgress
@@ -186,36 +238,119 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
         ) : null}
 
         <div className={styles.layout} data-full-width={current === "contract" || undefined}>
-          <div className={styles.main}>
-            {current === "license" ? (
-              <LicenseStep
-                context={context}
-                pending={rental.uploadPending || rental.simulationPending}
-                previewUrl={previewUrl}
-                readOnly={
-                  context.contract.status !== "AWAITING" &&
-                  context.contract.status !== "FORM"
-                }
-                fileHint={fileHint ?? (current === "license" ? inlineError : null)}
-                onFile={handleFile}
-                simulationAction={rentalSimulation ? <SimulationAction label={t("simulation.validLicense")} testId="simulate-license-valid" disabled={rental.simulationPending} onClick={() => void rental.simulateLicense()} /> : null}
-              />
-            ) : null}
+          <div className={styles.columns} data-testid="public-rental-columns">
+          <div className={styles.main} data-testid="public-rental-main-column">
+            {current === "license" && documentSubStage ? (
+              <div className={styles.stageWorkflow} data-testid="stage1-workflow">
+                <div className={styles.stage1SubProgressSlot} data-testid="stage1-sub-progress">
+                  <DocumentVerificationProgress subStage={documentSubStage} />
+                </div>
 
-            {current === "license" ? (
-              <PassportStep
-                context={context}
-                phase={rental.simulationPending ? "processing" : rental.passportPhase}
-                previewUrl={passportPreviewUrl}
-                readOnly={
-                  context.contract.status !== "AWAITING" &&
-                  context.contract.status !== "FORM"
-                }
-                fileHint={passportHint ?? passportError}
-                onFile={handlePassportFile}
-                onContinue={() => goToStage("contract")}
-                simulationAction={rentalSimulation ? <SimulationAction label={t("simulation.passportOcr")} testId="simulate-passport-ready" disabled={rental.simulationPending || context.licenseVerification.status !== "VALID"} onClick={() => void rental.simulatePassport()} /> : null}
-              />
+                <div className={styles.activeStageCard} data-testid="active-stage-card">
+                  {documentSubStage === "LICENSE" ? (
+                    <LicenseStep
+                      context={context}
+                      pending={rental.uploadPending || rental.simulationPending}
+                      previewUrl={previewUrl}
+                      readOnly={documentsReadOnly}
+                      fileHint={fileHint ?? inlineError}
+                      clientBadFrame={clientBadFrame}
+                      onFile={handleFile}
+                      simulationAction={
+                        rentalSimulation
+                          ? (
+                              <SimulationAction
+                                label={t("simulation.validLicense")}
+                                testId="simulate-license-valid"
+                                disabled={rental.simulationPending}
+                                onClick={() => void rental.simulateLicense()}
+                              />
+                            )
+                          : null
+                      }
+                    />
+                  ) : null}
+
+                  {documentSubStage === "PASSPORT" ? (
+                    <PassportStep
+                      context={context}
+                      phase={rental.simulationPending ? "processing" : rental.passportPhase}
+                      previewUrl={passportPreviewResolved}
+                      readOnly={documentsReadOnly}
+                      fileHint={passportHint ?? passportError}
+                      onFile={handlePassportFile}
+                      simulationAction={
+                        rentalSimulation
+                          ? (
+                              <SimulationAction
+                                label={t("simulation.passportOcr")}
+                                testId="simulate-passport-ready"
+                                disabled={
+                                  rental.simulationPending ||
+                                  context.licenseVerification.status !== "VALID"
+                                }
+                                onClick={() => void rental.simulatePassport()}
+                              />
+                            )
+                          : null
+                      }
+                    />
+                  ) : null}
+
+                  {documentSubStage === "RENTER_DETAILS" ? (
+                    <div className={styles.renterStageStack}>
+                      <LicenseStep
+                        context={context}
+                        pending={rental.uploadPending || rental.simulationPending}
+                        previewUrl={previewUrl}
+                        readOnly={documentsReadOnly}
+                        summaryOnly
+                        fileHint={null}
+                        onFile={handleFile}
+                      />
+                      {showPassportStep ? (
+                        <PassportStep
+                          context={context}
+                          phase={rental.simulationPending ? "processing" : rental.passportPhase}
+                          previewUrl={passportPreviewResolved}
+                          readOnly={documentsReadOnly}
+                          summaryOnly
+                          fileHint={passportHint ?? passportError}
+                          onFile={handlePassportFile}
+                        />
+                      ) : null}
+                      <RenterDetailsStep
+                        context={context}
+                        formPending={rental.formPending}
+                        formError={inlineError}
+                        readOnly={documentsReadOnly}
+                        onSubmitForm={async (values) => {
+                        const ok = await rental.submitForm(
+                          toPublicRentalFormPayload(values, context),
+                        );
+                        if (!ok) return;
+                        await playStageSuccess("documents");
+                        goToStage("contract");
+                      }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                {documentSubStage === "PASSPORT" ? (
+                  <div className={styles.stage1CompletedStack} data-testid="stage1-completed-summaries">
+                    <LicenseStep
+                      context={context}
+                      pending={rental.uploadPending || rental.simulationPending}
+                      previewUrl={previewUrl}
+                      readOnly={documentsReadOnly}
+                      summaryOnly
+                      fileHint={null}
+                      onFile={handleFile}
+                    />
+                  </div>
+                ) : null}
+              </div>
             ) : null}
 
             {current === "contract" ? (
@@ -235,6 +370,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                 }}
                 onSigned={async () => {
                   await rental.load(token);
+                  await playStageSuccess("contractSigned");
                   goToStage(isCashCollection ? "handover" : "payment");
                 }}
               />
@@ -267,11 +403,24 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
           </div>
           {current === "contract" ? null : (
             <aside className={styles.aside}>
+              {current === "license" && documentSubStage ? (
+                <div className={styles.asideProgressOffset} aria-hidden="true" data-testid="aside-sub-progress-offset" />
+              ) : null}
               <RentalSummary context={context} />
             </aside>
           )}
+          </div>
         </div>
       </div>
+      {stageSuccess ? (
+        <StageSuccessTransition
+          message={
+            stageSuccess === "documents"
+              ? t("stageSuccess.documentsVerified")
+              : t("stageSuccess.contractSigned")
+          }
+        />
+      ) : null}
     </div>
   );
 }

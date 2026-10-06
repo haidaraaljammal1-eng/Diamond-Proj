@@ -121,6 +121,15 @@ enum DrivingLicenseVerificationStatus {
   PROVIDER_UNAVAILABLE
 }
 
+/// Machine OCR snapshot for one DRIVING_LICENSE ContractDocument attempt.
+enum DrivingLicenseExtractionStatus {
+  PROCESSING
+  READY
+  PARTIAL
+  FAILED
+  PROVIDER_UNAVAILABLE
+}
+
 enum CustomerDocumentType {
   IDENTITY
   PASSPORT
@@ -218,8 +227,9 @@ model Contract {
   payments             ContractPayment[]
   cardPaymentMethod    ContractCardPaymentMethod?
   documents            ContractDocument[]
-  licenseVerifications DrivingLicenseVerification[]
-  passportExtractions  PassportExtraction[]
+  licenseVerifications      DrivingLicenseVerification[]
+  passportExtractions       PassportExtraction[]
+  drivingLicenseExtractions DrivingLicenseExtraction[]
   officialReviewDraft  OfficialContractReviewDraft?
   officialSignatures   OfficialContractSignature[]
   carOut               ContractCarOut?
@@ -484,8 +494,9 @@ model ContractDocument {
   supersededAt DateTime?
   createdAt    DateTime             @default(now())
 
-  verifications       DrivingLicenseVerification[]
-  passportExtractions PassportExtraction[]
+  verifications             DrivingLicenseVerification[]
+  passportExtractions       PassportExtraction[]
+  drivingLicenseExtractions DrivingLicenseExtraction[]
 
   @@index([contractId, type, supersededAt])
   @@map("contract_documents")
@@ -506,11 +517,46 @@ model DrivingLicenseVerification {
   provider        String?
   providerVersion String?
   verifiedAt      DateTime?
+  extractionId    String?                          @unique
+  extraction      DrivingLicenseExtraction?        @relation(fields: [extractionId], references: [id], onDelete: SetNull)
   createdAt       DateTime                         @default(now())
   updatedAt       DateTime                         @updatedAt
 
   @@index([contractId, createdAt])
   @@map("driving_license_verifications")
+}
+
+/// Normalized UAE driving-licence OCR for one DRIVING_LICENSE ContractDocument.
+/// Immutable machine read — never updated for customer form corrections.
+model DrivingLicenseExtraction {
+  id                   String                         @id @default(uuid())
+  contractId           String
+  contract             Contract                       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  documentId           String                         @unique
+  document             ContractDocument               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  attachmentId         String
+  status               DrivingLicenseExtractionStatus @default(PROCESSING)
+  /// LICENSE engine document_status at completion (ACCEPT | REVIEW_REQUIRED | REJECT).
+  engineDocumentStatus String?
+  jobId                String?
+  provider             String?
+  providerVersion      String?
+  licenseNumber        String?
+  holderNameEn         String?
+  nationality          String?
+  /// Calendar dates stored at UTC noon.
+  dateOfBirth          DateTime?
+  issueDate            DateTime?
+  expiryDate           DateTime?
+  placeOfIssue         String?
+  fieldsMeta           Json?
+  completedAt          DateTime?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  verification         DrivingLicenseVerification?
+
+  @@index([contractId, createdAt])
+  @@map("driving_license_extractions")
 }
 
 /// Normalized passport OCR result for one PASSPORT ContractDocument attempt.

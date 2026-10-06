@@ -32,42 +32,56 @@ export function RentalSummary({ context }: RentalSummaryProps) {
       : context.vehicle.displayName;
 
   return (
-    <Card className={styles.root} data-testid="rental-summary">
-      <Card.Title>{t("title")}</Card.Title>
-      <p className={styles.amount} dir="ltr">
-        {amount}
-      </p>
-      <dl className={styles.rows}>
-        <div className={styles.row}>
-          <dt>{t("office")}</dt>
-          <dd className={styles.value}>{context.office.company.displayName}</dd>
+    <Card className={styles.root} data-testid="rental-summary-card">
+      <header className={styles.header}>
+        <Card.Title>{t("title")}</Card.Title>
+        <div className={styles.priceBlock}>
+          <span className={styles.priceCaption}>{t("total")}</span>
+          <p className={styles.amount} dir="ltr" data-testid="summary-amount">
+            {amount}
+          </p>
         </div>
-        <div className={styles.row}>
-          <dt>{t("vehicle")}</dt>
-          <dd className={styles.value}>{vehicleLabel}</dd>
-        </div>
-        {context.vehicle.plateNumber ? (
-          <div className={styles.row}>
-            <dt>{t("plate")}</dt>
-            <dd className={styles.value} dir="ltr">
-              {context.vehicle.plateNumber}
-            </dd>
-          </div>
-        ) : null}
-        <div className={styles.row}>
-          <dt>{t("duration")}</dt>
-          <dd className={styles.value} dir="ltr">
+      </header>
+
+      <div className={styles.detailsPanel}>
+        <dl className={styles.rows} data-testid="rental-summary-grid">
+          <dt className={styles.label} data-testid="summary-label-vehicle">
+            {t("vehicle")}
+          </dt>
+          <dd className={styles.value} data-testid="summary-value-vehicle">
+            {vehicleLabel}
+          </dd>
+
+          {context.vehicle.plateNumber ? (
+            <>
+              <dt className={styles.label} data-testid="summary-label-plate">
+                {t("plate")}
+              </dt>
+              <dd className={styles.value} dir="ltr" data-testid="summary-value-plate">
+                {context.vehicle.plateNumber}
+              </dd>
+            </>
+          ) : null}
+
+          <dt className={styles.label} data-testid="summary-label-duration">
+            {t("duration")}
+          </dt>
+          <dd className={styles.value} dir="ltr" data-testid="summary-value-duration">
             {duration}
           </dd>
-        </div>
-        <div className={styles.row}>
-          <dt>{t("total")}</dt>
-          <dd className={styles.value} dir="ltr">
+
+          <dt className={styles.label} data-testid="summary-label-total">
+            {t("total")}
+          </dt>
+          <dd className={styles.value} dir="ltr" data-testid="summary-value-total">
             {amount}
           </dd>
-        </div>
-      </dl>
-      <p className={styles.note}>{t("readOnly")}</p>
+        </dl>
+      </div>
+
+      <footer className={styles.noteWrap}>
+        <p className={styles.note}>{t("readOnly")}</p>
+      </footer>
     </Card>
   );
 }

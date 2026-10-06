@@ -1,0 +1,75 @@
+{
+  "audit_id": "D-OCR-A1",
+  "audit_date": "2026-10-04",
+  "repository": {
+    "root": "C:\\Users\\Rw\\Documents\\DIAMOND-SYSTEM",
+    "branch": "main",
+    "head": "96cbce6a9c2a8ae44044c5732304dc6e5497cf02",
+    "uncommitted_integration_wip": true
+  },
+  "external_ocr": {
+    "crop_project": "C:\\Users\\Rw\\UAE_LICENSE_CROP_V2",
+    "crop_release": "DYNAMIC_CROP_V1",
+    "ocr_project": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1",
+    "ocr_release": "OCR_ENGLISH_V1_1_RUNTIME",
+    "ocr_regression": "26/26 exact (frozen dev set, per user brief)",
+    "english_only": true,
+    "name_ar": "NOT_OCR_PROCESSED"
+  },
+  "licence_upload": {
+    "frontend_component": "APP/frontend/src/modules/public-rental/components/license-step/license-step.tsx",
+    "api": "POST /contracts/rental/:token/driving-license",
+    "multipart_field": "file",
+    "mime": ["image/jpeg", "image/png"],
+    "max_bytes_default": 5242880,
+    "production_ocr_status": "NOT_CONFIGURED"
+  },
+  "passport_precedent": {
+    "client": "APP/backend/src/modules/document-engine/passport-number-api.client.ts",
+    "dev_orchestration": "APP/backend/scripts/dev-with-passport-api.ts"
+  },
+  "combined_orchestrator_in_monorepo": "COMBINED_ORCHESTRATOR_MISSING",
+  "combined_orchestrator_external_minimal": "run_crop_pipeline -> value_crops -> EnglishOcrPipeline.recognize_license_english",
+  "recommended_architecture": "OPTION_B_LONG_LIVED_HTTP_SERVICE",
+  "concurrent_output_collision_risk": "YES_WITHOUT_UNIQUE_JOB_DIR",
+  "ppocrv5_worker": "PERSISTENT_WITHIN_PYTHON_PROCESS_REQUIRED",
+  "initial_concurrency_recommendation": "SERIAL_QUEUE",
+  "deployment_os": "DEPLOYMENT_OS_COMPATIBILITY_AUDIT_REQUIRED",
+  "licensing_packaging": "RAPIDOCR_AND_PPOCRV5_REDISTRIBUTION_REVIEW_REQUIRED",
+  "schema_gaps": {
+    "date_of_birth": "FIELD_NOT_PRESENT_IN_CURRENT_SCHEMA",
+    "issue_date": "FIELD_NOT_PRESENT_IN_CURRENT_SCHEMA",
+    "place_of_issue": "FIELD_NOT_PRESENT_IN_CURRENT_SCHEMA",
+    "license_extraction_aggregate": "MISSING_MIRROR_PASSPORT_EXTRACTION"
+  },
+  "ocr_to_diamond_field_map": {
+    "license_number": "DrivingLicenseVerification.licenseNumber",
+    "expiry_date": "DrivingLicenseVerification.expiryDate",
+    "name_en": "Customer.name / form.name (on submit)",
+    "nationality": "Customer.nationality / form.nationality",
+    "date_of_birth": "FIELD_NOT_PRESENT_IN_CURRENT_SCHEMA",
+    "issue_date": "FIELD_NOT_PRESENT_IN_CURRENT_SCHEMA",
+    "place_of_issue": "FIELD_NOT_PRESENT_IN_CURRENT_SCHEMA"
+  },
+  "gemini_on_licence_path": false,
+  "blast_radius": "public_rental_identity_and_customer_form_only",
+  "verdict": "DIAMOND_OCR_INTEGRATION_AUDIT_COMPLETE_READY_FOR_IMPLEMENTATION",
+  "implementation_blockers": [
+    "Prisma persistence for multi-field licence OCR beyond number/expiry (design gate D-OCR-B4)",
+    "Vendoring engines into DOCUMENT-ENGINE/LICENSE without Windows-only paths in production",
+    "Model redistribution legal review for installer packaging"
+  ],
+  "artifacts": [
+    "DOCU/OCR_INTEGRATION_AUDIT/01_REPOSITORY_FLOW.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/02_CURRENT_LICENSE_UPLOAD_FLOW.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/03_OCR_EXISTING_CODE_AUDIT.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/04_DATA_MODEL_MAPPING.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/05_FRONTEND_FIELD_MAPPING.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/06_UPLOAD_SECURITY_AUDIT.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/07_PYTHON_INTEGRATION_ARCHITECTURE.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/08_DEPLOYMENT_RUNTIME_AUDIT.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/09_ERROR_CONTRACT.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/10_FILE_IMPACT_MAP.md",
+    "DOCU/OCR_INTEGRATION_AUDIT/11_IMPLEMENTATION_PHASE_PLAN.md"
+  ]
+}

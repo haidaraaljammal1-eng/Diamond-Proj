@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
@@ -100,24 +100,30 @@ export function ReconciliationHeader({ data }: { data: FullReconciliationReadDto
 
   return (
     <header className={styles.header} data-testid="reconciliation-header">
-      <div className={styles.headerMain}>
-        <h2 className={styles.dialogTitle}>{t("finalReconciliation.title")}</h2>
-        <p className={styles.headerMetaLine}>
-          <span dir="ltr">{contract.contractNumber}</span>
-          <span aria-hidden="true">·</span>
-          <span>{contract.vehicle.displayName}</span>
-          {contract.vehicle.plateNumber ? (
-            <>
-              <span aria-hidden="true">·</span>
-              <span dir="ltr">{contract.vehicle.plateNumber}</span>
-            </>
-          ) : null}
-        </p>
-      </div>
-      <div className={styles.headerStatus}>
-        <Chip tone={status.tone} dot data-testid="reconciliation-status">
-          {statusLabel}
-        </Chip>
+      <div className={styles.headerPanel}>
+        <div className={styles.headerMain}>
+          <h2 className={styles.dialogTitle}>{t("finalReconciliation.title")}</h2>
+          <p className={styles.headerMetaLine}>
+            <span className={styles.headerMetaContract} dir="ltr">
+              {contract.contractNumber}
+            </span>
+            <span className={styles.headerMetaDivider} aria-hidden="true" />
+            <span>{contract.vehicle.displayName}</span>
+            {contract.vehicle.plateNumber ? (
+              <>
+                <span className={styles.headerMetaDivider} aria-hidden="true" />
+                <span className={styles.headerMetaPlate} dir="ltr">
+                  {contract.vehicle.plateNumber}
+                </span>
+              </>
+            ) : null}
+          </p>
+        </div>
+        <div className={styles.headerStatus}>
+          <Chip tone={status.tone} dot data-testid="reconciliation-status">
+            {statusLabel}
+          </Chip>
+        </div>
       </div>
     </header>
   );
@@ -126,7 +132,9 @@ export function ReconciliationHeader({ data }: { data: FullReconciliationReadDto
 export function ReconciliationHistoricalBanner({ data }: { data: FullReconciliationReadDto }) {
   const t = useTranslations("Contracts");
   if (data.contract.status !== "CLOSED") return null;
-  return <p className={styles.historicalNote}>{t("finalReconciliation.historicalRecord")}</p>;
+  return (
+    <p className={`${styles.historicalNote} ${styles.bannerNote}`}>{t("finalReconciliation.historicalRecord")}</p>
+  );
 }
 
 export function ReconciliationCustodySection({ custody }: { custody: FullReconciliationReadDto["custody"] }) {
@@ -147,8 +155,10 @@ export function ReconciliationCustodySection({ custody }: { custody: FullReconci
       className={styles.section}
       data-testid="reconciliation-custody"
     >
-      <h3 className={styles.sectionTitle}>{t("finalReconciliation.vehicleReturnData")}</h3>
-      <table className={styles.metricTable} data-testid="reconciliation-metric-table">
+      <div className={styles.sectionCard}>
+        <h3 className={styles.sectionTitle}>{t("finalReconciliation.vehicleReturnData")}</h3>
+        <div className={styles.tableSurface}>
+          <table className={styles.metricTable} data-testid="reconciliation-metric-table">
         <colgroup>
           <col className={styles.metricColLabel} />
           <col className={styles.metricColNum} span={3} />
@@ -213,7 +223,9 @@ export function ReconciliationCustodySection({ custody }: { custody: FullReconci
             </td>
           </tr>
         </tbody>
-      </table>
+          </table>
+        </div>
+      </div>
     </section>
   );
 }
@@ -331,8 +343,10 @@ export function ReconciliationRoadLiabilitiesSection({
         className={styles.section}
         data-testid="reconciliation-road-liabilities"
       >
-        <h3 className={styles.sectionTitle}>{t("finalReconciliation.roadLiabilities")}</h3>
-        <p className={styles.muted}>{t("finalReconciliation.noRoadLiabilities")}</p>
+        <div className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("finalReconciliation.roadLiabilities")}</h3>
+          <p className={`${styles.muted} ${styles.emptyState}`}>{t("finalReconciliation.noRoadLiabilities")}</p>
+        </div>
       </section>
     );
   }
@@ -343,33 +357,35 @@ export function ReconciliationRoadLiabilitiesSection({
       className={styles.section}
       data-testid="reconciliation-road-liabilities"
     >
-      <h3 className={styles.sectionTitle}>{t("finalReconciliation.roadLiabilities")}</h3>
+      <div className={styles.sectionCard}>
+        <h3 className={styles.sectionTitle}>{t("finalReconciliation.roadLiabilities")}</h3>
 
-      {available.length > 0 ? (
-        <>
-          <div className={styles.reviewBanner} role="status">
-            <Icon name="mdi:alert-circle-outline" size={18} className={styles.reviewBannerIcon} />
-            <div>
-              <strong>{t("finalReconciliation.needsReviewTitle")}</strong>
-              <p>{t("finalReconciliation.needsReviewCount", { count: available.length })}</p>
+        {available.length > 0 ? (
+          <>
+            <div className={styles.reviewBanner} role="status">
+              <Icon name="mdi:alert-circle-outline" size={18} className={styles.reviewBannerIcon} />
+              <div>
+                <strong>{t("finalReconciliation.needsReviewTitle")}</strong>
+                <p>{t("finalReconciliation.needsReviewCount", { count: available.length })}</p>
+              </div>
             </div>
-          </div>
-          <RoadLiabilityTable
-            items={available}
-            showReview
-            editable={editable}
-            confirmPending={confirmPending}
-            onConfirm={onConfirm}
-          />
-        </>
-      ) : null}
+            <RoadLiabilityTable
+              items={available}
+              showReview
+              editable={editable}
+              confirmPending={confirmPending}
+              onConfirm={onConfirm}
+            />
+          </>
+        ) : null}
 
-      {attached.length > 0 ? (
-        <>
-          <p className={styles.groupLabel}>{t("finalReconciliation.attachedLiabilities")}</p>
-          <RoadLiabilityTable items={attached} showReview={false} editable={false} confirmPending={false} />
-        </>
-      ) : null}
+        {attached.length > 0 ? (
+          <>
+            <p className={styles.groupLabel}>{t("finalReconciliation.attachedLiabilities")}</p>
+            <RoadLiabilityTable items={attached} showReview={false} editable={false} confirmPending={false} />
+          </>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -416,18 +432,18 @@ export function ReconciliationReturnChargesSection({
     }
   }, [editable]);
 
-  const resetDamageForm = () => {
+  const resetDamageForm = useCallback(() => {
     setLocation("");
     setAmount("");
     setEditDamageId(null);
     setDamageFormOpen(false);
-  };
+  }, []);
 
-  const resetFuelForm = () => {
+  const resetFuelForm = useCallback(() => {
     setFuelAmount("");
     setEditFuelId(null);
     setFuelFormOpen(false);
-  };
+  }, []);
 
   const startEditDamage = (line: ReconciliationLineDto) => {
     setEditDamageId(line.id);
@@ -470,10 +486,12 @@ export function ReconciliationReturnChargesSection({
 
   return (
     <section id={SECTION_IDS.damage} className={styles.section} data-testid="reconciliation-return-charges">
-      <h3 className={styles.sectionTitle}>{t("finalReconciliation.returnDamagesAndCosts")}</h3>
+      <div className={styles.sectionCard}>
+        <h3 className={styles.sectionTitle}>{t("finalReconciliation.returnDamagesAndCosts")}</h3>
 
-      {editable ? (
-        <div className={styles.returnChargeActions}>
+        {editable ? (
+          <div className={styles.returnChargeToolbar}>
+            <div className={styles.returnChargeActions}>
           <Button
             type="button"
             size="sm"
@@ -502,11 +520,12 @@ export function ReconciliationReturnChargesSection({
           >
             {fuel[0] ? t("finalReconciliation.editFuelCharge") : t("finalReconciliation.addFuelCharge")}
           </Button>
-        </div>
-      ) : null}
+            </div>
+          </div>
+        ) : null}
 
-      {charges.length > 0 ? (
-        <ul className={styles.damageList}>
+        {charges.length > 0 ? (
+          <ul className={styles.damageList}>
           {charges.map((line) => (
             <li
               key={line.id}
@@ -556,7 +575,7 @@ export function ReconciliationReturnChargesSection({
           ))}
         </ul>
       ) : (
-        <p className={styles.muted}>{t("finalReconciliation.noReturnCharges")}</p>
+        <p className={`${styles.muted} ${styles.emptyState}`}>{t("finalReconciliation.noReturnCharges")}</p>
       )}
 
       <Dialog
@@ -613,6 +632,7 @@ export function ReconciliationReturnChargesSection({
           </div>
         </div>
       </Dialog>
+      </div>
     </section>
   );
 }
@@ -628,23 +648,20 @@ function summaryLineKey(key: string): string {
 }
 
 export function ReconciliationFinancialSummary({
-  data,
+  totals,
   currency = "AED",
   variant = "full",
 }: {
-  data: Pick<
-    FullReconciliationReadDto,
-    "totals" | "reconciliationChargesAmount" | "outstandingRenewalAmount" | "settlementAmountDue"
-  >;
+  totals: FullReconciliationReadDto["totals"];
   currency?: string;
   variant?: "full" | "compact";
 }) {
   const t = useTranslations("Contracts");
   const format = useFormatter();
-  const entries = totalsEntries(data.totals);
+  const entries = totalsEntries(totals);
 
   const breakdown = (
-    <>
+    <div className={styles.summaryStack}>
       {entries.length > 0 ? (
         <dl className={styles.summaryList}>
           {entries.map((entry) => (
@@ -657,75 +674,32 @@ export function ReconciliationFinancialSummary({
           ))}
         </dl>
       ) : (
-        <p className={styles.muted}>{t("finalReconciliation.noCharges")}</p>
+        <p className={`${styles.muted} ${styles.emptyState}`}>{t("finalReconciliation.noCharges")}</p>
       )}
-      <dl className={styles.summaryList}>
-        <div>
-          <dt>{t("finalReconciliation.reconciliationCharges")}</dt>
-          <dd dir="ltr">
-            {format.number(data.reconciliationChargesAmount)} {currency}
-          </dd>
+      <div
+        className={`${variant === "compact" ? styles.finalAmountPanelCompact : styles.finalAmountPanel} ${
+          variant === "full" ? styles.finalAmountPanelSupporting : ""
+        }${totals.finalAmount === 0 ? ` ${styles.finalAmountPanelZero}` : ""}`}
+        data-testid="reconciliation-final-amount"
+      >
+        <div className={variant === "compact" ? styles.finalAmountCompact : styles.finalAmountRow}>
+          <span>{t("finalReconciliation.finalAmountDue")}</span>
+          <span className={styles.finalAmountValue} dir="ltr">
+            {format.number(totals.finalAmount)} {currency}
+          </span>
         </div>
-        {data.outstandingRenewalAmount > 0 ? (
-          <div>
-            <dt>{t("finalReconciliation.unpaidRenewalsSubtotal")}</dt>
-            <dd dir="ltr">
-              {format.number(data.outstandingRenewalAmount)} {currency}
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-      <div className={variant === "compact" ? styles.finalAmountCompact : styles.finalAmountRow} data-testid="reconciliation-final-amount">
-        <span>{t("finalReconciliation.finalAmountDue")}</span>
-        <span className={styles.finalAmountValue} dir="ltr">
-          {format.number(data.settlementAmountDue)} {currency}
-        </span>
       </div>
-    </>
+    </div>
   );
 
   if (variant === "compact") return breakdown;
 
   return (
     <section id={SECTION_IDS.summary} className={styles.section} data-testid="reconciliation-summary">
-      <h3 className={styles.sectionTitle}>{t("finalReconciliation.financialSummary")}</h3>
-      {breakdown}
-    </section>
-  );
-}
-
-export function ReconciliationOutstandingRenewalsSection({
-  data,
-}: {
-  data: FullReconciliationReadDto;
-}) {
-  const t = useTranslations("Contracts");
-  const format = useFormatter();
-  if (data.outstandingRenewals.length === 0) return null;
-
-  return (
-    <section
-      className={styles.section}
-      data-testid="reconciliation-unpaid-renewals"
-    >
-      <h3 className={styles.sectionTitle}>{t("finalReconciliation.unpaidRenewalsTitle")}</h3>
-      <ul className={styles.renewalOutstandingList}>
-        {data.outstandingRenewals.map((row) => (
-          <li key={row.id} className={styles.renewalOutstandingItem}>
-            <p>
-              {format.dateTime(new Date(row.previousEndAt), { dateStyle: "medium" })}
-              {" → "}
-              {format.dateTime(new Date(row.newEndAt), { dateStyle: "medium" })}
-            </p>
-            <p className={styles.muted}>
-              +{format.number(row.additionalDays)} · {format.number(row.amount)} AED
-            </p>
-            <p className={styles.muted} data-testid="renewal-auto-included">
-              {t("finalReconciliation.autoIncludedInSettlement")}
-            </p>
-          </li>
-        ))}
-      </ul>
+      <div className={`${styles.sectionCard} ${styles.summarySectionCard}`}>
+        <h3 className={styles.sectionTitle}>{t("finalReconciliation.financialSummary")}</h3>
+        {breakdown}
+      </div>
     </section>
   );
 }

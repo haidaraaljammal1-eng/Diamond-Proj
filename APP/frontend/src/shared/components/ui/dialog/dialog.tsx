@@ -87,15 +87,21 @@ export function Dialog({
     document.addEventListener("keydown", handleKeyDown, true);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const previouslyFocused = document.activeElement;
-    dialogRef.current?.focus();
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
       document.body.style.overflow = previousOverflow;
-      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
   }, [open, handleKeyDown]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement;
+    dialogRef.current?.focus();
+    return () => {
+      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+    };
+  }, [open]);
 
   // Portalled to <body>: the AppShell content sits in its own stacking context,
   // so an overlay rendered inside it would paint under the header and the rail.

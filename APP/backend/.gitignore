@@ -10,4 +10,5 @@ uploads/*
 src/schemas/zod
 prisma/generated
 coverage
+.local/
 .DS_Store

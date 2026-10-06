@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { DrivingLicenseVerificationStatus, Prisma } from "@prisma/client";
 import { env } from "src/config/env";
 import {
   OFFICE_DISPLAY_NAME_DEFAULT,
@@ -12,12 +12,14 @@ import {
   formatStoredExpiry,
   maskLicenseNumber,
 } from "src/modules/contracts/driving-license-policy";
+import { resolvePublicLicenseUnreadableReason } from "src/modules/contracts/license-frame";
 import { canMaterializeContractCustomer } from "src/modules/contracts/contract-customer-materialization";
 import { getPaymentConsent, PAYMENT_METHOD_AUTHORIZATION_VERSION } from "src/modules/contracts/payment/payment-consent.constants";
 import { normalizePublicLocale, type PublicFrontendLocale } from "src/lib/http/public-frontend-url";
 import { fleetVehicleTypeLabel, vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import type { PublicRentalContextSchema } from "src/modules/contracts/contracts.schema";
+import { mapDrivingLicenseExtractionForPublicContext } from "src/modules/contracts/public-driving-license-extraction.mapper";
 import type { z } from "zod";
 
 export const PUBLIC_RENTAL_INCLUDE = {
@@ -31,6 +33,12 @@ export const PUBLIC_RENTAL_INCLUDE = {
   carOut: { select: { occurredAt: true } },
   carIn: { select: { occurredAt: true } },
   licenseVerifications: { orderBy: { createdAt: "desc" as const }, take: 1 },
+  // Active licence OCR only — superseded document extractions are not current prefill data.
+  drivingLicenseExtractions: {
+    where: { document: { supersededAt: null } },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
   // Active attempt only: a superseded (retaken) passport is never authoritative.
   passportExtractions: {
     where: { document: { supersededAt: null } },
@@ -41,12 +49,26 @@ export const PUBLIC_RENTAL_INCLUDE = {
 
 export type PublicRentalRow = Prisma.ContractGetPayload<{ include: typeof PUBLIC_RENTAL_INCLUDE }>;
 
+/** Full number for status-card display when OCR read succeeded (VALID or EXPIRED policy). */
+export function publicLicenseNumberForRentalContext(
+  status: DrivingLicenseVerificationStatus | undefined,
+  licenseNumber: string | null | undefined,
+): string | null {
+  if (status === "VALID" || status === "EXPIRED") {
+    return licenseNumber ?? null;
+  }
+  return null;
+}
+
 export function toPublicRentalContext(
   row: PublicRentalRow,
   now: Date = new Date(),
   locale: PublicFrontendLocale = "en",
 ): z.infer<typeof PublicRentalContextSchema> {
   const verification = row.licenseVerifications[0] ?? null;
+  const drivingLicenseExtraction = mapDrivingLicenseExtractionForPublicContext(
+    row.drivingLicenseExtractions[0] ?? null,
+  );
   const passport = row.passportExtractions[0] ?? null;
   const identity = buildContractIdentityDraft({ license: verification, passport, now });
   const payment = row.payments[0] ?? null;
@@ -111,15 +133,26 @@ export function toPublicRentalContext(
           drivingLicenseNumber: verifiedNumber ?? row.customer.drivingLicenseNumber,
           drivingLicenseExpiry:
             verifiedExpiry ?? formatStoredExpiry(row.customer.drivingLicenseExpiry),
+          dateOfBirth: formatStoredExpiry(row.customer.dateOfBirth),
+          drivingLicenseIssueDate: formatStoredExpiry(row.customer.drivingLicenseIssueDate),
+          drivingLicensePlaceOfIssue: row.customer.drivingLicensePlaceOfIssue,
         }
       : null,
     licenseVerification: {
       status: verification?.status ?? "PENDING",
-      licenseNumber: verification?.status === "VALID" ? verification.licenseNumber : null,
+      licenseNumber: publicLicenseNumberForRentalContext(
+        verification?.status,
+        verification?.licenseNumber,
+      ),
       licenseNumberMasked: maskLicenseNumber(verification?.licenseNumber ?? null),
       expiryDate: formatStoredExpiry(verification?.expiryDate ?? null),
       confidence: verification?.confidence ?? null,
+      unreadableReason: resolvePublicLicenseUnreadableReason(
+        verification?.status,
+        row.drivingLicenseExtractions[0]?.fieldsMeta,
+      ),
     },
+    drivingLicenseExtraction,
     identity: {
       licenseStatus: identity.licenseStatus,
       passport: {
@@ -137,6 +170,7 @@ export function toPublicRentalContext(
                 issuingCountry: identity.issuingCountry.value,
               }
             : null,
+        previewAvailable: Boolean(passport?.attachmentId),
       },
       identityReady: identity.identityReady,
     },

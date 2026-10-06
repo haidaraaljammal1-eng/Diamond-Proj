@@ -144,11 +144,19 @@ if (!INTEGRATION_ENABLED) {
     assert.equal(upd.json().data.email, "ahmed@example.com"); // normalized
     assert.equal(upd.json().data.optOutWhatsApp, true);
 
-    const row = await prisma.auditLog.findFirst({
+    const rows = await prisma.auditLog.findMany({
       where: { action: "customers.update", entityId: String(id) },
       orderBy: { createdAt: "desc" },
+      take: 10,
     });
-    assert.ok(row, "expected an audit row for customers.update");
+    const row = rows.find((entry) => {
+      const meta = entry.metadata as { contactFieldsChanged?: string[] } | null;
+      return (
+        meta?.contactFieldsChanged?.includes("email") &&
+        meta?.contactFieldsChanged?.includes("optOutWhatsApp")
+      );
+    });
+    assert.ok(row, "expected an audit row for customers.update with contact field metadata");
     const meta = row?.metadata as { contactFieldsChanged?: string[] } | null;
     assert.ok(meta?.contactFieldsChanged?.includes("email"));
     assert.ok(meta?.contactFieldsChanged?.includes("optOutWhatsApp"));

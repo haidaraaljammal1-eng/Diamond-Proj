@@ -59,19 +59,28 @@ import {
 import { createTarsWorkflowOrchestrator } from "src/modules/integrations/tars/tars-workflow.orchestrator";
 import { tarsError } from "src/modules/integrations/tars/tars.errors";
 import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
+import {
+  calendarDateToStoredUtc,
+  parseCalendarDate,
+} from "src/modules/contracts/license-calendar";
+import {
+  createDrivingLicenseExtractionForUpload,
+  createFailedDrivingLicenseExtractionForUpload,
+} from "src/modules/contracts/driving-license-extraction.repository";
+import { probeLicenseUploadSafeMeta } from "src/modules/contracts/license-upload-diagnostics";
 import { analyzeDrivingLicenseDocument } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
-import { evaluatePassportOcr } from "src/modules/contracts/passport-extraction-policy";
+import {
+  evaluatePassportNumberEngine,
+} from "src/modules/contracts/passport-extraction-policy";
+import { extractPassportNumberFromImage } from "src/modules/document-engine/passport-number-api.client";
 import {
   buildContractIdentityDraft,
   toPublicIdentityDraft,
 } from "src/modules/contracts/contract-identity-draft";
-import { analyzeDocument } from "src/modules/document-ocr/document-ocr.service";
-import { createSimulationDocumentOcrProvider } from "src/modules/document-ocr/simulation-document-ocr.provider";
 import { derivedEndAt } from "src/modules/contracts/contracts-period";
 import { resolveOfferPeriod } from "src/modules/contracts/contracts-duration";
 import {
   buildOfficialContractView,
-  OFFICIAL_CONTRACT_EDITABLE_FIELDS,
   OFFICIAL_CONTRACT_INCLUDE,
   OFFICIAL_CONTRACT_REVIEWABLE_STATUSES,
 } from "src/modules/contracts/official-contract";
@@ -1108,7 +1117,9 @@ export function createContractsService(fastify: FastifyInstance) {
     if (!input.identityNumber && !input.passportNumber) {
       throw contractError.publicFormIncomplete();
     }
-    return withTransaction(prisma, async (tx) => {
+    return withTransaction(
+      prisma,
+      async (tx) => {
       const link = await resolveContractLink(tx, token, "RENTAL");
       const contract = await tx.contract.findUnique({
         where: { id: link.contractId },
@@ -1120,13 +1131,27 @@ export function createContractsService(fastify: FastifyInstance) {
       }
 
       const verification = await latestLicense(tx, contract.id);
-      assertLicenseProgress(verification?.status, verification?.expiryDate);
-      if (!verification?.licenseNumber || !verification.expiryDate) {
-        throw contractError.drivingLicenseRequired();
+      const partialLicenseSave =
+        verification?.status === "UNREADABLE" || verification?.status === "REVIEW_REQUIRED";
+      if (partialLicenseSave) {
+        if (!verification?.licenseNumber) {
+          throw contractError.drivingLicenseRequired();
+        }
+      } else {
+        assertLicenseProgress(verification?.status, verification?.expiryDate);
+        if (!verification?.licenseNumber || !verification.expiryDate) {
+          throw contractError.drivingLicenseRequired();
+        }
+        if (!(await identityDraftFor(tx, contract.id)).identityReady) {
+          throw contractError.identityNotReady();
+        }
       }
-      if (!(await identityDraftFor(tx, contract.id)).identityReady) {
-        throw contractError.identityNotReady();
-      }
+
+      const parseFormDate = (iso: string | undefined): Date | null => {
+        if (!iso) return null;
+        const parsed = parseCalendarDate(iso);
+        return parsed ? calendarDateToStoredUtc(parsed) : null;
+      };
 
       const materialized = {
         name: input.name,
@@ -1138,6 +1163,9 @@ export function createContractsService(fastify: FastifyInstance) {
         drivingLicenseNumber: verification.licenseNumber,
         drivingLicenseExpiry: verification.expiryDate,
         address: input.address ?? null,
+        dateOfBirth: parseFormDate(input.dateOfBirth),
+        drivingLicenseIssueDate: parseFormDate(input.drivingLicenseIssueDate),
+        drivingLicensePlaceOfIssue: input.drivingLicensePlaceOfIssue?.trim() || null,
       };
 
       const customerId = await resolvePublicFormCustomerId(
@@ -1173,7 +1201,12 @@ export function createContractsService(fastify: FastifyInstance) {
         await emit(tx, "contract.form_completed", contract.id);
       }
       return loadPublicRental(tx, contract.id, locale);
-    });
+    },
+      {
+        // Concurrent public forms serialize on strong-identity advisory locks; allow queued waiters to finish.
+        timeout: 45_000,
+      },
+    );
   }
 
   async function acceptPublic(
@@ -1410,7 +1443,7 @@ export function createContractsService(fastify: FastifyInstance) {
   async function reconcile(
     contractId: string,
     input: z.infer<typeof ReconcileSchema>,
-    actorUserId: number,
+    _actorUserId: number,
   ) {
     for (const line of input.lines) {
       if (isManualExternalReconLineType(line.type)) {
@@ -2093,7 +2126,11 @@ export function createContractsService(fastify: FastifyInstance) {
     };
   }
 
-  async function uploadDrivingLicense(token: string, file: MultipartFile) {
+  async function uploadDrivingLicense(
+    token: string,
+    file: MultipartFile,
+    options?: { policyNow?: Date },
+  ) {
     const preview = await resolveContractLink(prisma, token, "RENTAL");
     const existing = await prisma.contract.findUnique({ where: { id: preview.contractId } });
     if (!existing) throw contractError.notFound();
@@ -2108,6 +2145,25 @@ export function createContractsService(fastify: FastifyInstance) {
       resolveStoragePath(env.FILE_STORAGE_DIR, (await prisma.attachment.findUniqueOrThrow({
         where: { id: attachment.id },
       })).storageKey),
+    );
+
+    const ocr = await analyzeDrivingLicenseDocument({
+      bytes,
+      mimeType: attachment.mimeType,
+      filename: attachment.originalName ?? undefined,
+    });
+    if (env.NODE_ENV !== "production") {
+      const safeMeta = probeLicenseUploadSafeMeta(bytes, attachment.mimeType);
+      fastify.log.info(
+        { contractId: preview.contractId, licenseUpload: safeMeta },
+        "driving_license_upload_meta",
+      );
+    }
+    const policyNow = options?.policyNow ?? new Date();
+    const evaluated = evaluateDrivingLicenseOcr(
+      ocr,
+      policyNow,
+      env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
     );
 
     return withTransaction(prisma, async (tx) => {
@@ -2130,16 +2186,23 @@ export function createContractsService(fastify: FastifyInstance) {
           attachmentId: attachment.id,
         },
       });
-
-      const ocr = await analyzeDrivingLicenseDocument({
-        bytes,
-        mimeType: attachment.mimeType,
-      });
-      const evaluated = evaluateDrivingLicenseOcr(
-        ocr,
-        new Date(),
-        env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
-      );
+      const extraction = ocr.ok
+        ? await createDrivingLicenseExtractionForUpload(tx, {
+            contractId: contract.id,
+            documentId: document.id,
+            attachmentId: attachment.id,
+            ocr,
+          })
+        : evaluated.uploadFailureCode
+          ? await createFailedDrivingLicenseExtractionForUpload(tx, {
+              contractId: contract.id,
+              documentId: document.id,
+              attachmentId: attachment.id,
+              provider: evaluated.provider,
+              providerVersion: evaluated.providerVersion,
+              failureCode: evaluated.uploadFailureCode,
+            })
+          : null;
       const verification = await tx.drivingLicenseVerification.create({
         data: {
           contractId: contract.id,
@@ -2152,6 +2215,7 @@ export function createContractsService(fastify: FastifyInstance) {
           provider: evaluated.provider,
           providerVersion: evaluated.providerVersion,
           verifiedAt: new Date(),
+          extractionId: extraction?.id ?? null,
         },
       });
       await emit(tx, "contract.license_uploaded", contract.id, {
@@ -2163,7 +2227,7 @@ export function createContractsService(fastify: FastifyInstance) {
         status: verification.status,
         dedupe: verification.id,
       });
-      return loadPublicRental(tx, contract.id);
+      return loadPublicRental(tx, contract.id, "en");
     });
   }
 
@@ -2186,14 +2250,20 @@ export function createContractsService(fastify: FastifyInstance) {
       const document = await tx.contractDocument.create({
         data: { contractId: contract.id, type: "DRIVING_LICENSE", attachmentId },
       });
-      const ocr = await analyzeDrivingLicenseDocumentWithProvider(
-        createSimulationDocumentOcrProvider(),
-      );
+      const ocr = simulatedDrivingLicenseOcr();
       const evaluated = evaluateDrivingLicenseOcr(
         ocr,
         new Date(),
         env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
       );
+      const extraction = ocr.ok
+        ? await createDrivingLicenseExtractionForUpload(tx, {
+            contractId: contract.id,
+            documentId: document.id,
+            attachmentId,
+            ocr,
+          })
+        : null;
       await tx.drivingLicenseVerification.create({
         data: {
           contractId: contract.id,
@@ -2206,6 +2276,7 @@ export function createContractsService(fastify: FastifyInstance) {
           provider: evaluated.provider,
           providerVersion: evaluated.providerVersion,
           verifiedAt: new Date(),
+          extractionId: extraction?.id ?? null,
         },
       });
       await emit(tx, "contract.license_simulated", contract.id, { documentId: document.id, dedupe: document.id });
@@ -2213,27 +2284,20 @@ export function createContractsService(fastify: FastifyInstance) {
     });
   }
 
-  async function analyzeDrivingLicenseDocumentWithProvider(provider: ReturnType<typeof createSimulationDocumentOcrProvider>) {
-    return analyzeDrivingLicenseDocumentWithBytes(provider);
-  }
-
-  async function analyzeDrivingLicenseDocumentWithBytes(provider: ReturnType<typeof createSimulationDocumentOcrProvider>) {
-    const outcome = await analyzeDocument("DRIVER_LICENSE", { bytes: SIMULATION_PNG, mimeType: "image/png" }, provider);
-    if (!outcome.ok) {
-      return { ok: false as const, reason: "UNREADABLE" as const, provider: outcome.provider, providerVersion: outcome.providerVersion ?? undefined };
-    }
+  /** DEV simulation only — does not call Document Engine or legacy OCR. */
+  function simulatedDrivingLicenseOcr() {
     return {
       ok: true as const,
-      licenseNumber: outcome.result.driverLicenseNumber,
-      expiryDate: outcome.result.driverLicenseExpiryDate,
-      holderName: outcome.result.fullName,
-      confidence: outcome.result.confidence,
+      licenseNumber: "SIM-DL-0001",
+      expiryDate: "2031-12-31",
+      holderName: "SIMULATED DRIVER",
+      confidence: 1,
       fieldConfidences: {
-        licenseNumber: outcome.result.fieldConfidence.driverLicenseNumber,
-        expiryDate: outcome.result.fieldConfidence.driverLicenseExpiryDate,
+        licenseNumber: 1,
+        expiryDate: 1,
       },
-      provider: outcome.provider,
-      providerVersion: outcome.providerVersion ?? undefined,
+      provider: "diamond-simulation",
+      providerVersion: "dev",
     };
   }
 
@@ -2290,9 +2354,22 @@ export function createContractsService(fastify: FastifyInstance) {
       return { contractId: contract.id, extractionId: extraction.id };
     });
 
-    const evaluated = evaluatePassportOcr(
-      await analyzeDocument("PASSPORT", { bytes, mimeType: attachment.mimeType }),
-    );
+    let engineOutcome;
+    try {
+      engineOutcome = await extractPassportNumberFromImage({
+        bytes,
+        mimeType: attachment.mimeType,
+        filename: attachment.originalName,
+      });
+    } catch {
+      engineOutcome = {
+        kind: "error" as const,
+        code: "INVALID_RESPONSE" as const,
+        provider: "passport-number-engine",
+        providerVersion: null,
+      };
+    }
+    const evaluated = evaluatePassportNumberEngine(engineOutcome);
 
     return withTransaction(prisma, async (tx) => {
       await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, attempt.contractId);
@@ -2342,13 +2419,13 @@ export function createContractsService(fastify: FastifyInstance) {
       const extraction = await tx.passportExtraction.create({
         data: { contractId: contract.id, documentId: document.id, attachmentId, status: "PROCESSING" },
       });
-      const evaluated = evaluatePassportOcr(
-        await analyzeDocument(
-          "PASSPORT",
-          { bytes: SIMULATION_PNG, mimeType: "image/png" },
-          createSimulationDocumentOcrProvider(),
-        ),
-      );
+      const evaluated = evaluatePassportNumberEngine({
+        kind: "business",
+        status: "VALID",
+        passportNumber: "P1234567",
+        provider: "diamond-simulation",
+        providerVersion: "dev",
+      });
       const { status, ...fields } = evaluated;
       await tx.passportExtraction.update({
         where: { id: extraction.id },
@@ -2537,6 +2614,23 @@ export function createContractsService(fastify: FastifyInstance) {
   async function openPublicOfficialSignature(token: string, slot: OfficialContractSignatureSlot) {
     const link = await resolveContractLink(prisma, token, "RENTAL", { allowCompleted: true });
     return openStaffOfficialSignature(link.contractId, slot);
+  }
+
+  /** Token-scoped active passport capture stream (non-superseded document only). */
+  async function openPublicPassportPreview(token: string) {
+    const link = await resolveContractLink(prisma, token, "RENTAL");
+    const extraction = await prisma.passportExtraction.findFirst({
+      where: { contractId: link.contractId, document: { supersededAt: null } },
+      orderBy: { createdAt: "desc" },
+      include: { attachment: true },
+    });
+    if (!extraction?.attachment) throw AppError.notFound("Passport preview not found");
+    return {
+      mimeType: extraction.attachment.mimeType,
+      stream: createReadStream(
+        resolveStoragePath(env.FILE_STORAGE_DIR, extraction.attachment.storageKey),
+      ),
+    };
   }
 
   async function openStaffOfficialSignature(contractId: string, slot: OfficialContractSignatureSlot) {
@@ -3122,6 +3216,7 @@ export function createContractsService(fastify: FastifyInstance) {
     savePublicOfficialSignature,
     clearPublicOfficialSignature,
     openPublicOfficialSignature,
+    openPublicPassportPreview,
     openStaffOfficialSignature,
     signPublicOfficialContract,
     requestPublicTarsOtp,

@@ -1,9 +1,5 @@
 import { z } from "zod";
 import "dotenv/config";
-import {
-  DOCUMENT_OCR_PROVIDER_IDS,
-  LEGACY_UNCONFIGURED_PROVIDER_VALUES,
-} from "src/modules/document-ocr/document-ocr.constants";
 
 /**
  * Environment validation. Startup FAILS FAST when a required variable is
@@ -87,16 +83,32 @@ const EnvSchema = z
     OFFICE_DISPLAY_NAME: z.string().trim().min(1).default("Diamond Rent Car"),
     // Asia/Dubai (UTC+4, no DST). License expiry uses this offset, not the client clock.
     BUSINESS_TIMEZONE_OFFSET_MINUTES: z.coerce.number().int().default(240),
-    // Provider-neutral OCR selection. No vendor is chosen yet; there is no fake/test value.
-    DOCUMENT_OCR_PROVIDER: z.preprocess(
-      (v) =>
-        v === undefined ||
-        (LEGACY_UNCONFIGURED_PROVIDER_VALUES as readonly unknown[]).includes(v)
-          ? "UNCONFIGURED"
-          : v,
-      z.enum(DOCUMENT_OCR_PROVIDER_IDS),
-    ),
+    // Minimum field confidence for driving-license REVIEW_REQUIRED (legacy env name retained).
     DOCUMENT_OCR_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
+    // Internal Document Engine — Passport Number API (server-only; never expose to frontend).
+    PASSPORT_NUMBER_API_URL: z.string().optional().default(""),
+    PASSPORT_NUMBER_API_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+    UAE_DRIVING_LICENSE_API_URL: z
+      .string()
+      .optional()
+      .default("")
+      .transform((value) => {
+        const trimmed = value.trim();
+        if (trimmed) return trimmed;
+        if (process.env.NODE_ENV === "development") {
+          return "http://127.0.0.1:8020";
+        }
+        return "";
+      }),
+    // Crop + OCR + serial queue; B1 live extracts were ~30–90s cold.
+    UAE_DRIVING_LICENSE_API_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+    /** Playwright/E2E only: honour X-E2E-License-Policy-Date on licence upload. Ignored in production. */
+    E2E_ALLOW_LICENSE_POLICY_CLOCK: envBool(false),
+
+    // Legacy Vision AI (Gemini) — not used for rental document OCR. Dev scripts only.
+    AI_VISION_PROVIDER: z.enum(["unconfigured", "gemini"]).optional().default("unconfigured"),
+    GEMINI_API_KEY: z.string().optional().default(""),
+    GEMINI_MODEL: z.string().trim().min(1).default("gemini-3.8-flash"),
     PAYMENT_PROVIDER: z.enum(["none", "stripe"]).default("none"),
     STRIPE_SECRET_KEY: z.string().optional().default(""),
     STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
@@ -243,6 +255,13 @@ const EnvSchema = z
           code: "custom",
           path: ["SEED_DEV_ADMIN"],
           message: "SEED_DEV_ADMIN must be false in production",
+        });
+      }
+      if (val.E2E_ALLOW_LICENSE_POLICY_CLOCK) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["E2E_ALLOW_LICENSE_POLICY_CLOCK"],
+          message: "E2E_ALLOW_LICENSE_POLICY_CLOCK must be false in production",
         });
       }
     }

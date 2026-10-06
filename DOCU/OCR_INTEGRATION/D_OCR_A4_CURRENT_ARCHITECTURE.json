@@ -1,0 +1,86 @@
+{
+  "audit_id": "D-OCR-A4",
+  "generated": "2026-10-05",
+  "verdict": "D_OCR_A4_ARCHITECTURE_BASELINE_READY",
+  "processes": {
+    "postgres": { "port": 5432, "role": "Diamond persistence" },
+    "uae_license_api": {
+      "port": 8020,
+      "entry": "DOCUMENT-ENGINE/LICENSE/services/uae_license_api/main.py",
+      "command": "python -m uvicorn services.uae_license_api.main:app --host 127.0.0.1 --port 8020",
+      "cwd": "DOCUMENT-ENGINE/LICENSE"
+    },
+    "passport_api": { "port": 8010, "note": "Independent; not on licence OCR path" },
+    "diamond_backend": { "port": 8000, "dev": "APP/backend npm run dev (orchestrates engines when configured)" },
+    "diamond_frontend": { "port": 3100, "dev": "APP/frontend npm run dev" }
+  },
+  "pipeline": [
+    { "from": "Browser", "to": "LicenseUpload input", "file": "APP/frontend/src/modules/public-rental/components/license-upload/license-upload.tsx", "fn": "handleChange → onFile" },
+    { "from": "Diamond Frontend", "to": "multipart POST", "file": "APP/frontend/src/modules/public-rental/api/public-rental.api.ts", "fn": "uploadPublicRentalLicense (field: file)" },
+    { "from": "Fastify public rental route", "to": "uploadDrivingLicense", "file": "APP/backend/src/modules/contracts/routes/public/route.ts", "fn": "POST /rental/:token/driving-license" },
+    { "from": "contracts.service", "to": "Attachment bytes", "file": "APP/backend/src/modules/contracts/contracts.service.ts", "fn": "uploadDrivingLicense → files.save → readFile" },
+    { "from": "Driving licence OCR adapter", "to": "HTTP client", "file": "APP/backend/src/modules/contracts/ocr/driving-license-ocr.adapter.ts", "fn": "analyzeDrivingLicenseDocument" },
+    { "from": "UAE licence HTTP client", "to": ":8020", "file": "APP/backend/src/modules/document-engine/uae-driving-license-api.client.ts", "fn": "extractDrivingLicenseFromImage (multipart image)" },
+    { "from": "FastAPI", "to": "orchestrator", "file": "DOCUMENT-ENGINE/LICENSE/services/uae_license_api/main.py", "fn": "extract_driving_license" },
+    { "from": "Orchestrator", "to": "Crop V1 subprocess", "file": "DOCUMENT-ENGINE/LICENSE/services/uae_license_api/orchestrator.py", "fn": "_run_crop_subprocess → src.run_crop_pipeline" },
+    { "from": "Orchestrator", "to": "English OCR", "file": "DOCUMENT-ENGINE/LICENSE/services/uae_license_api/orchestrator.py", "fn": "process_driver_license → pipeline.recognize_field" },
+    { "from": "EnglishOcrPipeline", "to": "engines", "file": "DOCUMENT-ENGINE/LICENSE/frozen/ocr_v1_1/src/inference/english_ocr_pipeline.py", "fn": "recognize_field" },
+    { "from": "Adapter", "to": "Policy", "file": "APP/backend/src/modules/contracts/driving-license-policy.ts", "fn": "evaluateDrivingLicenseOcr" },
+    { "from": "Persistence", "to": "DB", "file": "APP/backend/src/modules/contracts/driving-license-extraction.repository.ts", "fn": "createDrivingLicenseExtractionForUpload" },
+    { "from": "Public context", "to": "API response", "file": "APP/backend/src/modules/contracts/public-rental-context.ts", "fn": "toPublicRentalContext" },
+    { "from": "Frontend prefill", "to": "FormBuilder", "file": "APP/frontend/src/modules/public-rental/utils/public-rental-form-prefill.ts", "fn": "resolvePublicRentalFormDefaults" }
+  ],
+  "frozen_roots": {
+    "crop": "DOCUMENT-ENGINE/LICENSE/frozen/crop_v1",
+    "ocr": "DOCUMENT-ENGINE/LICENSE/frozen/ocr_v1_1",
+    "service_wrapper": "DOCUMENT-ENGINE/LICENSE/services/uae_license_api",
+    "gitignored": [
+      "DOCUMENT-ENGINE/LICENSE/jobs/",
+      "DOCUMENT-ENGINE/LICENSE/output/",
+      "DOCUMENT-ENGINE/LICENSE/.venv/",
+      "DOCUMENT-ENGINE/LICENSE/.venv_ppocrv5/",
+      "DOCUMENT-ENGINE/LICENSE/frozen/ocr_v1_1/vendor/"
+    ]
+  },
+  "semantic_fields": [
+    "license_number",
+    "name_ar",
+    "name_en",
+    "nationality",
+    "date_of_birth",
+    "issue_date",
+    "expiry_date",
+    "place_of_issue"
+  ],
+  "concurrency": {
+    "fastify_upload": "per-request; OCR outside transaction",
+    "engine_serial_lock": "asyncio.Lock in main.py — one extraction at a time per API instance",
+    "ppocrv5_worker": "single persistent subprocess per API process; threading.Lock on client",
+    "client_timeout_ms": 120000
+  },
+  "env": {
+    "diamond_backend": [
+      "UAE_DRIVING_LICENSE_API_URL",
+      "UAE_DRIVING_LICENSE_API_TIMEOUT_MS",
+      "UAE_DRIVING_LICENSE_API_ORCHESTRATE",
+      "DOCUMENT_OCR_MIN_CONFIDENCE",
+      "FILE_STORAGE_DIR",
+      "BUSINESS_TIMEZONE_OFFSET_MINUTES"
+    ],
+    "license_service": [
+      "UAE_LICENSE_API_HOST",
+      "UAE_LICENSE_API_PORT",
+      "LICENSE_JOBS_ROOT",
+      "KEEP_JOB_ARTIFACTS",
+      "LICENSE_ENGINE_ROOT",
+      "LICENSE_TESSERACT_CMD",
+      "LICENSE_TESSDATA_DIR",
+      "LICENSE_PPOCRV5_PYTHON"
+    ]
+  },
+  "artifacts": {
+    "field_matrix_md": "DOCU/OCR_INTEGRATION/D_OCR_A4_FIELD_PIPELINE_MATRIX.md",
+    "impact_matrix_md": "DOCU/OCR_INTEGRATION/D_OCR_A4_MODIFICATION_IMPACT_MATRIX.md",
+    "architecture_md": "DOCU/OCR_INTEGRATION/D_OCR_A4_CURRENT_ARCHITECTURE_AUDIT.md"
+  }
+}

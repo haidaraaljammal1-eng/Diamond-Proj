@@ -60,9 +60,10 @@ export function compareCalendarDate(a: CalendarDate, b: CalendarDate): number {
   return a.d - b.d;
 }
 
+/** True when expiry is on or before the business calendar day (inclusive end-of-validity). */
 export function isLicenseExpiredOn(
   expiry: CalendarDate,
   today: CalendarDate,
 ): boolean {
-  return compareCalendarDate(expiry, today) < 0;
+  return compareCalendarDate(expiry, today) <= 0;
 }

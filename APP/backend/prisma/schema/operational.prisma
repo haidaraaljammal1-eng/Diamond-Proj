@@ -48,9 +48,14 @@ model Customer {
   nationality          String?
   identityNumber       String?
   passportNumber       String?
-  drivingLicenseNumber String?
-  drivingLicenseExpiry DateTime?
-  address              String?
+  drivingLicenseNumber       String?
+  drivingLicenseExpiry       DateTime?
+  /// Person identity — confirmed on public rental form submit, not from OCR alone.
+  dateOfBirth                DateTime?
+  /// Licence metadata — confirmed on form submit.
+  drivingLicenseIssueDate    DateTime?
+  drivingLicensePlaceOfIssue String?
+  address                    String?
   /// One Stripe Customer per Diamond customer for the current Stripe account (UNIQUE/ELITE share one account).
   stripeCustomerId     String?   @unique
 

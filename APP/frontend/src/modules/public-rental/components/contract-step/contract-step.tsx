@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FormBuilder } from "@/shared/components/forms/form-builder/form-builder";
 import { Button } from "@/shared/components/ui/button/button";
@@ -12,6 +12,10 @@ import {
 } from "../../schemas/public-rental-form.schema";
 import type { PublicRentalContext } from "../../types/public-rental.types";
 import { formatLicenseExpiry } from "../../utils/format-license-date";
+import {
+  publicRentalFormMountKey,
+  resolvePublicRentalFormDefaults,
+} from "../../utils/public-rental-form-prefill";
 import { formatRentalAmount } from "../../utils/format-money";
 import { formatRentalDuration } from "@/modules/contracts/utils/format-rental-duration";
 import styles from "./contract-step.module.css";
@@ -78,16 +82,13 @@ export function ContractStep({
     },
     (key, values) => td(key, values),
   );
-  const defaultValues: PublicRentalFormValues = {
-    name: context.customer?.name ?? "",
-    mobile: context.customer?.mobile ?? "",
-    email: context.customer?.email ?? "",
-    nationality: context.customer?.nationality ?? "",
-    identityNumber: context.customer?.identityNumber ?? "",
-    passportNumber: context.customer?.passportNumber ?? "",
-    address: context.customer?.address ?? "",
-  };
-
+  const formMountKey = useMemo(() => publicRentalFormMountKey(context), [context]);
+  const defaultValues = useMemo(
+    () => resolvePublicRentalFormDefaults(context),
+    // B5: defaults are mount-scoped via formMountKey; omit `context` so refetches do not re-apply OCR over user edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount key is the intentional stability boundary
+    [formMountKey],
+  );
   return (
     <article className={styles.sheet} data-testid="contract-step">
       <header className={styles.masthead}>
@@ -159,7 +160,7 @@ export function ContractStep({
         <h2 className={styles.sectionTitle}>{t("customerTitle")}</h2>
         {canEdit ? (
           <FormBuilder<PublicRentalFormValues>
-            key={`${context.contract.status}-${context.customer?.name ?? "new"}-${context.customer?.mobile ?? ""}`}
+            key={formMountKey}
             fields={publicRentalFormFields((key) => t(key))}
             schema={publicRentalFormSchema}
             defaultValues={defaultValues}

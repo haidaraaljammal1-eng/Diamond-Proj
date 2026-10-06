@@ -1,0 +1,42 @@
+.field {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgb(201 161 92 / 18%);
+  background: rgb(201 161 92 / 05%);
+  transition:
+    border-color var(--pr-duration, 220ms) ease,
+    background var(--pr-duration, 220ms) ease;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label {
+  margin: 0;
+  color: var(--diamond-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.verifiedIcon {
+  color: var(--diamond-gold-hi);
+  opacity: 0.9;
+}
+
+.value {
+  margin: 0;
+  color: var(--diamond-champagne);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}

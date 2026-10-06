@@ -1,6 +1,4 @@
 import type { DrivingLicenseVerificationStatus } from "@prisma/client";
-import { env } from "src/config/env";
-import { DRIVING_LICENSE_MIN_CONFIDENCE } from "src/modules/contracts/contracts.constants";
 import {
   businessToday,
   calendarDateToStoredUtc,
@@ -10,6 +8,9 @@ import {
   type CalendarDate,
 } from "src/modules/contracts/license-calendar";
 import type { DrivingLicenseOcrResult } from "src/modules/contracts/ocr/driving-license-ocr.types";
+import type { LicenseUploadFailureCode } from "src/modules/contracts/license-frame";
+
+export type PublicLicenseUnreadableReason = "BAD_FRAME" | "OCR" | null;
 
 export interface EvaluatedLicenseVerification {
   status: DrivingLicenseVerificationStatus;
@@ -19,22 +20,8 @@ export interface EvaluatedLicenseVerification {
   confidence: number | null;
   provider: string | null;
   providerVersion: string | null;
-}
-
-function minConfidence(): number {
-  return env.DOCUMENT_OCR_MIN_CONFIDENCE || DRIVING_LICENSE_MIN_CONFIDENCE;
-}
-
-function confidencePasses(result: Extract<DrivingLicenseOcrResult, { ok: true }>): boolean {
-  const threshold = minConfidence();
-  const fields = result.fieldConfidences;
-  if (fields && (fields.licenseNumber != null || fields.expiryDate != null)) {
-    const numberOk = fields.licenseNumber == null || fields.licenseNumber >= threshold;
-    const expiryOk = fields.expiryDate == null || fields.expiryDate >= threshold;
-    return numberOk && expiryOk;
-  }
-  if (result.confidence == null) return false;
-  return result.confidence >= threshold;
+  unreadableReason: PublicLicenseUnreadableReason;
+  uploadFailureCode: LicenseUploadFailureCode | null;
 }
 
 export function evaluateDrivingLicenseOcr(
@@ -43,14 +30,24 @@ export function evaluateDrivingLicenseOcr(
   offsetMinutes: number,
 ): EvaluatedLicenseVerification {
   if (!result.ok) {
+    const status =
+      result.reason === "NOT_CONFIGURED" || result.reason === "PROVIDER_UNAVAILABLE"
+        ? "PROVIDER_UNAVAILABLE"
+        : "UNREADABLE";
+    const uploadFailureCode =
+      result.reason === "BAD_FRAME" ? ("BAD_FRAME" as LicenseUploadFailureCode) : null;
+    const unreadableReason: PublicLicenseUnreadableReason =
+      result.reason === "BAD_FRAME" ? "BAD_FRAME" : status === "UNREADABLE" ? "OCR" : null;
     return {
-      status: result.reason === "NOT_CONFIGURED" ? "PROVIDER_UNAVAILABLE" : "UNREADABLE",
+      status,
       licenseNumber: null,
       expiryDate: null,
       expiryCalendar: null,
       confidence: result.confidence ?? null,
       provider: result.provider,
       providerVersion: result.providerVersion ?? null,
+      unreadableReason,
+      uploadFailureCode,
     };
   }
 
@@ -61,24 +58,14 @@ export function evaluateDrivingLicenseOcr(
   if (!number || !parsedExpiry) {
     return {
       status: "UNREADABLE",
-      licenseNumber: number,
-      expiryDate: parsedExpiry ? calendarDateToStoredUtc(parsedExpiry) : null,
-      expiryCalendar: parsedExpiry,
+      licenseNumber: null,
+      expiryDate: null,
+      expiryCalendar: null,
       confidence,
       provider: result.provider,
       providerVersion: result.providerVersion ?? null,
-    };
-  }
-
-  if (!confidencePasses(result)) {
-    return {
-      status: "REVIEW_REQUIRED",
-      licenseNumber: number,
-      expiryDate: calendarDateToStoredUtc(parsedExpiry),
-      expiryCalendar: parsedExpiry,
-      confidence,
-      provider: result.provider,
-      providerVersion: result.providerVersion ?? null,
+      unreadableReason: "OCR",
+      uploadFailureCode: "OCR_FAILED",
     };
   }
 
@@ -92,6 +79,8 @@ export function evaluateDrivingLicenseOcr(
     confidence,
     provider: result.provider,
     providerVersion: result.providerVersion ?? null,
+    unreadableReason: null,
+    uploadFailureCode: null,
   };
 }
 

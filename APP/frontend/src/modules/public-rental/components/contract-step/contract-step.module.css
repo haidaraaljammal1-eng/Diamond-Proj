@@ -39,6 +39,28 @@
   border-bottom: 1px solid var(--diamond-hair);
 }
 
+.ocrNotice {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--diamond-ivory, #faf8f4);
+  border: 1px solid var(--diamond-hair);
+  color: var(--diamond-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ocrNotice {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--diamond-ivory, #faf8f4);
+  border: 1px solid var(--diamond-hair);
+  color: var(--diamond-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .sectionTitle {
   margin: 0;
   color: var(--diamond-gold-hi);

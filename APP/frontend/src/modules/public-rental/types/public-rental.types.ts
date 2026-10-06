@@ -14,6 +14,40 @@ export type DrivingLicenseVerificationStatus =
   | "REVIEW_REQUIRED"
   | "PROVIDER_UNAVAILABLE";
 
+export type DrivingLicenseExtractionStatus =
+  | "PROCESSING"
+  | "READY"
+  | "PARTIAL"
+  | "FAILED"
+  | "PROVIDER_UNAVAILABLE";
+
+export type DrivingLicenseEngineDocumentStatus = "ACCEPT" | "REVIEW_REQUIRED" | "REJECT";
+
+export interface PublicDrivingLicenseExtractionField {
+  value: string | null;
+  ocrStatus?: string | null;
+  confidence?: number | null;
+  cropStatus?: string | null;
+  ocrEligible?: boolean | null;
+  engine?: string | null;
+}
+
+export interface PublicDrivingLicenseExtractionFields {
+  licenseNumber: PublicDrivingLicenseExtractionField;
+  holderNameEn: PublicDrivingLicenseExtractionField;
+  nationality: PublicDrivingLicenseExtractionField;
+  dateOfBirth: PublicDrivingLicenseExtractionField;
+  issueDate: PublicDrivingLicenseExtractionField;
+  expiryDate: PublicDrivingLicenseExtractionField;
+  placeOfIssue: PublicDrivingLicenseExtractionField;
+}
+
+export interface PublicDrivingLicenseExtraction {
+  status: DrivingLicenseExtractionStatus;
+  engineDocumentStatus: DrivingLicenseEngineDocumentStatus | null;
+  fields: PublicDrivingLicenseExtractionFields;
+}
+
 /** Provider-neutral identity states from the backend. No OCR vendor appears here. */
 export type IdentityLicenseStatus =
   | "LICENSE_REQUIRED"
@@ -45,6 +79,7 @@ export interface PublicIdentityStatus {
   passport: {
     status: PublicPassportStatus;
     fields: PublicPassportFields | null;
+    previewAvailable: boolean;
   };
   identityReady: boolean;
 }
@@ -157,13 +192,18 @@ export interface PublicRentalContext {
     address: string | null;
     drivingLicenseNumber: string | null;
     drivingLicenseExpiry: string | null;
+    dateOfBirth?: string | null;
+    drivingLicenseIssueDate?: string | null;
+    drivingLicensePlaceOfIssue?: string | null;
   } | null;
+  drivingLicenseExtraction: PublicDrivingLicenseExtraction | null;
   licenseVerification: {
     status: DrivingLicenseVerificationStatus;
     licenseNumber: string | null;
     licenseNumberMasked: string | null;
     expiryDate: string | null;
     confidence: number | null;
+    unreadableReason: "BAD_FRAME" | "OCR" | null;
   };
   identity: PublicIdentityStatus;
   payment: {
@@ -247,6 +287,9 @@ export interface PublicRentalFormPayload {
   identityNumber?: string;
   passportNumber?: string;
   address?: string;
+  dateOfBirth?: string;
+  drivingLicenseIssueDate?: string;
+  drivingLicensePlaceOfIssue?: string;
 }
 
 export type PublicRentalUiStage =

@@ -28,6 +28,7 @@ export function derivePublicRentalFlowStep(input: {
   }
   // FORM contracts already passed the document stage; they stay on the contract step.
   if (input.status === "FORM") return "CONTRACT";
-  if (input.identityReady) return "CONTRACT";
+  // Identity may be ready while the renter form is still unsaved (AWAITING).
+  if (input.identityReady && input.status !== "AWAITING") return "CONTRACT";
   return "LICENSE_VERIFICATION";
 }

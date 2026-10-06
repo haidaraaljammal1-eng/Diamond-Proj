@@ -3,13 +3,17 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import {
-  createFakeDocumentOcrProvider,
-  fakePassportResult,
-  SYNTHETIC_PASSPORT,
-} from "../helpers/fake-document-ocr-provider";
+  fakeLicenseOcrResult,
+  type FakeLicenseInput,
+} from "../helpers/fake-vision-ai-provider";
+import {
+  createFakePassportNumberApi,
+  SYNTHETIC_PASSPORT_NUMBER,
+} from "../helpers/fake-passport-number-api";
+import { setDrivingLicenseDocumentAnalysisForTests } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
+import { setPassportNumberApiClientForTests } from "src/modules/document-engine/passport-number-api.client";
 import {
   imageMultipart,
-  injectDocumentOcr,
   TEST_PNG,
   uploadPublicDocument,
 } from "../helpers/public-identity";
@@ -32,7 +36,13 @@ if (!RUN) {
     const run = `PID${Date.now().toString(36).toUpperCase()}`;
     const admin = { email: `pid-admin-${run}@example.test`, password: "pid-admin-pass-123" };
     let staffToken = "";
-    const ocr = createFakeDocumentOcrProvider();
+    let licenseInput: FakeLicenseInput = {};
+    const licenseFake = {
+      setLicense(input: FakeLicenseInput) {
+        licenseInput = input;
+      },
+    };
+    const passportApi = createFakePassportNumberApi();
     const auth = () => ({ authorization: `Bearer ${staffToken}` });
 
     let seq = 0;
@@ -74,7 +84,7 @@ if (!RUN) {
       uploadPublicDocument(app, t, "passport", file);
 
     async function validLicense(t: string) {
-      ocr.setLicense({ licenseNumber: "DL-ID-1", expiryDate: "2031-06-01" });
+      licenseFake.setLicense({ licenseNumber: "DL-ID-1", expiryDate: "2031-06-01" });
       const res = await license(t);
       assert.equal(res.statusCode, 200, res.body);
       assert.equal(res.json().data.licenseVerification.status, "VALID");
@@ -119,11 +129,14 @@ if (!RUN) {
       await prisma.userRole.create({ data: { userId: user.id, roleId: role.id } });
       const login = await app.inject({ method: "POST", url: "/auth/login", payload: admin });
       staffToken = login.json().data.accessToken;
-      await injectDocumentOcr(ocr.provider);
+      setDrivingLicenseDocumentAnalysisForTests(async () => fakeLicenseOcrResult(licenseInput));
+      await passportApi.install();
     });
 
     after(async () => {
-      await injectDocumentOcr(undefined);
+      await passportApi.clear();
+      setDrivingLicenseDocumentAnalysisForTests(undefined);
+      setPassportNumberApiClientForTests(undefined);
       if (app) await app.close();
     });
 
@@ -140,7 +153,7 @@ if (!RUN) {
       assert.equal(early.statusCode, 409, early.body);
       assert.equal(early.json().error.context.reason, "PASSPORT_LICENSE_REQUIRED");
 
-      ocr.setLicense({ licenseNumber: "DL-OLD", expiryDate: "2020-01-01" });
+      licenseFake.setLicense({ licenseNumber: "DL-OLD", expiryDate: "2020-01-01" });
       const expired = await license(ctx.token);
       assert.equal(expired.json().data.licenseVerification.status, "EXPIRED");
       assert.equal(expired.json().data.identity.licenseStatus, "LICENSE_INVALID");
@@ -156,7 +169,7 @@ if (!RUN) {
 
     test("client cannot fake license validity with extra fields", async () => {
       const ctx = await offerAndToken();
-      ocr.setLicense({ licenseNumber: null, expiryDate: "2031-01-01" });
+      licenseFake.setLicense({ licenseNumber: null, expiryDate: "2031-01-01" });
       const boundary = "----fakevalid";
       const payload = Buffer.concat([
         Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="licenseValid"\r\n\r\ntrue\r\n`),
@@ -182,22 +195,27 @@ if (!RUN) {
       const ctx = await offerAndToken();
       await validLicense(ctx.token);
       const customersBefore = await prisma.customer.count();
-      ocr.setPassport(() => ({
-        ...fakePassportResult({ ...SYNTHETIC_PASSPORT, VendorSurname: "LEAK" }),
-        rawVendorResponse: { secretKey: "must-not-leak" },
-      }) as never);
+      passportApi.setPassport({ passportNumber: SYNTHETIC_PASSPORT_NUMBER });
 
       const res = await passport(ctx.token);
       assert.equal(res.statusCode, 200, res.body);
       const data = res.json().data;
       assert.equal(data.identity.passport.status, "READY");
-      assert.equal(data.identity.passport.fields.fullName, "TEST PERSON");
-      assert.equal(data.identity.passport.fields.passportNumber, "TEST123456");
-      assert.equal(data.identity.passport.fields.nationality, "TEST");
+      assert.equal(data.identity.passport.previewAvailable, true);
+      assert.equal(data.identity.passport.fields.fullName, null);
+      assert.equal(data.identity.passport.fields.passportNumber, SYNTHETIC_PASSPORT_NUMBER);
+
+      const preview = await app.inject({
+        method: "GET",
+        url: `/contracts/rental/${ctx.token}/passport/preview`,
+      });
+      assert.equal(preview.statusCode, 200, preview.body);
+      assert.match(preview.headers["content-type"] ?? "", /^image\//);
+      assert.equal(data.identity.passport.fields.nationality, null);
       assert.equal(data.identity.passport.fields.dateOfBirth, null);
       assert.equal(data.identity.passport.fields.passportExpiryDate, null);
       assert.equal(data.identity.identityReady, true);
-      assert.equal(data.flow.step, "CONTRACT");
+      assert.equal(data.flow.step, "LICENSE_VERIFICATION");
       assert.equal(res.body.includes("rawVendorResponse"), false);
       assert.equal(res.body.includes("must-not-leak"), false);
       assert.equal(res.body.includes("VendorSurname"), false);
@@ -221,8 +239,8 @@ if (!RUN) {
           passportStatus: draft.json().data.passportStatus,
         },
         {
-          fullName: "TEST PERSON",
-          passportNumber: "TEST123456",
+          fullName: null,
+          passportNumber: SYNTHETIC_PASSPORT_NUMBER,
           driverLicenseNumber: "DL-ID-1",
           driverLicenseExpiryDate: "2031-06-01",
           identityReady: true,
@@ -245,8 +263,7 @@ if (!RUN) {
       const audit = await prisma.auditLog.findMany({ where: { entityId: ctx.contractId } });
       const outbox = await prisma.domainOutboxEvent.findMany({ where: { aggregateId: ctx.contractId } });
       const persisted = JSON.stringify([audit, outbox]);
-      assert.equal(persisted.includes("TEST PERSON"), false);
-      assert.equal(persisted.includes("TEST123456"), false);
+      assert.equal(persisted.includes(SYNTHETIC_PASSPORT_NUMBER), false);
       assert.ok(outbox.some((e) => e.eventType === "contract.passport_processed"));
     });
 
@@ -254,30 +271,30 @@ if (!RUN) {
       const ctx = await offerAndToken();
       await validLicense(ctx.token);
 
-      await injectDocumentOcr(undefined);
+      await passportApi.clear();
       const unconfigured = await passport(ctx.token);
-      await injectDocumentOcr(ocr.provider);
+      await passportApi.install();
       assert.equal(unconfigured.statusCode, 200, unconfigured.body);
       assert.equal(unconfigured.json().data.identity.passport.status, "PROVIDER_UNAVAILABLE");
       assert.equal(unconfigured.json().data.identity.identityReady, false);
-      assert.equal(unconfigured.body.includes("DOCUMENT_OCR_PROVIDER_NOT_CONFIGURED"), false);
 
-      ocr.setPassport(() => ({ ok: false, reason: "DOCUMENT_OCR_NOT_RECOGNIZED" }));
+      passportApi.setPassport({ status: "REVIEW" });
       const notRecognized = await passport(ctx.token);
       assert.equal(notRecognized.json().data.identity.passport.status, "NOT_RECOGNIZED");
 
-      ocr.setPassport(() => fakePassportResult({ nationality: "TEST" }));
+      passportApi.setPassport({ status: "REVIEW" });
       const unreadable = await passport(ctx.token);
-      assert.equal(unreadable.json().data.identity.passport.status, "FAILED");
+      assert.equal(unreadable.json().data.identity.passport.status, "NOT_RECOGNIZED");
       assert.equal(unreadable.json().data.identity.passport.fields, null);
 
-      ocr.setPassport(() => {
+      passportApi.setResponder(async () => {
         throw new Error("vendor 500 https://secret.example key=abc");
       });
       const thrown = await passport(ctx.token);
       assert.equal(thrown.statusCode, 200, thrown.body);
       assert.equal(thrown.json().data.identity.passport.status, "FAILED");
       assert.equal(thrown.body.includes("secret.example"), false);
+      passportApi.setPassport({ passportNumber: SYNTHETIC_PASSPORT_NUMBER });
 
       const form = await app.inject({
         method: "POST",
@@ -297,27 +314,39 @@ if (!RUN) {
         release = resolve;
       });
       let calls = 0;
-      ocr.setPassport(async () => {
+      passportApi.setResponder(async () => {
         calls += 1;
         if (calls === 1) {
           await gate;
-          return fakePassportResult({ fullName: "STALE PERSON", passportNumber: "STALE0001" });
+          return {
+            kind: "business",
+            status: "VALID",
+            passportNumber: "STALE0001",
+            provider: "passport-number-engine-test",
+            providerVersion: "test",
+          };
         }
-        return fakePassportResult({ fullName: "TEST PERSON", passportNumber: "TEST123456" });
+        return {
+          kind: "business",
+          status: "VALID",
+          passportNumber: SYNTHETIC_PASSPORT_NUMBER,
+          provider: "passport-number-engine-test",
+          providerVersion: "test",
+        };
       });
 
       const slowA = passport(ctx.token);
       for (let i = 0; i < 200 && calls === 0; i++) await new Promise((r) => setTimeout(r, 10));
       assert.equal(calls, 1);
       const fastB = await passport(ctx.token);
-      assert.equal(fastB.json().data.identity.passport.fields.passportNumber, "TEST123456");
+      assert.equal(fastB.json().data.identity.passport.fields.passportNumber, SYNTHETIC_PASSPORT_NUMBER);
       release();
       const a = await slowA;
       assert.equal(a.statusCode, 200, a.body);
 
       const final = await app.inject({ method: "GET", url: `/contracts/rental/${ctx.token}` });
-      assert.equal(final.json().data.identity.passport.fields.passportNumber, "TEST123456");
-      assert.equal(final.json().data.identity.passport.fields.fullName, "TEST PERSON");
+      assert.equal(final.json().data.identity.passport.fields.passportNumber, SYNTHETIC_PASSPORT_NUMBER);
+      assert.equal(final.json().data.identity.passport.fields.fullName, null);
       const active = await prisma.contractDocument.count({
         where: { contractId: ctx.contractId, type: "PASSPORT", supersededAt: null },
       });
@@ -327,20 +356,20 @@ if (!RUN) {
     test("retaking passport replaces the authoritative attempt; retaking an invalid license revokes readiness", async () => {
       const ctx = await offerAndToken();
       await validLicense(ctx.token);
-      ocr.setPassport(() => fakePassportResult());
+      passportApi.setPassport({ passportNumber: SYNTHETIC_PASSPORT_NUMBER });
       const first = await passport(ctx.token);
       assert.equal(first.json().data.identity.identityReady, true);
 
-      ocr.setPassport(() => ({ ok: false, reason: "DOCUMENT_OCR_NOT_RECOGNIZED" }));
+      passportApi.setPassport({ status: "REVIEW" });
       const retake = await passport(ctx.token);
       assert.equal(retake.json().data.identity.passport.status, "NOT_RECOGNIZED");
       assert.equal(retake.json().data.identity.identityReady, false);
       assert.equal(retake.json().data.flow.step, "LICENSE_VERIFICATION");
 
-      ocr.setPassport(() => fakePassportResult());
+      passportApi.setPassport({ passportNumber: SYNTHETIC_PASSPORT_NUMBER });
       assert.equal((await passport(ctx.token)).json().data.identity.identityReady, true);
 
-      ocr.setLicense({ licenseNumber: "DL-OLD", expiryDate: "2020-01-01" });
+      licenseFake.setLicense({ licenseNumber: "DL-OLD", expiryDate: "2020-01-01" });
       const badLicense = await license(ctx.token);
       assert.equal(badLicense.json().data.identity.identityReady, false);
       assert.equal(badLicense.json().data.identity.licenseStatus, "LICENSE_INVALID");
@@ -350,15 +379,10 @@ if (!RUN) {
     });
 
     test("license validation works independently while passport OCR is unavailable", async () => {
-      // A provider that reads licenses only: passport stays unavailable.
-      const licenseOnly = createFakeDocumentOcrProvider();
-      await injectDocumentOcr({
-        ...licenseOnly.provider,
-        capabilities: { supportsDriverLicense: true, supportsPassport: false },
-      });
+      await passportApi.clear();
       try {
         const ctx = await offerAndToken();
-        licenseOnly.setLicense({ licenseNumber: "DL-IND-1", expiryDate: "2031-06-01" });
+        licenseFake.setLicense({ licenseNumber: "DL-IND-1", expiryDate: "2031-06-01" });
         const valid = await license(ctx.token);
         assert.equal(valid.statusCode, 200, valid.body);
         assert.equal(valid.json().data.licenseVerification.status, "VALID");
@@ -375,17 +399,23 @@ if (!RUN) {
         assert.equal(attachment, 1, "passport capture is still stored");
 
         const other = await offerAndToken();
-        licenseOnly.setLicense({ licenseNumber: "DL-OLD", expiryDate: "2020-01-01" });
+        licenseFake.setLicense({ licenseNumber: "DL-OLD", expiryDate: "2020-01-01" });
         const expired = await license(other.token);
         assert.equal(expired.json().data.licenseVerification.status, "EXPIRED");
         assert.equal((await passport(other.token)).statusCode, 409);
       } finally {
-        await injectDocumentOcr(ocr.provider);
+        await passportApi.install();
       }
     });
 
     test("fully unconfigured runtime: license and passport both report provider unavailable", async () => {
-      await injectDocumentOcr(undefined);
+      setDrivingLicenseDocumentAnalysisForTests(async () => ({
+        ok: false,
+        reason: "NOT_CONFIGURED",
+        provider: "document-engine-license",
+        providerVersion: undefined,
+      }));
+      await passportApi.clear();
       try {
         const ctx = await offerAndToken();
         const res = await license(ctx.token);
@@ -393,7 +423,8 @@ if (!RUN) {
         assert.equal(res.json().data.licenseVerification.status, "PROVIDER_UNAVAILABLE");
         assert.equal((await passport(ctx.token)).json().error.context.reason, "PASSPORT_LICENSE_REQUIRED");
       } finally {
-        await injectDocumentOcr(ocr.provider);
+        setDrivingLicenseDocumentAnalysisForTests(async () => fakeLicenseOcrResult(licenseInput));
+        await passportApi.install();
       }
     });
 

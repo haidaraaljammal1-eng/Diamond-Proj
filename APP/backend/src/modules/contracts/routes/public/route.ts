@@ -34,6 +34,7 @@ import { AppError } from "src/lib/errors/app-error";
 import { devPaymentSimulationEnabled } from "src/modules/contracts/payment/payment-provider.factory";
 import { authRateLimit } from "src/plugins/rate-limit";
 import { publicLocaleFromAcceptLanguage } from "src/lib/http/public-frontend-url";
+import { resolveLicensePolicyNow } from "src/modules/contracts/license-policy-clock";
 
 export default async function contractsPublicRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -75,7 +76,11 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
     async (request) => {
       const file = await request.file();
       if (!file) throw AppError.validation("Validation failed");
-      return { data: await contracts.uploadDrivingLicense(request.params.token, file) };
+      return {
+        data: await contracts.uploadDrivingLicense(request.params.token, file, {
+          policyNow: resolveLicensePolicyNow(request),
+        }),
+      };
     },
   );
 
@@ -118,6 +123,27 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       const file = await request.file();
       if (!file) throw AppError.validation("Validation failed");
       return { data: await contracts.uploadPassport(request.params.token, file) };
+    },
+  );
+
+  app.get(
+    "/rental/:token/passport/preview",
+    {
+      schema: {
+        summary: "Stream the active passport capture for the rental token",
+        operationId: "streamPublicRentalPassportPreview",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: { 200: z.any(), ...commonErrorResponses },
+      },
+    },
+    async (request, reply) => {
+      const { mimeType, stream } = await contracts.openPublicPassportPreview(request.params.token);
+      return reply
+        .header("content-type", mimeType)
+        .header("cache-control", "private, no-store")
+        .send(stream);
     },
   );
 

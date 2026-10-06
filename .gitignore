@@ -35,3 +35,14 @@ APP/backend/src/schemas/zod/
 APP/backend/prisma/generated/
 
 .playwright-mcp
+
+# Document Engine (Python) — track source; ignore local env and caches
+DOCUMENT-ENGINE/**/.venv/
+DOCUMENT-ENGINE/**/.venv_ppocrv5/
+DOCUMENT-ENGINE/LICENSE/jobs/
+DOCUMENT-ENGINE/LICENSE/output/
+DOCUMENT-ENGINE/LICENSE/frozen/ocr_v1_1/vendor/
+DOCUMENT-ENGINE/**/__pycache__/
+DOCUMENT-ENGINE/**/.pytest_cache/
+DOCUMENT-ENGINE/**/.mypy_cache/
+DOCUMENT-ENGINE/**/.ruff_cache/

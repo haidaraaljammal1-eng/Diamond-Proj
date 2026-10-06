@@ -446,6 +446,11 @@ export const PublicRenewalOfferSchema = z.object({
   awaitingPayment: z.boolean().optional(),
 });
 
+const PublicFormIsoDateSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "invalid_date");
+
 export const PublicFormSchema = z.object({
   name: z.string().trim().min(1).max(200),
   mobile: z.string().trim().min(3).max(30),
@@ -454,6 +459,9 @@ export const PublicFormSchema = z.object({
   identityNumber: z.string().trim().min(3).max(50).optional(),
   passportNumber: z.string().trim().min(3).max(50).optional(),
   address: z.string().trim().max(400).optional(),
+  dateOfBirth: PublicFormIsoDateSchema.optional(),
+  drivingLicenseIssueDate: PublicFormIsoDateSchema.optional(),
+  drivingLicensePlaceOfIssue: z.string().trim().max(120).optional(),
 });
 
 export const PublicAcceptSchema = z.object({
@@ -771,12 +779,50 @@ export const PublicContractViewSchema = z.object({
     .optional(),
 });
 
+export const PublicDrivingLicenseExtractionFieldSchema = z.object({
+  value: z.string().nullable(),
+  ocrStatus: z.string().nullable().optional(),
+  confidence: z.number().nullable().optional(),
+  cropStatus: z.string().nullable().optional(),
+  ocrEligible: z.boolean().nullable().optional(),
+  engine: z.string().nullable().optional(),
+});
+
+export const PublicDrivingLicenseExtractionFieldsSchema = z.object({
+  licenseNumber: PublicDrivingLicenseExtractionFieldSchema,
+  holderNameEn: PublicDrivingLicenseExtractionFieldSchema,
+  nationality: PublicDrivingLicenseExtractionFieldSchema,
+  dateOfBirth: PublicDrivingLicenseExtractionFieldSchema,
+  issueDate: PublicDrivingLicenseExtractionFieldSchema,
+  expiryDate: PublicDrivingLicenseExtractionFieldSchema,
+  placeOfIssue: PublicDrivingLicenseExtractionFieldSchema,
+});
+
+export const DrivingLicenseExtractionStatusSchema = z.enum([
+  "PROCESSING",
+  "READY",
+  "PARTIAL",
+  "FAILED",
+  "PROVIDER_UNAVAILABLE",
+]);
+
+export const PublicDrivingLicenseExtractionSchema = z.object({
+  status: DrivingLicenseExtractionStatusSchema,
+  engineDocumentStatus: z.enum(["ACCEPT", "REVIEW_REQUIRED", "REJECT"]).nullable(),
+  fields: PublicDrivingLicenseExtractionFieldsSchema,
+});
+
+export type PublicDrivingLicenseExtraction = z.infer<typeof PublicDrivingLicenseExtractionSchema>;
+
+export const PublicLicenseUnreadableReasonSchema = z.enum(["BAD_FRAME", "OCR"]).nullable();
+
 export const PublicLicenseVerificationSchema = z.object({
   status: DrivingLicenseVerificationStatusSchema,
   licenseNumber: z.string().nullable(),
   licenseNumberMasked: z.string().nullable(),
   expiryDate: z.string().nullable(),
   confidence: z.number().nullable(),
+  unreadableReason: PublicLicenseUnreadableReasonSchema,
 });
 
 /** Normalized passport fields only — never a raw OCR payload. */
@@ -796,6 +842,8 @@ export const PublicIdentityStatusSchema = z.object({
   passport: z.object({
     status: PublicPassportStatusSchema,
     fields: PublicPassportFieldsSchema.nullable(),
+    /** Active passport capture exists; preview via token-scoped GET (no attachment id exposed). */
+    previewAvailable: z.boolean(),
   }),
   identityReady: z.boolean(),
 });
@@ -865,9 +913,14 @@ export const PublicRentalContextSchema = z.object({
       address: z.string().nullable(),
       drivingLicenseNumber: z.string().nullable(),
       drivingLicenseExpiry: z.string().nullable(),
+      dateOfBirth: z.string().nullable().optional(),
+      drivingLicenseIssueDate: z.string().nullable().optional(),
+      drivingLicensePlaceOfIssue: z.string().nullable().optional(),
     })
     .nullable(),
   licenseVerification: PublicLicenseVerificationSchema,
+  /** Machine OCR snapshot for the active driving-licence document (persisted). */
+  drivingLicenseExtraction: PublicDrivingLicenseExtractionSchema.nullable(),
   identity: PublicIdentityStatusSchema,
   payment: z.object({
     status: ContractPaymentStatusSchema.nullable(),

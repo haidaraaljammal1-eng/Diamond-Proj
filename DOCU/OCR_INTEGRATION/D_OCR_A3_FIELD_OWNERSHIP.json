@@ -1,0 +1,69 @@
+{
+  "audit": "D-OCR-A3",
+  "recommendation": "OPTION_C_DrivingLicenseExtraction_plus_Customer_confirmed",
+  "fields": {
+    "license_number": {
+      "ocr_audit": "DrivingLicenseExtraction.licenseNumber",
+      "policy_gate": "DrivingLicenseVerification.licenseNumber",
+      "user_confirmed": "not on form today; submit uses Verification OCR",
+      "persistence_class": "BOTH_RAW_AND_CONFIRMED",
+      "notes": "Authoritative for gate/TARS/official doc from verification; user cannot override via form yet"
+    },
+    "name_en": {
+      "ocr_audit": "DrivingLicenseExtraction.holderNameEn",
+      "user_confirmed": "Customer.name",
+      "persistence_class": "BOTH_RAW_AND_CONFIRMED",
+      "notes": "Form name is person identity; OCR name is suggestion only"
+    },
+    "nationality": {
+      "ocr_audit": "DrivingLicenseExtraction.nationality",
+      "user_confirmed": "Customer.nationality",
+      "persistence_class": "BOTH_RAW_AND_CONFIRMED",
+      "notes": "Free text; OCR 'INDIA' prefills editable field"
+    },
+    "date_of_birth": {
+      "ocr_audit": "DrivingLicenseExtraction.dateOfBirth",
+      "user_confirmed": "Customer.dateOfBirth (proposed)",
+      "persistence_class": "BOTH_RAW_AND_CONFIRMED",
+      "notes": "Person field; passport DOB may differ — prefer explicit Customer ownership"
+    },
+    "issue_date": {
+      "ocr_audit": "DrivingLicenseExtraction.issueDate",
+      "user_confirmed": "Customer.drivingLicenseIssueDate (proposed)",
+      "persistence_class": "BOTH_RAW_AND_CONFIRMED",
+      "notes": "Licence metadata; TARS today only number+expiry"
+    },
+    "expiry_date": {
+      "ocr_audit": "DrivingLicenseExtraction.expiryDate",
+      "policy_gate": "DrivingLicenseVerification.expiryDate",
+      "user_confirmed": "Customer.drivingLicenseExpiry via submit from verification",
+      "persistence_class": "BOTH_RAW_AND_CONFIRMED",
+      "notes": "EXPIRED policy uses calendar compare at verification layer"
+    },
+    "place_of_issue": {
+      "ocr_audit": "DrivingLicenseExtraction.placeOfIssue",
+      "user_confirmed": "Customer.drivingLicensePlaceOfIssue (proposed)",
+      "persistence_class": "BOTH_RAW_AND_CONFIRMED",
+      "notes": "No current business consumer beyond UI/archive"
+    },
+    "name_ar": {
+      "ocr_audit": "none NOT_OCR_PROCESSED",
+      "persistence_class": "TRANSIENT_PREFILL_ONLY",
+      "notes": "Out of English OCR scope"
+    }
+  },
+  "missing_customer_fields_today": [
+    "dateOfBirth",
+    "drivingLicenseIssueDate",
+    "drivingLicensePlaceOfIssue"
+  ],
+  "engine_to_diamond_status": {
+    "ACCEPT_not_expired_conf_ok": "VALID",
+    "ACCEPT_not_expired_conf_low": "REVIEW_REQUIRED",
+    "ACCEPT_expired": "EXPIRED",
+    "REVIEW_REQUIRED": "REVIEW_REQUIRED_or_UNREADABLE",
+    "adapter_failure": "UNREADABLE_or_PROVIDER_UNAVAILABLE"
+  },
+  "reload_survives_today": false,
+  "confidence_storage": "aggregate on Verification; per-field in DrivingLicenseExtraction.fieldsMeta JSON"
+}

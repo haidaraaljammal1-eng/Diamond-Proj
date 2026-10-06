@@ -2,7 +2,7 @@ import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { createFakeDocumentOcrProvider } from "../helpers/fake-document-ocr-provider";
+import { createFakeVisionAIProvider } from "../helpers/fake-vision-ai-provider";
 import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
@@ -205,7 +205,7 @@ if (!RUN) {
       const passportBefore = await prisma.passportExtraction.findFirstOrThrow({ where: { contractId: ctx.contractId } });
       const licenseBefore = await prisma.drivingLicenseVerification.findFirstOrThrow({ where: { contractId: ctx.contractId } });
 
-      const counter = createFakeDocumentOcrProvider();
+      const counter = createFakeVisionAIProvider();
       await injectDocumentOcr(counter.provider);
       const res = await patchOfficial(ctx.token, {
         address: "TEST ADDRESS 1",
