@@ -97,9 +97,7 @@ async function findCustomersByStrongField(
 }
 
 /** Canonical advisory-lock entity ids for present strong identity fields (sorted). */
-export function canonicalStrongIdentityLockEntityIds(
-  materialized: Pick<MaterializableCustomer, "identityNumber" | "passportNumber" | "drivingLicenseNumber">,
-): string[] {
+export function canonicalStrongIdentityLockEntityIds(materialized: StrongIdentity): string[] {
   const strong = extractStrongIdentity(materialized);
   const keys: string[] = [];
   if (strong.identityNumber) keys.push(`identity:${strong.identityNumber}`);

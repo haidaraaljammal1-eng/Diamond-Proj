@@ -7,7 +7,14 @@ function baseContext(overrides: Partial<PublicRentalContext> = {}): PublicRental
   return {
     flow: { step: "LICENSE_VERIFICATION" },
     contract: { status: "AWAITING", contractNumber: "C-1", termsVersion: "v1" },
-    licenseVerification: { status: null, licenseNumber: null, expiryDate: null, unreadableReason: null },
+    licenseVerification: {
+      status: null,
+      licenseNumber: null,
+      licenseNumberMasked: null,
+      expiryDate: null,
+      confidence: null,
+      unreadableReason: null,
+    },
     identity: null,
     customer: null,
     ...overrides,
@@ -18,13 +25,27 @@ describe("resolveDocumentVerificationSubStage", () => {
   it("stays on licence until VALID", () => {
     assert.equal(
       resolveDocumentVerificationSubStage(
-        baseContext({ licenseVerification: { status: "EXPIRED", licenseNumber: "1", expiryDate: "2020-01-01", unreadableReason: null } }),
+        baseContext({
+          licenseVerification: {
+            status: "EXPIRED",
+            licenseNumber: "1",
+            expiryDate: "2020-01-01",
+            unreadableReason: null,
+          } as PublicRentalContext["licenseVerification"],
+        }),
       ),
       "LICENSE",
     );
     assert.equal(
       resolveDocumentVerificationSubStage(
-        baseContext({ licenseVerification: { status: "UNREADABLE", licenseNumber: null, expiryDate: null, unreadableReason: "OCR" } }),
+        baseContext({
+          licenseVerification: {
+            status: "UNREADABLE",
+            licenseNumber: null,
+            expiryDate: null,
+            unreadableReason: "OCR",
+          } as PublicRentalContext["licenseVerification"],
+        }),
       ),
       "LICENSE",
     );
@@ -34,8 +55,17 @@ describe("resolveDocumentVerificationSubStage", () => {
     assert.equal(
       resolveDocumentVerificationSubStage(
         baseContext({
-          licenseVerification: { status: "VALID", licenseNumber: "1893918", expiryDate: "2023-04-13", unreadableReason: null },
-          identity: { identityReady: false, passport: { status: "REQUIRED", fields: null }, licenseStatus: "LICENSE_VALID", passportStatus: "PASSPORT_REQUIRED" },
+          licenseVerification: {
+            status: "VALID",
+            licenseNumber: "1893918",
+            expiryDate: "2023-04-13",
+            unreadableReason: null,
+          } as PublicRentalContext["licenseVerification"],
+          identity: {
+            identityReady: false,
+            passport: { status: "REQUIRED", fields: null, previewAvailable: false },
+            licenseStatus: "LICENSE_VALID",
+          },
         }),
       ),
       "PASSPORT",
@@ -46,14 +76,28 @@ describe("resolveDocumentVerificationSubStage", () => {
     assert.equal(
       resolveDocumentVerificationSubStage(
         baseContext({
-          licenseVerification: { status: "VALID", licenseNumber: "1893918", expiryDate: "2023-04-13", unreadableReason: null },
+          licenseVerification: {
+            status: "VALID",
+            licenseNumber: "1893918",
+            expiryDate: "2023-04-13",
+            unreadableReason: null,
+          } as PublicRentalContext["licenseVerification"],
           identity: {
             identityReady: true,
             licenseStatus: "LICENSE_VALID",
-            passportStatus: "PASSPORT_READY",
             passport: {
               status: "READY",
-              fields: { passportNumber: "P1234567", fullName: "Test", nationality: "AE" },
+              previewAvailable: true,
+              fields: {
+                passportNumber: "P1234567",
+                fullName: "Test",
+                nationality: "AE",
+                dateOfBirth: null,
+                sex: null,
+                passportIssueDate: null,
+                passportExpiryDate: null,
+                issuingCountry: null,
+              },
             },
           },
         }),

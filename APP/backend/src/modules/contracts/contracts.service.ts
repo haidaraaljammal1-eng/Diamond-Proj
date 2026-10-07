@@ -2622,14 +2622,13 @@ export function createContractsService(fastify: FastifyInstance) {
     const extraction = await prisma.passportExtraction.findFirst({
       where: { contractId: link.contractId, document: { supersededAt: null } },
       orderBy: { createdAt: "desc" },
-      include: { attachment: true },
+      include: { document: { include: { attachment: true } } },
     });
-    if (!extraction?.attachment) throw AppError.notFound("Passport preview not found");
+    const attachment = extraction?.document?.attachment;
+    if (!attachment) throw AppError.notFound("Passport preview not found");
     return {
-      mimeType: extraction.attachment.mimeType,
-      stream: createReadStream(
-        resolveStoragePath(env.FILE_STORAGE_DIR, extraction.attachment.storageKey),
-      ),
+      mimeType: attachment.mimeType,
+      stream: createReadStream(resolveStoragePath(env.FILE_STORAGE_DIR, attachment.storageKey)),
     };
   }
 

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { env } from "src/config/env";
-import { analyzeDrivingLicenseDocument } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
+import {
+  analyzeDrivingLicenseDocument,
+  setDrivingLicenseDocumentAnalysisForTests,
+} from "src/modules/contracts/ocr/driving-license-ocr.adapter";
 import { evaluatePassportOcr } from "src/modules/contracts/passport-extraction-policy";
 import { buildPassportStructuredResult } from "src/modules/vision-ai/extraction/passport-postprocess";
 import { analyzeIdentityDocument } from "src/modules/vision-ai/identity-analysis.service";
@@ -16,12 +19,16 @@ import {
 } from "src/modules/vision-ai/vision-ai-provider.factory";
 import {
   createFakeVisionAIProvider,
+  fakeLicenseOcrResult,
   fakeUnrecognizedPassportExtraction,
 } from "../helpers/fake-vision-ai-provider";
 
 const FILE = { bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), mimeType: "image/png" };
 
-afterEach(() => setVisionAIProviderForTests(undefined));
+afterEach(() => {
+  setVisionAIProviderForTests(undefined);
+  setDrivingLicenseDocumentAnalysisForTests(undefined);
+});
 
 test("simulation provider returns normalized identity through analyzer", async () => {
   const provider = createSimulationVisionAIProvider();
@@ -85,12 +92,17 @@ test("passport policy maps unrecognized extraction", () => {
   assert.equal(evaluated.status, "NOT_RECOGNIZED");
 });
 
-test("injected fake provider is used for passport and license", async () => {
+test("injected fake vision provider is used for passport", async () => {
   const fake = createFakeVisionAIProvider();
   setVisionAIProviderForTests(fake.provider);
   assert.equal((await analyzeIdentityDocument("PASSPORT", FILE)).provider, "test");
-  assert.equal((await analyzeDrivingLicenseDocument(FILE)).provider, "test");
-  assert.deepEqual(fake.calls, ["PASSPORT", "DRIVER_LICENSE"]);
+  assert.deepEqual(fake.calls, ["PASSPORT"]);
+});
+
+test("injected license analysis hook is used for driving license", async () => {
+  setDrivingLicenseDocumentAnalysisForTests(async () => fakeLicenseOcrResult());
+  const result = await analyzeDrivingLicenseDocument(FILE);
+  assert.equal(result.provider, "test-license-ocr");
 });
 
 test("gemini licence pipeline normalizes slash-separated printed dates", async () => {

@@ -21,7 +21,6 @@ import { contractPaymentMethodLabel } from "../../utils/contract-payment-method"
 import { renewalCollectionState, renewalHistoryLabelKey } from "../../utils/renewal-history";
 import { createIdempotencyKey } from "../../utils/contract-link";
 import type { ContractDetailDto } from "../../types/contract.types";
-import type { FinalReconciliationDetailDto } from "../../types/reconciliation.types";
 import {
   ReconciliationCustodySection,
   ReconciliationFinancialSummary,
@@ -38,15 +37,6 @@ function reviewSettlementAmountDue(detail: ContractDetailDto): number {
       .filter((row) => row.collectable)
       .reduce((sum, row) => sum + row.additionalAmount, 0)
   );
-}
-
-function finalReconciliationSummaryData(detail: FinalReconciliationDetailDto) {
-  return {
-    totals: detail.totals,
-    reconciliationChargesAmount: detail.reconciliationChargesAmount,
-    outstandingRenewalAmount: detail.outstandingRenewalAmount,
-    settlementAmountDue: detail.settlementAmountDue,
-  };
 }
 
 export interface ContractDetailDrawerProps {
@@ -317,7 +307,7 @@ export function ContractDetailDrawer({
               <ReconciliationImagePairsSection pairs={detail.finalReconciliation.imagePairs} />
               <ReconciliationCustodySection custody={detail.finalReconciliation.custody} />
               <ReconciliationFinancialSummary
-                data={finalReconciliationSummaryData(detail.finalReconciliation)}
+                totals={detail.finalReconciliation.totals}
                 currency={detail.currency}
               />
               {detail.finalReconciliation.finalizedAt ? (

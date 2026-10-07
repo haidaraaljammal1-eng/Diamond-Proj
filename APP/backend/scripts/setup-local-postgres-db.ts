@@ -17,7 +17,7 @@ if (!databaseUrl) {
 const parsed = new URL(databaseUrl.replace(/^postgresql:/, "http:"));
 const user = decodeURIComponent(parsed.username);
 const pass = decodeURIComponent(parsed.password);
-const db = decodeURIComponent(parsed.pathname.slice(1).split("?")[0]);
+const db = decodeURIComponent(parsed.pathname.slice(1).split("?")[0] ?? "");
 
 const psql = "C:/Program Files/PostgreSQL/15/bin/psql.exe";
 

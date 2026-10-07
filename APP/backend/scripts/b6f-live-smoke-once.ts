@@ -12,11 +12,14 @@ import { setDrivingLicenseDocumentAnalysisForTests } from "src/modules/contracts
 import { resetFakeUaeDrivingLicenseExtractCallCount } from "../tests/helpers/fake-uae-driving-license-api";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
-const imagePath = process.env.B6F_LOCAL_LICENSE_IMAGE?.trim();
-if (!imagePath) {
-  console.error("B6F_LOCAL_LICENSE_IMAGE is required");
-  process.exit(1);
-}
+const imagePath = (() => {
+  const value = process.env.B6F_LOCAL_LICENSE_IMAGE?.trim();
+  if (!value) {
+    console.error("B6F_LOCAL_LICENSE_IMAGE is required");
+    process.exit(1);
+  }
+  return value;
+})();
 if (!process.env.UAE_DRIVING_LICENSE_API_URL?.trim()) {
   console.error("UAE_DRIVING_LICENSE_API_URL must point at the licence engine");
   process.exit(1);

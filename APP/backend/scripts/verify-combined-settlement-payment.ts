@@ -8,12 +8,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 dotenv.config({ override: false });
 
-const key = process.argv[2];
+const keyArg = process.argv[2];
 const databaseUrl = process.env.DATABASE_URL;
-if (!key || !databaseUrl) {
+if (!keyArg || !databaseUrl) {
   console.error("contract id or number required");
   process.exit(1);
 }
+const key = keyArg;
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),

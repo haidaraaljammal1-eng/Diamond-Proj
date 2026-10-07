@@ -1,3 +1,4 @@
+import type { DrivingLicenseOcrResult } from "src/modules/contracts/ocr/driving-license-ocr.types";
 import { buildLicenceStructuredResult } from "src/modules/vision-ai/extraction/licence-postprocess";
 import { buildPassportStructuredResult } from "src/modules/vision-ai/extraction/passport-postprocess";
 import { visionAiNotImplemented } from "src/modules/vision-ai/vision-ai-not-implemented";
@@ -10,6 +11,29 @@ import type {
 export interface FakeLicenseInput {
   licenseNumber?: string | null;
   expiryDate?: string | null;
+}
+
+export function fakeLicenseOcrResult(input: FakeLicenseInput = {}): DrivingLicenseOcrResult {
+  const licenseNumber = input.licenseNumber !== undefined ? input.licenseNumber : "DL-OK";
+  const expiryDate = input.expiryDate !== undefined ? input.expiryDate : "2031-06-01";
+  if (!licenseNumber?.trim() || !expiryDate?.trim()) {
+    return {
+      ok: false,
+      reason: "UNREADABLE",
+      provider: "test-license-ocr",
+      providerVersion: "test",
+    };
+  }
+  return {
+    ok: true,
+    licenseNumber: licenseNumber.trim(),
+    expiryDate: expiryDate.trim(),
+    holderName: null,
+    confidence: 1,
+    fieldConfidences: { licenseNumber: 1, expiryDate: 1 },
+    provider: "test-license-ocr",
+    providerVersion: "test",
+  };
 }
 
 export type FakeVisionResponder = () => Promise<VisionExtractionResult> | VisionExtractionResult;

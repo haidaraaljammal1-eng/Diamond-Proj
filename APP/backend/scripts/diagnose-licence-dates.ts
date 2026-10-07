@@ -45,7 +45,7 @@ async function main(): Promise<void> {
   }
 
   const fileArg = process.argv[2];
-  const files = fileArg
+  const files: [string, string][] = fileArg
     ? [[path.basename(fileArg), path.resolve(fileArg)]]
     : [
         ["L1", "C:/Users/Rw/OCR TEST/samples/licence/image.png"],
