@@ -27,9 +27,13 @@ import { WHATSAPP_MESSAGE_PAGE_SIZE, WHATSAPP_PAGE_SIZE } from "../types/whatsap
 import {
   applyUnreadZero,
   appendMessageById,
+  isConversationDetail,
+  mergeAndSortWhatsAppMessages,
   mergeById,
+  mergeConversationListIntoDetail,
   patchOutboundMessage,
   prependOlderMessages,
+  reconcileSelectedConversation,
   toChronologicalPage,
   upsertConversationForRealtime,
 } from "../utils/whatsapp-view-model";
@@ -97,8 +101,38 @@ let listRequestId = 0;
 let messagesRequestId = 0;
 let listInFlight: Promise<void> | null = null;
 const seenRealtimeEventIds = new Set<string>();
-let conversationPatchRequestId = 0;
-let realtimeMessageRequestId = 0;
+/** Per-conversation generation: stale realtime/select responses are ignored per id. */
+const conversationSyncGeneration = new Map<string, number>();
+const messagesLoadGeneration = new Map<string, number>();
+const reconcilePending = new Map<string, boolean>();
+const reconcileInFlight = new Map<string, Promise<void>>();
+
+const REALTIME_CONTENT_EVENTS = new Set<WhatsAppRealtimeEvent["type"]>([
+  "whatsapp.message.received",
+  "whatsapp.message.outbound_created",
+  "whatsapp.conversation.created",
+  "whatsapp.conversation.updated",
+]);
+
+function bumpConversationSync(conversationId: string): number {
+  const next = (conversationSyncGeneration.get(conversationId) ?? 0) + 1;
+  conversationSyncGeneration.set(conversationId, next);
+  return next;
+}
+
+function isConversationSyncCurrent(conversationId: string, generation: number): boolean {
+  return conversationSyncGeneration.get(conversationId) === generation;
+}
+
+function bumpMessagesLoad(conversationId: string): number {
+  const next = (messagesLoadGeneration.get(conversationId) ?? 0) + 1;
+  messagesLoadGeneration.set(conversationId, next);
+  return next;
+}
+
+function isMessagesLoadCurrent(conversationId: string, generation: number): boolean {
+  return messagesLoadGeneration.get(conversationId) === generation;
+}
 
 export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
   connection: null,
@@ -134,7 +168,19 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
   async reconcileRealtime() {
     const selectedId = get().selectedConversationId;
     await Promise.all([loadConnection(set), loadConversations(get, set, { replace: true })]);
-    if (selectedId) await mergeSelectedMessages(selectedId, get, set);
+    if (selectedId) {
+      await reconcileConversationFromServer(
+        selectedId,
+        {
+          type: "whatsapp.conversation.updated",
+          eventId: `client-reconcile-${selectedId}-${Date.now()}`,
+          conversationId: selectedId,
+          occurredAt: new Date().toISOString(),
+        },
+        get,
+        set,
+      );
+    }
   },
 
   setRealtimeStatus(status) {
@@ -147,7 +193,7 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
       case "whatsapp.connection.updated":
         await loadConnection(set);
         if (get().selectedConversationId) {
-          await refreshAffectedConversation(get().selectedConversationId!, event, get, set);
+          await queueConversationReconcile(get().selectedConversationId!, event, get, set);
         }
         return;
       case "whatsapp.conversation.read":
@@ -173,7 +219,7 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
       case "whatsapp.message.received":
       case "whatsapp.message.outbound_created":
         if (event.conversationId) {
-          await refreshAffectedConversation(event.conversationId, event, get, set);
+          await queueConversationReconcile(event.conversationId, event, get, set);
         }
         return;
       default:
@@ -221,13 +267,13 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
     const page = get().messagePageByConversation[conversationId] ?? 1;
     if (!meta || page >= meta.totalPages) return;
     const nextPage = page + 1;
-    const requestId = ++messagesRequestId;
+    const requestId = bumpMessagesLoad(conversationId);
     try {
       const result = await listWhatsAppMessages(conversationId, {
         page: nextPage,
         pageSize: WHATSAPP_MESSAGE_PAGE_SIZE,
       });
-      if (requestId !== messagesRequestId) return;
+      if (!isMessagesLoadCurrent(conversationId, requestId)) return;
       if (get().selectedConversationId !== conversationId) return;
       const current = get().messagesByConversation[conversationId] ?? [];
       set({
@@ -247,7 +293,7 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
         messagesError: null,
       });
     } catch (error) {
-      if (requestId !== messagesRequestId) return;
+      if (!isMessagesLoadCurrent(conversationId, requestId)) return;
       if (get().selectedConversationId !== conversationId) return;
       set({
         messagesStatus: "error",
@@ -269,7 +315,20 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
       set({
         sending: false,
         sendError: null,
-        selectedConversation: result.conversation,
+        selectedConversation: reconcileSelectedConversation(
+          get().conversations.map((item) =>
+            item.id === conversationId
+              ? {
+                  ...item,
+                  lastMessagePreview: result.conversation.lastMessagePreview,
+                  lastMessageType: result.conversation.lastMessageType,
+                  lastMessageAt: result.conversation.lastMessageAt,
+                  unreadCount: result.conversation.unreadCount,
+                }
+              : item,
+          ),
+          result.conversation,
+        ),
         messagesByConversation: {
           ...get().messagesByConversation,
           [conversationId]: appendMessageById(current, result.message),
@@ -335,26 +394,27 @@ function applySendResult(
     return;
   }
   const current = get().messagesByConversation[conversationId] ?? [];
+  const nextConversations = get().conversations.map((item) =>
+    item.id === conversationId
+      ? {
+          ...item,
+          lastMessagePreview: result.conversation.lastMessagePreview,
+          lastMessageType: result.conversation.lastMessageType,
+          lastMessageAt: result.conversation.lastMessageAt,
+          unreadCount: result.conversation.unreadCount,
+          customerLinked: result.conversation.customerLinked,
+        }
+      : item,
+  );
   set({
     sending: false,
     sendError: null,
-    selectedConversation: result.conversation,
+    selectedConversation: reconcileSelectedConversation(nextConversations, result.conversation),
     messagesByConversation: {
       ...get().messagesByConversation,
       [conversationId]: appendMessageById(current, result.message),
     },
-    conversations: get().conversations.map((item) =>
-      item.id === conversationId
-        ? {
-            ...item,
-            lastMessagePreview: result.conversation.lastMessagePreview,
-            lastMessageType: result.conversation.lastMessageType,
-            lastMessageAt: result.conversation.lastMessageAt,
-            unreadCount: result.conversation.unreadCount,
-            customerLinked: result.conversation.customerLinked,
-          }
-        : item,
-    ),
+    conversations: nextConversations,
   });
 }
 
@@ -387,11 +447,16 @@ async function loadConversations(
       const result = await listWhatsAppConversations(query);
       if (requestId !== listRequestId) return;
       const existing = options.replace ? [] : get().conversations;
+      const nextConversations = options.replace ? result.data : mergeById(existing, result.data);
       set({
-        conversations: options.replace ? result.data : mergeById(existing, result.data),
+        conversations: nextConversations,
         conversationMeta: result.meta,
         listStatus: "ready",
         listError: null,
+        selectedConversation: reconcileSelectedConversation(
+          nextConversations,
+          get().selectedConversation,
+        ),
       });
     } catch (error) {
       if (requestId !== listRequestId) return;
@@ -411,7 +476,8 @@ async function selectConversation(
   get: () => WhatsAppState,
   set: (partial: Partial<WhatsAppState>) => void,
 ) {
-  const requestId = ++messagesRequestId;
+  const requestId = bumpMessagesLoad(id);
+  messagesRequestId += 1;
   const fromList = get().conversations.find((item) => item.id === id) ?? null;
   const previous =
     get().selectedConversationId === id ? get().selectedConversation : fromList;
@@ -428,13 +494,13 @@ async function selectConversation(
       getWhatsAppConversation(id),
       listWhatsAppMessages(id, { page: 1, pageSize: WHATSAPP_MESSAGE_PAGE_SIZE }),
     ]);
-    if (requestId !== messagesRequestId) return;
+    if (!isMessagesLoadCurrent(id, requestId)) return;
     if (get().selectedConversationId !== id) return;
     set({
       selectedConversation: detail,
       messagesByConversation: {
         ...get().messagesByConversation,
-        [id]: toChronologicalPage(messages.data),
+        [id]: mergeAndSortWhatsAppMessages([], messages.data),
       },
       messageMetaByConversation: {
         ...get().messageMetaByConversation,
@@ -448,7 +514,7 @@ async function selectConversation(
       messagesError: null,
     });
   } catch (error) {
-    if (requestId !== messagesRequestId) return;
+    if (!isMessagesLoadCurrent(id, requestId)) return;
     if (get().selectedConversationId !== id) return;
     set({
       messagesStatus: "error",
@@ -459,17 +525,18 @@ async function selectConversation(
 
   try {
     const updated = await markWhatsAppConversationRead(id);
-    if (requestId !== messagesRequestId) return;
+    if (!isMessagesLoadCurrent(id, requestId)) return;
     if (get().selectedConversationId !== id) return;
+    const nextConversations = get().conversations.map((item) =>
+      item.id === id ? applyUnreadZero(item) : item,
+    );
     set({
-      selectedConversation: updated,
-      conversations: get().conversations.map((item) =>
-        item.id === id ? applyUnreadZero(item) : item,
-      ),
+      selectedConversation: reconcileSelectedConversation(nextConversations, updated),
+      conversations: nextConversations,
       markReadError: null,
     });
   } catch (error) {
-    if (requestId !== messagesRequestId) return;
+    if (!isMessagesLoadCurrent(id, requestId)) return;
     if (get().selectedConversationId !== id) return;
     set({ markReadError: normalizeApiError(error) });
   }
@@ -495,10 +562,13 @@ function applyConversationRead(
   const conversations = get().conversations.map((item) =>
     item.id === conversationId ? applyUnreadZero(item) : item,
   );
+  const currentSelected = get().selectedConversation;
   const selected =
-    get().selectedConversation?.id === conversationId
-      ? applyUnreadZero(get().selectedConversation as WhatsAppConversationListItemDto)
-      : get().selectedConversation;
+    currentSelected?.id === conversationId
+      ? isConversationDetail(currentSelected)
+        ? { ...currentSelected, unreadCount: 0 }
+        : applyUnreadZero(currentSelected as WhatsAppConversationListItemDto)
+      : currentSelected;
   const visible = conversations.filter((item) => {
     if (query.unread && item.unreadCount <= 0 && item.id !== selectedId) return false;
     return true;
@@ -530,67 +600,98 @@ function patchLocalMessage(
   if (changed) set({ messagesByConversation: nextMessages });
 }
 
-async function refreshAffectedConversation(
+async function queueConversationReconcile(
   conversationId: string,
   event: WhatsAppRealtimeEvent,
   get: () => WhatsAppState,
   set: (partial: Partial<WhatsAppState>) => void,
 ): Promise<void> {
-  const requestId = ++conversationPatchRequestId;
+  if (reconcileInFlight.has(conversationId)) {
+    reconcilePending.set(conversationId, true);
+    return reconcileInFlight.get(conversationId)!;
+  }
+  const run = reconcileConversationFromServer(conversationId, event, get, set).finally(() => {
+    reconcileInFlight.delete(conversationId);
+    if (reconcilePending.get(conversationId)) {
+      reconcilePending.set(conversationId, false);
+      void queueConversationReconcile(conversationId, event, get, set);
+    }
+  });
+  reconcileInFlight.set(conversationId, run);
+  return run;
+}
+
+async function reconcileConversationFromServer(
+  conversationId: string,
+  event: WhatsAppRealtimeEvent,
+  get: () => WhatsAppState,
+  set: (partial: Partial<WhatsAppState>) => void,
+): Promise<void> {
+  const generation = bumpConversationSync(conversationId);
+  const isSelected = get().selectedConversationId === conversationId;
+  const needsMessages = isSelected && REALTIME_CONTENT_EVENTS.has(event.type);
+
   try {
-    const detail = await getWhatsAppConversation(conversationId);
-    if (requestId !== conversationPatchRequestId) return;
-    const query = get().query;
-    set({
-      conversations: upsertConversationForRealtime(
+    if (needsMessages) {
+      const [detail, messages] = await Promise.all([
+        getWhatsAppConversation(conversationId),
+        listWhatsAppMessages(conversationId, {
+          page: 1,
+          pageSize: WHATSAPP_MESSAGE_PAGE_SIZE,
+        }),
+      ]);
+      if (!isConversationSyncCurrent(conversationId, generation)) return;
+      const query = get().query;
+      const nextConversations = upsertConversationForRealtime(
         get().conversations,
         detail,
         query,
         get().selectedConversationId,
-      ),
-      selectedConversation:
-        get().selectedConversationId === conversationId ? detail : get().selectedConversation,
-    });
-  } catch {
-    if (requestId !== conversationPatchRequestId) return;
-  }
+      );
+      const listRow = nextConversations.find((item) => item.id === conversationId) ?? detail;
+      const current = get().messagesByConversation[conversationId] ?? [];
+      set({
+        conversations: nextConversations,
+        selectedConversation:
+          isSelected
+            ? mergeConversationListIntoDetail(detail, listRow)
+            : get().selectedConversation,
+        messagesByConversation: {
+          ...get().messagesByConversation,
+          [conversationId]: mergeAndSortWhatsAppMessages(
+            current,
+            messages.data,
+          ),
+        },
+        messageMetaByConversation: {
+          ...get().messageMetaByConversation,
+          [conversationId]: messages.meta,
+        },
+        messagesError: null,
+        messagesStatus: "ready",
+      });
+      return;
+    }
 
-  const selected = get().selectedConversationId === conversationId;
-  const needsMessage =
-    selected &&
-    (event.type === "whatsapp.message.received" ||
-      event.type === "whatsapp.message.outbound_created");
-  if (!needsMessage) return;
-  await mergeSelectedMessages(conversationId, get, set);
-}
-
-async function mergeSelectedMessages(
-  conversationId: string,
-  get: () => WhatsAppState,
-  set: (partial: Partial<WhatsAppState>) => void,
-): Promise<void> {
-  const requestId = ++realtimeMessageRequestId;
-  try {
-    const messages = await listWhatsAppMessages(conversationId, {
-      page: 1,
-      pageSize: WHATSAPP_MESSAGE_PAGE_SIZE,
-    });
-    if (requestId !== realtimeMessageRequestId) return;
-    if (get().selectedConversationId !== conversationId) return;
-    const current = get().messagesByConversation[conversationId] ?? [];
+    const detail = await getWhatsAppConversation(conversationId);
+    if (!isConversationSyncCurrent(conversationId, generation)) return;
+    const query = get().query;
+    const nextConversations = upsertConversationForRealtime(
+      get().conversations,
+      detail,
+      query,
+      get().selectedConversationId,
+    );
+    const listRow = nextConversations.find((item) => item.id === conversationId) ?? detail;
     set({
-      messagesByConversation: {
-        ...get().messagesByConversation,
-        [conversationId]: mergeById(current, toChronologicalPage(messages.data)),
-      },
-      messageMetaByConversation: {
-        ...get().messageMetaByConversation,
-        [conversationId]: messages.meta,
-      },
-      messagesError: null,
+      conversations: nextConversations,
+      selectedConversation:
+        isSelected
+          ? mergeConversationListIntoDetail(detail, listRow)
+          : reconcileSelectedConversation(nextConversations, get().selectedConversation),
     });
   } catch {
-    if (requestId !== realtimeMessageRequestId) return;
+    if (!isConversationSyncCurrent(conversationId, generation)) return;
   }
 }
 
@@ -598,8 +699,10 @@ export function resetWhatsAppStoreForTests(): void {
   connectionRequestId = 0;
   listRequestId = 0;
   messagesRequestId = 0;
-  conversationPatchRequestId = 0;
-  realtimeMessageRequestId = 0;
+  conversationSyncGeneration.clear();
+  messagesLoadGeneration.clear();
+  reconcilePending.clear();
+  reconcileInFlight.clear();
   seenRealtimeEventIds.clear();
   useWhatsAppStore.setState({
     connection: null,

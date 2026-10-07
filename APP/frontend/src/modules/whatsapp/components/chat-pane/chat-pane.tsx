@@ -140,7 +140,17 @@ export function WhatsAppChatPane({
         </p>
       ) : null}
 
-      <div className={styles.msgs} ref={scroller} data-testid="whatsapp-messages">
+      <div
+        className={styles.msgs}
+        ref={scroller}
+        data-testid="whatsapp-messages"
+        onScroll={() => {
+          const node = scroller.current;
+          if (!node) return;
+          const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+          stickToBottom.current = distanceFromBottom < 96;
+        }}
+      >
         {hasOlder ? (
           <div className={styles.older}>
             <Button type="button" variant="secondary" size="sm" onClick={() => void loadOlder()}>

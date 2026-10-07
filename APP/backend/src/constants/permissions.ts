@@ -110,6 +110,9 @@ export const PERMISSIONS = {
   FINANCE_READ: "finance.read",
   FINANCE_MANAGE_EXPENSES: "finance.manage_expenses",
 
+  INVOICES_READ: "invoices.read",
+  INVOICES_SEND_WHATSAPP: "invoices.send_whatsapp",
+
   PURCHASE_EXPERIENCES_READ: "purchase_experiences.read",
   PURCHASE_EXPERIENCES_MANAGE: "purchase_experiences.manage",
 
@@ -420,6 +423,16 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     key: PERMISSIONS.FINANCE_MANAGE_EXPENSES,
     category: "finance",
     description: "Create, void, and correct manual company expenses",
+  },
+  {
+    key: PERMISSIONS.INVOICES_READ,
+    category: "invoices",
+    description: "View customer invoices and download PDFs",
+  },
+  {
+    key: PERMISSIONS.INVOICES_SEND_WHATSAPP,
+    category: "invoices",
+    description: "Send issued invoice PDFs via WhatsApp",
   },
   {
     key: PERMISSIONS.PURCHASE_EXPERIENCES_READ,

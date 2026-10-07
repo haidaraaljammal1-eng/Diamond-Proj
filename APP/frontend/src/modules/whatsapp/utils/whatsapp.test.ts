@@ -22,8 +22,15 @@ import {
   conversationTitle,
   formatCustomerWaId,
   isClientSendWindowStillOpen,
+  isFreeTextSendAllowed,
+  isMediaSendAllowed,
+  isTemplateSendAllowed,
   lastMessagePreviewKind,
   mergeById,
+  mergeAndSortWhatsAppMessages,
+  compareWhatsAppMessages,
+  mergeConversationListIntoDetail,
+  reconcileSelectedConversation,
   nextClientProviderStatus,
   outboundUiStatus,
   patchOutboundMessage,
@@ -39,6 +46,7 @@ import {
   WHATSAPP_SIMULATION_ID_PREFIX,
   WHATSAPP_SIMULATION_TEMPLATES,
 } from "../simulation/whatsapp-simulation.fixture.ts";
+import { WHAPI_CAPABILITIES } from "../types/whatsapp.types.ts";
 import { blankWhatsAppMessageFields } from "./whatsapp-view-model.ts";
 import type { WhatsAppConnectionDto, WhatsAppMessageDto } from "../types/whatsapp.types.ts";
 import { META_CLOUD_CAPABILITIES } from "../types/whatsapp.types.ts";
@@ -165,7 +173,10 @@ describe("search and unread query", () => {
 
 describe("message chronology", () => {
   it("converts newest-first API pages into chronological UI order", () => {
-    const newestFirst = [message({ id: "new" }), message({ id: "old" })];
+    const newestFirst = [
+      message({ id: "new", providerOccurredAt: "2026-09-12T11:00:00.000Z", receivedAt: "2026-09-12T11:00:00.000Z" }),
+      message({ id: "old", providerOccurredAt: "2026-09-12T10:00:00.000Z", receivedAt: "2026-09-12T10:00:00.000Z" }),
+    ];
     assert.deepEqual(
       toChronologicalPage(newestFirst).map((item) => item.id),
       ["old", "new"],
@@ -173,8 +184,14 @@ describe("message chronology", () => {
   });
 
   it("prepends older pages and dedupes by message id", () => {
-    const current = [message({ id: "mid" }), message({ id: "new" })];
-    const olderNewestFirst = [message({ id: "mid" }), message({ id: "oldest" })];
+    const current = [
+      message({ id: "mid", providerOccurredAt: "2026-09-12T10:00:00.000Z", receivedAt: "2026-09-12T10:00:00.000Z" }),
+      message({ id: "new", providerOccurredAt: "2026-09-12T11:00:00.000Z", receivedAt: "2026-09-12T11:00:00.000Z" }),
+    ];
+    const olderNewestFirst = [
+      message({ id: "mid", providerOccurredAt: "2026-09-12T10:00:00.000Z", receivedAt: "2026-09-12T10:00:00.000Z" }),
+      message({ id: "oldest", providerOccurredAt: "2026-09-12T09:00:00.000Z", receivedAt: "2026-09-12T09:00:00.000Z" }),
+    ];
     assert.deepEqual(
       prependOlderMessages(current, olderNewestFirst).map((item) => item.id),
       ["oldest", "mid", "new"],
@@ -341,6 +358,7 @@ describe("prohibited WhatsApp UI", () => {
   it("keeps simulation removable without backend writes", () => {
     const store = readFileSync(join(moduleDir, "simulation/whatsapp-simulation.store.ts"), "utf8");
     const hook = readFileSync(join(moduleDir, "hooks/use-whatsapp.ts"), "utf8");
+    const realtimeHook = readFileSync(join(moduleDir, "hooks/use-whatsapp-realtime.ts"), "utf8");
     const realStore = readFileSync(join(moduleDir, "stores/whatsapp.store.ts"), "utf8");
     const realtimeClient = readFileSync(join(moduleDir, "realtime/whatsapp.realtime-client.ts"), "utf8");
     const simRealtime = readFileSync(join(moduleDir, "simulation/whatsapp-simulation.realtime.ts"), "utf8");
@@ -348,8 +366,12 @@ describe("prohibited WhatsApp UI", () => {
     assert.match(hook, /simulationActive/);
     assert.match(hook, /selectSim\(id\)/);
     assert.match(hook, /if \(simulationActive\) \{\s*return sendSim/);
-    assert.match(hook, /if \(!isAllowed \|\| simulationActive \|\| sessionStatus === "unauthenticated"\)/);
-    assert.match(hook, /acquireWhatsAppRealtime/);
+    assert.doesNotMatch(hook, /acquireWhatsAppRealtime/);
+    assert.match(realtimeHook, /sessionStatus === "authenticated" && isAllowed/);
+    assert.match(realtimeHook, /sessionStatus === "loading"/);
+    assert.match(realtimeHook, /acquireWhatsAppRealtime/);
+    const screen = readFileSync(join(moduleDir, "components/whatsapp-screen/whatsapp-screen.tsx"), "utf8");
+    assert.match(screen, /useWhatsAppRealtimeSubscription/);
     assert.doesNotMatch(store, /markWhatsAppConversationRead/);
     assert.doesNotMatch(store, /listWhatsAppConversations/);
     assert.doesNotMatch(store, /sendWhatsAppTextMessage/);
@@ -360,6 +382,7 @@ describe("prohibited WhatsApp UI", () => {
     assert.doesNotMatch(realStore, /whatsapp-simulation/);
     assert.doesNotMatch(realtimeClient, /\?token=/);
     assert.match(realtimeClient, /Authorization/);
+    assert.match(realtimeClient, /env\.apiUrl/);
     assert.doesNotMatch(realtimeClient, /EventSource/);
     assert.doesNotMatch(simRealtime, /\/whatsapp\/realtime/);
     assert.doesNotMatch(simRealtime, /acquireWhatsAppRealtime/);
@@ -552,12 +575,153 @@ describe("manual outbound send UX", () => {
     assert.match(composer, /idempotencyKey\.current/);
     assert.match(composer, /crypto\.randomUUID/);
     assert.match(composer, /disabled=\{file \? !canSendMedia : !canSubmitText\}/);
-    assert.match(composer, /disabled=\{!enabled \|\| \(!windowOpen && !file\)\}/);
+    assert.match(composer, /disabled=\{!enabled \|\| \(!inbox\.canSend && !file\)\}/);
+    assert.match(composer, /inbox\.canSend/);
     assert.doesNotMatch(composer, /SENT/);
-    assert.match(hook, /hasSendPermission && isClientSendWindowStillOpen/);
+    assert.match(hook, /isFreeTextSendAllowed/);
+    assert.match(hook, /reconcileSelectedConversation/);
     assert.match(store, /if \(get\(\)\.sending\) return false/);
+    assert.match(store, /reconcileSelectedConversation/);
+    assert.match(store, /mergeAndSortWhatsAppMessages/);
+    assert.match(store, /queueConversationReconcile/);
+    assert.match(store, /Promise\.all/);
     assert.match(store, /appendMessageById/);
     assert.doesNotMatch(store, /providerStatus: "SENT"/);
+  });
+
+  it("orders messages by provider time regardless of arrival order", () => {
+    const mk = (
+      id: string,
+      providerOccurredAt: string,
+      direction: "INBOUND" | "OUTBOUND",
+    ) =>
+      ({
+        id,
+        direction,
+        messageType: "TEXT" as const,
+        textBody: id,
+        caption: null,
+        mediaFilename: null,
+        mediaMimeType: null,
+        mediaSizeBytes: null,
+        hasProtectedMedia: false,
+        templateName: null,
+        templateLanguage: null,
+        templatePreview: null,
+        location: null,
+        contacts: null,
+        reaction: null,
+        interactive: null,
+        sendState: null,
+        providerStatus: null,
+        providerOccurredAt,
+        receivedAt: providerOccurredAt,
+      }) satisfies import("../types/whatsapp.types.ts").WhatsAppMessageDto;
+
+    const shuffled = [
+      mk("m4", "2026-10-02T04:01:00.000Z", "OUTBOUND"),
+      mk("m1", "2026-10-02T03:39:00.000Z", "INBOUND"),
+      mk("m3", "2026-10-02T03:59:00.000Z", "INBOUND"),
+      mk("m2", "2026-10-02T03:58:00.000Z", "OUTBOUND"),
+    ];
+    const ordered = mergeAndSortWhatsAppMessages([], shuffled).map((m) => m.id);
+    assert.deepEqual(ordered, ["m1", "m2", "m3", "m4"]);
+
+    const merged = mergeAndSortWhatsAppMessages(
+      [mk("m1", "2026-10-02T03:39:00.000Z", "INBOUND")],
+      [mk("m2", "2026-10-02T03:58:00.000Z", "OUTBOUND"), mk("m1", "2026-10-02T03:39:00.000Z", "INBOUND")],
+    );
+    assert.equal(merged.length, 2);
+    assert.equal(merged[0].id, "m1");
+    assert.equal(merged[1].id, "m2");
+    const tieA = mk("aaa", "2026-10-02T03:00:00.000Z", "INBOUND");
+    const tieB = mk("bbb", "2026-10-02T03:00:00.000Z", "OUTBOUND");
+    assert.ok(compareWhatsAppMessages(tieA, tieB) < 0);
+  });
+
+  it("preserves detail eligibility when the list row refreshes", () => {
+    const listRow = {
+      id: "c-whapi",
+      customerWaId: "963984179466",
+      customerDisplayName: "Inbound",
+      lastMessagePreview: "مرحبا",
+      lastMessageType: "TEXT" as const,
+      lastMessageAt: "2026-10-02T12:00:00.000Z",
+      unreadCount: 1,
+      lastInboundAt: "2026-10-02T12:00:00.000Z",
+      customerLinked: false,
+      connection: { displayPhoneNumber: "963984179466", verifiedName: null },
+    };
+    const detail = {
+      ...listRow,
+      unreadCount: 0,
+      lastReadAt: "2026-10-02T12:01:00.000Z",
+      createdAt: "2026-10-02T11:00:00.000Z",
+      customerLink: { linked: false, customer: null, linkedAt: null },
+      messagingEligibility: {
+        canSendText: true,
+        canSendMedia: true,
+        canSendTemplate: false,
+        reason: "READY" as const,
+        windowExpiresAt: null,
+      },
+    };
+    const merged = reconcileSelectedConversation([listRow], detail);
+    assert.equal(conversationEligibility(merged)?.canSendText, true);
+    assert.equal(merged && "lastReadAt" in merged ? merged.lastReadAt : null, detail.lastReadAt);
+    assert.equal(merged && "messagingEligibility" in merged ? merged.unreadCount : null, 1);
+    const mergedFields = mergeConversationListIntoDetail(detail, { ...listRow, unreadCount: 0 });
+    assert.equal(mergedFields.unreadCount, 0);
+    assert.equal(mergedFields.messagingEligibility.reason, "READY");
+  });
+
+  it("does not apply Meta service window to WHAPI free-text send", () => {
+    const eligibility = {
+      canSendText: true,
+      canSendMedia: true,
+      canSendTemplate: false,
+      reason: "READY" as const,
+      windowExpiresAt: "2020-01-01T00:00:00.000Z",
+    };
+    assert.equal(
+      isFreeTextSendAllowed(eligibility, {
+        hasSendPermission: true,
+        requiresCustomerServiceWindow: WHAPI_CAPABILITIES.requiresCustomerServiceWindow,
+        simulationActive: false,
+      }),
+      true,
+    );
+    assert.equal(
+      isFreeTextSendAllowed(eligibility, {
+        hasSendPermission: true,
+        requiresCustomerServiceWindow: true,
+        simulationActive: false,
+      }),
+      false,
+    );
+    assert.equal(
+      isFreeTextSendAllowed(eligibility, {
+        hasSendPermission: false,
+        requiresCustomerServiceWindow: false,
+        simulationActive: false,
+      }),
+      false,
+    );
+    assert.equal(
+      isTemplateSendAllowed(
+        { ...eligibility, canSendTemplate: false },
+        { hasSendPermission: true, simulationActive: false },
+      ),
+      false,
+    );
+    assert.equal(
+      isMediaSendAllowed(eligibility, {
+        hasSendPermission: true,
+        requiresCustomerServiceWindow: false,
+        simulationActive: false,
+      }),
+      true,
+    );
   });
 
   it("includes open and closed simulation windows and stays frontend-only", () => {

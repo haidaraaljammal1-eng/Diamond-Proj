@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
 import { usePermissions } from "@/modules/auth";
 import { isDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
@@ -32,10 +31,13 @@ import type {
 } from "../types/whatsapp.types";
 import { WHATSAPP_MESSAGE_PAGE_SIZE, WHATSAPP_PAGE_SIZE } from "../types/whatsapp.types";
 import {
-  isClientSendWindowStillOpen,
-  keepSelectedIfMissingFromList,
+  connectionCapabilities,
+  conversationEligibility,
+  isFreeTextSendAllowed,
+  isMediaSendAllowed,
+  isTemplateSendAllowed,
+  reconcileSelectedConversation,
 } from "../utils/whatsapp-view-model";
-import { acquireWhatsAppRealtime } from "../realtime/whatsapp.realtime-client";
 import type { WhatsAppRealtimeTransportStatus } from "../realtime/whatsapp.realtime";
 
 export interface UseWhatsAppResult {
@@ -96,7 +98,6 @@ export interface UseWhatsAppResult {
 }
 
 export function useWhatsApp(): UseWhatsAppResult {
-  const { status: sessionStatus } = useSession();
   const { hasPermission } = usePermissions();
   const isAllowed = WHATSAPP_PAGE_PERMISSIONS.every((permission) =>
     hasPermission(permission),
@@ -162,23 +163,6 @@ export function useWhatsApp(): UseWhatsAppResult {
     void load();
   }, [isAllowed, simulationActive, load]);
 
-  useEffect(() => {
-    if (!isAllowed || simulationActive || sessionStatus === "unauthenticated") {
-      return;
-    }
-    return acquireWhatsAppRealtime({
-      onEvent: (event) => {
-        void useWhatsAppStore.getState().applyRealtimeEvent(event);
-      },
-      onStatus: (status) => {
-        useWhatsAppStore.getState().setRealtimeStatus(status);
-      },
-      onReconnect: () => {
-        void useWhatsAppStore.getState().reconcileRealtime();
-      },
-    });
-  }, [isAllowed, simulationActive, sessionStatus]);
-
   const simulatedConversations = useMemo(() => {
     if (!simulatedInbox) return [];
     return filterSimulatedConversations(simulatedInbox, simulatedSearch, simulatedUnread);
@@ -199,8 +183,8 @@ export function useWhatsApp(): UseWhatsAppResult {
     simulationActive,
     simulatedSelectedId,
   );
-  const realSelected = keepSelectedIfMissingFromList(conversations, selectedConversation);
-  const simSelected = keepSelectedIfMissingFromList(
+  const realSelected = reconcileSelectedConversation(conversations, selectedConversation);
+  const simSelected = reconcileSelectedConversation(
     simulatedConversations,
     simulatedSelectedDetail(simulatedInbox, simulatedSelectedId),
   );
@@ -239,28 +223,21 @@ export function useWhatsApp(): UseWhatsAppResult {
     : 1;
   const realHasOlder = Boolean(selectedConversationId && realPage < realTotalPages);
   const simHasOlder = simAll.length > simPage * WHATSAPP_MESSAGE_PAGE_SIZE;
-  const eligibility =
-    displaySelected && "messagingEligibility" in displaySelected
-      ? displaySelected.messagingEligibility
-      : null;
+  const eligibility = conversationEligibility(displaySelected);
+  const sendCaps = connectionCapabilities(displayConnection);
+  const sendGate = {
+    hasSendPermission,
+    requiresCustomerServiceWindow: sendCaps.requiresCustomerServiceWindow,
+    simulationActive,
+  };
   const canSend = Boolean(
-    displaySelectedId &&
-      eligibility?.canSendText &&
-      (simulationActive
-        ? true
-        : hasSendPermission && isClientSendWindowStillOpen(eligibility.windowExpiresAt)),
+    displaySelectedId && isFreeTextSendAllowed(eligibility, sendGate),
   );
   const canSendTemplate = Boolean(
-    displaySelectedId &&
-      eligibility?.canSendTemplate &&
-      (simulationActive ? true : hasSendPermission),
+    displaySelectedId && isTemplateSendAllowed(eligibility, sendGate),
   );
   const canSendMedia = Boolean(
-    displaySelectedId &&
-      eligibility?.canSendMedia &&
-      (simulationActive
-        ? true
-        : hasSendPermission && isClientSendWindowStillOpen(eligibility.windowExpiresAt)),
+    displaySelectedId && isMediaSendAllowed(eligibility, sendGate),
   );
 
   return useMemo(

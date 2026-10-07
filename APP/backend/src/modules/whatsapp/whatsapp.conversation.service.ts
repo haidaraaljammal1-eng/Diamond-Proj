@@ -17,6 +17,7 @@ import {
 } from "src/modules/whatsapp/whatsapp.mapper";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
+import { sendProviderReadReceiptsBestEffort } from "src/modules/whatsapp/whatsapp.provider-read-receipt";
 import type {
   ListWhatsAppConversationsQuery,
   ListWhatsAppMessagesQuery,
@@ -197,7 +198,7 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
     const result = await withTransaction(prisma, async (tx) => {
       const existing = await tx.whatsAppConversation.findUnique({
         where: { id: conversationId },
-        select: { id: true, unreadCount: true, connectionId: true },
+        select: { id: true, unreadCount: true, connectionId: true, lastReadAt: true },
       });
       if (!existing) throw whatsappError.conversationNotFound();
       const updated = await tx.whatsAppConversation.update({
@@ -218,9 +219,15 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
               connectionId: existing.connectionId,
             }).then((event) => (event ? [event] : []))
           : [];
-      return { updated, events };
+      return { updated, events, previousUnreadCount: existing.unreadCount, readBeforeAt: existing.lastReadAt };
     });
     publishWhatsAppRealtime(result.events);
+    void sendProviderReadReceiptsBestEffort(prisma, {
+      conversationId,
+      connectionId: result.updated.connectionId,
+      previousUnreadCount: result.previousUnreadCount,
+      readBeforeAt: result.readBeforeAt,
+    });
     audit({
       action: WHATSAPP_AUDIT.CONVERSATION_READ,
       entityType: "WhatsAppConversation",

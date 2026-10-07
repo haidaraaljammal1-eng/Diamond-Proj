@@ -2631,6 +2631,8 @@
       "inputLabel": "Message",
       "send": "Send",
       "disabledHint": "Sending messages will be enabled after WhatsApp messaging is configured.",
+      "loadingDetail": "Loading conversation details…",
+      "selectConversation": "Select a conversation to send a message.",
       "readyHint": "Manual text messages only. Recipient is set by the conversation.",
       "noPermission": "You do not have permission to send WhatsApp messages.",
       "reason": {
@@ -2806,6 +2808,7 @@
       "disconnectConfirm": "Diamond will stop using this connection. Historical conversations remain. This does not delete the number from Meta.",
       "changeAccountConfirm": "Future messages will use the newly selected account. Historical conversations stay on the previous connection.",
       "providerUltraMsg": "Provider: UltraMsg",
+      "providerWhapi": "Provider: Whapi",
       "showQr": "Show QR Code",
       "qrHint": "Scan the QR code to connect WhatsApp.",
       "qrLoading": "Loading QR code…"
@@ -2821,6 +2824,149 @@
       "unlink": "Unlink Customer",
       "search": "Search customers",
       "needCustomerRead": "Customer search requires customer read permission."
+    }
+  },
+  "Invoices": {
+    "title": "Invoices",
+    "subtitle": "Official invoices generated from contracts and customer obligations",
+    "crumbs": "Invoices",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "denied": {
+      "title": "Invoices access is not available",
+      "description": "This page requires the invoices.read permission."
+    },
+    "search": {
+      "placeholder": "Search invoice, contract, customer or plate",
+      "inputLabel": "Search invoices",
+      "button": "Search",
+      "clear": "Clear"
+    },
+    "filters": {
+      "company": "Company",
+      "companyOptions": {
+        "ALL": "All",
+        "ELITE": "ELITE",
+        "UNIQUE": "UNIQUE"
+      },
+      "type": "Invoice type",
+      "typeOptions": {
+        "ALL": "All types",
+        "RENTAL": "Rental",
+        "ROAD_LIABILITY": "Road Liability",
+        "RECONCILIATION": "Reconciliation",
+        "RENEWAL": "Renewal"
+      },
+      "dateFrom": "From",
+      "dateTo": "To",
+      "clear": "Clear filters"
+    },
+    "columns": {
+      "invoice": "Invoice",
+      "company": "Company",
+      "customer": "Customer",
+      "contract": "Contract",
+      "vehicle": "Vehicle",
+      "source": "Source",
+      "issueDate": "Issue date",
+      "amount": "Amount",
+      "whatsapp": "WhatsApp",
+      "actions": "Actions"
+    },
+    "types": {
+      "RENTAL": "Rental",
+      "ROAD_LIABILITY": "Road Liability",
+      "RECONCILIATION": "Reconciliation",
+      "RENEWAL": "Renewal"
+    },
+    "status": {
+      "ISSUED": "Issued",
+      "VOID": "Void"
+    },
+    "delivery": {
+      "notSent": "Not sent",
+      "historyEmpty": "This invoice has not been sent via WhatsApp yet.",
+      "status": {
+        "PENDING": "Pending",
+        "SENDING": "Sending",
+        "SENT": "Sent",
+        "DELIVERED": "Delivered",
+        "FAILED": "Failed"
+      }
+    },
+    "list": {
+      "results": "{count} invoices"
+    },
+    "pagination": {
+      "label": "Invoice pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {totalPages}"
+    },
+    "empty": {
+      "noMatch": "No matching invoices",
+      "none": "No invoices yet"
+    },
+    "actions": {
+      "view": "View",
+      "viewPdf": "View PDF",
+      "download": "Download",
+      "sendWhatsApp": "Send via WhatsApp"
+    },
+    "detail": {
+      "title": "Invoice details",
+      "close": "Close",
+      "loading": "Loading invoice…",
+      "summary": "Invoice summary",
+      "invoiceNumber": "Invoice number",
+      "invoiceType": "Invoice type",
+      "company": "Company",
+      "issueDate": "Issue date",
+      "dueDate": "Due date",
+      "terms": "Terms",
+      "currency": "Currency",
+      "customer": "Customer",
+      "customerName": "Customer name",
+      "contract": "Contract",
+      "contractNumber": "Contract number",
+      "vehicle": "Vehicle",
+      "vehicleName": "Vehicle",
+      "plateNumber": "Plate number",
+      "source": "Source",
+      "sourceLabel": "Source",
+      "lines": "Invoice lines",
+      "lineService": "Service",
+      "lineDescription": "Description",
+      "lineQty": "Qty",
+      "lineRate": "Rate",
+      "lineAmount": "Amount",
+      "total": "Total",
+      "delivery": "Delivery",
+      "latestWhatsApp": "WhatsApp",
+      "deliveryLoading": "Loading delivery history…"
+    },
+    "whatsapp": {
+      "title": "Send via WhatsApp",
+      "description": "The official PDF will be sent through WhatsApp.",
+      "customer": "Customer",
+      "invoiceNumber": "Invoice",
+      "contract": "Contract",
+      "company": "Company",
+      "amount": "Amount",
+      "phoneHint": "The invoice will be sent to the customer's registered phone number.",
+      "cancel": "Cancel",
+      "send": "Send",
+      "sending": "Sending…",
+      "success": "Invoice sent via WhatsApp."
+    },
+    "errors": {
+      "generic": "Unable to load invoices.",
+      "pdfView": "Unable to open invoice PDF.",
+      "pdfDownload": "Unable to download invoice.",
+      "whatsappUnconfigured": "WhatsApp delivery is not configured yet. Direct sending will become available after the WhatsApp Business provider is connected.",
+      "WHATSAPP_PROVIDER_UNCONFIGURED": "WhatsApp delivery is not configured yet. Direct sending will become available after the WhatsApp Business provider is connected.",
+      "INVOICE_NOT_FOUND": "Invoice not found.",
+      "NETWORK_ERROR": "Network connection error."
     }
   },
   "Archive": {

@@ -185,8 +185,8 @@ if (!RUN) {
       await validLicense(ctx.token);
       const customersBefore = await prisma.customer.count();
       ocr.setPassport(() => ({
-        ...fakePassportExtraction({ ...SYNTHETIC_PASSPORT, VendorSurname: "LEAK" }),
-        rawVendorResponse: { secretKey: "must-not-leak" },
+        ...fakePassportExtraction({ ...SYNTHETIC_PASSPORT }),
+        rawVendorResponse: { secretKey: "must-not-leak", VendorSurname: "LEAK" },
       }) as never);
 
       const res = await passport(ctx.token);

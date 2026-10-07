@@ -44,6 +44,8 @@ model OperatingCompany {
   ledgerEntries           FinancialLedgerEntry[]
   tarsVehicleIntegrations TarsVehicleIntegration[]
   tarsAttachmentUploads   TarsAttachmentUpload[]
+  invoices                Invoice[]
+  invoiceNumberSequences  InvoiceNumberSequence[]
 
   @@index([isActive])
   @@map("operating_companies")

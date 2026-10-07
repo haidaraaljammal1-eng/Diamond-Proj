@@ -1,0 +1,122 @@
+.section {
+  margin-top: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: start;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--diamond-hair);
+  color: var(--diamond-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  vertical-align: top;
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover td {
+  background: rgba(201, 161, 92, 0.06);
+}
+
+.invoiceNumber {
+  font-weight: 700;
+}
+
+.companyBadge {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.vehicle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plate {
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
+.amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.linkButton {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--diamond-gold-hi);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.desktop {
+  overflow-x: auto;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.empty,
+.error {
+  padding: 32px 16px;
+  text-align: center;
+  border: 1px dashed var(--diamond-hair);
+  border-radius: 12px;
+  color: var(--diamond-muted);
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton {
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.07) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+}
+
+@media (max-width: 960px) {
+  .table {
+    min-width: 900px;
+  }
+}

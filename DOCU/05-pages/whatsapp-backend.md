@@ -49,7 +49,11 @@ Optional `/chats` history import is **not** implemented (schema not live-verifie
 - Live outbound: only if `ULTRAMSG_TEST_RECIPIENT` is set. Never pick a recipient from existing chats.
 - Destructive UltraMsg APIs (`/instance/clear`, logout, restart, chat/message delete) are forbidden in application code.
 
-Historical Meta phases remain documented below. UltraMsg is the active operational provider.
+### Whapi provider (WHAPI-1 / WHAPI-2)
+
+Third provider enum value: `WHAPI`. Select with `WHATSAPP_PROVIDER=WHAPI` and server-only `WHAPI_TOKEN` (Bearer to `https://gate.whapi.cloud`). Optional `WHAPI_CHANNEL_ID`, `WHAPI_WEBHOOK_SECRET`, `WHAPI_WEBHOOK_CALLBACK_KEY`. Webhook: `POST /whatsapp/webhooks/whapi/:callbackKey` with header `X-Diamond-Whapi-Secret`. Events: `messages` (inbound + `from_me` echo / mobile outbound) and `statuses` (monotonic SENT/DELIVERED/READ). Outbound PDF uses `POST /messages/document` with base64 data URI. Invoice routing uses capability `supportsDirectOutboundMedia` (not QR auth). Outbound recipient addressing uses `recipientAddressing` (`WA_ID` vs `PROVIDER_CHAT_ID`) via `resolveProviderRecipient()` — independent of media transport. Connection readiness uses `isWhatsAppConnectionOperational()` — Whapi requires `providerInstanceId` + `AUTHENTICATED`, not Meta `phoneNumberId`. Staff mark-read calls best-effort `markProviderMessageRead` only when `supportsProviderReadReceipt` (Whapi only; UltraMsg advertises false). Remote webhook PATCH (`messages` + `statuses`, `auto_download: false`) only when `WHAPI_CONFIGURE_WEBHOOK=true` and public `PUBLIC_BACKEND_URL`. Meta and UltraMsg remain unchanged.
+
+Historical Meta phases remain documented below. UltraMsg is the active operational provider unless `WHATSAPP_PROVIDER=WHAPI`.
 
 - **Phase 1:** secure office connection (credentials / WABA / phone).
 - **Phase 2:** secure Meta webhook ingress (verify, signature, route, idempotent store).

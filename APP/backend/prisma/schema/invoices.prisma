@@ -1,0 +1,182 @@
+// ---------------------------------------------------------------------------
+// Customer invoices — immutable document snapshots (not payment/ledger authority).
+// ---------------------------------------------------------------------------
+
+enum InvoiceType {
+  RENTAL
+  RECONCILIATION
+  ROAD_LIABILITY
+  RENEWAL
+}
+
+enum InvoiceStatus {
+  ISSUED
+  VOID
+}
+
+enum InvoiceLineType {
+  RENTAL
+  RECONCILIATION_DAMAGE
+  RECONCILIATION_FUEL
+  RECONCILIATION_LATE
+  RECONCILIATION_OTHER
+  ROAD_LIABILITY_TRAFFIC
+  ROAD_LIABILITY_SALIK
+  ROAD_LIABILITY_OTHER
+  RENEWAL
+}
+
+enum InvoiceSourceType {
+  CONTRACT_RENTAL
+  CONTRACT_RENEWAL
+  RECONCILIATION_LINE
+  ROAD_LIABILITY_CUSTOMER_CHARGE
+}
+
+enum InvoiceDeliveryChannel {
+  WHATSAPP
+}
+
+enum InvoiceDeliveryStatus {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+model Invoice {
+  id        String        @id @default(uuid())
+  /// Display number allocated per company (not client-supplied).
+  invoiceNumber Int
+  invoiceType   InvoiceType
+  status        InvoiceStatus @default(ISSUED)
+
+  companyId Int
+  company   OperatingCompany @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  vehicleId  Int
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  issueDate DateTime @db.Date
+  dueDate   DateTime @db.Date
+  termsSnapshot String
+  currency  String   @default("AED")
+
+  customerNameSnapshot String
+
+  contractNumberSnapshot String
+
+  vehicleNameSnapshot String
+  plateNumberSnapshot String
+
+  companyDisplayNameSnapshot String
+  companyAddressSnapshot   String?
+  companyEmailSnapshot     String?
+  companyBrandKeySnapshot  String
+
+  subtotalAmount      Int
+  totalAmount         Int
+  balanceDueSnapshot  Int
+
+  templateVersion String @default("v1")
+
+  /// Idempotency for automatic issuance (e.g. RENTAL:<contractId>).
+  originEventKey String @unique
+
+  issuedAt DateTime @default(now())
+  issuedByUserId Int?
+  issuedBy       User? @relation("InvoiceIssuedBy", fields: [issuedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines      InvoiceLine[]
+  deliveries InvoiceDelivery[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([contractId])
+  @@index([vehicleId])
+  @@index([customerId])
+  @@index([companyId, issueDate])
+  @@index([invoiceType])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id        String @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  position Int
+
+  lineType InvoiceLineType
+
+  serviceLabel String
+  description  String
+
+  quantity Int @default(1)
+  /// Whole AED per unit when quantity > 1; otherwise equals amount.
+  unitRate Int
+  amount   Int
+
+  sourceType InvoiceSourceType
+  sourceId   String
+
+  createdAt DateTime @default(now())
+
+  @@unique([sourceType, sourceId])
+  @@index([invoiceId, position])
+  @@map("invoice_lines")
+}
+
+model InvoiceDelivery {
+  id        String @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  channel InvoiceDeliveryChannel
+  status  InvoiceDeliveryStatus @default(PENDING)
+
+  recipientPhoneSnapshot String
+  recipientNameSnapshot  String?
+  messageSnapshot        String
+
+  provider          String?
+  providerMessageId   String?
+  idempotencyKey      String? @unique
+
+  requestedAt   DateTime @default(now())
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  failureCode   String?
+  failureMessage String?
+
+  requestedByUserId Int
+  requestedBy       User @relation("InvoiceDeliveryRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId, createdAt])
+  @@index([status])
+  @@index([providerMessageId])
+  @@map("invoice_deliveries")
+}
+
+/// Per-company automatic invoice number allocation. Requires explicit configuration before production issuance.
+model InvoiceNumberSequence {
+  companyId Int @id
+  company   OperatingCompany @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// Next integer to assign when an invoice is issued.
+  nextNumber Int
+  configuredAt DateTime
+  updatedAt    DateTime @updatedAt
+
+  @@map("invoice_number_sequences")
+}

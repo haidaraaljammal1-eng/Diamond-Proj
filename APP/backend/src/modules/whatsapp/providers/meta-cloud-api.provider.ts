@@ -670,6 +670,10 @@ export class MetaCloudWhatsAppProvider implements WhatsAppProvider {
     if (this.http.postJson) return this.http.postJson(url, headers, body);
     return defaultPostJson(url, headers, body);
   }
+
+  async markProviderMessageRead(): Promise<WhatsAppProviderResult<{ success: boolean }>> {
+    return { ok: false, code: "NOT_CONFIGURED" };
+  }
 }
 
 function failSendRejected(json: unknown): WhatsAppProviderFailure {

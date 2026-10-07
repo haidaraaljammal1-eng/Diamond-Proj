@@ -95,6 +95,8 @@ model User {
   manualExpensesCreated                ManualExpense[]               @relation("ManualExpenseCreatedBy")
   manualExpensesVoided                 ManualExpense[]               @relation("ManualExpenseVoidedBy")
   manualExpenseRevisions               ManualExpenseRevision[]       @relation("ManualExpenseRevisionChangedBy")
+  invoicesIssued                       Invoice[]                     @relation("InvoiceIssuedBy")
+  invoiceDeliveriesRequested           InvoiceDelivery[]             @relation("InvoiceDeliveryRequestedBy")
   whatsAppConnectionsConnected         WhatsAppConnection[]          @relation("WhatsAppConnectionConnectedBy")
   whatsAppConnectionsDisconnected      WhatsAppConnection[]          @relation("WhatsAppConnectionDisconnectedBy")
   whatsAppConnectionAttempts           WhatsAppConnectionAttempt[]   @relation("WhatsAppConnectionAttemptInitiatedBy")

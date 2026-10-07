@@ -6,6 +6,7 @@ import { evaluatePassportOcr } from "src/modules/contracts/passport-extraction-p
 import { buildPassportStructuredResult } from "src/modules/vision-ai/extraction/passport-postprocess";
 import { analyzeIdentityDocument } from "src/modules/vision-ai/identity-analysis.service";
 import { geminiExtractDrivingLicence } from "src/modules/vision-ai/gemini/gemini-licence.extract";
+import { geminiExtractPassport } from "src/modules/vision-ai/gemini/gemini-passport.extract";
 import { GeminiVisionProvider } from "src/modules/vision-ai/providers/gemini-vision.provider";
 import { createSimulationVisionAIProvider } from "src/modules/vision-ai/providers/simulation-vision-ai.provider";
 import { UnconfiguredVisionAIProvider } from "src/modules/vision-ai/providers/unconfigured-vision-ai.provider";
@@ -15,7 +16,6 @@ import {
 } from "src/modules/vision-ai/vision-ai-provider.factory";
 import {
   createFakeVisionAIProvider,
-  fakePassportExtraction,
   fakeUnrecognizedPassportExtraction,
 } from "../helpers/fake-vision-ai-provider";
 
@@ -144,12 +144,11 @@ test("gemini licence two-pass fills dates when pass one omits them", async () =>
 });
 
 test("malformed gemini passport schema maps to analysis failure", async () => {
-  const provider = new GeminiVisionProvider({
+  const outcome = await geminiExtractPassport(FILE, {
     apiKey: "unit-test-key",
     model: "gemini-3.8-flash",
-    generateStructured: async () => ({ passportNumber: 12345 }),
+    generateFn: async () => ({ passportNumber: 12345 }),
   });
-  const outcome = await provider.extractPassport(FILE);
   assert.equal(outcome.ok, false);
   if (outcome.ok) return;
   assert.equal(outcome.code, "VISION_AI_SCHEMA_INVALID");

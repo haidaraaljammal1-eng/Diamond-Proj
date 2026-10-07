@@ -55,10 +55,20 @@ export type LicenceDateReviewFlags = {
 
 export type ParsedLicenceVisual = DrivingLicenceVisualFields & LicenceDateReviewFlags;
 
+export type ParsedLicenceDatePatch = Pick<
+  ParsedLicenceVisual,
+  | "dateOfBirth"
+  | "issueDate"
+  | "expiryDate"
+  | "dateOfBirthNeedsReview"
+  | "issueDateNeedsReview"
+  | "expiryDateNeedsReview"
+>;
+
 function normalizeLicenceDateFields(
   raw: { dateOfBirth?: string | null; issueDate?: string | null; expiryDate?: string | null },
   preferDayFirst: boolean,
-): Pick<ParsedLicenceVisual, "dateOfBirth" | "issueDate" | "expiryDate" | LicenceDateReviewFlags> {
+): ParsedLicenceDatePatch {
   const dob = normalizePrintedDate(raw.dateOfBirth, { preferDayFirst });
   const issue = normalizePrintedDate(raw.issueDate, { preferDayFirst });
   const expiry = normalizePrintedDate(raw.expiryDate, { preferDayFirst });
@@ -76,7 +86,7 @@ function normalizeLicenceDateFields(
 export function parseGeminiLicenceDatesOnlyRaw(
   input: unknown,
   context: { issuingCountry: string | null; nationality: string | null },
-): Pick<ParsedLicenceVisual, "dateOfBirth" | "issueDate" | "expiryDate" | LicenceDateReviewFlags> {
+): ParsedLicenceDatePatch {
   const parsed = GeminiLicenceDatesOnlyRawSchema.safeParse(input);
   if (!parsed.success) {
     throw new VisionAIError("VISION_AI_SCHEMA_INVALID", "Licence dates response failed schema validation");
@@ -87,7 +97,7 @@ export function parseGeminiLicenceDatesOnlyRaw(
 
 export function mergeLicenceDateFields(
   base: ParsedLicenceVisual,
-  patch: Pick<ParsedLicenceVisual, "dateOfBirth" | "issueDate" | "expiryDate" | LicenceDateReviewFlags>,
+  patch: ParsedLicenceDatePatch,
 ): ParsedLicenceVisual {
   return {
     ...base,

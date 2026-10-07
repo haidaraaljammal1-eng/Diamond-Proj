@@ -1,25 +1,26 @@
 .bubble {
-  max-width: 72%;
-  padding: 9px 14px;
-  font-size: 12.5px;
-  line-height: 1.7;
-  border-radius: 4px;
+  max-width: min(72%, 520px);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(38, 32, 21, 0.06);
 }
 
 .in {
   align-self: flex-start;
-  background: rgba(28, 29, 35, 0.95);
-  border: 1px solid rgba(200, 194, 178, 0.14);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--diamond-hair);
   color: var(--diamond-ivory);
 }
 
 .out {
   align-self: flex-end;
-  background: var(--diamond-gold, linear-gradient(160deg, #f2e0b4, #c9a15c));
-  border: none;
-  color: #241b08;
+  background: linear-gradient(165deg, rgba(242, 224, 180, 0.55), rgba(255, 253, 248, 0.92));
+  border: 1px solid rgba(201, 161, 92, 0.35);
+  color: var(--diamond-champagne);
   font-weight: 500;
-  box-shadow: 0 8px 24px rgba(201, 161, 92, 0.22);
+  box-shadow: 0 4px 14px rgba(201, 161, 92, 0.12);
 }
 
 .text {
@@ -51,13 +52,13 @@
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  margin-top: 3px;
-  font-size: 8.5px;
+  margin-top: 4px;
+  font-size: 9px;
   color: var(--diamond-muted);
 }
 
 .out .meta {
-  color: rgba(36, 27, 8, 0.62);
+  color: rgba(43, 36, 23, 0.55);
 }
 
 .status {
@@ -65,32 +66,53 @@
   letter-spacing: 0.02em;
 }
 
+.status[data-status="READ"] {
+  color: var(--diamond-gold-hi);
+}
+
 .mediaImg {
   display: block;
-  max-width: 220px;
-  max-height: 220px;
+  max-width: min(240px, 100%);
+  max-height: 240px;
   margin-top: 6px;
-  border-radius: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--diamond-hair);
 }
 
 .player {
   display: block;
-  width: min(220px, 100%);
+  width: min(240px, 100%);
   margin-top: 6px;
+  border-radius: 8px;
 }
 
 .download {
-  display: inline-block;
-  margin-top: 6px;
-  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--diamond-hair);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--diamond-champagne);
   font-size: 12px;
+  text-decoration: none;
+}
+
+.download:hover {
+  border-color: rgba(201, 161, 92, 0.45);
 }
 
 .simMedia {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--diamond-hair);
+  background: rgba(255, 255, 255, 0.65);
   font-size: 12px;
 }
 

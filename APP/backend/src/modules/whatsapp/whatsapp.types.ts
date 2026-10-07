@@ -268,6 +268,11 @@ export interface WhatsAppProvider {
   sendMediaMessage(
     input: WhatsAppSendMediaInput,
   ): Promise<WhatsAppProviderResult<WhatsAppSendTextAccepted>>;
+  /** Best-effort provider read receipt for an inbound provider message id. */
+  markProviderMessageRead(
+    accessToken: string,
+    providerMessageId: string,
+  ): Promise<WhatsAppProviderResult<{ success: boolean }>>;
 }
 
 export interface WhatsAppMetaRuntimeConfig {

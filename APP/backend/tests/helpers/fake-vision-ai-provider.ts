@@ -33,6 +33,9 @@ export function fakeLicenseExtraction(input: FakeLicenseInput = {}): VisionExtra
       expiryDate: input.expiryDate !== undefined ? input.expiryDate : "2031-06-01",
       issuingCountry: null,
       issuingAuthority: null,
+      dateOfBirthNeedsReview: false,
+      issueDateNeedsReview: false,
+      expiryDateNeedsReview: false,
     }),
   };
 }

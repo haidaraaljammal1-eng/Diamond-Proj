@@ -1,5 +1,9 @@
 import { env } from "src/config/env";
-import { ULTRAMSG_CAPABILITIES, UNCONFIGURED_CAPABILITIES } from "src/modules/whatsapp/whatsapp.capabilities";
+import {
+  ULTRAMSG_CAPABILITIES,
+  UNCONFIGURED_CAPABILITIES,
+  WHAPI_CAPABILITIES,
+} from "src/modules/whatsapp/whatsapp.capabilities";
 import type {
   WhatsAppAccessCredential,
   WhatsAppGrantedPhone,
@@ -35,6 +39,16 @@ export class WhatsAppUnconfiguredProvider implements WhatsAppProvider {
     if (env.WHATSAPP_PROVIDER === "ULTRAMSG") {
       return {
         ...ULTRAMSG_CAPABILITIES,
+        supportsFreeText: false,
+        supportsImage: false,
+        supportsDocument: false,
+        supportsAudio: false,
+        supportsVideo: false,
+      };
+    }
+    if (env.WHATSAPP_PROVIDER === "WHAPI") {
+      return {
+        ...WHAPI_CAPABILITIES,
         supportsFreeText: false,
         supportsImage: false,
         supportsDocument: false,
@@ -160,6 +174,10 @@ export class WhatsAppUnconfiguredProvider implements WhatsAppProvider {
   async sendMediaMessage(
     _input?: WhatsAppSendMediaInput,
   ): Promise<WhatsAppProviderResult<{ providerMessageId: string }>> {
+    return notConfigured();
+  }
+
+  async markProviderMessageRead(): Promise<WhatsAppProviderResult<{ success: boolean }>> {
     return notConfigured();
   }
 }

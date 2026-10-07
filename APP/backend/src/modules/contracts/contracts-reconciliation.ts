@@ -372,6 +372,13 @@ export async function ensureReconciliationFinalizedInTx(
       approvedByUserId: actorUserId,
     },
   });
+  await writeOutboxEvent(tx, {
+    eventType: "reconciliation.finalized",
+    aggregateType: "contract_reconciliation",
+    aggregateId: contract.reconciliation.id,
+    dedupeKey: `reconciliation.finalized:${contract.reconciliation.id}`,
+    payload: { reconciliationId: contract.reconciliation.id, contractId },
+  });
 }
 
 export async function finalizeReconciliationAndCloseInTx(

@@ -5,6 +5,7 @@ import { createStripeWebhookWorker } from "src/modules/contracts/payment/stripe-
 import { createBusinessNotificationOutboxConsumer } from "src/modules/notification-delivery/business-notification-outbox.consumer";
 import { createAttentionMonitorService } from "src/modules/notification-delivery/attention-monitor.service";
 import { createRoadLiabilityOutboxConsumer } from "src/modules/road-liabilities/road-liability-outbox-consumer";
+import { createInvoiceOutboxConsumer } from "src/modules/invoices/invoice-outbox-consumer";
 import { createReportExecService } from "src/modules/reports/report-exec.service";
 
 /**
@@ -23,6 +24,7 @@ export function createBackgroundRunner(app: FastifyInstance) {
   const reportExec = createReportExecService(app);
   const stripeWebhooks = createStripeWebhookWorker(app);
   const roadLiabilityOutbox = createRoadLiabilityOutboxConsumer(app);
+  const invoiceOutbox = createInvoiceOutboxConsumer(app);
   const businessNotifications = createBusinessNotificationOutboxConsumer(app);
   const attentionMonitor = createAttentionMonitorService(app);
 
@@ -66,6 +68,14 @@ export function createBackgroundRunner(app: FastifyInstance) {
       }
     } catch (err) {
       app.log.error({ err }, "road-liability-outbox: cycle failed");
+    }
+    try {
+      const inv = await invoiceOutbox.runInvoiceOutboxCycle();
+      if (inv.processed) {
+        app.log.info(inv, "invoice-outbox: cycle");
+      }
+    } catch (err) {
+      app.log.error({ err }, "invoice-outbox: cycle failed");
     }
     try {
       const bn = await businessNotifications.consumeOutbox();

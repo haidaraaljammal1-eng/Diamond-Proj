@@ -3,7 +3,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--diamond-onyx2, #fffdf8);
 }
 
 .header {
@@ -12,7 +12,7 @@
   gap: 11px;
   padding: 12px 18px;
   border-bottom: 1px solid var(--diamond-hair);
-  background: rgba(13, 13, 17, 0.72);
+  background: rgba(255, 255, 255, 0.92);
   flex: none;
 }
 
@@ -23,8 +23,9 @@
   display: grid;
   place-items: center;
   font-weight: 700;
-  color: var(--diamond-gold);
-  background: linear-gradient(160deg, rgba(201, 161, 92, 0.24), rgba(138, 102, 48, 0.12));
+  color: var(--diamond-gold-hi);
+  background: linear-gradient(160deg, rgba(201, 161, 92, 0.18), rgba(255, 253, 248, 0.95));
+  border: 1px solid rgba(201, 161, 92, 0.28);
   clip-path: polygon(24% 0, 76% 0, 100% 24%, 100% 76%, 76% 100%, 24% 100%, 0 76%, 0 24%);
 }
 
@@ -62,14 +63,14 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 18px;
+  padding: 16px 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
   direction: ltr;
   background:
-    radial-gradient(rgba(201, 161, 92, 0.05) 1px, transparent 1.4px) 0 0 / 24px 24px,
-    radial-gradient(500px 300px at 80% 0%, rgba(201, 161, 92, 0.05), transparent 62%);
+    radial-gradient(520px 280px at 12% 0%, rgba(201, 161, 92, 0.06), transparent 70%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(250, 248, 242, 0.92));
 }
 
 .older {
@@ -87,6 +88,7 @@
   height: 120px;
   background: rgba(201, 161, 92, 0.08);
   animation: pulse 1.2s ease-in-out infinite;
+  border-radius: 10px;
 }
 
 @keyframes pulse {

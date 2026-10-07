@@ -236,6 +236,9 @@ export function WhatsAppConnectionSettings({
         {caps.provider === "ULTRAMSG" ? (
           <p data-testid="whatsapp-provider-label">{t("manage.providerUltraMsg")}</p>
         ) : null}
+        {caps.provider === "WHAPI" ? (
+          <p data-testid="whatsapp-provider-label">{t("manage.providerWhapi")}</p>
+        ) : null}
         <p>
           {t(`connection.status.${connection?.status === "DISCONNECTED" || !connection ? "disconnected" : connection.status}`)}
           {" · "}

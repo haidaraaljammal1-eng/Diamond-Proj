@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { PageHeader } from "@/shared/components/ui/page-header";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
+import { useWhatsAppRealtimeSubscription } from "../../hooks/use-whatsapp-realtime";
 import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error";
 import { WhatsAppChatPane } from "../chat-pane/chat-pane";
 import { WhatsAppConnectionBanner } from "../connection-banner/connection-banner";
@@ -15,6 +16,7 @@ import styles from "./whatsapp-screen.module.css";
 
 export function WhatsAppScreen() {
   const t = useTranslations("WhatsApp");
+  useWhatsAppRealtimeSubscription();
   const inbox = useWhatsApp();
   const [manageOpen, setManageOpen] = useState(false);
 

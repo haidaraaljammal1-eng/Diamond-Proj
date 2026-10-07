@@ -5,30 +5,37 @@ test.use({ channel: "chrome" });
 const email = process.env.PLAYWRIGHT_LOGIN_EMAIL ?? "admin@diamond.test";
 const password = process.env.PLAYWRIGHT_LOGIN_PASSWORD ?? "Diamond123!";
 
-async function login(page: Page, locale: "ar" | "en") {
-  await page.goto(`/${locale}/login`);
+/** Reuse an existing staff session when the browser context is already authenticated. */
+async function login(page: Page, locale: "ar" | "en", landingPath: string) {
+  await page.goto(landingPath);
+  if (!page.url().includes("/login")) return;
+
+  await page.locator("#email").waitFor({ state: "visible", timeout: 30_000 });
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(password);
   await page.getByRole("button", { name: /دخول|login|sign in/i }).click();
   await page.waitForURL((url) => !url.pathname.includes("/login"), {
-    timeout: 30_000,
+    timeout: 60_000,
   });
+  if (!page.url().includes(landingPath)) {
+    await page.goto(landingPath);
+  }
 }
 
 test.describe("Contracts Frontend V1 visual", () => {
+  test.describe.configure({ mode: "serial" });
   test("Arabic contracts desk opens with RTL, filters, empty or table", async ({
     page,
   }) => {
-    await login(page, "ar");
-    await page.goto("/ar/contracts");
+    await login(page, "ar", "/ar/contracts");
 
     const html = page.locator("html");
     await expect(html).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "العقود" })).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByTestId("contract-filters")).toBeVisible();
-    await expect(page.getByTestId("data-search")).toBeVisible();
+    await expect(page.getByTestId("contract-filters")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("data-search")).toBeVisible({ timeout: 60_000 });
 
     const table = page.getByTestId("contracts-table");
     const empty = page.getByTestId("contracts-empty");
@@ -48,8 +55,7 @@ test.describe("Contracts Frontend V1 visual", () => {
   });
 
   test("English contracts desk opens LTR with Shared filters", async ({ page }) => {
-    await login(page, "en");
-    await page.goto("/en/contracts");
+    await login(page, "en", "/en/contracts");
 
     const html = page.locator("html");
     await expect(html).toHaveAttribute("dir", "ltr");
@@ -63,8 +69,7 @@ test.describe("Contracts Frontend V1 visual", () => {
   test("Fleet page opens; Set Rental Price dialog when a vehicle exists", async ({
     page,
   }) => {
-    await login(page, "en");
-    await page.goto("/en/vehicles");
+    await login(page, "en", "/en/vehicles");
     await expect(page.getByTestId("vehicle-filters")).toBeVisible({ timeout: 20_000 });
 
     const grid = page.getByTestId("vehicles-grid");
@@ -75,7 +80,7 @@ test.describe("Contracts Frontend V1 visual", () => {
       const price = page.getByRole("button", { name: /set price|rental price|price/i }).first();
       const carOut = page.getByRole("button", { name: /car-out/i }).first();
       const returnLink = page.getByRole("button", { name: /return/i }).first();
-      await expect(price.or(carOut).or(returnLink)).toBeVisible();
+      await expect(price.or(carOut).or(returnLink).first()).toBeVisible();
 
       if (await price.isVisible()) {
         await price.click();

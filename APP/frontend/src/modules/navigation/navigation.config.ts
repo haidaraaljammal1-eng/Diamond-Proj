@@ -5,6 +5,7 @@ import { CONTRACTS_PAGE_PERMISSIONS } from "@/modules/contracts/contracts.permis
 import { ARCHIVE_PAGE_PERMISSIONS } from "@/modules/archive/archive.permissions";
 import { MAINTENANCE_PAGE_PERMISSIONS } from "@/modules/maintenance/maintenance.permissions";
 import { FINANCE_PAGE_PERMISSIONS } from "@/modules/finance/finance.permissions";
+import { INVOICES_PAGE_PERMISSIONS } from "@/modules/invoices/invoices.permissions";
 import type { NavigationConfig } from "./navigation.types";
 
 /**
@@ -16,7 +17,7 @@ import type { NavigationConfig } from "./navigation.types";
  *   (`roles.read` + `permissions.read`), Vehicles (`vehicles.read`),
  *   Contracts (`contracts.read`), Maintenance (`maintenance.read`),
  *   GPS (`gps.read`), Violations & Salik (`violations.read`),
- *   Finance (`finance.read`), and WhatsApp (`whatsapp.read`) map to permissions
+ *   Finance (`finance.read`), Invoices (`invoices.read`), and WhatsApp (`whatsapp.read`) map to permissions
  *   that exist in the Backend catalog.
  * - Remaining Demo pages with no matching Backend permission declare none
  *   (never invented).
@@ -89,7 +90,7 @@ export const navigationConfig: NavigationConfig = [
         labelKey: "invoices",
         href: "/invoices",
         icon: "invoices",
-        adminOnly: true,
+        permissions: [...INVOICES_PAGE_PERMISSIONS],
       },
       {
         key: "contracts",

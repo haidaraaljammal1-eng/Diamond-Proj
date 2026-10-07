@@ -32,8 +32,10 @@ export const WhatsAppConnectedBySchema = z
   .nullable();
 
 export const WhatsAppCapabilitySchema = z.object({
-  provider: z.enum(["META_CLOUD", "ULTRAMSG"]),
+  provider: z.enum(["META_CLOUD", "ULTRAMSG", "WHAPI"]),
   supportsQrAuthentication: z.boolean(),
+  supportsDirectOutboundMedia: z.boolean(),
+  recipientAddressing: z.enum(["WA_ID", "PROVIDER_CHAT_ID"]),
   supportsEmbeddedSignup: z.boolean(),
   supportsFreeText: z.boolean(),
   supportsTemplates: z.boolean(),
@@ -61,7 +63,7 @@ export const WhatsAppProviderSessionStatusSchema = z.enum([
 
 export const WhatsAppConnectionSchema = z.object({
   status: WhatsAppConnectionStatusSchema,
-  provider: z.enum(["META_CLOUD_API", "ULTRAMSG"]),
+  provider: z.enum(["META_CLOUD_API", "ULTRAMSG", "WHAPI"]),
   displayPhoneNumber: z.string().nullable(),
   verifiedName: z.string().nullable(),
   businessAccountName: z.string().nullable(),

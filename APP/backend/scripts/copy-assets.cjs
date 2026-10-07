@@ -7,6 +7,7 @@ const path = require("node:path");
 const ASSET_DIRS = [
   // [from, to]
   ["src/modules/reports/assets", "dist/src/modules/reports/assets"],
+  ["src/modules/invoices/assets", "dist/src/modules/invoices/assets"],
 ];
 
 for (const [from, to] of ASSET_DIRS) {

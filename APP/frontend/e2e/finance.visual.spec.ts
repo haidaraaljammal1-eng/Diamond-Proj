@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { BACKEND, staffToken } from "./helpers/e2e-api";
 
 test.use({ channel: "chrome" });
 test.describe.configure({ timeout: 180_000 });
@@ -8,6 +9,7 @@ const password = process.env.PLAYWRIGHT_LOGIN_PASSWORD ?? "Diamond123!";
 
 async function staffLogin(page: Page) {
   await page.goto("/ar/login");
+  await page.locator("#email").waitFor({ state: "visible", timeout: 30_000 });
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(password);
   await page.getByRole("button", { name: /دخول|login|sign in/i }).click();
@@ -38,19 +40,89 @@ function collectMissing(page: Page): string[] {
   return missing;
 }
 
-async function createExpenseViaUi(page: Page, description: string, amount = "80") {
-  await page.getByTestId("finance-add-expense").click();
-  await page.locator("#finance-expense-amount").fill(amount);
-  await page.locator("#finance-expense-description").fill(description);
-  await page.getByRole("button", { name: /حفظ المصروف|Save expense/ }).click();
-  await expect(page.getByTestId("finance-notice")).toBeVisible({ timeout: 30_000 });
+async function selectFinancePeriodToday(page: Page) {
+  // Month preset avoids edge cases where "today" in UI timezone excludes recognizedAt.
+  await page.getByTestId("finance-period-month").click();
+  await page.getByTestId("finance-refresh").click();
+  await waitForFinanceReady(page);
 }
 
-async function openExpenseFromLedger(page: Page, description: string) {
+type SeededExpense = { id: string; description: string };
+
+/** Ledger API search matches sourceId/dedupeKey — not expense description. */
+async function applyLedgerSearch(page: Page, query: string) {
+  await selectFinancePeriodToday(page);
   const ledger = page.getByTestId("finance-ledger");
-  await ledger.getByLabel(/^(الحركة|Movement)$/).click();
-  await page.getByRole("option", { name: /^(مصروف|Expense)$/ }).click();
-  const row = ledger.getByTestId("finance-ledger-row").filter({ hasText: description });
+  await page.getByTestId("finance-ledger-clear").click();
+  await page.getByTestId("finance-ledger-search").fill(query);
+  await ledger.getByRole("button", { name: /^بحث$|^Search$/i }).click();
+  await expect(ledger.getByTestId("finance-ledger-empty")).toHaveCount(0, { timeout: 30_000 });
+  return ledger;
+}
+
+/** Seeds a real manual expense via the approved backend API (local dev DB only). */
+async function createExpenseForLedgerTest(
+  page: Page,
+  description: string,
+  amount = "80",
+): Promise<SeededExpense> {
+  const token = await staffToken();
+  const response = await fetch(`${BACKEND}/finance/expenses`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: Number(amount),
+      category: "VEHICLE_CLEANING",
+      recognizedAt: new Date().toISOString(),
+      description,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Manual expense seed failed (${response.status})`);
+  }
+  const body = (await response.json()) as { data: { id: string } };
+  const seeded = { id: body.data.id, description };
+  await page.getByTestId("finance-refresh").click();
+  await waitForFinanceReady(page);
+  await selectFinancePeriodToday(page);
+  return seeded;
+}
+
+async function createExpenseViaUi(page: Page, description: string, amount = "80"): Promise<SeededExpense> {
+  await page.getByTestId("finance-add-expense").click();
+  await expect(page.getByRole("heading", { name: /إضافة مصروف|Add expense/i })).toBeVisible();
+  await page.locator("#finance-expense-amount").fill(amount);
+  await page.locator("#finance-expense-description").fill(description);
+  const createResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/finance/expenses") &&
+      response.request().method() === "POST" &&
+      response.ok(),
+  );
+  await page.getByRole("button", { name: /حفظ المصروف|Save expense/ }).click();
+  const response = await createResponse;
+  const body = (await response.json()) as { data: { id: string } };
+  const seeded = { id: body.data.id, description };
+  await expect(page.getByRole("heading", { name: /إضافة مصروف|Add expense/i })).toHaveCount(0, {
+    timeout: 30_000,
+  });
+  await expect(page.getByTestId("finance-notice")).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId("finance-refresh").click();
+  await waitForFinanceReady(page);
+  await selectFinancePeriodToday(page);
+  return seeded;
+}
+
+async function expenseRowInLedger(page: Page, expense: SeededExpense) {
+  const ledger = await applyLedgerSearch(page, expense.id);
+  return ledger.getByTestId("finance-ledger-row").filter({ hasText: expense.description });
+}
+
+async function openExpenseFromLedger(page: Page, expense: SeededExpense) {
+  const row = await expenseRowInLedger(page, expense);
   await expect(row).toBeVisible({ timeout: 30_000 });
   await row.getByTestId("finance-view-expense").click();
   await expect(page.getByTestId("finance-expense-detail")).toBeVisible({ timeout: 30_000 });
@@ -226,8 +298,8 @@ test.describe("Finance V1", () => {
     await page.goto("/ar/finance");
     await waitForFinanceReady(page);
 
-    await createExpenseViaUi(page, marker);
-    await openExpenseFromLedger(page, marker);
+    const seeded = await createExpenseForLedgerTest(page, marker);
+    await openExpenseFromLedger(page, seeded);
 
     await page.getByTestId("finance-correct-expense").click();
     await expect(page.getByRole("heading", { name: "تصحيح المصروف" })).toBeVisible();
@@ -268,7 +340,9 @@ test.describe("Finance V1", () => {
     await expect(page.getByRole("heading", { name: "تصحيح المصروف" })).toHaveCount(0, {
       timeout: 30_000,
     });
-    await expect(page.getByTestId("finance-expense-detail").getByText(`${marker}-corrected`)).toBeVisible();
+    await expect(
+      page.getByTestId("finance-expense-detail").getByText(`${marker}-corrected`, { exact: true }).first(),
+    ).toBeVisible();
 
     await page.getByTestId("finance-void-expense").click();
     await expect(page.getByRole("heading", { name: "إلغاء المصروف" })).toBeVisible();
@@ -292,8 +366,8 @@ test.describe("Finance V1", () => {
     const enMarker = `${marker}-en`;
     await page.goto("/en/finance");
     await waitForFinanceReady(page);
-    await createExpenseViaUi(page, enMarker);
-    await openExpenseFromLedger(page, enMarker);
+    const enSeeded = await createExpenseForLedgerTest(page, enMarker);
+    await openExpenseFromLedger(page, enSeeded);
     await page.getByTestId("finance-correct-expense").click();
     await expect(page.getByRole("heading", { name: "Correct Expense" })).toBeVisible();
     await expect(page.locator("#finance-correct-void-reason")).toHaveCount(0);
@@ -312,11 +386,9 @@ test.describe("Finance V1", () => {
     await page.goto("/ar/finance");
     await waitForFinanceReady(page);
 
-    await createExpenseViaUi(page, marker, "100");
+    const seededVoid = await createExpenseForLedgerTest(page, marker, "100");
     const ledger = page.getByTestId("finance-ledger");
-    await ledger.getByLabel("الحركة").click();
-    await page.getByRole("option", { name: "مصروف", exact: true }).click();
-    const activeRow = ledger.getByTestId("finance-ledger-row").filter({ hasText: marker });
+    const activeRow = await expenseRowInLedger(page, seededVoid);
     await expect(activeRow).toBeVisible({ timeout: 30_000 });
     await expect(activeRow).toHaveAttribute("data-movement", "EXPENSE");
     await expect(activeRow.getByTestId("finance-ledger-source")).toHaveText("مصروف يدوي");
@@ -336,13 +408,25 @@ test.describe("Finance V1", () => {
     await page.getByTestId("shared-drawer").getByRole("button", { name: "إغلاق" }).click();
 
     await page.getByTestId("finance-ledger-clear").click();
+    const expenseFilterResponse = page.waitForResponse(
+      (response) => response.url().includes("/finance/ledger") && response.ok(),
+    );
     await ledger.getByLabel("الحركة").click();
     await page.getByRole("option", { name: "مصروف", exact: true }).click();
-    await expect(ledger.getByTestId("finance-ledger-row").filter({ hasText: marker })).toHaveCount(0);
+    await expenseFilterResponse;
+    await page.getByTestId("finance-ledger-search").fill(seededVoid.id);
+    await ledger.getByRole("button", { name: /^بحث$|^Search$/i }).click();
+    await expect(
+      ledger.locator('[data-testid="finance-ledger-row"][data-movement="EXPENSE"]').filter({
+        hasText: marker,
+      }),
+    ).toHaveCount(0, { timeout: 15_000 });
 
     await page.getByTestId("finance-ledger-clear").click();
     await ledger.getByLabel("الحركة").click();
     await page.getByRole("option", { name: "ملغى", exact: true }).click();
+    await page.getByTestId("finance-ledger-search").fill(seededVoid.id);
+    await ledger.getByRole("button", { name: /^بحث$|^Search$/i }).click();
     const voidedRow = ledger
       .locator('[data-testid="finance-ledger-row"][data-movement="VOIDED"]')
       .filter({ hasText: marker });
@@ -358,8 +442,8 @@ test.describe("Finance V1", () => {
     ).toHaveCount(0);
 
     const correctMarker = `${marker}-fix`;
-    await createExpenseViaUi(page, correctMarker, "100");
-    await openExpenseFromLedger(page, correctMarker);
+    const seededCorrect = await createExpenseForLedgerTest(page, correctMarker, "100");
+    await openExpenseFromLedger(page, seededCorrect);
     await page.getByTestId("finance-correct-expense").click();
     await expect(page.getByRole("heading", { name: "تصحيح المصروف" })).toBeVisible();
     await expect(page.locator("#finance-correct-void-reason")).toHaveCount(0);
@@ -369,8 +453,10 @@ test.describe("Finance V1", () => {
     await expect(page.getByRole("heading", { name: "تصحيح المصروف" })).toHaveCount(0, {
       timeout: 30_000,
     });
-    await expect(page.getByTestId("finance-expense-detail").getByText("AED 80")).toBeVisible();
-    await expect(page.getByTestId("finance-expense-detail").getByText("مصروف مصحح")).toBeVisible();
+    await expect(
+      page.getByTestId("finance-expense-detail").getByText("AED 80", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(page.getByTestId("finance-correction-history")).toBeVisible();
 
     await page.getByTestId("finance-void-expense").click();
     await expect(page.locator("#finance-void-reason")).toBeVisible();

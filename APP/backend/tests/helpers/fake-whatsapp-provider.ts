@@ -231,6 +231,9 @@ export function createFakeWhatsAppProvider(options?: {
       const id = sendMessageId ?? `wamid.fake.media.${mediaSendCount}`;
       return { ok: true, value: { providerMessageId: id } };
     },
+    async markProviderMessageRead() {
+      return { ok: true, value: { success: true } };
+    },
   };
 
   return {

@@ -1,7 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { formatSseFrame, type WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
 import { WhatsAppRealtimePublisher } from "src/modules/whatsapp/whatsapp.realtime-publisher";
+
+const REALTIME_ROUTE = join(
+  process.cwd(),
+  "src/modules/whatsapp/routes/admin/realtime/route.ts",
+);
 
 function sample(overrides?: Partial<WhatsAppRealtimeEvent>): WhatsAppRealtimeEvent {
   return {
@@ -14,6 +21,21 @@ function sample(overrides?: Partial<WhatsAppRealtimeEvent>): WhatsAppRealtimeEve
     ...overrides,
   };
 }
+
+describe("whatsapp realtime SSE route lifecycle", () => {
+  it("cleans up on response/socket close, not request close (GET SSE)", () => {
+    const source = readFileSync(REALTIME_ROUTE, "utf8");
+    assert.match(source, /reply\.raw\.on\("close", cleanup\)/);
+    assert.match(source, /request\.raw\.on\("aborted", cleanup\)/);
+    assert.doesNotMatch(source, /request\.raw\.on\("close", cleanup\)/);
+  });
+
+  it("applies shared CORS headers on hijacked SSE writeHead", () => {
+    const source = readFileSync(REALTIME_ROUTE, "utf8");
+    assert.match(source, /corsHeadersForOrigin/);
+    assert.match(source, /\.\.\.corsHeadersForOrigin\(requestOrigin\)/);
+  });
+});
 
 describe("whatsapp realtime envelope", () => {
   it("formats SSE frames without customer text or secrets", () => {

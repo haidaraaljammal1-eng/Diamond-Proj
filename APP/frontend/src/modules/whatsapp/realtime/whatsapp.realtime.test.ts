@@ -43,6 +43,44 @@ describe("whatsapp realtime parser", () => {
 });
 
 describe("whatsapp realtime fetch client", () => {
+  it("tolerates React Strict Mode style handler churn without extra fetch storms", async () => {
+    resetWhatsAppRealtimeClientForTests();
+    let fetches = 0;
+    const fetchImpl: typeof fetch = async () => {
+      fetches += 1;
+      return {
+        ok: true,
+        status: 200,
+        body: new ReadableStream<Uint8Array>({
+          start() {
+            // open until abort
+          },
+        }),
+      } as Response;
+    };
+    const client = new WhatsAppRealtimeClient({
+      fetchImpl,
+      apiUrl: "http://api.test",
+      getAccessToken: async () => "test-access",
+      isOnline: () => true,
+      stopDebounceMs: 40,
+    });
+    const handler = {
+      onEvent: () => undefined,
+      onStatus: () => undefined,
+      onReconnect: () => undefined,
+    };
+    const offA = client.addHandler(handler);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    offA();
+    const offB = client.addHandler(handler);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    assert.ok(fetches <= 1, `expected at most one fetch, got ${fetches}`);
+    offB();
+    client.stop();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  });
+
   it("opens one authenticated stream, closes on release, and does not put a token in the URL", async () => {
     resetWhatsAppRealtimeClientForTests();
     let fetches = 0;
@@ -89,6 +127,31 @@ describe("whatsapp realtime fetch client", () => {
     a();
     assert.equal(client.handlerCount, 0);
     assert.equal(events.length, 0);
+  });
+
+  it("backs off on 429 without auth failure", async () => {
+    resetWhatsAppRealtimeClientForTests();
+    let fetches = 0;
+    const fetchImpl: typeof fetch = async () => {
+      fetches += 1;
+      return { ok: false, status: 429, body: null } as Response;
+    };
+    const statuses: string[] = [];
+    const client = new WhatsAppRealtimeClient({
+      fetchImpl,
+      apiUrl: "http://api.test",
+      getAccessToken: async () => "test-access",
+      isOnline: () => true,
+    });
+    client.addHandler({
+      onEvent: () => undefined,
+      onStatus: (status) => statuses.push(status),
+      onReconnect: () => undefined,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(fetches, 1);
+    assert.equal(statuses.includes("reconnecting"), true);
+    client.stop();
   });
 
   it("does not retry 401/403 in a loop", async () => {

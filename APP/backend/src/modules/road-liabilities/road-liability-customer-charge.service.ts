@@ -3,6 +3,8 @@ import type { ContractStatus } from "@prisma/client";
 import { acquireAdvisoryLocks } from "src/lib/db/advisory-lock";
 import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { runIdempotent, fingerprintIdempotentPayload } from "src/lib/db/idempotency";
+import { writeOutboxEvent } from "src/lib/db/outbox";
+import { INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE } from "src/modules/invoices/invoices.constants";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import {
   CONTRACT_RECONCILE_LOCK_NS,
@@ -233,7 +235,14 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
           deductions: 0,
         },
       });
-      return;
+      await writeOutboxEvent(tx, {
+        eventType: INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE,
+        aggregateType: "road_liability_customer_charge",
+        aggregateId: charge.id,
+        dedupeKey: `${INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE}:${charge.id}`,
+        payload: { customerChargeId: charge.id, contractId: input.contract.id },
+      });
+      return charge.id;
     }
 
     await tx.contractPostCloseReceivable.create({
@@ -246,6 +255,14 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
         status: "OPEN",
       },
     });
+    await writeOutboxEvent(tx, {
+      eventType: INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE,
+      aggregateType: "road_liability_customer_charge",
+      aggregateId: charge.id,
+      dedupeKey: `${INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE}:${charge.id}`,
+      payload: { customerChargeId: charge.id, contractId: input.contract.id },
+    });
+    return charge.id;
   }
 
   function samePayloadLocked(

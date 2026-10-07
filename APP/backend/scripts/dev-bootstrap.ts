@@ -76,6 +76,32 @@ async function main(): Promise<void> {
   console.log("[4/5] Demo Fleet seed (DEMO-FLEET-01..20, create-missing)…");
   run("npm", ["run", "db:seed:demo"]);
 
+  console.log("[4b/5] Invoice number sequences (ELITE/UNIQUE, idempotent)…");
+  {
+    const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+    const prisma = new PrismaClient({ adapter }).$extends(normalizedNameExtension);
+    try {
+      const { ensureDevelopmentInvoiceNumberSequences } = await import(
+        "src/modules/invoices/invoice-number-sequence.bootstrap"
+      );
+      const seqResults = await ensureDevelopmentInvoiceNumberSequences(
+        prisma as unknown as PrismaClient,
+      );
+      for (const row of seqResults) {
+        console.log(
+          `  [invoices] ${row.companyCode}: action=${row.action} nextNumber=${row.nextNumber} issued=${row.issuedInvoices}`,
+        );
+        if (row.action === "human_review_required") {
+          console.warn(
+            `  [invoices] SEQUENCE CHANGE REQUIRES HUMAN REVIEW for ${row.companyCode}`,
+          );
+        }
+      }
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
   console.log("[5/5] Verifying development state…");
   const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
   const prisma = new PrismaClient({ adapter }).$extends(normalizedNameExtension);

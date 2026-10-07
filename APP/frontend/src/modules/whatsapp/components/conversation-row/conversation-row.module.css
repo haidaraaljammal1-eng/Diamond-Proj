@@ -89,14 +89,15 @@
 }
 
 .unread {
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   display: grid;
   place-items: center;
   font-size: 9.5px;
-  font-weight: 800;
-  color: #04240f;
-  background: linear-gradient(140deg, #63d89a, #46bf7f);
-  clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+  font-weight: 700;
+  color: var(--diamond-champagne);
+  background: linear-gradient(160deg, rgba(242, 224, 180, 0.95), rgba(201, 161, 92, 0.88));
+  border: 1px solid rgba(138, 102, 48, 0.35);
+  border-radius: 999px;
 }

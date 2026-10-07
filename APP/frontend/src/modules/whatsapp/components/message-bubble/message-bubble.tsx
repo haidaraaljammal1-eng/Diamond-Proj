@@ -172,7 +172,11 @@ export function WhatsAppMessageBubble({ message }: { message: WhatsAppMessageDto
           </time>
         ) : null}
         {outbound ? (
-          <span className={styles.status} data-testid="whatsapp-message-status">
+          <span
+            className={styles.status}
+            data-testid="whatsapp-message-status"
+            data-status={outboundUiStatus(message) ?? undefined}
+          >
             {(() => {
               const status = outboundUiStatus(message);
               return status ? t(`status.${status}`) : null;

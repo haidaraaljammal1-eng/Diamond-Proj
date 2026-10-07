@@ -3,10 +3,14 @@ import { ApiRequestError } from "./errors";
 import { shouldRedirectToLogin } from "./session-redirect";
 import type { ApiErrorResponse, ApiResponse } from "./types";
 
-async function getAccessToken(): Promise<string | undefined> {
+export async function getStaffAccessToken(): Promise<string | undefined> {
   if (typeof window === "undefined") return undefined;
   const { getSession } = await import("next-auth/react");
   return (await getSession())?.accessToken;
+}
+
+async function getAccessToken(): Promise<string | undefined> {
+  return getStaffAccessToken();
 }
 
 let loggingOut = false;

@@ -85,26 +85,138 @@ export function applyUnreadZero(
   return { ...conversation, unreadCount: 0 };
 }
 
-export function keepSelectedIfMissingFromList<T extends { id: string }>(
-  list: T[],
-  selected: T | null,
-): T | null {
+/** Merge fresher list-row presentation fields into an authoritative detail DTO. */
+export function mergeConversationListIntoDetail(
+  detail: WhatsAppConversationDetailDto,
+  listRow: WhatsAppConversationListItemDto,
+): WhatsAppConversationDetailDto {
+  return {
+    ...detail,
+    customerWaId: listRow.customerWaId,
+    customerDisplayName: listRow.customerDisplayName,
+    customerLinked: listRow.customerLinked,
+    lastMessagePreview: listRow.lastMessagePreview,
+    lastMessageType: listRow.lastMessageType,
+    lastMessageAt: listRow.lastMessageAt,
+    unreadCount: listRow.unreadCount,
+    lastInboundAt: listRow.lastInboundAt,
+    connection: listRow.connection,
+  };
+}
+
+/**
+ * Keep the loaded conversation detail when the list refreshes.
+ * Never replace a detail DTO with a list row (list rows lack messagingEligibility).
+ */
+export function reconcileSelectedConversation(
+  list: WhatsAppConversationListItemDto[],
+  selected: WhatsAppConversationDetailDto | WhatsAppConversationListItemDto | null,
+): WhatsAppConversationDetailDto | WhatsAppConversationListItemDto | null {
   if (!selected) return null;
-  return list.find((item) => item.id === selected.id) ?? selected;
+  const listRow = list.find((item) => item.id === selected.id);
+  if (isConversationDetail(selected)) {
+    return listRow ? mergeConversationListIntoDetail(selected, listRow) : selected;
+  }
+  return listRow ?? selected;
+}
+
+export function isFreeTextSendAllowed(
+  eligibility: WhatsAppMessagingEligibility | null,
+  input: {
+    hasSendPermission: boolean;
+    requiresCustomerServiceWindow: boolean;
+    simulationActive: boolean;
+  },
+): boolean {
+  if (!eligibility?.canSendText) return false;
+  if (input.simulationActive) return true;
+  if (!input.hasSendPermission) return false;
+  if (!input.requiresCustomerServiceWindow) return true;
+  return isClientSendWindowStillOpen(eligibility.windowExpiresAt);
+}
+
+export function isMediaSendAllowed(
+  eligibility: WhatsAppMessagingEligibility | null,
+  input: {
+    hasSendPermission: boolean;
+    requiresCustomerServiceWindow: boolean;
+    simulationActive: boolean;
+  },
+): boolean {
+  if (!eligibility?.canSendMedia) return false;
+  if (input.simulationActive) return true;
+  if (!input.hasSendPermission) return false;
+  if (!input.requiresCustomerServiceWindow) return true;
+  return isClientSendWindowStillOpen(eligibility.windowExpiresAt);
+}
+
+export function isTemplateSendAllowed(
+  eligibility: WhatsAppMessagingEligibility | null,
+  input: { hasSendPermission: boolean; simulationActive: boolean },
+): boolean {
+  if (!eligibility?.canSendTemplate) return false;
+  if (input.simulationActive) return true;
+  return input.hasSendPermission;
+}
+
+/** Milliseconds used for chronological ordering (provider time, then receivedAt). */
+export function messageChronologyMillis(
+  message: Pick<WhatsAppMessageDto, "providerOccurredAt" | "receivedAt">,
+): { primary: number; received: number } {
+  const received = toValidDate(message.receivedAt)?.getTime() ?? 0;
+  const primary = toValidDate(message.providerOccurredAt)?.getTime() ?? received;
+  return { primary, received };
+}
+
+/** Deterministic oldest → newest ordering for chat rendering. */
+export function compareWhatsAppMessages(a: WhatsAppMessageDto, b: WhatsAppMessageDto): number {
+  const aTime = messageChronologyMillis(a);
+  const bTime = messageChronologyMillis(b);
+  if (aTime.primary !== bTime.primary) return aTime.primary - bTime.primary;
+  if (aTime.received !== bTime.received) return aTime.received - bTime.received;
+  if (a.id === b.id) return 0;
+  return a.id < b.id ? -1 : 1;
+}
+
+export function mergeWhatsAppMessageRecord(
+  existing: WhatsAppMessageDto,
+  incoming: WhatsAppMessageDto,
+): WhatsAppMessageDto {
+  return {
+    ...existing,
+    ...incoming,
+    sendState: incoming.sendState ?? existing.sendState,
+    providerStatus:
+      incoming.providerStatus && incoming.providerStatus !== null
+        ? nextClientProviderStatus(existing.providerStatus, incoming.providerStatus)
+        : existing.providerStatus,
+  };
+}
+
+/** Deduplicate by id, merge fields, sort by canonical chronology. */
+export function mergeAndSortWhatsAppMessages(
+  existing: WhatsAppMessageDto[],
+  incoming: WhatsAppMessageDto[],
+): WhatsAppMessageDto[] {
+  const map = new Map<string, WhatsAppMessageDto>();
+  for (const message of existing) map.set(message.id, message);
+  for (const message of incoming) {
+    const prior = map.get(message.id);
+    map.set(message.id, prior ? mergeWhatsAppMessageRecord(prior, message) : message);
+  }
+  return [...map.values()].sort(compareWhatsAppMessages);
 }
 
 /** Backend returns newest-first. Chat UI is oldest → newest. */
 export function toChronologicalPage(newestFirst: WhatsAppMessageDto[]): WhatsAppMessageDto[] {
-  return [...newestFirst].reverse();
+  return mergeAndSortWhatsAppMessages([], newestFirst);
 }
 
 export function prependOlderMessages(
   currentChronological: WhatsAppMessageDto[],
   olderNewestFirst: WhatsAppMessageDto[],
 ): WhatsAppMessageDto[] {
-  const older = toChronologicalPage(olderNewestFirst);
-  const seen = new Set(currentChronological.map((message) => message.id));
-  return [...older.filter((message) => !seen.has(message.id)), ...currentChronological];
+  return mergeAndSortWhatsAppMessages(currentChronological, olderNewestFirst);
 }
 
 export function messageTimestamp(message: Pick<WhatsAppMessageDto, "providerOccurredAt" | "receivedAt">): string {
@@ -266,7 +378,7 @@ export function appendMessageById(
   current: WhatsAppMessageDto[],
   incoming: WhatsAppMessageDto,
 ): WhatsAppMessageDto[] {
-  return mergeById(current, [incoming]);
+  return mergeAndSortWhatsAppMessages(current, [incoming]);
 }
 
 export function blankWhatsAppMessageFields(): Pick<

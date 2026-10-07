@@ -47,14 +47,14 @@ export async function staffToken(): Promise<string> {
     return cachedStaffToken;
   }
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     const response = await fetch(`${BACKEND}/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email: STAFF_EMAIL, password: STAFF_PASSWORD }),
     });
-    if (response.status === 429 && attempt < 3) {
-      await new Promise((resolve) => setTimeout(resolve, 2_000 * (attempt + 1)));
+    if (response.status === 429 && attempt < 7) {
+      await new Promise((resolve) => setTimeout(resolve, 3_000 * (attempt + 1)));
       continue;
     }
     if (!response.ok) {
@@ -339,6 +339,29 @@ export function completeRentalSigning(rentalToken: string): void {
     "E2E_RENTAL_SIGN_JSON",
     `scripts/e2e-complete-rental-sign.ts --token=${rentalToken}`,
   );
+}
+
+export interface InvoiceListItemSeed {
+  id: string;
+  invoiceNumber: number;
+  companyCode: string;
+  contractNumber: string;
+  sourceLabel: string;
+  totalAmount: number;
+}
+
+export async function listInvoices(
+  token: string,
+  query = "page=1&pageSize=20",
+): Promise<InvoiceListItemSeed[]> {
+  const response = await fetch(`${BACKEND}/invoices?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`List invoices failed (${response.status})`);
+  }
+  const body = (await response.json()) as { data: InvoiceListItemSeed[] };
+  return body.data;
 }
 
 export function auditCashRental(token: string): CashRentalAudit {

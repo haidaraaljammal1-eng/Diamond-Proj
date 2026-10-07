@@ -5,10 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
-import {
-  conversationEligibility,
-  isClientSendWindowStillOpen,
-} from "../../utils/whatsapp-view-model";
+import { conversationEligibility } from "../../utils/whatsapp-view-model";
 import { WHATSAPP_TEXT_BODY_MAX } from "../../types/whatsapp.types";
 import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error";
 import { WhatsAppTemplateDialog } from "../template-dialog/template-dialog";
@@ -31,26 +28,27 @@ export function WhatsAppComposer() {
   const fileInput = useRef<HTMLInputElement>(null);
   const eligibility = conversationEligibility(inbox.selectedConversation);
   const trimmed = text.replace(/^[\s\uFEFF\u200B]+|[\s\uFEFF\u200B]+$/g, "");
-  const windowOpen = Boolean(
-    eligibility?.canSendText &&
-      (inbox.simulationActive ||
-        !inbox.connection?.capabilities?.requiresCustomerServiceWindow ||
-        isClientSendWindowStillOpen(eligibility.windowExpiresAt)),
-  );
   const enabled = inbox.hasSendPermission && !submitting && !inbox.sending;
-  const canSubmitText = enabled && windowOpen && trimmed.length > 0 && trimmed.length <= WHATSAPP_TEXT_BODY_MAX;
-  const canSendTemplate = Boolean(enabled && eligibility?.canSendTemplate);
-  const canSendMedia = Boolean(enabled && eligibility?.canSendMedia && windowOpen);
+  const canSubmitText =
+    enabled &&
+    inbox.canSend &&
+    trimmed.length > 0 &&
+    trimmed.length <= WHATSAPP_TEXT_BODY_MAX;
+  const canSendTemplate = Boolean(enabled && inbox.canSendTemplate);
+  const canSendMedia = Boolean(enabled && inbox.canSendMedia);
 
   function hint(): string {
     if (!inbox.hasSendPermission && !inbox.simulationActive) return t("composer.noPermission");
-    if (!eligibility) return t("composer.disabledHint");
-    if (windowOpen) return t("composer.readyHint");
+    if (!inbox.selectedConversationId) return t("composer.selectConversation");
+    if (!eligibility) return t("composer.loadingDetail");
+    if (inbox.canSend) return t("composer.readyHint");
     if (eligibility.reason === "QR_REQUIRED") return t("composer.reason.QR_REQUIRED");
     if (eligibility.reason === "PROVIDER_NOT_AUTHENTICATED") {
       return t("composer.reason.PROVIDER_NOT_AUTHENTICATED");
     }
-    if (eligibility.canSendTemplate) return t("composer.reason.CUSTOMER_SERVICE_WINDOW_CLOSED");
+    if (eligibility.reason === "CUSTOMER_SERVICE_WINDOW_CLOSED" && eligibility.canSendTemplate) {
+      return t("composer.reason.CUSTOMER_SERVICE_WINDOW_CLOSED");
+    }
     return t(`composer.reason.${eligibility.reason}`);
   }
 
@@ -113,7 +111,7 @@ export function WhatsAppComposer() {
         <textarea
           className={styles.input}
           value={text}
-          disabled={!enabled || (!windowOpen && !file)}
+          disabled={!enabled || (!inbox.canSend && !file)}
           maxLength={WHATSAPP_TEXT_BODY_MAX}
           placeholder={t("composer.placeholder")}
           aria-label={t("composer.inputLabel")}

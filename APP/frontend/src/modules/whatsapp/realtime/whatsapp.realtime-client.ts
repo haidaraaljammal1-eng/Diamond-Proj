@@ -1,3 +1,4 @@
+import { env } from "../../../config/env.ts";
 import {
   nextRealtimeBackoffMs,
   parseSseFrames,
@@ -17,14 +18,22 @@ export interface WhatsAppRealtimeClientDeps {
   getAccessToken?: () => Promise<string | undefined>;
   apiUrl?: string;
   isOnline?: () => boolean;
+  /** Test-only: debounce before stop when the last handler is removed. */
+  stopDebounceMs?: number;
 }
 
 const PATH = "/whatsapp/realtime";
+const HANDLER_STOP_DEBOUNCE_MS = 300;
 
 async function defaultAccessToken(): Promise<string | undefined> {
   if (typeof window === "undefined") return undefined;
   const { getSession } = await import("next-auth/react");
   return (await getSession())?.accessToken;
+}
+
+function resolveApiBaseUrl(override?: string): string {
+  const base = (override ?? env.apiUrl).replace(/\/$/, "");
+  return base;
 }
 
 /**
@@ -39,17 +48,20 @@ export class WhatsAppRealtimeClient {
   private lastEventId: string | null = null;
   private attempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingStopTimer: ReturnType<typeof setTimeout> | null = null;
   private stopped = true;
   private streamGeneration = 0;
+  private connectPromise: Promise<void> | null = null;
   private onlineHandler: (() => void) | null = null;
   private offlineHandler: (() => void) | null = null;
 
   constructor(deps: WhatsAppRealtimeClientDeps = {}) {
     this.deps = {
       fetchImpl: deps.fetchImpl ?? fetch.bind(globalThis),
-      apiUrl: (deps.apiUrl ?? process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, ""),
+      apiUrl: resolveApiBaseUrl(deps.apiUrl),
       getAccessToken: deps.getAccessToken,
       isOnline: deps.isOnline,
+      stopDebounceMs: deps.stopDebounceMs ?? HANDLER_STOP_DEBOUNCE_MS,
     };
   }
 
@@ -58,11 +70,15 @@ export class WhatsAppRealtimeClient {
   }
 
   addHandler(handler: WhatsAppRealtimeHandlers): () => void {
+    if (this.pendingStopTimer) {
+      clearTimeout(this.pendingStopTimer);
+      this.pendingStopTimer = null;
+    }
     this.handlers.add(handler);
     if (this.stopped) this.start();
     return () => {
       this.handlers.delete(handler);
-      if (this.handlers.size === 0) this.stop();
+      if (this.handlers.size === 0) this.scheduleStop();
     };
   }
 
@@ -75,12 +91,26 @@ export class WhatsAppRealtimeClient {
 
   stop(): void {
     this.stopped = true;
+    if (this.pendingStopTimer) {
+      clearTimeout(this.pendingStopTimer);
+      this.pendingStopTimer = null;
+    }
     this.unbindNetwork();
     this.clearReconnect();
     this.abort?.abort();
     this.abort = null;
+    this.connectPromise = null;
     this.attempt = 0;
     this.emitStatus("idle");
+  }
+
+  private scheduleStop(): void {
+    if (this.pendingStopTimer) return;
+    const delay = this.deps.stopDebounceMs ?? HANDLER_STOP_DEBOUNCE_MS;
+    this.pendingStopTimer = setTimeout(() => {
+      this.pendingStopTimer = null;
+      if (this.handlers.size === 0) this.stop();
+    }, delay);
   }
 
   /** Test helper. */
@@ -117,8 +147,21 @@ export class WhatsAppRealtimeClient {
     return navigator.onLine;
   }
 
-  private async connect(): Promise<void> {
+  private connect(): Promise<void> {
+    if (this.stopped) return Promise.resolve();
+    if (this.connectPromise) return this.connectPromise;
+    this.connectPromise = this.connectOnce().finally(() => {
+      this.connectPromise = null;
+    });
+    return this.connectPromise;
+  }
+
+  private async connectOnce(): Promise<void> {
     if (this.stopped) return;
+    if (!this.deps.apiUrl) {
+      this.emitStatus("offline");
+      return;
+    }
     if (!this.isOnline()) {
       this.emitStatus("offline");
       return;
@@ -142,9 +185,15 @@ export class WhatsAppRealtimeClient {
         credentials: "include",
         signal: controller.signal,
       });
+      if (this.stopped || generation !== this.streamGeneration) return;
       if (response.status === 401 || response.status === 403) {
         this.stop();
         this.handlers.forEach((handler) => handler.onAuthFailure?.());
+        return;
+      }
+      if (response.status === 429) {
+        this.attempt = Math.max(this.attempt, 6);
+        this.scheduleReconnect();
         return;
       }
       if (!response.ok || !response.body) {
@@ -160,6 +209,7 @@ export class WhatsAppRealtimeClient {
     } catch (error) {
       if (controller.signal.aborted || this.stopped) return;
       if (error instanceof DOMException && error.name === "AbortError") return;
+      if (generation !== this.streamGeneration) return;
       this.scheduleReconnect();
     }
   }

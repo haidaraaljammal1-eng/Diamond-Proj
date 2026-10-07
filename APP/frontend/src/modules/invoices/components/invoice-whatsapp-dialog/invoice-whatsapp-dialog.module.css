@@ -1,0 +1,46 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.summary dt {
+  color: var(--diamond-muted);
+}
+
+.summary dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.phoneHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--diamond-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--diamond-danger, #b42318);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

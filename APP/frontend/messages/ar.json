@@ -2631,6 +2631,8 @@
       "inputLabel": "رسالة",
       "send": "إرسال",
       "disabledHint": "سيتم تفعيل إرسال الرسائل بعد إكمال إعداد المراسلة في واتساب.",
+      "loadingDetail": "جاري تحميل تفاصيل المحادثة…",
+      "selectConversation": "اختر محادثة لإرسال رسالة.",
       "readyHint": "رسائل نصية يدوية فقط. المستلم يُحدد من المحادثة.",
       "noPermission": "ليس لديك صلاحية لإرسال رسائل واتساب.",
       "reason": {
@@ -2806,6 +2808,7 @@
       "disconnectConfirm": "سيتوقف دايموند عن استخدام هذا الربط. المحادثات التاريخية تبقى. هذا لا يحذف الرقم من ميتا.",
       "changeAccountConfirm": "الرسائل القادمة ستستخدم الحساب الجديد. المحادثات التاريخية تبقى على الربط السابق.",
       "providerUltraMsg": "المزوّد: UltraMsg",
+      "providerWhapi": "المزوّد: Whapi",
       "showQr": "عرض رمز QR",
       "qrHint": "امسح رمز QR لربط واتساب.",
       "qrLoading": "جارٍ تحميل رمز QR…"
@@ -2821,6 +2824,149 @@
       "unlink": "إلغاء ربط العميل",
       "search": "ابحث عن العملاء",
       "needCustomerRead": "البحث عن العملاء يتطلب صلاحية قراءة العملاء."
+    }
+  },
+  "Invoices": {
+    "title": "الفواتير",
+    "subtitle": "سجل الفواتير الرسمية المرتبطة بالعقود والمبالغ المستحقة",
+    "crumbs": "الفواتير",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
+    "denied": {
+      "title": "لا يمكن الوصول إلى الفواتير",
+      "description": "تتطلب هذه الصفحة صلاحية invoices.read."
+    },
+    "search": {
+      "placeholder": "ابحث برقم الفاتورة، العقد، العميل أو اللوحة",
+      "inputLabel": "بحث الفواتير",
+      "button": "بحث",
+      "clear": "مسح"
+    },
+    "filters": {
+      "company": "الشركة",
+      "companyOptions": {
+        "ALL": "الكل",
+        "ELITE": "ELITE",
+        "UNIQUE": "UNIQUE"
+      },
+      "type": "نوع الفاتورة",
+      "typeOptions": {
+        "ALL": "كل الأنواع",
+        "RENTAL": "إيجار",
+        "ROAD_LIABILITY": "مخالفة / سالك",
+        "RECONCILIATION": "مطابقة",
+        "RENEWAL": "تمديد"
+      },
+      "dateFrom": "من",
+      "dateTo": "إلى",
+      "clear": "مسح الفلاتر"
+    },
+    "columns": {
+      "invoice": "الفاتورة",
+      "company": "الشركة",
+      "customer": "العميل",
+      "contract": "العقد",
+      "vehicle": "المركبة",
+      "source": "المصدر",
+      "issueDate": "تاريخ الإصدار",
+      "amount": "المبلغ",
+      "whatsapp": "واتساب",
+      "actions": "إجراءات"
+    },
+    "types": {
+      "RENTAL": "إيجار",
+      "ROAD_LIABILITY": "مخالفة / سالك",
+      "RECONCILIATION": "مطابقة",
+      "RENEWAL": "تمديد"
+    },
+    "status": {
+      "ISSUED": "صادرة",
+      "VOID": "ملغاة"
+    },
+    "delivery": {
+      "notSent": "لم تُرسل",
+      "historyEmpty": "لم يتم إرسال هذه الفاتورة عبر واتساب بعد.",
+      "status": {
+        "PENDING": "قيد الانتظار",
+        "SENDING": "جارٍ الإرسال",
+        "SENT": "تم الإرسال",
+        "DELIVERED": "تم التسليم",
+        "FAILED": "فشل الإرسال"
+      }
+    },
+    "list": {
+      "results": "{count} فاتورة"
+    },
+    "pagination": {
+      "label": "صفحات الفواتير",
+      "previous": "السابق",
+      "next": "التالي",
+      "page": "صفحة {page} من {totalPages}"
+    },
+    "empty": {
+      "noMatch": "لا توجد فواتير مطابقة",
+      "none": "لا توجد فواتير حتى الآن"
+    },
+    "actions": {
+      "view": "عرض",
+      "viewPdf": "عرض PDF",
+      "download": "تنزيل",
+      "sendWhatsApp": "إرسال عبر واتساب"
+    },
+    "detail": {
+      "title": "تفاصيل الفاتورة",
+      "close": "إغلاق",
+      "loading": "جارٍ تحميل الفاتورة…",
+      "summary": "ملخص الفاتورة",
+      "invoiceNumber": "رقم الفاتورة",
+      "invoiceType": "نوع الفاتورة",
+      "company": "الشركة",
+      "issueDate": "تاريخ الإصدار",
+      "dueDate": "تاريخ الاستحقاق",
+      "terms": "الشروط",
+      "currency": "العملة",
+      "customer": "العميل",
+      "customerName": "اسم العميل",
+      "contract": "العقد",
+      "contractNumber": "رقم العقد",
+      "vehicle": "المركبة",
+      "vehicleName": "المركبة",
+      "plateNumber": "رقم اللوحة",
+      "source": "المصدر",
+      "sourceLabel": "المصدر",
+      "lines": "بنود الفاتورة",
+      "lineService": "الخدمة",
+      "lineDescription": "الوصف",
+      "lineQty": "الكمية",
+      "lineRate": "السعر",
+      "lineAmount": "المبلغ",
+      "total": "الإجمالي",
+      "delivery": "التسليم",
+      "latestWhatsApp": "واتساب",
+      "deliveryLoading": "جارٍ تحميل سجل الإرسال…"
+    },
+    "whatsapp": {
+      "title": "إرسال عبر واتساب",
+      "description": "سيتم إرسال ملف PDF الرسمي عبر واتساب.",
+      "customer": "العميل",
+      "invoiceNumber": "الفاتورة",
+      "contract": "العقد",
+      "company": "الشركة",
+      "amount": "المبلغ",
+      "phoneHint": "سيتم إرسال الفاتورة إلى رقم العميل المسجل في النظام.",
+      "cancel": "إلغاء",
+      "send": "إرسال",
+      "sending": "جارٍ الإرسال…",
+      "success": "تم إرسال الفاتورة عبر واتساب."
+    },
+    "errors": {
+      "generic": "تعذر تحميل الفواتير.",
+      "pdfView": "تعذر فتح ملف PDF للفاتورة.",
+      "pdfDownload": "تعذر تنزيل الفاتورة.",
+      "whatsappUnconfigured": "خدمة واتساب غير مهيأة بعد. سيتم تفعيل الإرسال المباشر بعد ربط مزود WhatsApp Business.",
+      "WHATSAPP_PROVIDER_UNCONFIGURED": "خدمة واتساب غير مهيأة بعد. سيتم تفعيل الإرسال المباشر بعد ربط مزود WhatsApp Business.",
+      "INVOICE_NOT_FOUND": "الفاتورة غير موجودة.",
+      "NETWORK_ERROR": "خطأ في الاتصال بالشبكة."
     }
   },
   "Archive": {

@@ -165,6 +165,36 @@ if (!RUN) {
       assert.equal(withQuery.statusCode, 401);
     });
 
+    test("authorized cross-origin SSE includes credentialed CORS headers", async () => {
+      const controller = new AbortController();
+      const response = await fetch(`${baseUrl}/whatsapp/realtime`, {
+        headers: {
+          Authorization: `Bearer ${readerToken}`,
+          Accept: "text/event-stream",
+          Origin: "http://localhost:3100",
+        },
+        signal: controller.signal,
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("access-control-allow-origin"), "http://localhost:3100");
+      assert.equal(response.headers.get("access-control-allow-credentials"), "true");
+      assert.match(response.headers.get("vary") ?? "", /Origin/i);
+      assert.match(response.headers.get("content-type") ?? "", /text\/event-stream/);
+      controller.abort();
+    });
+
+    test("disallowed browser origin is rejected for SSE", async () => {
+      const response = await fetch(`${baseUrl}/whatsapp/realtime`, {
+        headers: {
+          Authorization: `Bearer ${readerToken}`,
+          Accept: "text/event-stream",
+          Origin: "http://evil.example.test",
+        },
+      });
+      assert.equal(response.status, 403);
+      assert.equal(response.headers.get("access-control-allow-origin"), null);
+    });
+
     test("authorized SSE is event-stream with cache headers, heartbeat, and disconnect cleanup", async () => {
       const hub = getWhatsAppRealtimePublisher();
       hub.resetForTests();
@@ -205,6 +235,71 @@ if (!RUN) {
       controller.abort();
       await new Promise((resolve) => setTimeout(resolve, 50));
       assert.equal(hub.subscriberCount <= 1, true);
+    });
+
+    test("authorized SSE stays open across multiple heartbeat intervals", async () => {
+      const controller = new AbortController();
+      const response = await fetch(`${baseUrl}/whatsapp/realtime`, {
+        headers: {
+          Authorization: `Bearer ${readerToken}`,
+          Accept: "text/event-stream",
+        },
+        signal: controller.signal,
+      });
+      assert.equal(response.status, 200);
+      const reader = response.body?.getReader();
+      assert.ok(reader);
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let pingCount = 0;
+      const deadline = Date.now() + 20_000;
+      while (Date.now() < deadline) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        pingCount = buffer.split(": ping").length - 1;
+        if (pingCount >= 2) break;
+      }
+      controller.abort();
+      assert.ok(pingCount >= 2, `expected at least 2 heartbeats, got ${pingCount}`);
+    });
+
+    test("in-process publisher delivers to an open SSE stream", async () => {
+      const hub = getWhatsAppRealtimePublisher();
+      const controller = new AbortController();
+      const response = await fetch(`${baseUrl}/whatsapp/realtime`, {
+        headers: {
+          Authorization: `Bearer ${readerToken}`,
+          Accept: "text/event-stream",
+        },
+        signal: controller.signal,
+      });
+      assert.equal(response.status, 200);
+      const reader = response.body?.getReader();
+      assert.ok(reader);
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const deadline = Date.now() + 3_000;
+      while (Date.now() < deadline && !buffer.includes(": ping")) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+      }
+      hub.publish({
+        eventId: "999001",
+        type: "whatsapp.conversation.updated",
+        conversationId: "conv-synthetic",
+        occurredAt: "2026-09-12T10:00:00.000Z",
+      });
+      const eventDeadline = Date.now() + 3_000;
+      while (Date.now() < eventDeadline && !buffer.includes("whatsapp.conversation.updated")) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+      }
+      controller.abort();
+      assert.match(buffer, /whatsapp\.conversation\.updated/);
+      assertSafePayload(buffer, "sse live publish");
     });
 
     test("committed inbound emits conversation.created and message.received after commit", async () => {

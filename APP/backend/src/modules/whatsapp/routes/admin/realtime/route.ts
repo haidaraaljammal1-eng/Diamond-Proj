@@ -13,6 +13,7 @@ import { formatSseFrame } from "src/modules/whatsapp/whatsapp.realtime";
 import { startWhatsAppRealtimeFanout } from "src/modules/whatsapp/whatsapp.realtime-fanout";
 import { listWhatsAppRealtimeSince } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { getWhatsAppRealtimePublisher } from "src/modules/whatsapp/whatsapp.realtime-publisher";
+import { corsHeadersForOrigin, isCorsOriginAllowed } from "src/lib/http/cors-origin";
 
 const T = ["WhatsApp"];
 
@@ -67,8 +68,18 @@ export default async function whatsappRealtimeRoutes(fastify: FastifyInstance) {
 
       const identity = requireAuth(request);
       request.setAudit({ skip: true });
+      const requestOrigin =
+        typeof request.headers.origin === "string" ? request.headers.origin : undefined;
+      if (requestOrigin && !isCorsOriginAllowed(requestOrigin)) {
+        throw new AppError({
+          code: ErrorCode.FORBIDDEN,
+          message: "Origin not allowed",
+          statusCode: 403,
+        });
+      }
       reply.hijack();
       reply.raw.writeHead(200, {
+        ...corsHeadersForOrigin(requestOrigin),
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Connection: "keep-alive",
@@ -119,8 +130,12 @@ export default async function whatsappRealtimeRoutes(fastify: FastifyInstance) {
         if (!reply.raw.writableEnded) reply.raw.end();
       };
 
-      request.raw.on("close", cleanup);
+      // Hijacked SSE must not listen on request "close": for GET the request body
+      // ends immediately, which would tear down the stream while the client is still connected.
+      reply.raw.on("close", cleanup);
       request.raw.on("aborted", cleanup);
+      const socket = reply.raw.socket;
+      if (socket) socket.on("close", cleanup);
     },
   );
 }

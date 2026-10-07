@@ -62,6 +62,7 @@ model Customer {
   whatsAppConversations WhatsAppConversation[]
   paymentProfiles       CustomerPaymentProfile[]
   paymentAuthorizations ContractPaymentAuthorization[]
+  invoices              Invoice[]
 
   @@index([mobile])
   @@index([email])
@@ -121,6 +122,7 @@ model Vehicle {
   roadLiabilityObservations RoadLiabilityObservation[]
   tarsIntegrations          TarsVehicleIntegration[]
   archiveRows               ArchiveRow[]
+  invoices                  Invoice[]
 
   @@unique([companyId, externalId])
   @@index([companyId])

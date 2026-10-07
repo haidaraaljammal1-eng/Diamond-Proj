@@ -331,6 +331,10 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
   ): Promise<WhatsAppProviderResult<WhatsAppSendTextAccepted>> {
     return { ok: false, code: "NOT_CONFIGURED" };
   }
+
+  async markProviderMessageRead(): Promise<WhatsAppProviderResult<{ success: boolean }>> {
+    return { ok: false, code: "NOT_CONFIGURED" };
+  }
 }
 
 export function createUltraMsgWhatsAppProvider(fetchImpl?: typeof fetch): UltraMsgWhatsAppProvider {

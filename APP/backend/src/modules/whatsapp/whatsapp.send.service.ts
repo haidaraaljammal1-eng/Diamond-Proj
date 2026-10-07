@@ -33,7 +33,7 @@ import {
   sanitizeMediaFilename,
   validateOutboundMedia,
 } from "src/modules/whatsapp/whatsapp.media";
-import { outboundUltraMsgChatId } from "src/modules/whatsapp/ultramsg.chat-id";
+import { resolveProviderRecipient } from "src/modules/whatsapp/whatsapp.recipient-addressing";
 import { ULTRAMSG_DOCUMENT_FILENAME_MAX, ULTRAMSG_MEDIA_MAX_BYTES } from "src/modules/whatsapp/ultramsg.config";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
@@ -175,22 +175,17 @@ function routingForSend(
 ) {
   if (!current?.credentialCiphertext) throw whatsappError.conversationConnectionInactive();
   const caps = createWhatsAppProvider().capabilities();
-  if (caps.supportsQrAuthentication) {
-    const toChatId = outboundUltraMsgChatId({
-      providerChatId: conversation.providerChatId,
-      customerWaId: conversation.customerWaId,
-    });
-    if (!toChatId) throw whatsappError.conversationConnectionInactive();
-    return {
-      toChatId,
-      phoneNumberId: current.phoneNumberId ?? "",
-      credentialCiphertext: current.credentialCiphertext,
-    };
+  const recipient = resolveProviderRecipient(caps, {
+    providerChatId: conversation.providerChatId,
+    customerWaId: conversation.customerWaId,
+  });
+  if (!recipient) throw whatsappError.conversationConnectionInactive();
+  if (recipient.addressing === "WA_ID" && !current.phoneNumberId) {
+    throw whatsappError.conversationConnectionInactive();
   }
-  if (!current.phoneNumberId) throw whatsappError.conversationConnectionInactive();
   return {
-    toChatId: conversation.customerWaId,
-    phoneNumberId: current.phoneNumberId,
+    toChatId: recipient.toAddress,
+    phoneNumberId: current.phoneNumberId ?? "",
     credentialCiphertext: current.credentialCiphertext,
   };
 }
@@ -813,14 +808,14 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       bytes: params.bytes,
       declaredMime: params.declaredMime,
       requestedKind: params.requestedKind,
-      providerMaxBytes: createWhatsAppProvider().capabilities().supportsQrAuthentication
+      providerMaxBytes: createWhatsAppProvider().capabilities().supportsDirectOutboundMedia
         ? ULTRAMSG_MEDIA_MAX_BYTES
         : undefined,
     });
     const caption = normalizeMediaCaption(validated.kind, params.caption);
     const filename = sanitizeMediaFilename(
       params.filename,
-      createWhatsAppProvider().capabilities().supportsQrAuthentication
+      createWhatsAppProvider().capabilities().supportsDirectOutboundMedia
         ? ULTRAMSG_DOCUMENT_FILENAME_MAX
         : 180,
     );

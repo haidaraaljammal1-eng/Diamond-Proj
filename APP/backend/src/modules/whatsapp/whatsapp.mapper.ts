@@ -32,7 +32,12 @@ export function toConnectionDto(
   if (!row) {
     return {
       status: "DISCONNECTED",
-      provider: capabilities.provider === "ULTRAMSG" ? "ULTRAMSG" : "META_CLOUD_API",
+      provider:
+        capabilities.provider === "ULTRAMSG"
+          ? "ULTRAMSG"
+          : capabilities.provider === "WHAPI"
+            ? "WHAPI"
+            : "META_CLOUD_API",
       displayPhoneNumber: null,
       verifiedName: null,
       businessAccountName: null,

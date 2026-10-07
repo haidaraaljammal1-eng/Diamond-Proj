@@ -236,6 +236,7 @@ model Contract {
   customerCharges      RoadLiabilityCustomerCharge[]
   postCloseReceivables ContractPostCloseReceivable[]
   paymentAuthorization ContractPaymentAuthorization?
+  invoices             Invoice[]
 
   @@index([vehicleId, status])
   @@index([companyId])

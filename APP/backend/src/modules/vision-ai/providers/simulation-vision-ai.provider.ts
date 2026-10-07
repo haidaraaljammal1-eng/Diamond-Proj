@@ -49,6 +49,9 @@ export function createSimulationVisionAIProvider(): VisionAIProvider {
           expiryDate: "2099-12-31",
           issuingCountry: null,
           issuingAuthority: null,
+          dateOfBirthNeedsReview: false,
+          issueDateNeedsReview: false,
+          expiryDateNeedsReview: false,
         }),
       };
     },

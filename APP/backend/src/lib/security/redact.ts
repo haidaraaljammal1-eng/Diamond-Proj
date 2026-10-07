@@ -57,7 +57,8 @@ export function redactSensitiveUrl(url: string | undefined): string | undefined 
   return url
     .replace(/([?&](?:hub\.)?verify_token=)[^&]*/gi, "$1[REDACTED]")
     .replace(/([?&]token=)[^&]*/gi, "$1[REDACTED]")
-    .replace(/(\/whatsapp\/webhooks\/ultramsg\/)[^/?#]+/gi, "$1[REDACTED]");
+    .replace(/(\/whatsapp\/webhooks\/ultramsg\/)[^/?#]+/gi, "$1[REDACTED]")
+    .replace(/(\/whatsapp\/webhooks\/whapi\/)[^/?#]+/gi, "$1[REDACTED]");
 }
 
 /** Mask the last octet of an IPv4 address for audit storage. */
