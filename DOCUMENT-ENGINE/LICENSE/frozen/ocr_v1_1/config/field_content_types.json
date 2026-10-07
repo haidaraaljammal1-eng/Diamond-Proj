@@ -1,0 +1,10 @@
+{
+  "license_number": "LATIN_DIGITS_OR_ALPHANUMERIC",
+  "name_ar": "ARABIC_TEXT",
+  "name_en": "LATIN_PERSON_NAME",
+  "nationality": "LATIN_TEXT",
+  "date_of_birth": "DATE_DD_MM_YYYY",
+  "issue_date": "DATE_DD_MM_YYYY",
+  "expiry_date": "DATE_DD_MM_YYYY",
+  "place_of_issue": "LATIN_TEXT"
+}

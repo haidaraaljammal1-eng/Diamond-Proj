@@ -6,7 +6,9 @@
   "description": "Haidara backend — Fastify 5 + TypeScript + Prisma 7 + PostgreSQL. Auth, RBAC, audit, notifications, files, settings, complaints, reports.",
   "main": "dist/src/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx scripts/dev-with-document-engines.ts",
+    "dev:stack": "tsx scripts/dev-stack.ts",
+    "dev:server-only": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json && node scripts/copy-assets.cjs",
     "start": "node dist/src/server.js",
     "simulate:notifications": "tsx scripts/simulate-notifications.ts",
@@ -33,6 +35,8 @@
     "db:cleanup:dev-roles:only-system-admin": "tsx scripts/cleanup-dev-roles.ts --only-system-admin",
     "dev:bootstrap": "tsx scripts/dev-bootstrap.ts",
     "dev:check": "tsx scripts/dev-check.ts",
+    "dev:postgres:start": "tsx scripts/start-local-postgres.ts",
+    "dev:postgres:setup-db": "tsx scripts/setup-local-postgres-db.ts",
     "test:pushover": "tsx scripts/test-pushover.ts",
     "test:gemini": "tsx scripts/test-gemini.ts",
     "test:gemini-document": "tsx scripts/test-gemini-document.ts"

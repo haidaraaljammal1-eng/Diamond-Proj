@@ -1,0 +1,13 @@
+{
+  "exact_total": 26,
+  "sample_count": 26,
+  "OUTPUT_DIFFERENCE_COUNT": 0,
+  "differences": [],
+  "groups": {
+    "license": "2/2",
+    "dates": "12/12",
+    "name_en": "5/5",
+    "nationality": "3/3",
+    "place": "4/4"
+  }
+}

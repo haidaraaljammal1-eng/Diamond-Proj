@@ -22,6 +22,10 @@ interface LicenseUploadProps {
   labels?: DocumentCaptureLabels;
   icon?: string;
   testId?: string;
+  /** When false, preview is shown elsewhere (e.g. verified panel) but replace label still applies. */
+  showPreview?: boolean;
+  /** After verification: replace button only, directly under document preview. */
+  variant?: "dropzone" | "replaceAction";
   onFile: (file: File) => void;
 }
 
@@ -32,6 +36,8 @@ export function LicenseUpload({
   labels,
   icon = "mdi:card-account-details-outline",
   testId,
+  showPreview = true,
+  variant = "dropzone",
   onFile,
 }: LicenseUploadProps) {
   const t = useTranslations("PublicRental.license");
@@ -49,14 +55,25 @@ export function LicenseUpload({
     if (file) onFile(file);
   };
 
+  const replaceOnly = variant === "replaceAction";
+
   return (
-    <div className={styles.drop} data-testid={testId}>
-      <Icon name={icon} size={28} />
-      {previewUrl ? (
+    <div
+      className={replaceOnly ? styles.replaceAction : styles.drop}
+      data-testid={testId}
+      data-variant={variant}
+    >
+      {replaceOnly ? null : <Icon name={icon} size={28} />}
+      {showPreview && previewUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
-        <img src={previewUrl} alt={copy.previewAlt} className={styles.preview} />
+        <img
+          src={previewUrl}
+          alt={copy.previewAlt}
+          className={styles.preview}
+          data-testid={testId ? `${testId}-preview` : undefined}
+        />
       ) : null}
-      <p className={styles.hint}>{copy.formats}</p>
+      {replaceOnly ? null : <p className={styles.hint}>{copy.formats}</p>}
       <div className={styles.actions}>
         <Button
           type="button"
@@ -64,9 +81,10 @@ export function LicenseUpload({
           size="md"
           loading={pending}
           disabled={disabled || pending}
+          data-testid={testId ? `${testId}-replace` : undefined}
           onClick={() => inputRef.current?.click()}
         >
-          {previewUrl ? copy.replace : copy.upload}
+          {previewUrl || replaceOnly ? copy.replace : copy.upload}
         </Button>
       </div>
       <input

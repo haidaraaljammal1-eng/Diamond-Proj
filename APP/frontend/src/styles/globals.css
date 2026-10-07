@@ -1,15 +1,17 @@
 @import "./tokens.css";
 @import "./reset.css";
 
-html,
-body {
-  height: 100%;
+html {
   min-height: 100%;
   margin: 0;
+  background: var(--diamond-page-bg);
+  background-attachment: fixed;
 }
 
 body {
-  background: var(--diamond-page-bg);
+  min-height: 100%;
+  margin: 0;
+  background: transparent;
   color: var(--diamond-ivory);
   font-family: var(--diamond-font-body);
   font-size: 14px;

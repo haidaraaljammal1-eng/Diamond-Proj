@@ -848,6 +848,8 @@
       "RECONCILIATION_LOCKED": "المطابقة معتمدة نهائيًا ولا يمكن تعديلها.",
       "RECONCILIATION_NOT_FINALIZED": "اعتمد المطابقة النهائية قبل المتابعة.",
       "ROAD_LIABILITIES_REVIEW_REQUIRED": "لا تزال بنود سالك أو المخالفات المؤكدة تحتاج مراجعة.",
+      "RENEWAL_PAYMENT_REQUIRED": "يجب تحصيل مبلغ التجديد المستحق قبل إكمال المطابقة.",
+      "ELECTRONIC_RENEWAL_COLLECTION_ACTIVE": "تسجيل التجديد في المكتب محظور بينما رابط الدفع الإلكتروني ما زال نشطاً.",
       "PAYMENT_ALREADY_PROCESSING": "توجد محاولة دفع قيد المعالجة.",
       "ALREADY_PAID": "هذا المبلغ مسوّى بالفعل.",
       "ELECTRONIC_COLLECTION_ACTIVE": "لا يمكن التحصيل النقدي بينما لا يزال الدفع الإلكتروني قابلاً للدفع.",
@@ -883,9 +885,20 @@
       "gpsSalikBody": "تم رصد عبور محتمل خلال فترة الإيجار. هذا تنبيه معلوماتي فقط ولا يمثل رسماً مؤكداً.",
       "gpsSalikClosed": "لم يُؤكد رسم سالك رسمي بعد.",
       "renewals": "التجديدات",
-      "renewalState": {
-        "pending": "قيد الانتظار",
-        "confirmed": "مؤكد"
+      "renewalDatesPlanned": "تمديد مخطط",
+      "renewalDatesApplied": "تمديد مطبّق",
+      "renewalAmountDue": "المبلغ المستحق: {amount}",
+      "renewalCollect": "تحصيل",
+      "renewalCollectTitle": "تحصيل التجديد (كاش)",
+      "renewalCollectBody": "أكّد استلام مبلغ التجديد نقداً.",
+      "renewalCollectMethod": "طريقة الدفع: كاش",
+      "renewalCollectConfirm": "تأكيد التحصيل",
+      "renewalCollectionState": {
+        "PENDING": "قيد الانتظار",
+        "AWAITING_PAYMENT": "بانتظار الدفع",
+        "OFFICE_UNPAID": "غير محصل",
+        "PAID": "مؤكد ومدفوع",
+        "COMPLETED_NO_CHARGE": "مكتمل (بدون رسوم)"
       }
     },
     "timeline": {
@@ -1190,7 +1203,12 @@
       "amount": "مبلغ إضافي (درهم)",
       "submit": "تجديد",
       "link": "إنشاء رابط التجديد",
-      "applyOffice": "تطبيق في المكتب"
+      "applyOffice": "تسجيل في المكتب للتحصيل كاش",
+      "officeConfirmTitle": "تسجيل التجديد للتحصيل كاش",
+      "officeConfirmLead": "سيُمدّد العقد الآن. يبقى المبلغ غير محصل حتى يتم التحصيل نقداً.",
+      "officeConfirmBody": "راجع التمديد قبل تسجيل هذا التجديد كمستحق كاش في المكتب.",
+      "officeConfirmSubmit": "تسجيل التجديد",
+      "officeCurrentEnd": "نهاية العقد الحالية"
     },
     "reconcile": {
       "title": "المطابقة",
@@ -1261,6 +1279,9 @@
       "previousImage": "السابق",
       "nextImage": "التالي",
       "roadLiabilities": "الالتزامات المرورية",
+      "unpaidRenewalsTitle": "تجديدات غير محصلة",
+      "unpaidRenewalsAlert": "يوجد مبلغ تجديد غير محصل. قم بتحصيله قبل إنهاء المطابقة.",
+      "collectRenewal": "تحصيل التجديد",
       "attachedLiabilities": "مرفقة بالمطابقة",
       "pendingLiabilities": "تحتاج مراجعة",
       "salik": "سالك",
@@ -1288,6 +1309,9 @@
       "noDamages": "لا توجد أضرار بعد.",
       "financialSummary": "الملخص المالي",
       "noCharges": "لا توجد فئات رسوم بعد.",
+      "reconciliationCharges": "رسوم المطابقة",
+      "unpaidRenewalsSubtotal": "التجديدات غير المحصلة",
+      "autoIncludedInSettlement": "مضاف تلقائيًا إلى التسوية",
       "finalAmountDue": "المبلغ النهائي المستحق",
       "collect": "تحصيل",
       "cashPayment": "الدفع النقدي",
@@ -1366,6 +1390,10 @@
     "fallbackOffice": "Diamond Rent Car",
     "loading": "جارٍ تحميل تفاصيل الإيجار…",
     "retry": "إعادة المحاولة",
+    "stageSuccess": {
+      "documentsVerified": "تم التحقق من المستندات",
+      "contractSigned": "تم توقيع العقد بنجاح"
+    },
     "progress": {
       "label": "مراحل الإيجار",
       "license": "التحقق من المستندات",
@@ -1451,11 +1479,17 @@
     "license": {
       "title": "التحقق من رخصة القيادة",
       "intro": "يرجى رفع صورة واضحة لرخصة القيادة للمتابعة.",
+      "uploadFrameHint": "ارفع صورة الرخصة فقط بدون حواف خارجية أو خلفية كبيرة. يجب أن تظهر الرخصة كاملة، مستقيمة وواضحة.",
+      "uploadFrameHintSecondary": "لا ترفع لقطة شاشة تحتوي على مساحات حول الرخصة.",
+      "badFrameTitle": "الصورة غير مناسبة للتحقق من الرخصة",
+      "badFrameBody": "تأكد من رفع صورة الرخصة كاملة فقط، بدون مساحات خارجية كبيرة أو لقطة شاشة، ثم حاول مرة أخرى.",
+      "reuploadRequired": "تعذر قراءة بيانات الرخصة بشكل صحيح. يرجى إعادة رفع صورة واضحة للرخصة كاملة وبدون حواف.",
+      "unreadableOcrBody": "تعذر قراءة بيانات الرخصة بشكل صحيح. يرجى رفع صورة أوضح.",
       "upload": "رفع صورة رخصة القيادة",
       "replace": "رفع رخصة أخرى",
       "formats": "JPEG أو PNG — صورة واحدة فقط",
       "previewAlt": "معاينة رخصة القيادة",
-      "verifying": "جارٍ التحقق من رخصة القيادة...",
+      "verifying": "جارٍ التحقق من رخصة القيادة",
       "validTitle": "تم التحقق من رخصة القيادة",
       "number": "رقم الرخصة",
       "expiry": "صالحة حتى",
@@ -1471,22 +1505,39 @@
       "ocrDevNote": "OCR provider not configured",
       "invalidFile": "يرجى اختيار صورة JPEG أو PNG."
     },
+    "documentProgress": {
+      "label": "خطوات التحقق من المستندات",
+      "license": "رخصة القيادة",
+      "passport": "جواز السفر",
+      "renter": "بيانات المستأجر"
+    },
+    "renter": {
+      "title": "بيانات المستأجر",
+      "intro": "أكد بيانات التواصل. أرقام المستندات أدناه تم التحقق منها تلقائياً.",
+      "verifiedTitle": "البيانات المتحقق منها",
+      "editableTitle": "بياناتك",
+      "save": "حفظ البيانات",
+      "saving": "جارٍ الحفظ…"
+    },
     "passport": {
       "title": "جواز السفر",
+      "verifiedTitle": "تم التحقق من جواز السفر",
       "locked": "يتاح بعد التحقق من رخصة القيادة.",
       "intro": "صوّر صفحة بيانات جواز السفر بوضوح — الصفحة التي تحتوي على صورتك وبياناتك.",
       "capture": "تصوير جواز السفر",
+      "replace": "رفع جواز آخر",
       "retake": "إعادة تصوير الجواز",
+      "verifiedFactsTitle": "البيانات المتحقق منها",
       "formats": "JPEG أو PNG — صفحة البيانات فقط",
       "previewAlt": "معاينة جواز السفر",
       "uploading": "جارٍ رفع صورة الجواز...",
-      "processing": "جارٍ قراءة بيانات الجواز...",
+      "processing": "جارٍ التحقق من جواز السفر",
       "readyTitle": "تمت قراءة بيانات الجواز",
       "fullName": "الاسم الكامل",
       "passportNumber": "رقم الجواز",
       "nationality": "الجنسية",
-      "notRecognizedTitle": "لم يتم التعرف على الجواز",
-      "notRecognizedBody": "الصورة لا تبدو صفحة بيانات جواز سفر. يرجى إعادة تصوير الصفحة التي تحتوي على صورتك وبياناتك.",
+      "notRecognizedTitle": "تعذر قراءة رقم الجواز",
+      "notRecognizedBody": "تعذر قراءة رقم الجواز من الصورة. يرجى رفع صورة أوضح.",
       "failedTitle": "تعذر قراءة الجواز",
       "failedBody": "تعذر قراءة بيانات الجواز بوضوح. يرجى إعادة التصوير بصورة أوضح.",
       "unavailableTitle": "خدمة قراءة بيانات جواز السفر غير متاحة حالياً.",
@@ -1518,6 +1569,8 @@
       "return": "تاريخ إرجاع السيارة",
       "returnPlaceholder": "يُعبّأ عند إعادة السيارة",
       "customerTitle": "بيانات المستأجر",
+      "ocrReview": "تمت قراءة بيانات الرخصة تلقائياً. يرجى مراجعتها قبل المتابعة.",
+      "ocrPartialReview": "تعذّر قراءة بعض بيانات الرخصة تلقائياً. يرجى إكمال الحقول الناقصة يدوياً.",
       "fields": {
         "name": "الاسم الكامل",
         "mobile": "رقم الجوال",
@@ -1525,7 +1578,12 @@
         "nationality": "الجنسية",
         "identityNumber": "رقم الهوية",
         "passportNumber": "رقم جواز السفر",
-        "address": "العنوان"
+        "address": "العنوان",
+        "drivingLicenseNumber": "رقم رخصة القيادة",
+        "drivingLicenseExpiry": "تاريخ انتهاء الرخصة (YYYY-MM-DD)",
+        "dateOfBirth": "تاريخ الميلاد (YYYY-MM-DD)",
+        "drivingLicenseIssueDate": "تاريخ إصدار الرخصة (YYYY-MM-DD)",
+        "drivingLicensePlaceOfIssue": "مكان الإصدار"
       },
       "save": "حفظ البيانات",
       "saving": "جارٍ الحفظ...",

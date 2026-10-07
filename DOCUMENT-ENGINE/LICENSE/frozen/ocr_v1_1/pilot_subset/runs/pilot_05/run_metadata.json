@@ -1,0 +1,8 @@
+{
+  "run_id": "e017ea8f36dc4ee18061e2b895719993",
+  "input_path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\pilot_subset\\runs\\pilot_05\\_crop_input_staged_2x.png",
+  "input_sha256": "443075f3fb398f22270f6e1bf9dca7f56a93f6a9e301c2591d6bdfd4c2e48858",
+  "started_at": "2026-10-04T13:35:23.420540+00:00",
+  "completed_at": "2026-10-04T13:35:25.529962+00:00",
+  "pipeline_status": "PIPELINE_COMPLETE"
+}

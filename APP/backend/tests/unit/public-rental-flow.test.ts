@@ -11,14 +11,14 @@ import {
 import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
 import { derivePublicRentalFlowStep } from "src/modules/contracts/public-rental-flow";
 
-test("expiry yesterday is EXPIRED, today and future are VALID", () => {
+test("expiry on or before business today is EXPIRED; after today is VALID", () => {
   const offset = 240;
   const now = new Date("2026-09-09T12:00:00.000Z");
   const today = businessToday(now, offset);
   const yesterday = { y: today.y, m: today.m, d: today.d - 1 };
   const tomorrow = { y: today.y, m: today.m, d: today.d + 1 };
   assert.equal(isLicenseExpiredOn(yesterday, today), true);
-  assert.equal(isLicenseExpiredOn(today, today), false);
+  assert.equal(isLicenseExpiredOn(today, today), true);
   assert.equal(isLicenseExpiredOn(tomorrow, today), false);
 });
 
@@ -42,7 +42,7 @@ test("Dubai UTC+4 date is independent of process/client timezone", () => {
   );
   assert.equal(expired.status, "EXPIRED");
 
-  const validToday = evaluateDrivingLicenseOcr(
+  const expiredToday = evaluateDrivingLicenseOcr(
     {
       ok: true,
       licenseNumber: "DL-1",
@@ -53,7 +53,7 @@ test("Dubai UTC+4 date is independent of process/client timezone", () => {
     now,
     offset,
   );
-  assert.equal(validToday.status, "VALID");
+  assert.equal(expiredToday.status, "EXPIRED");
 
   const validTomorrow = evaluateDrivingLicenseOcr(
     {
@@ -104,7 +104,7 @@ test("OCR policy: unreadable, low confidence, expired, valid", () => {
     now,
     offset,
   );
-  assert.equal(low.status, "REVIEW_REQUIRED");
+  assert.equal(low.status, "VALID");
 
   const expired = evaluateDrivingLicenseOcr(
     {
@@ -119,7 +119,7 @@ test("OCR policy: unreadable, low confidence, expired, valid", () => {
   );
   assert.equal(expired.status, "EXPIRED");
 
-  const validToday = evaluateDrivingLicenseOcr(
+  const expiredOnLastDay = evaluateDrivingLicenseOcr(
     {
       ok: true,
       licenseNumber: "DL-1",
@@ -130,7 +130,7 @@ test("OCR policy: unreadable, low confidence, expired, valid", () => {
     now,
     offset,
   );
-  assert.equal(validToday.status, "VALID");
+  assert.equal(expiredOnLastDay.status, "EXPIRED");
 
   const unavailable = evaluateDrivingLicenseOcr(
     { ok: false, reason: "NOT_CONFIGURED", provider: "none" },
@@ -138,6 +138,15 @@ test("OCR policy: unreadable, low confidence, expired, valid", () => {
     offset,
   );
   assert.equal(unavailable.status, "PROVIDER_UNAVAILABLE");
+
+  const badFrame = evaluateDrivingLicenseOcr(
+    { ok: false, reason: "BAD_FRAME", provider: "uae-driving-license-engine" },
+    now,
+    offset,
+  );
+  assert.equal(badFrame.status, "UNREADABLE");
+  assert.equal(badFrame.unreadableReason, "BAD_FRAME");
+  assert.equal(badFrame.uploadFailureCode, "BAD_FRAME");
 });
 
 test("public rental flow is derived, never stored as Contract.status", () => {
@@ -148,7 +157,7 @@ test("public rental flow is derived, never stored as Contract.status", () => {
   );
   assert.equal(
     derivePublicRentalFlowStep({ status: "AWAITING", identityReady: true, paymentStatus: null, ...electronic }),
-    "CONTRACT",
+    "LICENSE_VERIFICATION",
   );
   assert.equal(
     derivePublicRentalFlowStep({ status: "FORM", identityReady: true, paymentStatus: null, ...electronic }),
@@ -162,6 +171,47 @@ test("public rental flow is derived, never stored as Contract.status", () => {
     derivePublicRentalFlowStep({ status: "PAID", identityReady: true, paymentStatus: "CONFIRMED", ...electronic }),
     "READY_FOR_HANDOVER",
   );
+});
+
+test("V1.2H Marlon fixture policy: expiry 2023-04-13 vs injected business today", () => {
+  const offset = 240;
+  const marlonOcr = {
+    ok: true as const,
+    licenseNumber: "1893918",
+    expiryDate: "2023-04-13",
+    confidence: 0.96,
+    provider: "document-engine",
+    providerVersion: "document-engine/license-v1.2-two-field",
+  };
+
+  const validWithTestClock = evaluateDrivingLicenseOcr(
+    marlonOcr,
+    calendarDateToStoredUtc({ y: 2023, m: 1, d: 1 }),
+    offset,
+  );
+  assert.equal(validWithTestClock.status, "VALID");
+  assert.equal(validWithTestClock.licenseNumber, "1893918");
+
+  const expiredOnExpiryDay = evaluateDrivingLicenseOcr(
+    marlonOcr,
+    calendarDateToStoredUtc({ y: 2023, m: 4, d: 13 }),
+    offset,
+  );
+  assert.equal(expiredOnExpiryDay.status, "EXPIRED");
+
+  const expiredAfter = evaluateDrivingLicenseOcr(
+    marlonOcr,
+    calendarDateToStoredUtc({ y: 2023, m: 4, d: 14 }),
+    offset,
+  );
+  assert.equal(expiredAfter.status, "EXPIRED");
+
+  const expiredRealClock = evaluateDrivingLicenseOcr(
+    marlonOcr,
+    new Date("2026-10-01T12:00:00.000Z"),
+    offset,
+  );
+  assert.equal(expiredRealClock.status, "EXPIRED");
 });
 
 test("cash rental skips payment step after signature", () => {

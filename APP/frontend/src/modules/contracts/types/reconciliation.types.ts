@@ -90,6 +90,18 @@ export interface FullReconciliationReadDto {
     paymentStatus: string | null;
     paymentMethod: string | null;
   };
+  outstandingRenewals: Array<{
+    id: string;
+    createdAt: string;
+    previousEndAt: string;
+    newEndAt: string;
+    additionalDays: number;
+    amount: number;
+    state: "OFFICE_UNPAID";
+  }>;
+  outstandingRenewalAmount: number;
+  reconciliationChargesAmount: number;
+  settlementAmountDue: number;
 }
 
 export interface FinalReconciliationDetailDto {
@@ -105,6 +117,9 @@ export interface FinalReconciliationDetailDto {
   };
   finalizedAt: string | null;
   finalizedBy: { id: number; name: string } | null;
+  reconciliationChargesAmount: number;
+  outstandingRenewalAmount: number;
+  settlementAmountDue: number;
 }
 
 export interface ReconciliationLineInputPayload {

@@ -1,0 +1,31 @@
+{
+  "release_id": "OCR_ENGLISH_V1_2_TWO_FIELD",
+  "version": "1.2.0",
+  "calibration_note": "Ratios measured from standard UAE licence row crops (canonical table row width). Not absolute image pixels.",
+  "calibration_reference": {
+    "source": "internal_standard_uae_licence_layout",
+    "reference_image_dimensions_px": { "width": 506, "height": 305 },
+    "row_width_px_observed": 501
+  },
+  "license_number": {
+    "left_label_width_ratio": 0.228,
+    "right_label_width_ratio": 0.155,
+    "safety_margin_ratio": 0.01,
+    "value_crop_x_ratio": { "start": 0.238, "end": 0.835 }
+  },
+  "expiry_date": {
+    "left_label_width_ratio": 0.236,
+    "right_label_width_ratio": 0.161,
+    "safety_margin_ratio": 0.012,
+    "value_crop_x_ratio": { "start": 0.248, "end": 0.827 }
+  },
+  "geometry_gate": {
+    "min_table_width_over_image": 0.42,
+    "max_table_width_over_image": 0.92,
+    "min_table_height_over_image": 0.38,
+    "max_table_height_over_image": 0.88,
+    "required_table_status": "TABLE_OK",
+    "required_handoff_quality": "INPUT_OK_FOR_CROP_AND_OCR",
+    "required_row_semantics": ["license_number", "expiry_date"]
+  }
+}

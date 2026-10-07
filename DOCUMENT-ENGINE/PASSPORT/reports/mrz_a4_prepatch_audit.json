@@ -1,0 +1,21 @@
+{
+  "phase": "MRZ-A4",
+  "created_before_code_changes": true,
+  "target_production_file": "scripts/icao_td3.py",
+  "sha256_before": "16ed87bc0cc7df5a309f6529c04e8dd801ef406f72d5f4cede2fa205061a0ddc",
+  "size_bytes_before": 5366,
+  "relevant_function": "validate_td3",
+  "current_composite_expression": "line2[0:10] + line2[13:20] + line2[21:28]",
+  "current_composite_length_on_a2_raw": 24,
+  "correct_composite_expression": "line2[0:10] + line2[13:20] + line2[21:28] + line2[28:43]",
+  "correct_composite_length_on_a2_raw": 39,
+  "existing_project_tests_before_a4": [],
+  "python_version": "3.12.10",
+  "relevant_packages": {
+    "opencv-python-headless": "5.0.0.93",
+    "opencv-contrib-python": "4.10.0.84",
+    "paddleocr": "3.7.0",
+    "paddlepaddle": "3.3.1",
+    "paddlex": "3.7.2"
+  }
+}

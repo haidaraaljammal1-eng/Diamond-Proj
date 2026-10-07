@@ -1,6 +1,7 @@
 import type { PassportExtractionStatus } from "@prisma/client";
 import { calendarDateToStoredUtc, parseCalendarDate } from "src/modules/contracts/license-calendar";
 import type { IdentityDocumentAnalysisOutcome } from "src/modules/vision-ai/identity-document.types";
+import type { PassportNumberEngineOutcome } from "src/modules/document-engine/passport-number-api.types";
 
 export interface EvaluatedPassportExtraction {
   status: Exclude<PassportExtractionStatus, "PROCESSING">;
@@ -41,8 +42,48 @@ function storedDate(value: string | null): Date | null {
 }
 
 /**
- * Passport success rule: recognized document with at least a full name or a
- * passport number. No passport-expiry hard gate (license validity is the gate).
+ * Maps the internal Document Engine passport-number API outcome into
+ * `PassportExtraction` columns. Only passport number is populated; VIZ fields stay null.
+ */
+export function evaluatePassportNumberEngine(
+  outcome: PassportNumberEngineOutcome,
+): EvaluatedPassportExtraction {
+  const meta = {
+    provider: outcome.kind === "error" ? outcome.provider : outcome.provider,
+    providerVersion:
+      outcome.kind === "error" ? outcome.providerVersion : outcome.providerVersion,
+  };
+
+  if (outcome.kind === "error") {
+    const status =
+      outcome.code === "NOT_CONFIGURED" || outcome.code === "CONNECTION_FAILED"
+        ? "PROVIDER_UNAVAILABLE"
+        : outcome.code === "TIMEOUT" || outcome.code === "HTTP_ERROR"
+          ? "FAILED"
+          : "FAILED";
+    return { ...EMPTY_FIELDS, ...meta, status };
+  }
+
+  if (outcome.status === "REVIEW") {
+    return { ...EMPTY_FIELDS, ...meta, status: "NOT_RECOGNIZED" };
+  }
+
+  const passportNumber = outcome.passportNumber.trim();
+  if (!passportNumber) {
+    return { ...EMPTY_FIELDS, ...meta, status: "FAILED" };
+  }
+
+  return {
+    ...EMPTY_FIELDS,
+    ...meta,
+    status: "READY",
+    passportNumber,
+    confidence: 1,
+  };
+}
+
+/**
+ * @deprecated Legacy Vision AI path — retained for unit tests only.
  */
 export function evaluatePassportOcr(outcome: IdentityDocumentAnalysisOutcome): EvaluatedPassportExtraction {
   const meta = { provider: outcome.provider, providerVersion: outcome.providerVersion };

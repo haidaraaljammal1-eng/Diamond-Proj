@@ -85,6 +85,44 @@ export async function recordTrustedCollectionLedger(tx: Tx, payment: ContractPay
   });
 }
 
+type AllocationLedgerRow = {
+  allocationPurpose: "RECONCILIATION" | "RENEWAL";
+  targetId: string;
+  amount: number;
+};
+
+export async function recordTrustedCollectionAllocationLedgers(
+  tx: Tx,
+  payment: ContractPayment,
+  allocations: ReadonlyArray<AllocationLedgerRow>,
+): Promise<void> {
+  if (!isTrustedCustomerCollection(payment)) return;
+  const contract = await tx.contract.findUnique({
+    where: { id: payment.contractId },
+    select: { customerId: true, vehicleId: true, companyId: true },
+  });
+  if (!contract) return;
+
+  for (const row of allocations) {
+    const kind =
+      row.allocationPurpose === "RENEWAL" ? "RENEWAL_PAYMENT" : "RECONCILIATION_PAYMENT";
+    await insertLedgerEntry(tx, {
+      kind,
+      sourceType: "CONTRACT_PAYMENT",
+      sourceId: payment.id,
+      dedupeKey: `payment:${payment.id}:${row.allocationPurpose}:${row.targetId}`,
+      amount: row.amount,
+      currency: payment.currency,
+      occurredAt: payment.confirmedAt!,
+      companyId: contract.companyId,
+      contractId: payment.contractId,
+      customerId: contract.customerId,
+      vehicleId: contract.vehicleId,
+      contractPaymentId: payment.id,
+    });
+  }
+}
+
 /** @deprecated Use recordTrustedCollectionLedger — kept for Stripe-specific call sites. */
 export async function recordStripePaymentLedger(tx: Tx, payment: ContractPayment): Promise<void> {
   return recordTrustedCollectionLedger(tx, payment);

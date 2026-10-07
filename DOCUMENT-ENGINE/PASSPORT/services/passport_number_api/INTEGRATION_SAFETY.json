@@ -1,0 +1,22 @@
+{
+  "passport_number_engine_logic_modified": false,
+  "ocr_weights_modified": false,
+  "engine_core_sha256": {
+    "scripts/passport_number/extract_passport_number.py": "d5d4399978ebb4a7b9e3aabd2ded00a4d2d813a50e7a214089f3833c01fefea3",
+    "scripts/passport_number/focused_ocr.py": "cee560877a8e0d9e54708ee98fb47894b8a7b48636015f6845bf5df46525e61d",
+    "scripts/passport_number/checksum_resolve.py": "1efacd1be230b5c825408993632ae4845ffc4e38f68cfc8e19dcd021d5d3ea29",
+    "scripts/passport_number/detection_bridge.py": "5f2e28c79777bf32cfe1634ba8e1148bc12724b8ee671c567697c59c2640407a"
+  },
+  "api_parity_tests": "services/passport_number_api/test_api_parity.py — passed",
+  "regression_bundle": "results/passport_number/20261001T144033Z",
+  "historical_8": {
+    "correct": 6,
+    "wrong": 0,
+    "no_extraction": 2,
+    "unchanged_vs_baseline": true
+  },
+  "note": "Full 11-specimen runner includes paths under samples/passport/; current folder only has MRZ-only test images, so ARG/SYR_NEW/LUX_NEW rows show no extraction in this run. Historical 8 use results/mrz_a2 references and are unchanged.",
+  "files_deleted": 0,
+  "commits": 0,
+  "pushes": 0
+}

@@ -1,0 +1,7 @@
+﻿.\.venv\Scripts\python.exe : C:\Users\Rw\DIAMOND MRZ\.venv\Scripts\python.exe: No module named pytest
+At C:\Users\Rw\AppData\Local\Temp\ps-script-5072e6e4-b30f-40fb-9797-1edb28b9133a.ps1:104 char:41
++ ... AMOND MRZ"; .\.venv\Scripts\python.exe -m pytest tests/test_icao_td3_ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\Rw\DIA...le named pytest:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

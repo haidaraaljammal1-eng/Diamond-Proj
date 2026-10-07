@@ -13,6 +13,7 @@ import {
   completeContractReviewAndSign,
   completeIdentitySimulation,
   continueAfterContractSign,
+  fillAndSaveRenterDetails,
 } from "./helpers/rental-contract";
 
 test.use({ channel: "chrome" });
@@ -55,7 +56,7 @@ test("en electronic rental settles via test-provider payment", async ({ page, co
     const rentalPage = await context.newPage();
     await rentalPage.goto(link);
     await completeIdentitySimulation(rentalPage);
-    await expect(rentalPage.getByTestId("contract-review")).toBeVisible({ timeout: 120_000 });
+    await fillAndSaveRenterDetails(rentalPage);
     await completeContractReviewAndSign(rentalPage);
     await continueAfterContractSign(rentalPage);
 

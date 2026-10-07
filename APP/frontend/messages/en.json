@@ -848,6 +848,8 @@
       "RECONCILIATION_LOCKED": "This reconciliation is already finalized and can no longer be edited.",
       "RECONCILIATION_NOT_FINALIZED": "Finalize the reconciliation before continuing.",
       "ROAD_LIABILITIES_REVIEW_REQUIRED": "Confirmed Salik or traffic violation items still need staff review.",
+      "RENEWAL_PAYMENT_REQUIRED": "An outstanding renewal amount must be collected before reconciliation can complete.",
+      "ELECTRONIC_RENEWAL_COLLECTION_ACTIVE": "Office renewal is blocked while an electronic renewal checkout is still active.",
       "PAYMENT_ALREADY_PROCESSING": "A payment attempt is already in progress.",
       "ALREADY_PAID": "This amount is already settled.",
       "ELECTRONIC_COLLECTION_ACTIVE": "Cash cannot be collected while the electronic checkout can still be paid.",
@@ -883,9 +885,20 @@
       "gpsSalikBody": "A possible crossing was detected during the rental. This is informational only and is not a confirmed charge.",
       "gpsSalikClosed": "No official Salik charge confirmed yet.",
       "renewals": "Renewals",
-      "renewalState": {
-        "pending": "Pending",
-        "confirmed": "Confirmed"
+      "renewalDatesPlanned": "Planned extension",
+      "renewalDatesApplied": "Applied extension",
+      "renewalAmountDue": "Amount due: {amount}",
+      "renewalCollect": "Collect",
+      "renewalCollectTitle": "Collect renewal (cash)",
+      "renewalCollectBody": "Confirm that cash was received for this renewal extension.",
+      "renewalCollectMethod": "Payment method: Cash",
+      "renewalCollectConfirm": "Confirm collection",
+      "renewalCollectionState": {
+        "PENDING": "Pending",
+        "AWAITING_PAYMENT": "Awaiting payment",
+        "OFFICE_UNPAID": "Unpaid",
+        "PAID": "Paid / confirmed",
+        "COMPLETED_NO_CHARGE": "Completed (no charge)"
       }
     },
     "timeline": {
@@ -1190,7 +1203,12 @@
       "amount": "Additional amount (AED)",
       "submit": "Renew",
       "link": "Generate renewal link",
-      "applyOffice": "Apply in office"
+      "applyOffice": "Register in office for cash collection",
+      "officeConfirmTitle": "Register renewal for cash collection",
+      "officeConfirmLead": "The contract will extend now. Payment stays unpaid until cash is collected.",
+      "officeConfirmBody": "Review the extension before registering this renewal as an office cash receivable.",
+      "officeConfirmSubmit": "Register renewal",
+      "officeCurrentEnd": "Current contract end"
     },
     "reconcile": {
       "title": "Reconciliation",
@@ -1261,6 +1279,9 @@
       "previousImage": "Previous",
       "nextImage": "Next",
       "roadLiabilities": "Road liabilities",
+      "unpaidRenewalsTitle": "Unpaid renewals",
+      "unpaidRenewalsAlert": "An outstanding renewal amount must be collected before final reconciliation can complete.",
+      "collectRenewal": "Collect renewal",
       "attachedLiabilities": "Attached to reconciliation",
       "pendingLiabilities": "Requires review",
       "salik": "Salik",
@@ -1288,6 +1309,9 @@
       "noDamages": "No damage entries yet.",
       "financialSummary": "Financial summary",
       "noCharges": "No charge categories yet.",
+      "reconciliationCharges": "Reconciliation charges",
+      "unpaidRenewalsSubtotal": "Unpaid renewals",
+      "autoIncludedInSettlement": "Automatically included in final settlement",
       "finalAmountDue": "Final amount due",
       "collect": "Collect",
       "cashPayment": "Cash payment",
@@ -1366,6 +1390,10 @@
     "fallbackOffice": "Diamond Rent Car",
     "loading": "Loading rental details…",
     "retry": "Try again",
+    "stageSuccess": {
+      "documentsVerified": "Documents verified",
+      "contractSigned": "Contract signed successfully"
+    },
     "progress": {
       "label": "Rental steps",
       "license": "Document Verification",
@@ -1451,11 +1479,17 @@
     "license": {
       "title": "Driving License Verification",
       "intro": "Please upload a clear photo of your driving license to continue.",
+      "uploadFrameHint": "Upload only the driving licence — no large outer margins or background. The full licence must appear straight, complete, and clear.",
+      "uploadFrameHintSecondary": "Do not upload a wide screenshot with empty space around the licence.",
+      "badFrameTitle": "This image is not suitable for licence verification",
+      "badFrameBody": "Upload only the full licence itself — not a wide screenshot with large empty margins around it — then try again.",
+      "reuploadRequired": "We could not read the licence details correctly. Please upload a clear photo of the full licence with no borders.",
+      "unreadableOcrBody": "We could not read the licence details correctly. Please upload a clearer photo.",
       "upload": "Upload Driving License",
       "replace": "Upload Another License",
       "formats": "JPEG or PNG — one image only",
       "previewAlt": "Driving license preview",
-      "verifying": "Verifying your driving license...",
+      "verifying": "Verifying driving licence",
       "validTitle": "Driving license verified",
       "number": "License number",
       "expiry": "Valid until",
@@ -1471,22 +1505,39 @@
       "ocrDevNote": "OCR provider not configured",
       "invalidFile": "Please choose a JPEG or PNG image."
     },
+    "documentProgress": {
+      "label": "Document verification steps",
+      "license": "Driving licence",
+      "passport": "Passport",
+      "renter": "Renter details"
+    },
+    "renter": {
+      "title": "Renter details",
+      "intro": "Confirm your contact details. Document numbers below were verified automatically.",
+      "verifiedTitle": "Verified information",
+      "editableTitle": "Your details",
+      "save": "Save details",
+      "saving": "Saving…"
+    },
     "passport": {
       "title": "Passport",
+      "verifiedTitle": "Passport verified",
       "locked": "Available after your driving license is verified.",
       "intro": "Capture the passport information page clearly — the page with your photo and details.",
       "capture": "Take Passport Photo",
+      "replace": "Upload Another Passport",
       "retake": "Retake Passport",
+      "verifiedFactsTitle": "Verified information",
       "formats": "JPEG or PNG — the information page only",
       "previewAlt": "Passport preview",
       "uploading": "Uploading passport photo...",
-      "processing": "Reading passport details...",
+      "processing": "Verifying passport",
       "readyTitle": "Passport details captured",
       "fullName": "Full name",
       "passportNumber": "Passport number",
       "nationality": "Nationality",
-      "notRecognizedTitle": "Passport not recognized",
-      "notRecognizedBody": "This does not look like a passport information page. Please retake a photo of the page with your photo and details.",
+      "notRecognizedTitle": "Passport number not read",
+      "notRecognizedBody": "The passport number could not be read from this image. Please upload a clearer image.",
       "failedTitle": "Passport could not be read",
       "failedBody": "The passport details could not be read clearly. Please retake a clearer photo.",
       "unavailableTitle": "Passport processing is currently unavailable.",
@@ -1518,6 +1569,8 @@
       "return": "Vehicle Return Date",
       "returnPlaceholder": "Completed when the vehicle is returned",
       "customerTitle": "Renter details",
+      "ocrReview": "Licence details were read automatically. Please review them before continuing.",
+      "ocrPartialReview": "Some licence details could not be read automatically. Please complete any missing fields manually.",
       "fields": {
         "name": "Full name",
         "mobile": "Mobile",
@@ -1525,7 +1578,12 @@
         "nationality": "Nationality",
         "identityNumber": "Identity number",
         "passportNumber": "Passport number",
-        "address": "Address"
+        "address": "Address",
+        "drivingLicenseNumber": "Driving licence number",
+        "drivingLicenseExpiry": "Licence expiry (YYYY-MM-DD)",
+        "dateOfBirth": "Date of birth (YYYY-MM-DD)",
+        "drivingLicenseIssueDate": "Licence issue date (YYYY-MM-DD)",
+        "drivingLicensePlaceOfIssue": "Place of issue"
       },
       "save": "Save details",
       "saving": "Saving...",

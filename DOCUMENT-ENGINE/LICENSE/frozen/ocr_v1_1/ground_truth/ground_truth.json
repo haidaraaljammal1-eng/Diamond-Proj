@@ -1,0 +1,749 @@
+{
+  "schema_version": "1.0",
+  "crop_release": "DYNAMIC_CROP_V1_FROZEN_FOR_OCR",
+  "corpus_generated_at": "2026-10-04T00:06:39.256297+00:00",
+  "documents": [
+    {
+      "test_id": "real10",
+      "source_input_sha256": "f99e810170ace411e3f3f4daaf87456fe2dbe714b6f065171ab7946da5ab6045",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "890300f911674547049027085121949a9bf26f75fc61fd464f1548de26fca9bd"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "be487e680ee6c7eedeb00ecbbe600aa8ab7666c20f6b00b38c1d0906bcba820b"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "1cba3c2f8832528b29eeed91d1748bdc5a2c26cc45aeb0783ba9e27aa7292efb"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "7e8517ec974f45b90a2e703bacb1faa367e17dfccd000a6bf8bc4fa29298cc63"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "74567bc7d4b85bf2efd6bc7d7757a34c72a323dd67b229308765d9d55e391398"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "284ba2c2701f762b0f69163d849f48bafd7573d704e6a47b5580b7e998289d2f"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "06ecad805ffc9e3f8713d65189363ad5dec17aebb18bacdf8d6d864d03b5d78f"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "ef244397eee18f66d706c867aac8a29cab6897422cc8c20cefb1f84ac7dbf09b"
+        }
+      }
+    },
+    {
+      "test_id": "real11",
+      "source_input_sha256": "99d2df7a85e605f4a18e8e232301cc74c6784b9e9f8c841264f70634a16e7d51",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "d7aa028a2bbd0237a043ed39d85ccf8c96a0f42f57f9a718c86e0623077a74af"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "32e130a416e9bdb7afb058f75184a64442f9dcfd25ba10785a891f21dd7fedbc"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "fec8f66d221fdebd680c4b02af012390d376dd97b2fe39f537ebf084c7c4e95c"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "62bdab8dd0542c6423af6798796d55f648c9b501df3a87fecacec6f4ade82737"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "f76f673af17342c3eb051f1db8ed1b7e51b58db198f58c74353eccef1514182d"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "5532c33562ab02b8dd59d812eebc222bddb47135193e272da0cfecc322093cc5"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "ec38ec2e92f25b12fcb1a23af370c7bf6db8bf0f7e6eeff4df69162e08284d2f"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "b9ed96683996d3080bc504ec12db1a96ebfe779683a3503fbc9f6a7891e79cbd"
+        }
+      }
+    },
+    {
+      "test_id": "real12",
+      "source_input_sha256": "c857d7c81788666c08c4f3d671f9671b4cff0e526e689ac112ecd135c05c16dc",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "b37add600a89fd16f07342d2225d407307e8e533bd91671ef841a0eb7e4d4014"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "b1e97035a1ff49cdd979a324517411e30ddf2724405695a1aa5a2d14ebd265d4"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "d03d0fa040f64f7f1f4537a2edd40142ba9b69d73bf9207ae1e528a9eb8ad340"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "0c88657e5ebb10f5591285ef3ed97d8f604fb09196e7d1c6ab3159866a1577fd"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "81e1ca9c0ee9c7ec4708eb98663c19d63cea4172b8b90b4c1d71ebc4fbcf9a88"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "0a711d194a733e9c887331b5db4a4a6f6a1ae9fe5a41c271fa9cef598014c214"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "ba6274dc043a7df24e303932face342f901caaa003d104fb0124336ca7e3daf9"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "5d6fa1a864612fed92a86cfca32197a0671a227b1269ff38524d0cdb98aafe82"
+        }
+      }
+    },
+    {
+      "test_id": "real13",
+      "source_input_sha256": "33779d15fc1c19ea2589fe7b82ba4b1f5b4f0bca382a826487ef4b53667281ec",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "special_low_res",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "2de4e6d9e33729cb5d9a3eacbd8892fd40024e46c2d633ccade27d19e931a3b4"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "2c9830f93ee488ca4467d814de62ab947368aff68900fcb3a351117d7d194258"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "a162aba819cee30b1c49d9fe5b9c1e648f8aeb4516fe063e3bd485a74f1077d2"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "053b9272d05863d977b3f600825d7f2b09cf73a048bf9654409024be11340ad4"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "697a148c67d0f4275e6859163ee59f8ae9a0017739b511ba540dcfb9041ccde2"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "7b03922486c0fb87ce35ffe91bd626661e41f0be59c2a950a066fa97c136c118"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        }
+      }
+    },
+    {
+      "test_id": "real14",
+      "source_input_sha256": "424664706cca42f9659d9984ab2547688f640619527a46c8b48da6e01f3f8597",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "8014b892264b53e297d8aaa31e4196b3c24e27b0e0afaf4b44a46f00466b161f"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "ae180d626c8e1e564a55e6a115be343b2aef4ce6d2f2f30f88e9e0fc85267a73"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "6ff91e23671cae0bc7bbc1fe319f1d6ed6656827994af235dd608c5e5d8e419a"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "6aaac1f77ad4fad9a133259debc05e2ec5c2e344f8aaa1d463f4c3df3af3d8f4"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "48f0259173add7a4a681789ec402c54727d617bce81f04abfc983dafdc245e4c"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "93fb44b4420bbdf1e1c170f9c17868397701b2b9560b50100fc730d7d463f481"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "920c639e322f8bc381dfaa92ec7c532ede158fa6f984bcc54d3300d16edb3a7b"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c2e99e66544e75e786741cce565557aac5fb19c13341b9220dcf9db8c4684043"
+        }
+      }
+    },
+    {
+      "test_id": "real3",
+      "source_input_sha256": "b736d9bbe1d65aafb7e5356c6a317012363e938f7df26538381520f3e4b0302d",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "cd0222b60c623c30b5df4ce76c7deeb980bff21e6e84bc1d23d5cfcf34faa3ff"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "6ebbf99e57c2c25548be65962ca439aa1c61ab4cd26385da622f7c197ab4be13"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "7fd0e5ce145350828a76dff451fff18999a0073464d5c5ed9e5ce66e8c5826cb"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "f9aff4d464da187830742ee180c26fb20c9c9ab79591ab3437f593c0251693bd"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "71e54207849a12cafd0072ebca3f45ac9bb30e9b8d5432a387181c41ea708bf3"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "efe87919fc2cb441cb68210a6800b3b286774833133cbdda4f1b6c651684bd30"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "583136b0cd1a2f88654536a9052f91c892f80028961d1ac58742dc116dcb7d08"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "f8da60456b62e4aae09b2f117ae53142c76ef500288132c9c76b0d98b813bc16"
+        }
+      }
+    },
+    {
+      "test_id": "real4",
+      "source_input_sha256": "2f401f2c2c470224e3e664b1e36107b9176e194754d82e80c890cc85024c0806",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "holdout",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "1b99f2bd64f3ee75092fcaafbde77161670f8d052e581dee9ee278e03abb98bc"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "b21570142c6e1780ab58156d40ae6116b17f5029766c237fbc159c26ecc9fab0"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "8b39d0496e3ba9b65f1f044aa7c5bc2a0ac61669c8b721c2548e903d63ed0bd4"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "6ba2435a079a2b9eb7426a2829c7325bc064c9cbb5df1055c1398bffb5b6eede"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "1fa805c3aefea1aab3153ee9c4d6e98b8f88cb21af8b250c07ac0ef59b9f735c"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "14a2dee1f8566f898d177260127817ecaa2ae70d73b082b968acbe0242085492"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "84ef1e4228477db3586bfe500630d14817199b9fb3409437daec72e9f22a7034"
+        }
+      }
+    },
+    {
+      "test_id": "real5",
+      "source_input_sha256": "f99e810170ace411e3f3f4daaf87456fe2dbe714b6f065171ab7946da5ab6045",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "890300f911674547049027085121949a9bf26f75fc61fd464f1548de26fca9bd"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "be487e680ee6c7eedeb00ecbbe600aa8ab7666c20f6b00b38c1d0906bcba820b"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "1cba3c2f8832528b29eeed91d1748bdc5a2c26cc45aeb0783ba9e27aa7292efb"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "7e8517ec974f45b90a2e703bacb1faa367e17dfccd000a6bf8bc4fa29298cc63"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "74567bc7d4b85bf2efd6bc7d7757a34c72a323dd67b229308765d9d55e391398"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "284ba2c2701f762b0f69163d849f48bafd7573d704e6a47b5580b7e998289d2f"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "06ecad805ffc9e3f8713d65189363ad5dec17aebb18bacdf8d6d864d03b5d78f"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "ef244397eee18f66d706c867aac8a29cab6897422cc8c20cefb1f84ac7dbf09b"
+        }
+      }
+    },
+    {
+      "test_id": "real6",
+      "source_input_sha256": "ad5927a51eced920574e18ca8e988edc65c860b7d144b09bdfd07b0fcf47f7a9",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "3bb695b5e3b9edcb7bfc6ee7809e7098ad080ce4dda960ec4bcddf016055780f"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "242e02a63c49a07b6892e0b09a2cb1b25704391eb0776aaeb85a9fc373674836"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "3861d77678acb08c9844438d4acbefb722e2e173e013554a6dc3ed6c1ddf1c5b"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "cc8330fda3e302c74cfb62692a58763081cc61861ce9703492acda147e5c3bc8"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "8efaa6d032691776c24068da9014612cec54faa3c0fd716941ea4a5038884e3e"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "13f8af732be5b013035a1ea7ed12f3cf20ef756391f1733c72dbc35684989c7a"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "dc4a7c2d78626765d2a981e4277e1b80f89f04a1cce58707e55a72c7ab73806f"
+        }
+      }
+    },
+    {
+      "test_id": "real7",
+      "source_input_sha256": "c07c32fd0362b53c72460681a8a71f2566c733b76c871ecad273e148d8b2f884",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "35ba73391da85511ec92f5eeca455050c1e9a2ee6d11cea34bc060e8e9b49857"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "7bda837c1b885c8f45f237ffb6d85a26057f0f7625d28f888a42d8a2905ed039"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "57d397765ecc0941fad24fb9450d55a10fd78f3ce231fdbb1c67d8bcfc03e5d5"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "459d6450b9e073963969114f0897e52f861ae1273a6f3dc6430b7fbf312e2878"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "863d09533603359ea63c5d74b799ebad0663b57b0cd101c0924a467a1671388e"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c17c4ab3c50a601448952fb4b893c43b5c22a92de1a7427dc65d079642878f69"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "68503a85ed825d6e73a054ae90f290baf6a7dbe12b4185f97401458761122f83"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c3142ccf75ce0138c87b9879d7d6b06775fc1a515c3602aa52528a9dd3b1512d"
+        }
+      }
+    },
+    {
+      "test_id": "real8",
+      "source_input_sha256": "316a5abc6f9b01fc9432ba663c9725e82ffccd22a943ab509ea385ee0f1254f8",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "0e0173df799c33c4d87ec2b1058eb00f622d98fba0f6fe8f544ee36593a54667"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "891c2e689c9ce1c0f6c59f0f4a3f5a70fc9457c9b50aa6953397fcffd4ff553c"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c939d40648cd99b9bd47818b3fe8fb1d19bf0aaa785adb45775559ac7a92719c"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "172f5ab38528d52ea3738f3bd9868cf8a1288096718fa669fd9034f9f1d9f309"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "7725bf0968e4f94426e4901c36d10271c6fd99ff645fd85377969fb90eb95bfc"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "ad94d86cebbffa7f528e336e3e9f0b411ee6d18ba35de2ff56352cb065737dc6"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "985a0db951c3272e97df3df6cc01fcc344721fd423740aa68141a5a5728e17bf"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "4fe0735eaa79aa2f9e3c97392bcbdaade8fdb5e4b595036f5700133fbcddc7ff"
+        }
+      }
+    },
+    {
+      "test_id": "real9",
+      "source_input_sha256": "e959bfd53f735ffca1ed9f7355b488637e9d1826980d6e9372496258536636cc",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "special_negative",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "909150ef0bdb5381c9b8e5a83071fb7a84ce299d7d628c0fa70b2af224dc47a3"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "84b0c04e6e26aa4919c1e0f8858cfb3b8829b899a6b3e406c78644e28f1604d1"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "5b541610e1de1a100ecc7829bc437a60c6c0f6388e727703da854181723f4b65"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        }
+      }
+    },
+    {
+      "test_id": "real_01",
+      "source_input_sha256": "2e0f21960f63f42f7c4dfe13aeb52a61fbb3423a517da6c53a320b9aac462e10",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "adf2f0e0fcf029f0343afa70792deca199f0e2374eda92651d402857b9465c9b"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c86c7169adc0254615112da2e0e24e0a5c82fd388d9eeb14b613fa4f00ab4fe3"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c99686922370da19e9c394f92ee43fccff7eb1c7e89faa3f5421464d53b5f13c"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "218578f470506909c522be744fd0fc88aef31f8259df721a38ad20354188e9ae"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "3eee8b84ad4007335f1a67e0c8b74f565591580eb30ceff4ffd8d9f23b7c90ba"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "ce5bf6842bdcc6bc6ebee0b909458d81f3b952f14b134bbb9f962b00b4bddd59"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "e45eecb447ebbb9cb3c2736834abb88b56e44ca8d448219bc55df27582d300f6"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "5a2aa8984107437677f8e66cd3ca6e94e6723eb2d54141ee044019622ade4f36"
+        }
+      }
+    },
+    {
+      "test_id": "real_02",
+      "source_input_sha256": "5ad484b95ef6938726f5e6e8c6b8be8ca1ea7a957e5f299f0f827742bbd5d927",
+      "verified_by": null,
+      "verified_at": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "verification_status": "UNVERIFIED",
+      "benchmark_split": "development",
+      "benchmark_split_frozen": false,
+      "fields": {
+        "license_number": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "name_ar": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "8305b2e2fcfa2d91a6345439d6b44476f6ffd627637e31b0a7de84f939017ea5"
+        },
+        "name_en": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "8f2ac5717dfd817c0d8e48a62d94c74abfeef28d9960d10f0da7b0a37ab25082"
+        },
+        "nationality": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "date_of_birth": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "issue_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "expiry_date": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c48172488ad49af905dce65d62c85eca26462cbd18c9a632f7969a03ca1dd44f"
+        },
+        "place_of_issue": {
+          "value": null,
+          "truth_status": "UNVERIFIED",
+          "crop_sha256": "c5fc50080e3af4557abf996f177aeaf40ee73d81426255aa3312e33a8bcf61f6"
+        }
+      }
+    }
+  ]
+}

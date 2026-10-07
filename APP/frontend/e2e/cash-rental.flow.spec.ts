@@ -8,7 +8,9 @@ import {
 } from "./helpers/e2e-api";
 import {
   completeContractReviewAndSign,
+  completeIdentitySimulation,
   continueAfterContractSign,
+  fillAndSaveRenterDetails,
 } from "./helpers/rental-contract";
 
 /**
@@ -92,26 +94,6 @@ async function generateCashLink(page: Page, locale: "ar" | "en", vehicleId: numb
   return href;
 }
 
-async function completeIdentitySimulation(rentalPage: Page) {
-  await expect(rentalPage.getByTestId("license-step")).toBeVisible({ timeout: 60_000 });
-  await rentalPage.getByTestId("simulate-license-valid").click();
-  await expect(rentalPage.getByTestId("license-valid")).toBeVisible({ timeout: 30_000 });
-
-  const passportSim = rentalPage.getByTestId("simulate-passport-ready");
-  if (await passportSim.isVisible()) {
-    await passportSim.click();
-    await expect(
-      rentalPage
-        .getByTestId("passport-ready")
-        .or(rentalPage.getByTestId("contract-review")),
-    ).toBeVisible({ timeout: 30_000 });
-  }
-
-  const identityContinue = rentalPage.getByTestId("identity-continue");
-  if (await identityContinue.isVisible()) {
-    await identityContinue.click();
-  }
-}
 
 for (const locale of ["en", "ar"] as const) {
   test(`${locale} cash rental completes without payment step`, async ({ page, context }) => {
@@ -127,7 +109,7 @@ for (const locale of ["en", "ar"] as const) {
       const rentalPage = await context.newPage();
       await rentalPage.goto(link);
       await completeIdentitySimulation(rentalPage);
-      await expect(rentalPage.getByTestId("contract-review")).toBeVisible({ timeout: 120_000 });
+      await fillAndSaveRenterDetails(rentalPage);
       await completeContractReviewAndSign(rentalPage);
       await continueAfterContractSign(rentalPage);
       await expect(rentalPage.getByTestId("handover-step")).toBeVisible({ timeout: 60_000 });

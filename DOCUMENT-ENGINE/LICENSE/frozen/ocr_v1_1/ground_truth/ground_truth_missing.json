@@ -1,0 +1,677 @@
+{
+  "count": 112,
+  "items": [
+    {
+      "test_id": "real10",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real10",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real10",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real10",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real10",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real10",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real10",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real10",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real11",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real12",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real13",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_low_res"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real14",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real3",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real4",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "holdout"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real5",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real6",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real7",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real8",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real9",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "special_negative"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_01",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "license_number",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "name_ar",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "name_en",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "nationality",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "date_of_birth",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "issue_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "expiry_date",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    },
+    {
+      "test_id": "real_02",
+      "field_name": "place_of_issue",
+      "reason": "awaiting_manual_verification",
+      "benchmark_split": "development"
+    }
+  ]
+}

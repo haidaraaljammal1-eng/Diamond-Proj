@@ -1,8 +1,18 @@
+# Vision AI (legacy — not used for rental document OCR)
+
+**Rental passport and driving-license capture** use the internal **Document Engine** instead.
+See `DOCU/00-system-overview/document-engine.md`.
+
+The `vision-ai` module below remains in the tree for dev scripts (`npm run test:gemini*`) and
+future non-rental use; it is **not** called from `contracts.service` upload paths.
+
+---
+
 # Vision AI (Gemini identity extraction)
 
-Server-only Gemini extraction behind `VisionAIProvider`. Public rental and contracts
-call `analyzeIdentityDocument()` — never `@google/genai` or `GeminiVisionProvider`
-from business modules.
+Server-only Gemini extraction behind `VisionAIProvider`. Public rental and contracts must not
+call `@google/genai` or `GeminiVisionProvider` from business modules except through the
+approved analysis entry points documented here.
 
 ## Module
 
@@ -40,7 +50,7 @@ If pass-1 omits dates, a targeted second Gemini call requests only DOB / issue /
 ## Removed
 
 The legacy `document-ocr` module and `DOCUMENT_OCR_PROVIDER` env selector are removed.
-Identity analysis is Vision AI only.
+Rental production OCR is Document Engine only; Gemini is diagnostic/legacy.
 
 ## Not implemented (Phase 2 scope boundary)
 

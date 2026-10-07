@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-10-04T11:58:17.418242+00:00",
+  "canonical_documents": 14,
+  "total_field_slots": 112,
+  "per_field_status_counts": {
+    "license_number": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    },
+    "name_ar": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    },
+    "name_en": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    },
+    "nationality": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    },
+    "date_of_birth": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    },
+    "issue_date": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    },
+    "expiry_date": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    },
+    "place_of_issue": {
+      "VERIFIED": 0,
+      "EMPTY": 0,
+      "UNREADABLE": 0,
+      "UNCERTAIN": 0,
+      "UNVERIFIED": 14
+    }
+  },
+  "aggregate_status_counts": {
+    "VERIFIED": 0,
+    "EMPTY": 0,
+    "UNREADABLE": 0,
+    "UNCERTAIN": 0,
+    "UNVERIFIED": 112
+  },
+  "fully_verified_documents": 0,
+  "partially_verified_documents": 0,
+  "unverified_documents": 14,
+  "benchmark_ready_fields": 0,
+  "rejection_benchmark_empty_fields": 0,
+  "benchmark_eligibility_rule": "accuracy: ocr_eligible AND truth_status==VERIFIED; reject precision: truth_status==EMPTY"
+}

@@ -1,0 +1,6 @@
+{
+  "tesseract_cmd": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+  "tessdata_dir": "vendor/tessdata",
+  "default_psm": 7,
+  "licensing_status": "APPROVED_FOR_PILOT"
+}

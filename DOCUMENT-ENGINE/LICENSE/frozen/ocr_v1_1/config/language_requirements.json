@@ -1,0 +1,17 @@
+{
+  "arabic": [
+    "name_ar"
+  ],
+  "english_latin": [
+    "name_en",
+    "nationality",
+    "place_of_issue"
+  ],
+  "digits_dates": [
+    "license_number",
+    "date_of_birth",
+    "issue_date",
+    "expiry_date"
+  ],
+  "benchmark_strategy": "Field-specific engine/config allowed if accuracy improves; compare fairly on same crops"
+}

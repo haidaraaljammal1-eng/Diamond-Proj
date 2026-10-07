@@ -1,0 +1,22 @@
+{
+  "pack_dir": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack",
+  "per_licence_sheets": [
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real3_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real5_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real6_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real7_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real8_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real10_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real11_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real12_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real14_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real_01_review.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\real_02_review.png"
+  ],
+  "contact_sheets": [
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\all_development_contact_sheet_01.png",
+    "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_pack\\all_development_contact_sheet_02.png"
+  ],
+  "queue": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_review_queue.json",
+  "validation": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\ground_truth\\development_set_validation.json"
+}

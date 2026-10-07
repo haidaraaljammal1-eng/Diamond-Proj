@@ -1,0 +1,8 @@
+{
+  "description": "MRZ-A18 final TD3 row geometry overrides (merged into fallback_crop_normalization at runtime).",
+  "min_pair_crop_height_ratio_to_trigger": 0.8,
+  "min_glyph_median_height_ratio_for_normalize": 0.55,
+  "min_pair_crop_height_ratio_after_gate": 0.7,
+  "min_crop_height_to_glyph_median": 2.0,
+  "phase": "MRZ-A18"
+}

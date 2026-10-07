@@ -2,27 +2,22 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { publicRentalFormSchema } from "./public-rental-form.schema.ts";
 import { toPublicRentalFormPayload } from "../utils/to-form-payload.ts";
+import type { PublicRentalContext } from "../types/public-rental.types.ts";
 
 describe("publicRentalFormSchema", () => {
-  it("requires personal fields and identity or passport", () => {
+  it("requires name, mobile, and nationality", () => {
     const parsed = publicRentalFormSchema.parse({
       name: "Sara Ali",
       mobile: "+971501234567",
-      email: "sara@example.com",
       nationality: "AE",
-      identityNumber: "784-1990-1234567-1",
-      passportNumber: "",
       address: "Dubai",
     });
     assert.equal(parsed.name, "Sara Ali");
     assert.throws(() =>
       publicRentalFormSchema.parse({
-        name: "Sara Ali",
+        name: "",
         mobile: "+971501234567",
-        email: "",
         nationality: "AE",
-        identityNumber: "",
-        passportNumber: "",
         address: "",
       }),
     );
@@ -33,39 +28,38 @@ describe("publicRentalFormSchema", () => {
       publicRentalFormSchema.parse({
         name: "Sara Ali",
         mobile: "+971501234567",
-        email: "",
         nationality: "AE",
-        identityNumber: "7841990",
-        passportNumber: "",
         address: "",
       }),
     );
-    assert.equal(keys.includes("agreedAmount"), false);
-    assert.equal(keys.includes("rentalDays"), false);
-    assert.equal(keys.includes("contractNumber"), false);
-    assert.equal(keys.includes("licenseNumber"), false);
+    assert.equal(keys.includes("passportNumber"), false);
+    assert.equal(keys.includes("drivingLicenseNumber"), false);
   });
 });
 
 describe("toPublicRentalFormPayload", () => {
-  it("sends only customer-editable fields and omits empty optionals", () => {
-    const payload = toPublicRentalFormPayload({
-      name: " Sara Ali ",
-      mobile: " +97150 ",
-      email: "",
-      nationality: "AE",
-      identityNumber: "7841990",
-      passportNumber: "",
-      address: "",
-    });
-    assert.deepEqual(payload, {
-      name: "Sara Ali",
-      mobile: "+97150",
-      nationality: "AE",
-      identityNumber: "7841990",
-      email: undefined,
-      passportNumber: undefined,
-      address: undefined,
-    });
+  const context = {
+    identity: {
+      passport: {
+        status: "READY",
+        fields: { passportNumber: "P998877", fullName: null, nationality: null },
+      },
+    },
+  } as PublicRentalContext;
+
+  it("sends passport from verification context, not the form", () => {
+    const payload = toPublicRentalFormPayload(
+      {
+        name: " Sara Ali ",
+        mobile: " +97150 ",
+        nationality: "AE",
+        address: " Dubai ",
+      },
+      context,
+    );
+    assert.equal(payload.name, "Sara Ali");
+    assert.equal(payload.passportNumber, "P998877");
+    assert.equal(payload.address, "Dubai");
+    assert.equal("email" in payload, false);
   });
 });

@@ -1,0 +1,44 @@
+{
+  "release": "DYNAMIC_CROP_V1",
+  "release_date": "2026-10-04",
+  "geometry_frozen": true,
+  "sources": [
+    {
+      "path": "src/deskew.py",
+      "sha256": "0f8a40caae9846fe3de962817fb4ed6ff40aefd34f3ff71638cb25dcffc82929"
+    },
+    {
+      "path": "src/detect_table.py",
+      "sha256": "757f514b023f85af12b94a59772898ca4989175072f1fbb0e95b58ca00bb83c3"
+    },
+    {
+      "path": "src/detect_rows.py",
+      "sha256": "1ddc222f433a4d776a8bcbcf117fbdb339b59b0bc714273b7de4f9c37b576583"
+    },
+    {
+      "path": "src/text_band_fallback.py",
+      "sha256": "4ff2bdab41b3f103a6dfe56e004d15f41ac82e7ebacfa4ea07434fa8bee3969d"
+    },
+    {
+      "path": "src/value_crop/pipeline.py",
+      "sha256": "329845e100b5fd6b45507ecd30db41600fb3dd16b9fcbc8c283d727874ce9f41"
+    },
+    {
+      "path": "src/value_crop/type2_split.py",
+      "sha256": "0c2e1bdf6e20409df51dae34af808671e7be56bf090571ccb72452cf74433669"
+    },
+    {
+      "path": "src/value_crop/type2_two_front.py",
+      "sha256": "3132adb80eaf42e3088fcc997b9ec8f259b707e8435b0408c05e5a447ace7244"
+    },
+    {
+      "path": "config/crop_layout.json",
+      "sha256": "8a098dedfff9097d9c09e31f9d3d9a6f65482136fbf1a5fe792378a65d19b35a"
+    },
+    {
+      "path": "config/value_fields.json",
+      "sha256": "71268a5bd730f03acf1349436e0465a3badf764ac792b2414458cbc4e3c64f7d"
+    }
+  ],
+  "aggregate_sha256": "feb1fd3513afed84de89c0d8a87eb065319094b466eefe9c7336c4303a7b1e26"
+}

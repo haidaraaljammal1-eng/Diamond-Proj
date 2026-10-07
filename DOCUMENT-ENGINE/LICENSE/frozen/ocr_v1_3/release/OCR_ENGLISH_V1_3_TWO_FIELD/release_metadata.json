@@ -1,0 +1,8 @@
+{
+  "release_id": "OCR_ENGLISH_V1_3_TWO_FIELD",
+  "supersedes": "OCR_ENGLISH_V1_2_TWO_FIELD",
+  "license_number_engine": "ppocrv5_en_stability_veto",
+  "expiry_engine": "OCR_ENGLISH_V1_2_TWO_FIELD",
+  "crop_release": "DYNAMIC_CROP_V1",
+  "notes": "PP-OCRv5 primary licence number with 2x upscale stability; expiry unchanged from V1.2."
+}

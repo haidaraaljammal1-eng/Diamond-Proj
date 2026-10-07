@@ -249,7 +249,8 @@ if (!RUN) {
       const passport = await uploadPassport(ctx.token);
       assert.equal(passport.statusCode, 200, passport.body);
       assert.equal(passport.json().data.identity.passport.status, "READY");
-      assert.equal(passport.json().data.flow.step, "CONTRACT");
+      assert.equal(passport.json().data.identity.identityReady, true);
+      assert.equal(passport.json().data.flow.step, "LICENSE_VERIFICATION");
 
       const again = await app.inject({ method: "GET", url: `/contracts/rental/${ctx.token}` });
       assert.equal(again.statusCode, 200);

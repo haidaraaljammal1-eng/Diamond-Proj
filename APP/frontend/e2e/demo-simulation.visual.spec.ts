@@ -44,6 +44,7 @@ const RENTAL = {
     licenseNumberMasked: null,
     expiryDate: null,
     confidence: null,
+    unreadableReason: null,
   },
   payment: {
     status: null,
@@ -130,9 +131,9 @@ test.describe("Demo Simulation Mode — customer rental", () => {
     await page.goto("/ar/rental/demo-sim-token");
     await expect(page.getByTestId("license-step")).toBeVisible({ timeout: DESK_TIMEOUT });
     await expect(page.getByTestId("simulate-license")).toBeVisible();
-    await expect(page.getByTestId("rental-summary")).toContainText("BMW 730Li");
-    await expect(page.getByTestId("rental-summary")).toContainText("AED 3,500");
-    await expect(page.getByTestId("rental-summary")).toContainText("A 12345");
+    await expect(page.getByTestId("rental-summary-card")).toContainText("BMW 730Li");
+    await expect(page.getByTestId("rental-summary-card")).toContainText("AED 3,500");
+    await expect(page.getByTestId("rental-summary-card")).toContainText("A 12345");
     await page.screenshot({ path: `${SHOTS}/ar-01-license-verification.png`, fullPage: true });
 
     await page.getByTestId("simulate-license").click();

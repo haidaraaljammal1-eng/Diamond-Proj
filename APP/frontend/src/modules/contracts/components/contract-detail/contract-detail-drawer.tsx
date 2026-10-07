@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
+import { Dialog } from "@/shared/components/ui/dialog";
 import { Drawer } from "@/shared/components/ui/drawer";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import { StripePaymentActions } from "@/modules/payments/components/stripe-payment-actions";
@@ -17,13 +18,36 @@ import { ContractTarsInlineStatus } from "../contract-tars/contract-tars-inline-
 import { resolveContractsErrorMessage } from "../../utils/resolve-contracts-error";
 import { formatRentalDuration } from "../../utils/format-rental-duration";
 import { contractPaymentMethodLabel } from "../../utils/contract-payment-method";
-import { renewalHistoryState } from "../../utils/renewal-history";
+import { renewalCollectionState, renewalHistoryLabelKey } from "../../utils/renewal-history";
+import { createIdempotencyKey } from "../../utils/contract-link";
+import type { ContractDetailDto } from "../../types/contract.types";
+import type { FinalReconciliationDetailDto } from "../../types/reconciliation.types";
 import {
   ReconciliationCustodySection,
   ReconciliationFinancialSummary,
 } from "../../forms/reconcile/reconciliation-sections";
 import { ReconciliationImagePairsSection } from "../../forms/reconcile/reconciliation-images";
 import styles from "./contract-detail-drawer.module.css";
+
+function reviewSettlementAmountDue(detail: ContractDetailDto): number {
+  const charges = detail.reconciliation?.finalAmount ?? 0;
+  if (detail.status !== "REVIEW") return charges;
+  return (
+    charges +
+    detail.renewals
+      .filter((row) => row.collectable)
+      .reduce((sum, row) => sum + row.additionalAmount, 0)
+  );
+}
+
+function finalReconciliationSummaryData(detail: FinalReconciliationDetailDto) {
+  return {
+    totals: detail.totals,
+    reconciliationChargesAmount: detail.reconciliationChargesAmount,
+    outstandingRenewalAmount: detail.outstandingRenewalAmount,
+    settlementAmountDue: detail.settlementAmountDue,
+  };
+}
 
 export interface ContractDetailDrawerProps {
   contractId: string | null;
@@ -64,12 +88,16 @@ export function ContractDetailDrawer({
   const format = useFormatter();
   const checkout = useStripeCheckout();
   const [providerAvailable, setProviderAvailable] = useState(true);
+  const [collectRenewalId, setCollectRenewalId] = useState<string | null>(null);
+  const collectKeyRef = useRef(createIdempotencyKey());
   const {
     detail,
     detailStatus,
     detailError,
     actions,
     loadContract,
+    settleRenewalCash,
+    renewPending,
   } = useContract();
 
   useEffect(() => {
@@ -82,7 +110,13 @@ export function ContractDetailDrawer({
   const carOutAngleLabel = (angle: string) =>
     t.has(`carOut.angle.${angle}`) ? t(`carOut.angle.${angle}`) : t(`carOutAngles.${angle}`);
 
+  const collectRenewal =
+    collectRenewalId && detail
+      ? detail.renewals.find((row) => row.id === collectRenewalId) ?? null
+      : null;
+
   return (
+    <>
     <Drawer
       open={contractId != null}
       onClose={onClose}
@@ -272,7 +306,7 @@ export function ContractDetailDrawer({
               <p className={styles.muted}>{t("finalReconciliation.openDialogHint")}</p>
               <Kv
                 label={t("finalReconciliation.finalAmountDue")}
-                value={money(detail.reconciliation.finalAmount, detail.currency)}
+                value={money(reviewSettlementAmountDue(detail), detail.currency)}
               />
             </section>
           ) : null}
@@ -282,7 +316,10 @@ export function ContractDetailDrawer({
               <p className={styles.sectionTitle}>{t("finalReconciliation.title")}</p>
               <ReconciliationImagePairsSection pairs={detail.finalReconciliation.imagePairs} />
               <ReconciliationCustodySection custody={detail.finalReconciliation.custody} />
-              <ReconciliationFinancialSummary totals={detail.finalReconciliation.totals} currency={detail.currency} />
+              <ReconciliationFinancialSummary
+                data={finalReconciliationSummaryData(detail.finalReconciliation)}
+                currency={detail.currency}
+              />
               {detail.finalReconciliation.finalizedAt ? (
                 <Kv
                   label={t("finalReconciliation.finalizedAt")}
@@ -329,16 +366,23 @@ export function ContractDetailDrawer({
               <p className={styles.sectionTitle}>{t("detail.renewals")}</p>
               <ol className={styles.renewalList}>
                 {detail.renewals.map((renewal) => {
-                  const state = renewalHistoryState(renewal.approvedAt);
+                  const state = renewalCollectionState(renewal);
                   const stamp = renewal.approvedAt ?? renewal.createdAt;
+                  const dateLabel = renewal.extensionApplied
+                    ? t("detail.renewalDatesApplied")
+                    : t("detail.renewalDatesPlanned");
                   return (
-                    <li key={renewal.id} className={styles.renewalItem}>
+                    <li key={renewal.id} className={styles.renewalItem} data-renewal-state={state}>
                       <p className={styles.renewalMeta}>
                         {format.dateTime(new Date(stamp), { dateStyle: "medium", timeStyle: "short" })}
                         {" · "}
-                        {t(`detail.renewalState.${state}`)}
+                        {t(renewalHistoryLabelKey(state))}
+                        {renewal.paymentMethod
+                          ? ` · ${contractPaymentMethodLabel(renewal.paymentMethod, t as never)}`
+                          : null}
                       </p>
                       <p className={styles.muted}>
+                        {dateLabel}:{" "}
                         {format.dateTime(new Date(renewal.previousEndAt), { dateStyle: "medium" })}
                         {" → "}
                         {format.dateTime(new Date(renewal.newEndAt), { dateStyle: "medium" })}
@@ -348,6 +392,27 @@ export function ContractDetailDrawer({
                         {" · "}
                         {money(renewal.additionalAmount, detail.currency)}
                       </p>
+                      {state === "OFFICE_UNPAID" && detail.status !== "REVIEW" ? (
+                        <>
+                          <p className={styles.renewalDue}>
+                            {t("detail.renewalAmountDue", {
+                              amount: money(renewal.additionalAmount, detail.currency),
+                            })}
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            data-testid={`renewal-collect-${renewal.id}`}
+                            onClick={() => setCollectRenewalId(renewal.id)}
+                          >
+                            {t("detail.renewalCollect")}
+                          </Button>
+                        </>
+                      ) : null}
+                      {state === "OFFICE_UNPAID" && detail.status === "REVIEW" ? (
+                        <p className={styles.muted}>{t("finalReconciliation.autoIncludedInSettlement")}</p>
+                      ) : null}
                     </li>
                   );
                 })}
@@ -398,7 +463,7 @@ export function ContractDetailDrawer({
                 </Button>
               ) : null}
               {detail.reconciliation &&
-              detail.reconciliation.finalAmount > 0 &&
+              reviewSettlementAmountDue(detail) > 0 &&
               !detail.reconciliation.settled ? (
                 <p className={styles.muted}>{tPay("closeBlocked")}</p>
               ) : null}
@@ -412,5 +477,44 @@ export function ContractDetailDrawer({
         </div>
       ) : null}
     </Drawer>
+    <Dialog
+      open={collectRenewal != null}
+      onClose={() => setCollectRenewalId(null)}
+      title={t("detail.renewalCollectTitle")}
+      description={t("detail.renewalCollectBody")}
+      closeLabel={t("common.cancel")}
+    >
+      {collectRenewal && detail ? (
+        <div className={styles.renewalCollectDialog}>
+          <p className={styles.muted}>
+            {format.dateTime(new Date(collectRenewal.previousEndAt), { dateStyle: "medium" })}
+            {" → "}
+            {format.dateTime(new Date(collectRenewal.newEndAt), { dateStyle: "medium" })}
+          </p>
+          <p className={styles.muted}>
+            +{format.number(collectRenewal.additionalDays)} {t("detail.days").toLowerCase()}
+          </p>
+          <p>
+            <b>{money(collectRenewal.additionalAmount, detail.currency)}</b>
+          </p>
+          <p className={styles.muted}>{t("detail.renewalCollectMethod")}</p>
+          <Button
+            type="button"
+            size="md"
+            loading={renewPending}
+            onClick={() =>
+              void settleRenewalCash(detail.id, collectRenewal.id, collectKeyRef.current).then(
+                (ok) => {
+                  if (ok) setCollectRenewalId(null);
+                },
+              )
+            }
+          >
+            {t("detail.renewalCollectConfirm")}
+          </Button>
+        </div>
+      ) : null}
+    </Dialog>
+    </>
   );
 }

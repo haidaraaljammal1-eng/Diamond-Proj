@@ -267,7 +267,18 @@ export interface ContractRenewalDto {
   createdAt: string;
   approvedAt: string | null;
   appliedAt?: string | null;
+  settledPaymentId?: string | null;
+  collectionState:
+    | "PENDING"
+    | "AWAITING_PAYMENT"
+    | "OFFICE_UNPAID"
+    | "PAID"
+    | "COMPLETED_NO_CHARGE";
+  extensionApplied: boolean;
+  collectable: boolean;
   awaitingPayment?: boolean;
+  paymentMethod?: "BANK_TRANSFER" | "CARD" | "CASH" | "MANUAL" | null;
+  paymentStatus?: "PENDING" | "PROCESSING" | "CONFIRMED" | "FAILED" | "CANCELLED" | null;
 }
 
 export interface ContractRoadLiabilitySignalsDto {

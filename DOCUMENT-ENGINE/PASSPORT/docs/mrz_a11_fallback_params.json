@@ -1,0 +1,99 @@
+{
+  "description": "MRZ-A11 conservative fallback detector (invoked only after primary MRZ_NOT_FOUND)",
+  "working_copy": {
+    "min_long_edge_px": 640,
+    "interpolation": "INTER_CUBIC"
+  },
+  "responses": {
+    "clahe_clip": 2.0,
+    "clahe_grid_frac_of_min_dim": 0.02,
+    "clahe_grid_min": 4,
+    "clahe_grid_max": 16,
+    "adaptive_block_frac_of_width": 0.06,
+    "adaptive_block_min": 11,
+    "adaptive_c": 2,
+    "horizontal_open_width_frac": 0.06,
+    "horizontal_open_height_frac": 0.006,
+    "horizontal_open_min_w": 7,
+    "horizontal_open_min_h": 1
+  },
+  "projection_bands": {
+    "smooth_kernel_frac_h": 0.015,
+    "smooth_kernel_min": 3,
+    "ink_threshold_sigma": 0.35,
+    "min_band_height_frac": 0.012,
+    "max_band_height_frac": 0.09,
+    "min_band_width_frac": 0.45,
+    "max_band_area_frac": 0.22
+  },
+  "row_gates": {
+    "min_width_frac": 0.42,
+    "max_width_frac": 1.0,
+    "min_height_frac": 0.012,
+    "max_height_frac": 0.1,
+    "min_aspect_ratio": 5.5,
+    "max_aspect_ratio": 120.0,
+    "max_single_blob_area_frac": 0.22,
+    "min_horizontal_coverage_frac": 0.38,
+    "min_component_count": 8,
+    "min_ink_density": 0.02,
+    "max_ink_density": 0.45,
+    "max_internal_height_cv": 0.95,
+    "min_spacing_regularity": 0.18
+  },
+  "pairing": {
+    "min_width_ratio": 0.75,
+    "min_height_ratio": 0.5,
+    "max_height_ratio": 2.0,
+    "min_x_overlap_frac": 0.72,
+    "min_gap_height_ratio": 0.05,
+    "max_gap_height_ratio": 3.0,
+    "min_pair_total_score": 0.42,
+    "min_score_margin_over_second": 0.08,
+    "max_pairs_to_evaluate": 400,
+    "lower_page_prior_weight": 0.12
+  },
+  "scoring_weights": {
+    "width_similarity": 0.16,
+    "height_similarity": 0.1,
+    "horizontal_alignment": 0.16,
+    "vertical_gap": 0.1,
+    "component_regularity": 0.12,
+    "horizontal_coverage": 0.14,
+    "text_structure": 0.12,
+    "lower_page_prior": 0.1
+  },
+  "line_structure": {
+    "min_row_width_frac": 0.58,
+    "max_gap_above_line1_times_height": 1.05,
+    "high_horizontal_coverage": 0.88,
+    "low_regularity_line_like": 0.38
+  },
+  "bottom_up": {
+    "discovery_band_order": "descending_y",
+    "pair_center_y_prior_weight": 0.12,
+    "lower_page_structure_relax_min_center_y_frac": 0.62,
+    "lower_page_max_ink_density": 0.72,
+    "lower_page_min_horizontal_coverage_for_ink_relax": 0.85,
+    "lower_page_min_components_for_structure_relax": 12,
+    "lower_page_min_horizontal_coverage_for_structure_relax": 0.35
+  },
+  "crop_assignment": {
+    "recover_orphan_max_gap_over_avg_height": 2.8,
+    "min_line2_ink_density": 0.03
+  },
+  "row_core_crop": {
+    "enabled": true,
+    "min_row_horizontal_coverage": 0.52,
+    "ink_row_threshold_frac_of_max": 0.15,
+    "min_core_height_px": 5,
+    "max_vertical_trim_frac": 0.75,
+    "non_overlap_margin_px": 1,
+    "min_preserved_width_frac": 0.9,
+    "max_horizontal_margin_trim_frac": 0.08,
+    "fallback_min_row_coverage": 0.28,
+    "corridor_resplit_upper_max_cov": 0.45,
+    "corridor_resplit_lower_min_max_cov": 0.65,
+    "corridor_mrz_row_coverage": 0.48
+  }
+}

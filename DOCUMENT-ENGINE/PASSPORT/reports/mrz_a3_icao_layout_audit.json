@@ -1,0 +1,119 @@
+{
+  "reference": "ICAO Doc 9303 TD3 travel document MRZ line 2",
+  "character_values": {
+    "0-9": "0-9",
+    "A-Z": "10-35",
+    "<": 0
+  },
+  "weights": [
+    7,
+    3,
+    1
+  ],
+  "line2_fields": {
+    "document_number": {
+      "1_based": "1-9",
+      "0_based": "0-8",
+      "length": 9
+    },
+    "document_number_check_digit": {
+      "1_based": 10,
+      "0_based": 9
+    },
+    "nationality": {
+      "1_based": "11-13",
+      "0_based": "10-12",
+      "excluded_from_composite": true
+    },
+    "date_of_birth": {
+      "1_based": "14-19",
+      "0_based": "13-18",
+      "length": 6
+    },
+    "date_of_birth_check_digit": {
+      "1_based": 20,
+      "0_based": 19
+    },
+    "sex": {
+      "1_based": 21,
+      "0_based": 20,
+      "excluded_from_composite": true
+    },
+    "date_of_expiry": {
+      "1_based": "22-27",
+      "0_based": "21-26",
+      "length": 6
+    },
+    "date_of_expiry_check_digit": {
+      "1_based": 28,
+      "0_based": 27
+    },
+    "optional_data": {
+      "1_based": "29-42",
+      "0_based": "28-41",
+      "length": 14
+    },
+    "optional_data_check_digit": {
+      "1_based": 43,
+      "0_based": 42
+    },
+    "composite_check_digit": {
+      "1_based": 44,
+      "0_based": 43
+    }
+  },
+  "composite_checksum_input": {
+    "description": "Concatenation of document+check, DOB+check, expiry+check, optional+check",
+    "segments_0_based": [
+      {
+        "name": "document_number_and_check",
+        "range": "0-9",
+        "length": 10
+      },
+      {
+        "name": "dob_and_check",
+        "range": "13-19",
+        "length": 7
+      },
+      {
+        "name": "expiry_and_check",
+        "range": "21-27",
+        "length": 7
+      },
+      {
+        "name": "optional_data_and_check",
+        "range": "28-42",
+        "length": 15
+      }
+    ],
+    "excluded_0_based": [
+      "10-12 nationality",
+      "20 sex"
+    ],
+    "total_composite_input_length": 39
+  },
+  "implementation_audit": {
+    "file": "scripts/icao_td3.py",
+    "function": "validate_td3",
+    "current_composite_expression": "line2[0:10] + line2[13:20] + line2[21:28]",
+    "current_composite_length": 24,
+    "icao_correct_expression": "line2[0:10] + line2[13:20] + line2[21:28] + line2[28:43]",
+    "icao_correct_length": 39,
+    "missing_segment": "optional_data_and_check (0-based 28-42 inclusive)",
+    "td3_layout_documented_correctly": true,
+    "composite_position_selection_in_parser_correct": false,
+    "weights_correct": true,
+    "character_values_correct": true,
+    "parser_bug_found": true,
+    "parser_bug_summary": "Composite validation omits optional-data field and its check digit (15 characters)."
+  },
+  "verification_on_a2_raw_line2": {
+    "with_parser_composite_sequence": "017057747004011022601054",
+    "parser_calculated_digit": 8,
+    "with_icao_composite_sequence": "017057747004011022601054050<50161796<<8",
+    "icao_calculated_digit": 4,
+    "ocr_composite_digit_at_pos_44": "4",
+    "parser_would_verify_as": "FAIL",
+    "icao_spec_would_verify_as": "PASS"
+  }
+}

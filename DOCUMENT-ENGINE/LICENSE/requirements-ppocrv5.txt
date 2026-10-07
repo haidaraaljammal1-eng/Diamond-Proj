@@ -1,0 +1,4 @@
+# PP-OCRv5 persistent worker (.venv_ppocrv5) — imports traced to rapidocr_ppocrv5_en only.
+# Transitive deps (e.g. opencv, pillow) resolve from rapidocr==3.9.2; do not duplicate rapidocr-onnxruntime here.
+rapidocr==3.9.2
+onnxruntime==1.30.0

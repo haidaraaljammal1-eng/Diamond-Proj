@@ -36,8 +36,6 @@ async function main() {
       createdByUserId: 1,
       priceType: "DAILY",
       rentalDays: 1,
-      durationValue: 1,
-      durationUnit: "DAY",
       agreedAmount: 500,
       collectionMode: "CASH",
     },

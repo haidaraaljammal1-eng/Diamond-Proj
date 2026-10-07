@@ -18,7 +18,18 @@ export function useLogin() {
         redirect: false,
       });
       const succeeded = Boolean(result?.ok && !result.error);
-      if (!succeeded) setError("UNAUTHORIZED");
+      if (!succeeded) {
+        const code = result?.error ?? "";
+        if (code === "INTERNAL_ERROR" || code.startsWith("HTTP_5")) {
+          setError("generic");
+        } else if (code === "ACCOUNT_SUSPENDED") {
+          setError("ACCOUNT_SUSPENDED");
+        } else if (code === "TWO_FACTOR_REQUIRED") {
+          setError("generic");
+        } else {
+          setError("UNAUTHORIZED");
+        }
+      }
       return succeeded;
     } catch {
       setError("NETWORK_ERROR");

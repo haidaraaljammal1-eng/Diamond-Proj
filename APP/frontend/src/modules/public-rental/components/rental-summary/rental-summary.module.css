@@ -1,32 +1,117 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--diamond-hair);
+}
+
+.priceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.priceCaption {
+  color: var(--diamond-muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .amount {
+  margin: 0;
   color: var(--diamond-gold-hi);
   font-family: var(--diamond-font-display);
-  font-size: 22px;
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 600;
   unicode-bidi: isolate;
+}
+
+.detailsPanel {
+  margin-top: 14px;
+  padding: 12px 12px 10px;
+  border-radius: 8px;
+  border: 1px solid rgb(201 161 92 / 12%);
+  background: rgb(201 161 92 / 04%);
 }
 
 .rows {
   display: grid;
-  gap: 8px;
-  margin-top: 10px;
+  grid-template-columns: minmax(7.25rem, max-content) minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 0;
+  margin: 0;
 }
 
-.row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+.label {
+  grid-column: 1;
+  margin: 0;
+  padding: 9px 0;
   color: var(--diamond-muted);
-  font-size: 12.5px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  text-align: start;
+  border-bottom: 1px solid rgb(201 161 92 / 08%);
 }
 
 .value {
+  grid-column: 2;
+  margin: 0;
+  padding: 9px 0;
   color: var(--diamond-ivory);
-  text-align: end;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: start;
+  justify-self: stretch;
   unicode-bidi: isolate;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid rgb(201 161 92 / 08%);
+}
+
+.label:last-of-type,
+.value:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+
+.noteWrap {
+  margin-top: 14px;
+  padding-top: 12px;
 }
 
 .note {
-  margin: 10px 0 0;
+  margin: 0;
   color: var(--diamond-dim);
   font-size: 11px;
+  line-height: 1.55;
+}
+
+@media (max-width: 430px) {
+  .amount {
+    font-size: 23px;
+  }
+
+  .detailsPanel {
+    padding: 10px;
+  }
+
+  .rows {
+    grid-template-columns: minmax(6.5rem, max-content) minmax(0, 1fr);
+    column-gap: 12px;
+  }
+
+  .label,
+  .value {
+    font-size: 11px;
+    padding: 8px 0;
+  }
 }

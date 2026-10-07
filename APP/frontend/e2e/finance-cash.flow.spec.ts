@@ -12,7 +12,7 @@ import {
   STAFF_PASSWORD,
 } from "./helpers/e2e-api";
 import { openViolationsRow } from "./helpers/violations";
-import { completeIdentitySimulation } from "./helpers/rental-contract";
+import { completeIdentitySimulation, fillAndSaveRenterDetails } from "./helpers/rental-contract";
 
 test.use({ channel: "chrome" });
 test.describe.configure({ timeout: 420_000, mode: "serial" });
@@ -76,7 +76,7 @@ test("finance shows cash rental and cash road liability collections", async ({ p
     const rentalPage = await context.newPage();
     await rentalPage.goto(link);
     await completeIdentitySimulation(rentalPage);
-    await expect(rentalPage.getByTestId("contract-review")).toBeVisible({ timeout: 120_000 });
+    await fillAndSaveRenterDetails(rentalPage);
     completeRentalSigning(rentalToken);
     await rentalPage.reload();
     await expect(rentalPage.getByTestId("handover-step")).toBeVisible({ timeout: 60_000 });

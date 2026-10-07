@@ -1,0 +1,54 @@
+{
+  "dataset_name": "uae_driving_license_ocr_pilot_subset",
+  "created_at_utc": "2026-10-04T12:06:21.848893+00:00",
+  "document_count": 5,
+  "field_slots": 32,
+  "authoritative_subset_only": true,
+  "documents": [
+    {
+      "test_id": "pilot_01",
+      "source_image": "/mnt/data/UAE_LICENSE_OCR_PILOT_SUBSET/images/pilot_01.png",
+      "source_filename": "pilot_01.png",
+      "source_sha256": "4683979815aa417f273e5f1b324702d3a80a7051f1f593bd5c535dc6e15f9e89",
+      "width": 704,
+      "height": 440,
+      "included_in_pilot": true
+    },
+    {
+      "test_id": "pilot_02",
+      "source_image": "/mnt/data/UAE_LICENSE_OCR_PILOT_SUBSET/images/pilot_02.png",
+      "source_filename": "pilot_02.png",
+      "source_sha256": "b2846030259e49735ce1a56293d70911b244b0dca923e742e6e1321337286355",
+      "width": 701,
+      "height": 438,
+      "included_in_pilot": true
+    },
+    {
+      "test_id": "pilot_03",
+      "source_image": "/mnt/data/UAE_LICENSE_OCR_PILOT_SUBSET/images/pilot_03.png",
+      "source_filename": "pilot_03.png",
+      "source_sha256": "fb7cf7fb63e32571785da8e0c09d951b552c1bb63651da6cd2dd6be373a6705e",
+      "width": 651,
+      "height": 387,
+      "included_in_pilot": true
+    },
+    {
+      "test_id": "pilot_04",
+      "source_image": "/mnt/data/UAE_LICENSE_OCR_PILOT_SUBSET/images/pilot_04.png",
+      "source_filename": "pilot_04.png",
+      "source_sha256": "33252114f253de98b9f1d877c117d290926687fd8fd0079350779f5013453264",
+      "width": 568,
+      "height": 352,
+      "included_in_pilot": true
+    },
+    {
+      "test_id": "pilot_05",
+      "source_image": "pilot_subset/images/pilot_05.png",
+      "source_filename": "pilot_05.png",
+      "source_sha256": "d7bcc6dbf6bb45b26272ef04ffc26409265fc6abafe279db1886fe1345afa3d5",
+      "width": 456,
+      "height": 294,
+      "included_in_pilot": true
+    }
+  ]
+}

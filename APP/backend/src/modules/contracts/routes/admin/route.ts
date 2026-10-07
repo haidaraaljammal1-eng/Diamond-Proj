@@ -953,6 +953,39 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   );
 
   app.post(
+    "/:id/renewals/:renewalId/cash/settle",
+    {
+      schema: {
+        summary: "Confirm cash collection for an applied office renewal",
+        operationId: "settleContractRenewalCash",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RENEW],
+        params: z.object({
+          id: z.string().uuid(),
+          renewalId: z.string().uuid(),
+        }),
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      const data = await contracts.settleRenewalCash(
+        request.params.id,
+        request.params.renewalId,
+        actor.id,
+        typeof key === "string" ? key : undefined,
+      );
+      request.setAudit({
+        action: "contracts.renewal_cash_settle",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
     "/:id/renew",
     {
       schema: {

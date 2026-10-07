@@ -121,6 +121,15 @@ enum DrivingLicenseVerificationStatus {
   PROVIDER_UNAVAILABLE
 }
 
+/// Machine OCR snapshot for one DRIVING_LICENSE ContractDocument attempt.
+enum DrivingLicenseExtractionStatus {
+  PROCESSING
+  READY
+  PARTIAL
+  FAILED
+  PROVIDER_UNAVAILABLE
+}
+
 enum CustomerDocumentType {
   IDENTITY
   PASSPORT
@@ -218,8 +227,9 @@ model Contract {
   payments             ContractPayment[]
   cardPaymentMethod    ContractCardPaymentMethod?
   documents            ContractDocument[]
-  licenseVerifications DrivingLicenseVerification[]
-  passportExtractions  PassportExtraction[]
+  licenseVerifications      DrivingLicenseVerification[]
+  passportExtractions       PassportExtraction[]
+  drivingLicenseExtractions DrivingLicenseExtraction[]
   officialReviewDraft  OfficialContractReviewDraft?
   officialSignatures   OfficialContractSignature[]
   carOut               ContractCarOut?
@@ -333,7 +343,8 @@ model ContractPayment {
 
   reconciliationSettlement ContractReconciliation?       @relation("ReconciliationSettlement")
   postCloseSettlement      ContractPostCloseReceivable?  @relation("PostCloseSettlement")
-  renewalSettlement        ContractRenewal?              @relation("RenewalSettlement")
+  renewalSettlements       ContractRenewal[]             @relation("RenewalSettlement")
+  allocations              ContractPaymentAllocation[]
   roadLiabilitySettlement  RoadLiabilityCustomerCharge?  @relation("RoadLiabilitySettlement")
   ledgerEntries            FinancialLedgerEntry[]
   paymentAuthorization     ContractPaymentAuthorization?
@@ -484,8 +495,9 @@ model ContractDocument {
   supersededAt DateTime?
   createdAt    DateTime             @default(now())
 
-  verifications       DrivingLicenseVerification[]
-  passportExtractions PassportExtraction[]
+  verifications             DrivingLicenseVerification[]
+  passportExtractions       PassportExtraction[]
+  drivingLicenseExtractions DrivingLicenseExtraction[]
 
   @@index([contractId, type, supersededAt])
   @@map("contract_documents")
@@ -506,11 +518,46 @@ model DrivingLicenseVerification {
   provider        String?
   providerVersion String?
   verifiedAt      DateTime?
+  extractionId    String?                          @unique
+  extraction      DrivingLicenseExtraction?        @relation(fields: [extractionId], references: [id], onDelete: SetNull)
   createdAt       DateTime                         @default(now())
   updatedAt       DateTime                         @updatedAt
 
   @@index([contractId, createdAt])
   @@map("driving_license_verifications")
+}
+
+/// Normalized UAE driving-licence OCR for one DRIVING_LICENSE ContractDocument.
+/// Immutable machine read — never updated for customer form corrections.
+model DrivingLicenseExtraction {
+  id                   String                         @id @default(uuid())
+  contractId           String
+  contract             Contract                       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  documentId           String                         @unique
+  document             ContractDocument               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  attachmentId         String
+  status               DrivingLicenseExtractionStatus @default(PROCESSING)
+  /// LICENSE engine document_status at completion (ACCEPT | REVIEW_REQUIRED | REJECT).
+  engineDocumentStatus String?
+  jobId                String?
+  provider             String?
+  providerVersion      String?
+  licenseNumber        String?
+  holderNameEn         String?
+  nationality          String?
+  /// Calendar dates stored at UTC noon.
+  dateOfBirth          DateTime?
+  issueDate            DateTime?
+  expiryDate           DateTime?
+  placeOfIssue         String?
+  fieldsMeta           Json?
+  completedAt          DateTime?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  verification         DrivingLicenseVerification?
+
+  @@index([contractId, createdAt])
+  @@map("driving_license_extractions")
 }
 
 /// Normalized passport OCR result for one PASSPORT ContractDocument attempt.
@@ -799,13 +846,34 @@ model ContractRenewal {
   /// Customer accepted the offer. Contract extension applies only after payment (or zero amount).
   approvedAt       DateTime?
   appliedAt        DateTime?
-  settledPaymentId String?          @unique
+  settledPaymentId String?
   settledPayment   ContractPayment? @relation("RenewalSettlement", fields: [settledPaymentId], references: [id], onDelete: SetNull)
   createdByUserId  Int?
   createdBy        User?            @relation("ContractRenewalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([contractId, createdAt])
+  @@index([settledPaymentId])
   @@map("contract_renewals")
+}
+
+enum ContractPaymentAllocationPurpose {
+  RECONCILIATION
+  RENEWAL
+}
+
+model ContractPaymentAllocation {
+  id                String                           @id @default(uuid())
+  contractPaymentId String
+  contractPayment   ContractPayment                  @relation(fields: [contractPaymentId], references: [id], onDelete: Cascade)
+  allocationPurpose ContractPaymentAllocationPurpose
+  targetId          String
+  amount            Int
+  createdAt         DateTime                         @default(now())
+
+  @@unique([contractPaymentId, allocationPurpose, targetId])
+  @@index([contractPaymentId])
+  @@index([targetId])
+  @@map("contract_payment_allocations")
 }
 
 model CustomerDocument {

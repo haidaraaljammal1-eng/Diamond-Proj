@@ -2,7 +2,12 @@ import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { createFakeVisionAIProvider } from "../helpers/fake-vision-ai-provider";
+import {
+  createFakeVisionAIProvider,
+  fakeLicenseOcrResult,
+} from "../helpers/fake-vision-ai-provider";
+import { setDrivingLicenseDocumentAnalysisForTests } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
+import { createFakePassportNumberApi } from "../helpers/fake-passport-number-api";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
 function isIdentityAmbiguous(error: unknown): boolean {
@@ -51,6 +56,7 @@ if (!RUN) {
 
     async function fakeOcr(input: { licenseNumber?: string; expiryDate?: string }) {
       ocr.setLicense(input);
+      setDrivingLicenseDocumentAnalysisForTests(async () => fakeLicenseOcrResult(input));
       const { setVisionAIProviderForTests } = await import(
         "src/modules/vision-ai/vision-ai-provider.factory"
       );
@@ -59,6 +65,8 @@ if (!RUN) {
 
     async function seedIdentity(rentalToken: string, licenseNumber: string) {
       await fakeOcr({ licenseNumber, expiryDate: "2031-06-01" });
+      const passportApi = createFakePassportNumberApi();
+      await passportApi.install();
       const dl = multipart("dl.png", "image/png", PNG);
       const pp = multipart("pp.png", "image/png", PNG);
       assert.equal(
@@ -72,17 +80,14 @@ if (!RUN) {
         ).statusCode,
         200,
       );
-      assert.equal(
-        (
-          await app.inject({
-            method: "POST",
-            url: `/contracts/rental/${rentalToken}/passport`,
-            headers: pp.headers,
-            payload: pp.payload,
-          })
-        ).statusCode,
-        200,
-      );
+      const passportRes = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${rentalToken}/passport`,
+        headers: pp.headers,
+        payload: pp.payload,
+      });
+      await passportApi.clear();
+      assert.equal(passportRes.statusCode, 200, passportRes.body);
     }
 
     async function offerToken() {
@@ -119,6 +124,22 @@ if (!RUN) {
         contractNumber: offer.json().data.contractNumber as string,
         token: link.json().data.link.token as string,
       };
+    }
+
+    async function postFormOnly(
+      rentalToken: string,
+      input: { name: string; mobile: string; identityNumber: string },
+    ) {
+      return app.inject({
+        method: "POST",
+        url: `/contracts/rental/${rentalToken}/form`,
+        payload: {
+          name: input.name,
+          mobile: input.mobile,
+          nationality: "AE",
+          identityNumber: input.identityNumber,
+        },
+      });
     }
 
     async function submitForm(
@@ -196,6 +217,7 @@ if (!RUN) {
     });
 
     after(async () => {
+      setDrivingLicenseDocumentAnalysisForTests(undefined);
       const { setVisionAIProviderForTests } = await import(
         "src/modules/vision-ai/vision-ai-provider.factory"
       );
@@ -313,6 +335,9 @@ if (!RUN) {
               drivingLicenseNumber: licenseB,
               drivingLicenseExpiry: new Date("2031-06-01"),
               address: null,
+              dateOfBirth: null,
+              drivingLicenseIssueDate: null,
+              drivingLicensePlaceOfIssue: null,
             }),
           ),
         isIdentityAmbiguous,
@@ -341,24 +366,19 @@ if (!RUN) {
       assert.equal(contractB?.customerId, contractA?.customerId);
     });
 
-    test("concurrent same-identity form submissions resolve to one customer", async () => {
-      const mobile = `+9715009${run.slice(-5)}8`;
-      const identity = `784-conc-${run}`;
-      const tokens = await Promise.all([offerToken(), offerToken(), offerToken()]);
-      await Promise.all(tokens.map((t) => seedIdentity(t.token, `DL-CONC-${t.token.slice(0, 6)}`)));
-
+    async function concurrentSameIdentityFormSubmits(count: number, mobileSuffix: string, identitySuffix: string) {
+      const mobile = `+9715009${run.slice(-5)}${mobileSuffix}`;
+      const identity = `784-conc-${identitySuffix}-${run}`;
+      const tokens: Awaited<ReturnType<typeof offerToken>>[] = [];
+      for (let i = 0; i < count; i += 1) {
+        tokens.push(await offerToken());
+      }
+      for (const t of tokens) {
+        await seedIdentity(t.token, `DL-CONC-${t.token.slice(0, 6)}`);
+      }
       const results = await Promise.all(
         tokens.map((t) =>
-          app.inject({
-            method: "POST",
-            url: `/contracts/rental/${t.token}/form`,
-            payload: {
-              name: "Concurrent",
-              mobile,
-              nationality: "AE",
-              identityNumber: identity,
-            },
-          }),
+          postFormOnly(t.token, { name: "Concurrent", mobile, identityNumber: identity }),
         ),
       );
       for (const res of results) assert.equal(res.statusCode, 200, res.body);
@@ -372,6 +392,42 @@ if (!RUN) {
         await prisma.customer.count({ where: { identityNumber: identity.toLowerCase(), isActive: true } }),
         1,
       );
+      return { tokens, customerId: [...ids][0]! };
+    }
+
+    test("concurrent same-identity form submissions (2) resolve to one customer", async () => {
+      await concurrentSameIdentityFormSubmits(2, "8a", "two");
+    });
+
+    test("concurrent same-identity form submissions resolve to one customer", async () => {
+      await concurrentSameIdentityFormSubmits(3, "8", "three");
+    });
+
+    test("concurrent same-identity form submissions (7) resolve to one customer", async () => {
+      await concurrentSameIdentityFormSubmits(7, "8b", "seven");
+    });
+
+    test("concurrent different identities create distinct customers", async () => {
+      const tokens = await Promise.all([offerToken(), offerToken()]);
+      for (const [i, t] of tokens.entries()) {
+        await seedIdentity(t.token, `DL-DIFF-${i}-${t.token.slice(0, 4)}`);
+      }
+      const results = await Promise.all(
+        tokens.map((t, i) =>
+          postFormOnly(t.token, {
+            name: `Diff ${i}`,
+            mobile: `+9715009${run.slice(-5)}${i}d`,
+            identityNumber: `784-diff-${i}-${run}`,
+          }),
+        ),
+      );
+      for (const res of results) assert.equal(res.statusCode, 200, res.body);
+      const contracts = await prisma.contract.findMany({
+        where: { id: { in: tokens.map((t) => t.contractId) } },
+        select: { customerId: true },
+      });
+      const ids = new Set(contracts.map((c) => c.customerId));
+      assert.equal(ids.size, 2);
     });
 
     test("resolvePublicFormCustomerId rejects rebinding an existing contract customer", async () => {
@@ -410,6 +466,9 @@ if (!RUN) {
                 drivingLicenseNumber: `DL-REBIND-${run}`,
                 drivingLicenseExpiry: new Date("2031-06-01"),
                 address: null,
+                dateOfBirth: null,
+                drivingLicenseIssueDate: null,
+                drivingLicensePlaceOfIssue: null,
               },
               wrong.id,
             ),

@@ -1,4 +1,4 @@
-import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
+import { acquireAdvisoryLocks } from "src/lib/db/advisory-lock";
 import { normalizeIdentifier, normalizePhone } from "src/lib/security/normalize";
 import type { Tx } from "src/lib/db/transaction";
 import type { ContractSnapshot } from "src/modules/contracts/contracts-snapshot";
@@ -15,8 +15,12 @@ type MaterializableCustomer = {
   identityNumber: string | null;
   passportNumber: string | null;
   drivingLicenseNumber: string;
-  drivingLicenseExpiry: Date;
+  /** Nullable during partial public form save when verification has no parsed expiry. */
+  drivingLicenseExpiry: Date | null;
   address: string | null;
+  dateOfBirth: Date | null;
+  drivingLicenseIssueDate: Date | null;
+  drivingLicensePlaceOfIssue: string | null;
 };
 
 type StrongIdentity = {
@@ -92,6 +96,32 @@ async function findCustomersByStrongField(
   return rows.map((row) => row.id);
 }
 
+/** Canonical advisory-lock entity ids for present strong identity fields (sorted). */
+export function canonicalStrongIdentityLockEntityIds(
+  materialized: Pick<MaterializableCustomer, "identityNumber" | "passportNumber" | "drivingLicenseNumber">,
+): string[] {
+  const strong = extractStrongIdentity(materialized);
+  const keys: string[] = [];
+  if (strong.identityNumber) keys.push(`identity:${strong.identityNumber}`);
+  if (strong.passportNumber) keys.push(`passport:${strong.passportNumber}`);
+  if (strong.drivingLicenseNumber) keys.push(`license:${strong.drivingLicenseNumber}`);
+  return keys.sort((a, b) => a.localeCompare(b));
+}
+
+async function acquireStrongIdentityMaterializationLocks(
+  tx: Tx,
+  materialized: MaterializableCustomer,
+): Promise<void> {
+  const entityIds = canonicalStrongIdentityLockEntityIds(materialized);
+  if (entityIds.length === 0) {
+    throw contractError.customerIdentityAmbiguous();
+  }
+  await acquireAdvisoryLocks(
+    tx,
+    entityIds.map((entityId) => ({ namespace: CUSTOMER_MATERIALIZATION_LOCK_NS, entityId })),
+  );
+}
+
 /**
  * Conservative customer resolver. Strong identifiers only — never merge on phone/email alone.
  */
@@ -103,6 +133,8 @@ export async function resolveCustomerIdFromIdentity(
   if (!hasStrongIdentity(strong)) {
     throw contractError.customerIdentityAmbiguous();
   }
+
+  await acquireStrongIdentityMaterializationLocks(tx, materialized);
 
   const candidateSets: number[][] = [];
   if (strong.identityNumber) {
@@ -152,6 +184,9 @@ function customerCreateData(materialized: MaterializableCustomer): Prisma.Custom
     drivingLicenseNumber: strong.drivingLicenseNumber ?? materialized.drivingLicenseNumber,
     drivingLicenseExpiry: materialized.drivingLicenseExpiry,
     address: materialized.address,
+    dateOfBirth: materialized.dateOfBirth,
+    drivingLicenseIssueDate: materialized.drivingLicenseIssueDate,
+    drivingLicensePlaceOfIssue: materialized.drivingLicensePlaceOfIssue,
   };
 }
 
@@ -168,6 +203,11 @@ function customerEnrichData(materialized: MaterializableCustomer): Prisma.Custom
   if (strong.passportNumber) data.passportNumber = strong.passportNumber;
   if (strong.drivingLicenseNumber) data.drivingLicenseNumber = strong.drivingLicenseNumber;
   if (materialized.drivingLicenseExpiry) data.drivingLicenseExpiry = materialized.drivingLicenseExpiry;
+  if (materialized.dateOfBirth) data.dateOfBirth = materialized.dateOfBirth;
+  if (materialized.drivingLicenseIssueDate) data.drivingLicenseIssueDate = materialized.drivingLicenseIssueDate;
+  if (materialized.drivingLicensePlaceOfIssue) {
+    data.drivingLicensePlaceOfIssue = materialized.drivingLicensePlaceOfIssue;
+  }
   return data;
 }
 
@@ -186,18 +226,10 @@ function materializedFromSnapshot(snapshot: unknown): MaterializableCustomer | n
     drivingLicenseNumber: fromSnapshot.drivingLicenseNumber,
     drivingLicenseExpiry: fromSnapshot.drivingLicenseExpiry,
     address: fromSnapshot.address ?? null,
+    dateOfBirth: null,
+    drivingLicenseIssueDate: null,
+    drivingLicensePlaceOfIssue: null,
   };
-}
-
-function materializationLockKey(materialized: MaterializableCustomer, contractId: string): string {
-  return [
-    materialized.identityNumber,
-    materialized.passportNumber,
-    materialized.drivingLicenseNumber,
-    normalizePhone(materialized.mobile),
-  ]
-    .filter(Boolean)
-    .join(":") || contractId;
 }
 
 /**
@@ -210,12 +242,6 @@ export async function resolvePublicFormCustomerId(
   materialized: MaterializableCustomer,
   existingCustomerId: number | null,
 ): Promise<number> {
-  await acquireAdvisoryLock(
-    tx,
-    CUSTOMER_MATERIALIZATION_LOCK_NS,
-    materializationLockKey(materialized, contractId),
-  );
-
   const resolvedId = await resolveCustomerIdFromIdentity(tx, materialized);
 
   if (existingCustomerId != null && existingCustomerId !== resolvedId) {
@@ -261,12 +287,6 @@ export async function resolveContractCustomerFromSnapshot(
   const materialized = materializedFromSnapshot(snapshot);
   if (!materialized) throw contractError.paymentNotAllowed();
 
-  await acquireAdvisoryLock(
-    tx,
-    CUSTOMER_MATERIALIZATION_LOCK_NS,
-    materializationLockKey(materialized, contractId),
-  );
-
   const refreshed = await tx.contract.findUnique({
     where: { id: contractId },
     select: { customerId: true },
@@ -305,12 +325,6 @@ export async function ensureContractCustomerForPayment(tx: Tx, contractId: strin
 
   const materialized = materializedFromSnapshot(contract.snapshot);
   if (!materialized) throw contractError.paymentNotAllowed();
-
-  await acquireAdvisoryLock(
-    tx,
-    CUSTOMER_MATERIALIZATION_LOCK_NS,
-    materializationLockKey(materialized, contractId),
-  );
 
   const resolvedId = await resolveCustomerIdFromIdentity(tx, materialized);
 

@@ -14,28 +14,10 @@ export function publicRentalFormFields(
       colSpan: 1,
     },
     {
-      type: "email",
-      name: "email",
-      placeholder: t("fields.email"),
-      autoComplete: "email",
-      colSpan: 1,
-    },
-    {
       type: "text",
       name: "nationality",
       placeholder: t("fields.nationality"),
       autoComplete: "country-name",
-    },
-    {
-      type: "text",
-      name: "identityNumber",
-      placeholder: t("fields.identityNumber"),
-      colSpan: 1,
-    },
-    {
-      type: "text",
-      name: "passportNumber",
-      placeholder: t("fields.passportNumber"),
       colSpan: 1,
     },
     { type: "text", name: "address", placeholder: t("fields.address"), autoComplete: "street-address" },

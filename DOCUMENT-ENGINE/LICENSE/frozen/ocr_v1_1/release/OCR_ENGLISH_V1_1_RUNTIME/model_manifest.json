@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-10-04T14:46:33.120599+00:00",
+  "immutability": "SHA-256 recorded; binaries not bundled in release",
+  "artifacts": {
+    "tesseract_executable": {
+      "path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+      "sha256": "c66f0f12ed76f6aa455dac97684bbc86756d6a732380bee09122454cfda3f420"
+    },
+    "eng_traineddata": {
+      "path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\vendor\\tessdata\\eng.traineddata",
+      "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+    },
+    "rapidocr_en_ppocrv4_rec": {
+      "path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\vendor\\rapidocr_en\\en_PP-OCRv4_rec_infer.onnx",
+      "sha256": "e8770c967605983d1570cdf5352041dfb68fa0c21664f49f47b155abd3e0e318",
+      "used_for": [
+        "dates_primary",
+        "place_of_issue"
+      ]
+    },
+    "ppocrv5_en_rec_mobile": {
+      "path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\vendor\\ppocrv5_en\\en_PP-OCRv5_rec_mobile.onnx",
+      "sha256": "c3461add59bb4323ecba96a492ab75e06dda42467c9e3d0c18db5d1d21924be8",
+      "used_for": [
+        "name_en"
+      ]
+    },
+    "ppocrv5_en_dict": {
+      "path": "C:\\Users\\Rw\\UAE_LICENSE_OCR_V1\\vendor\\ppocrv5_en\\ppocrv5_en_dict.txt",
+      "sha256": "e025a66d31f327ba0c232e03f407ae8d105e1e709e7ccb3f408aa778c24e70d6"
+    }
+  }
+}

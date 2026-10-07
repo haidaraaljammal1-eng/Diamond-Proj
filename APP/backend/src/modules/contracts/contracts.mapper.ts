@@ -15,6 +15,7 @@ import {
   isReconciliationSettled,
   type FullReconciliationRow,
 } from "src/modules/contracts/contracts-reconciliation";
+import { deriveRenewalCollectionState } from "src/modules/contracts/contracts-renewal-collection";
 
 const DETAIL_INCLUDE = {
   company: { select: { id: true, code: true, displayName: true, accentColor: true } },
@@ -61,7 +62,12 @@ const DETAIL_INCLUDE = {
       approvedBy: { select: { id: true, name: true } },
     },
   },
-  renewals: { orderBy: { createdAt: "asc" as const } },
+  renewals: {
+    orderBy: { createdAt: "asc" as const },
+    include: {
+      settledPayment: { select: { id: true, status: true, method: true } },
+    },
+  },
   postCloseReceivables: {
     orderBy: { createdAt: "desc" as const },
     include: { roadLiability: { select: { type: true } } },
@@ -386,18 +392,31 @@ export function toDetail(
       row.status === "CLOSED" && row.reconciliation && row.carOut && row.carIn
         ? buildFinalReconciliationDetail(row as unknown as FullReconciliationRow)
         : null,
-    renewals: row.renewals.map((r) => ({
-      id: r.id,
-      additionalDays: r.additionalDays,
-      additionalAmount: r.additionalAmount,
-      previousEndAt: r.previousEndAt,
-      newEndAt: r.newEndAt,
-      createdAt: r.createdAt,
-      approvedAt: r.approvedAt,
-      appliedAt: r.appliedAt,
-      awaitingPayment:
-        r.approvedAt != null && r.appliedAt == null && r.additionalAmount > 0,
-    })),
+    renewals: row.renewals.map((r) => {
+      const collectionState = deriveRenewalCollectionState({
+        additionalAmount: r.additionalAmount,
+        approvedAt: r.approvedAt,
+        appliedAt: r.appliedAt,
+        settledPaymentId: r.settledPaymentId,
+      });
+      return {
+        id: r.id,
+        additionalDays: r.additionalDays,
+        additionalAmount: r.additionalAmount,
+        previousEndAt: r.previousEndAt,
+        newEndAt: r.newEndAt,
+        createdAt: r.createdAt,
+        approvedAt: r.approvedAt,
+        appliedAt: r.appliedAt,
+        settledPaymentId: r.settledPaymentId,
+        collectionState,
+        extensionApplied: r.appliedAt != null,
+        collectable: collectionState === "OFFICE_UNPAID",
+        awaitingPayment: collectionState === "AWAITING_PAYMENT",
+        paymentMethod: r.settledPayment?.method ?? null,
+        paymentStatus: r.settledPayment?.status ?? null,
+      };
+    }),
     actions: actionsFor(row, canCarOut),
     roadLiabilitySignals: signals,
     postCloseReceivables: toPostCloseSummary(row),

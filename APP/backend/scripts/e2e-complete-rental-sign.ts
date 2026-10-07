@@ -56,21 +56,19 @@ async function main() {
     throw new Error("Contract not ready for API signing after identity simulation");
   }
 
-  let contractView: ContractView = view;
-
-  if (contractView.contract.status === "AWAITING") {
+  if (view.contract.status === "AWAITING") {
     const reviewed = await submitReview();
     if (reviewed.statusCode !== 200) {
       throw new Error(`Review submit failed (${reviewed.statusCode}): ${reviewed.body}`);
     }
-    contractView = reviewed.json().data as ContractView;
+    view = reviewed.json().data;
   }
 
   const patchBody: Record<string, string> = {};
-  if (contractView.permissions.missingRequirements.includes("TELEPHONE")) {
+  if (view.permissions.missingRequirements.includes("TELEPHONE")) {
     patchBody.telephone = "+971500000099";
   }
-  if (contractView.permissions.missingRequirements.includes("ADDRESS")) {
+  if (view.permissions.missingRequirements.includes("ADDRESS")) {
     patchBody.address = "Dubai Marina";
   }
   if (Object.keys(patchBody).length > 0) {
@@ -78,10 +76,10 @@ async function main() {
     if (patched.statusCode !== 200) {
       throw new Error(`Review patch failed (${patched.statusCode}): ${patched.body}`);
     }
-    contractView = patched.json().data as ContractView;
+    view = patched.json().data;
   }
 
-  for (const slot of contractView.permissions.signableSlots) {
+  for (const slot of view.permissions.signableSlots) {
     const path = slot === "HIRER" ? "hirer" : slot === "ADDITIONAL_DRIVER" ? "additional-driver" : "sponsor";
     const saved = await putSignature(path);
     if (saved.statusCode !== 200) {

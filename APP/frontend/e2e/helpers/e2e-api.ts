@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-export const BACKEND = process.env.PLAYWRIGHT_API_URL ?? "http://localhost:3000";
+export const BACKEND = process.env.PLAYWRIGHT_API_URL ?? "http://localhost:8000";
 export const STAFF_EMAIL = process.env.PLAYWRIGHT_LOGIN_EMAIL ?? "admin@diamond.test";
 export const STAFF_PASSWORD = process.env.PLAYWRIGHT_LOGIN_PASSWORD ?? "Diamond123!";
 

@@ -8,22 +8,28 @@ export type LicensePanelKind =
   | "verifying"
   | "valid"
   | "expired"
+  | "bad_frame"
   | "unreadable"
   | "review"
   | "unavailable";
 
+export type PublicLicenseUnreadableReason = "BAD_FRAME" | "OCR" | null;
+
 export function licensePanelFromStatus(
   status: DrivingLicenseVerificationStatus | null | undefined,
   pending: boolean,
+  unreadableReason?: PublicLicenseUnreadableReason,
+  clientBadFrame?: boolean,
 ): LicensePanelKind {
   if (pending) return "verifying";
+  if (clientBadFrame) return "bad_frame";
   switch (status) {
     case "VALID":
       return "valid";
     case "EXPIRED":
       return "expired";
     case "UNREADABLE":
-      return "unreadable";
+      return unreadableReason === "BAD_FRAME" ? "bad_frame" : "unreadable";
     case "REVIEW_REQUIRED":
       return "review";
     case "PROVIDER_UNAVAILABLE":

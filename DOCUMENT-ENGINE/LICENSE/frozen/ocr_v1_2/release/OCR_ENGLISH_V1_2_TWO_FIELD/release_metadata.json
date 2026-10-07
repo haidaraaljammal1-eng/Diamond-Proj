@@ -1,0 +1,9 @@
+{
+  "release_id": "OCR_ENGLISH_V1_2_TWO_FIELD",
+  "version": "1.2.0",
+  "supersedes": "OCR_ENGLISH_V1_1_RUNTIME",
+  "scope": {
+    "ocr_fields": ["license_number", "expiry_date"],
+    "frozen_baseline_preserved": "frozen/ocr_v1_1"
+  }
+}

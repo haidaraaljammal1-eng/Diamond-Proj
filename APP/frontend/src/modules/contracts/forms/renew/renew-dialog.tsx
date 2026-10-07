@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { FieldRenderer } from "@/shared/components/forms/form-builder/field-renderer";
@@ -44,8 +44,10 @@ function RenewForm({
   onClose: () => void;
 }) {
   const t = useTranslations("Contracts");
-  const { renew, generateRenewalLink, renewPending, renewError } = useContract();
+  const format = useFormatter();
+  const { detail, renew, generateRenewalLink, renewPending, renewError } = useContract();
   const keyRef = useRef(createIdempotencyKey());
+  const [officeConfirm, setOfficeConfirm] = useState<RenewFormValues | null>(null);
   const methods = useForm<RenewFormValues>({
     resolver: zodResolver(renewFormSchema) as never,
     defaultValues: { additionalDays: 7, additionalAmount: 0 },
@@ -60,6 +62,7 @@ function RenewForm({
   );
 
   const errorMessage = resolveContractsErrorMessage(t, renewError);
+  const currentEnd = detail?.endAt ? format.dateTime(new Date(detail.endAt), { dateStyle: "medium" }) : "—";
 
   return (
     <FormProvider {...methods}>
@@ -93,15 +96,59 @@ function RenewForm({
           size="sm"
           loading={renewPending}
           onClick={() =>
-            void methods.handleSubmit(async (values) => {
-              const ok = await renew(contractId, values, keyRef.current);
-              if (ok) onClose();
+            void methods.handleSubmit((values) => {
+              if (values.additionalAmount <= 0) {
+                void renew(contractId, values, keyRef.current).then((ok) => {
+                  if (ok) onClose();
+                });
+                return;
+              }
+              setOfficeConfirm(values);
             })()
           }
         >
           {t("renew.applyOffice")}
         </Button>
       </div>
+      <Dialog
+        open={officeConfirm != null}
+        onClose={() => setOfficeConfirm(null)}
+        title={t("renew.officeConfirmTitle")}
+        description={t("renew.officeConfirmLead")}
+        closeLabel={t("common.cancel")}
+      >
+        {officeConfirm ? (
+          <div className={styles.officeConfirm}>
+            <p>{t("renew.officeConfirmBody")}</p>
+            <ul className={styles.officeList}>
+              <li>
+                {t("renew.officeCurrentEnd")}: <b>{currentEnd}</b>
+              </li>
+              <li>
+                {t("renew.days")}: <b>{officeConfirm.additionalDays}</b>
+              </li>
+              <li>
+                {t("renew.amount")}: <b>{format.number(officeConfirm.additionalAmount)} AED</b>
+              </li>
+            </ul>
+            <Button
+              type="button"
+              size="md"
+              loading={renewPending}
+              onClick={() =>
+                void renew(contractId, officeConfirm, keyRef.current).then((ok) => {
+                  if (ok) {
+                    setOfficeConfirm(null);
+                    onClose();
+                  }
+                })
+              }
+            >
+              {t("renew.officeConfirmSubmit")}
+            </Button>
+          </div>
+        ) : null}
+      </Dialog>
     </FormProvider>
   );
 }

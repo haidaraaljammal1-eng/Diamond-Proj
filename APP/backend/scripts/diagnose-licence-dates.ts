@@ -54,7 +54,6 @@ async function main(): Promise<void> {
 
   const out: unknown[] = [];
   for (const [id, file] of files) {
-    if (!file) continue;
     await sleep(10000);
     const bytes = await readFile(file);
     const fullRaw = (await geminiGenerateStructuredJson({

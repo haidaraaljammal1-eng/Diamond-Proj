@@ -451,7 +451,7 @@ describe("official contract — interactive completion", () => {
     });
     const ctx = {
       identity: { licenseStatus: "LICENSE_VALID", passport: { status: "READY", fields: null }, identityReady: true },
-      licenseVerification: { status: "VALID", licenseNumber: "DXB-DEV-482731", licenseNumberMasked: null, expiryDate: "2099-12-31", confidence: 0.99 },
+      licenseVerification: { status: "VALID", licenseNumber: "DXB-DEV-482731", licenseNumberMasked: null, expiryDate: "2099-12-31", confidence: 0.99, unreadableReason: null },
     } as unknown as PublicRentalContext;
     const opened = withNormalizedIdentity(locked, ctx);
     assert.equal(opened.permissions.canEdit, false);

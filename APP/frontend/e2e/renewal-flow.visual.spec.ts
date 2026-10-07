@@ -239,6 +239,11 @@ test.describe("Staff renewal", () => {
           newEndAt: "2026-09-08T08:00:00.000Z",
           createdAt: "2026-09-03T08:00:00.000Z",
           approvedAt: "2026-09-03T08:05:00.000Z",
+          appliedAt: "2026-09-03T08:10:00.000Z",
+          settledPaymentId: null,
+          collectionState: "OFFICE_UNPAID",
+          extensionApplied: true,
+          collectable: true,
         },
       ],
     });

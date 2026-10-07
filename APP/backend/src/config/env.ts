@@ -89,8 +89,27 @@ const EnvSchema = z
     BUSINESS_TIMEZONE_OFFSET_MINUTES: z.coerce.number().int().default(240),
     // Minimum field confidence for driving-license REVIEW_REQUIRED (legacy env name retained).
     DOCUMENT_OCR_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
-    // Vision AI (passport / licence / vehicle imagery). Provider credentials are
-    // server-only. Phase 1 is connectivity foundation — no business wiring yet.
+    // Internal Document Engine — Passport Number API (server-only; never expose to frontend).
+    PASSPORT_NUMBER_API_URL: z.string().optional().default(""),
+    PASSPORT_NUMBER_API_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+    UAE_DRIVING_LICENSE_API_URL: z
+      .string()
+      .optional()
+      .default("")
+      .transform((value) => {
+        const trimmed = value.trim();
+        if (trimmed) return trimmed;
+        if (process.env.NODE_ENV === "development") {
+          return "http://127.0.0.1:8020";
+        }
+        return "";
+      }),
+    // Crop + OCR + serial queue; B1 live extracts were ~30–90s cold.
+    UAE_DRIVING_LICENSE_API_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+    /** Playwright/E2E only: honour X-E2E-License-Policy-Date on licence upload. Ignored in production. */
+    E2E_ALLOW_LICENSE_POLICY_CLOCK: envBool(false),
+
+    // Legacy Vision AI (Gemini) — rental OCR uses Document Engine; dev/diagnostic scripts only.
     AI_VISION_PROVIDER: z.preprocess(
       (v) =>
         v === undefined ||
@@ -254,6 +273,13 @@ const EnvSchema = z
           code: "custom",
           path: ["SEED_DEV_ADMIN"],
           message: "SEED_DEV_ADMIN must be false in production",
+        });
+      }
+      if (val.E2E_ALLOW_LICENSE_POLICY_CLOCK) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["E2E_ALLOW_LICENSE_POLICY_CLOCK"],
+          message: "E2E_ALLOW_LICENSE_POLICY_CLOCK must be false in production",
         });
       }
     }

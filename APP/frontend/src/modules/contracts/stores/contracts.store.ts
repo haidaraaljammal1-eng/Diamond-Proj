@@ -16,6 +16,7 @@ import {
   getContracts,
   reconcileContract as reconcileRequest,
   renewContract as renewRequest,
+  settleRenewalCash as settleRenewalCashRequest,
   submitCarOut as submitCarOutRequest,
   getCarOut as getCarOutRequest,
   saveCarOutDraft as saveCarOutDraftRequest,
@@ -136,6 +137,11 @@ interface ContractsState {
     payload: RenewPayload,
   ) => Promise<boolean>;
   renew: (id: string, payload: RenewPayload, idempotencyKey: string) => Promise<boolean>;
+  settleRenewalCash: (
+    contractId: string,
+    renewalId: string,
+    idempotencyKey: string,
+  ) => Promise<boolean>;
   reconcile: (id: string, payload: ReconcilePayload) => Promise<boolean>;
   close: (id: string, idempotencyKey: string) => Promise<boolean>;
   clearOfferError: () => void;
@@ -559,6 +565,18 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       set({ renewSlot: { pending: true, error: null } });
       try {
         const detail = await renewRequest(id, payload, idempotencyKey);
+        set({ renewSlot: IDLE_SLOT, detail, detailStatus: "ready" });
+        await refreshAll();
+        return true;
+      } catch (error) {
+        set({ renewSlot: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async settleRenewalCash(contractId, renewalId, idempotencyKey) {
+      set({ renewSlot: { pending: true, error: null } });
+      try {
+        const detail = await settleRenewalCashRequest(contractId, renewalId, idempotencyKey);
         set({ renewSlot: IDLE_SLOT, detail, detailStatus: "ready" });
         await refreshAll();
         return true;

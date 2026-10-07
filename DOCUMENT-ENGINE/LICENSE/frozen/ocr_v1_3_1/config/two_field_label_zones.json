@@ -1,0 +1,5 @@
+{
+  "release_id": "OCR_ENGLISH_V1_3_1_TWO_FIELD",
+  "inherits_from": "OCR_ENGLISH_V1_3_TWO_FIELD",
+  "notes": "Label zones unchanged from V1.3; release tracks Rapid fallback policy only."
+}
