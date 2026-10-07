@@ -11,6 +11,7 @@ import type {
   FullReconciliationReadDto,
   ReconciliationLineDto,
   ReconciliationRoadLiabilityDto,
+  ReconciliationSettlementSummaryDto,
 } from "../../types/reconciliation.types";
 import {
   damageLines,
@@ -648,17 +649,17 @@ function summaryLineKey(key: string): string {
 }
 
 export function ReconciliationFinancialSummary({
-  totals,
+  data,
   currency = "AED",
   variant = "full",
 }: {
-  totals: FullReconciliationReadDto["totals"];
+  data: ReconciliationSettlementSummaryDto;
   currency?: string;
   variant?: "full" | "compact";
 }) {
   const t = useTranslations("Contracts");
   const format = useFormatter();
-  const entries = totalsEntries(totals);
+  const entries = totalsEntries(data.totals);
 
   const breakdown = (
     <div className={styles.summaryStack}>
@@ -676,16 +677,32 @@ export function ReconciliationFinancialSummary({
       ) : (
         <p className={`${styles.muted} ${styles.emptyState}`}>{t("finalReconciliation.noCharges")}</p>
       )}
+      <dl className={styles.summaryList}>
+        <div>
+          <dt>{t("finalReconciliation.reconciliationCharges")}</dt>
+          <dd dir="ltr">
+            {format.number(data.reconciliationChargesAmount)} {currency}
+          </dd>
+        </div>
+        {data.outstandingRenewalAmount > 0 ? (
+          <div>
+            <dt>{t("finalReconciliation.unpaidRenewalsSubtotal")}</dt>
+            <dd dir="ltr">
+              {format.number(data.outstandingRenewalAmount)} {currency}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
       <div
-        className={`${variant === "compact" ? styles.finalAmountPanelCompact : styles.finalAmountPanel} ${
-          variant === "full" ? styles.finalAmountPanelSupporting : ""
-        }${totals.finalAmount === 0 ? ` ${styles.finalAmountPanelZero}` : ""}`}
+        className={`${variant === "compact" ? styles.finalAmountPanelCompact : styles.finalAmountPanel}${
+          data.settlementAmountDue === 0 ? ` ${styles.finalAmountPanelZero}` : ""
+        }`}
         data-testid="reconciliation-final-amount"
       >
         <div className={variant === "compact" ? styles.finalAmountCompact : styles.finalAmountRow}>
           <span>{t("finalReconciliation.finalAmountDue")}</span>
           <span className={styles.finalAmountValue} dir="ltr">
-            {format.number(totals.finalAmount)} {currency}
+            {format.number(data.settlementAmountDue)} {currency}
           </span>
         </div>
       </div>
@@ -699,6 +716,37 @@ export function ReconciliationFinancialSummary({
       <div className={`${styles.sectionCard} ${styles.summarySectionCard}`}>
         <h3 className={styles.sectionTitle}>{t("finalReconciliation.financialSummary")}</h3>
         {breakdown}
+      </div>
+    </section>
+  );
+}
+
+export function ReconciliationOutstandingRenewalsSection({ data }: { data: FullReconciliationReadDto }) {
+  const t = useTranslations("Contracts");
+  const format = useFormatter();
+  if (data.outstandingRenewals.length === 0) return null;
+
+  return (
+    <section className={styles.section} data-testid="reconciliation-unpaid-renewals">
+      <div className={styles.sectionCard}>
+        <h3 className={styles.sectionTitle}>{t("finalReconciliation.unpaidRenewalsTitle")}</h3>
+        <ul className={styles.renewalOutstandingList}>
+          {data.outstandingRenewals.map((row) => (
+            <li key={row.id} className={styles.renewalOutstandingItem}>
+              <p>
+                {format.dateTime(new Date(row.previousEndAt), { dateStyle: "medium" })}
+                {" → "}
+                {format.dateTime(new Date(row.newEndAt), { dateStyle: "medium" })}
+              </p>
+              <p className={styles.muted}>
+                +{format.number(row.additionalDays)} · {format.number(row.amount)} AED
+              </p>
+              <p className={styles.muted} data-testid="renewal-auto-included">
+                {t("finalReconciliation.autoIncludedInSettlement")}
+              </p>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

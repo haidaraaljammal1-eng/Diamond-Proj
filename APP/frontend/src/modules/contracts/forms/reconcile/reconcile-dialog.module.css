@@ -886,6 +886,29 @@
   background: var(--diamond-line);
 }
 
+.renewalOutstandingList {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.renewalOutstandingItem {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--diamond-hair);
+  background: color-mix(in srgb, var(--diamond-onyx2) 88%, var(--diamond-onyx));
+}
+
+.renewalOutstandingItem p {
+  margin: 0;
+}
+
+.renewalOutstandingItem p + p {
+  margin-block-start: 6px;
+}
+
 /* ── Sticky action bar ── */
 
 .actionBarShell {

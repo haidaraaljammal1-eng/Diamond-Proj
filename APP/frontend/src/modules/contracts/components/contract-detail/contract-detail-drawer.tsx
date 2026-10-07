@@ -25,6 +25,7 @@ import {
   ReconciliationCustodySection,
   ReconciliationFinancialSummary,
 } from "../../forms/reconcile/reconciliation-sections";
+import { reconciliationSettlementSummary } from "../../utils/reconciliation.utils";
 import { ReconciliationImagePairsSection } from "../../forms/reconcile/reconciliation-images";
 import styles from "./contract-detail-drawer.module.css";
 
@@ -307,7 +308,7 @@ export function ContractDetailDrawer({
               <ReconciliationImagePairsSection pairs={detail.finalReconciliation.imagePairs} />
               <ReconciliationCustodySection custody={detail.finalReconciliation.custody} />
               <ReconciliationFinancialSummary
-                totals={detail.finalReconciliation.totals}
+                data={reconciliationSettlementSummary(detail.finalReconciliation)}
                 currency={detail.currency}
               />
               {detail.finalReconciliation.finalizedAt ? (

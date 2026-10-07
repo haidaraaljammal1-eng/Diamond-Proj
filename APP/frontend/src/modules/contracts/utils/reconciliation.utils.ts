@@ -1,9 +1,11 @@
 import type {
+  FinalReconciliationDetailDto,
   FullReconciliationReadDto,
   ReconciliationImagePairDto,
   ReconciliationLineDto,
   ReconciliationPreviewImage,
   ReconciliationRoadLiabilityType,
+  ReconciliationSettlementSummaryDto,
   ReconciliationTotalsDto,
 } from "../types/reconciliation.types";
 
@@ -21,6 +23,17 @@ export function canCollectReconciliation(data: FullReconciliationReadDto): boole
 
 export function settlementAmountDue(data: FullReconciliationReadDto): number {
   return data.settlementAmountDue;
+}
+
+export function reconciliationSettlementSummary(
+  data: FullReconciliationReadDto | FinalReconciliationDetailDto,
+): ReconciliationSettlementSummaryDto {
+  return {
+    totals: data.totals,
+    reconciliationChargesAmount: data.reconciliationChargesAmount,
+    outstandingRenewalAmount: data.outstandingRenewalAmount,
+    settlementAmountDue: data.settlementAmountDue,
+  };
 }
 
 export function isReconciliationAwaitingPayment(data: FullReconciliationReadDto): boolean {

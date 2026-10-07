@@ -104,6 +104,12 @@ export interface FullReconciliationReadDto {
   settlementAmountDue: number;
 }
 
+/** API-backed final settlement projection for reconciliation UI (no client-side recomputation). */
+export type ReconciliationSettlementSummaryDto = Pick<
+  FullReconciliationReadDto,
+  "totals" | "reconciliationChargesAmount" | "outstandingRenewalAmount" | "settlementAmountDue"
+>;
+
 export interface FinalReconciliationDetailDto {
   custody: ReconciliationCustodyDto;
   imagePairs: ReconciliationImagePairDto[];

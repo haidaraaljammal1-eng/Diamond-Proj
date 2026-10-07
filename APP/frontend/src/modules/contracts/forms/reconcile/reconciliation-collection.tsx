@@ -12,6 +12,8 @@ import {
   isReconciliationEditable,
   isReconciliationPaymentFailed,
   isReconciliationPaymentPending,
+  reconciliationSettlementSummary,
+  settlementAmountDue,
 } from "../../utils/reconciliation.utils";
 import { ReconciliationFinancialSummary } from "./reconciliation-sections";
 import styles from "./reconcile-dialog.module.css";
@@ -58,7 +60,8 @@ export function ReconciliationActionBar({
   };
 
   const amountLabel = t("finalReconciliation.finalAmountDue");
-  const amountValue = `${format.number(data.totals.finalAmount)} AED`;
+  const dueAmount = settlementAmountDue(data);
+  const amountValue = `${format.number(dueAmount)} AED`;
 
   const collectLabel =
     awaitingPayment && (paymentPending || paymentFailed)
@@ -113,7 +116,7 @@ export function ReconciliationActionBar({
         closeLabel={t("detail.close")}
       >
         <div className={styles.cashConfirmBody}>
-          <ReconciliationFinancialSummary totals={data.totals} variant="compact" />
+          <ReconciliationFinancialSummary data={reconciliationSettlementSummary(data)} variant="compact" />
           <p className={styles.cashConfirmNote}>{t("finalReconciliation.paymentMethodCash")}</p>
           <div className={styles.dialogActions}>
             <Button type="button" size="sm" variant="ghost" onClick={() => setView("none")}>
@@ -216,7 +219,7 @@ export function ReconciliationActionBar({
             <div>
               <p className={styles.completionTitle}>{t("finalReconciliation.completed")}</p>
               <p className={styles.completionNote}>
-                {data.totals.finalAmount === 0
+                {dueAmount === 0
                   ? t("finalReconciliation.completedWithoutChargesNote")
                   : t("finalReconciliation.paymentSettledNote")}
               </p>
@@ -235,7 +238,7 @@ export function ReconciliationActionBar({
     return renderDialogs();
   }
 
-  if (editable && data.totals.finalAmount === 0) {
+  if (editable && data.settlementAmountDue === 0) {
     return (
       <>
         <footer className={`${styles.actionBar} ${styles.actionBarShell}`} data-testid="reconciliation-zero-draft">
