@@ -2138,12 +2138,126 @@
       "end": "النهاية",
       "viewContract": "عرض العقد"
     },
+    "mileage": {
+      "title": "ملخص المسافة",
+      "load": "تحميل المسافة",
+      "loading": "جار تحميل المسافة…",
+      "today": "اليوم",
+      "yesterday": "أمس",
+      "thisMonth": "هذا الشهر",
+      "lastMonth": "الشهر الماضي"
+    },
+    "overspeed": {
+      "title": "تقرير السرعة الزائدة",
+      "date": "التاريخ",
+      "threshold": "الحد (كم/س)",
+      "load": "تحميل التقرير",
+      "loading": "جار تحميل التقرير…",
+      "empty": "لم يتم العثور على أحداث سرعة زائدة.",
+      "start": "البداية",
+      "end": "النهاية",
+      "duration": "المدة",
+      "maxSpeed": "السرعة القصوى",
+      "averageSpeed": "متوسط السرعة",
+      "address": "العنوان"
+    },
+    "health": {
+      "title": "حالة الجهاز",
+      "loading": "جارٍ التحقق من حالة الجهاز…",
+      "unavailable": "حالة الجهاز غير متاحة حالياً.",
+      "unavailableValue": "غير متاح",
+      "lastCommunication": "آخر اتصال",
+      "deviceModel": "طراز الجهاز",
+      "never": "لا يوجد اتصال مسجل",
+      "status": {
+        "ONLINE": "متصل",
+        "STALE": "قديم",
+        "OFFLINE": "غير متصل"
+      }
+    },
+    "history": {
+      "title": "السجل وإعادة التشغيل",
+      "description": "راجع مسار GPS للقراءة فقط للمركبة {vehicle}.",
+      "descriptionFallback": "راجع مسار GPS للقراءة فقط.",
+      "open": "السجل وإعادة التشغيل",
+      "close": "إغلاق السجل",
+      "range": "الفترة الزمنية للسجل",
+      "fetch": "جلب السجل",
+      "loading": "جاري تحميل السجل…",
+      "empty": "لم يتم إرجاع نقاط GPS لهذه الفترة.",
+      "prompt": "اختر فترة ثم اجلب السجل. لا يتم تخزين سجل المواقع في Diamond.",
+      "timezone": "يستخدم المزود توقيت الإمارات (UTC+4)، وتُعرض الأوقات وفق اللغة والإعدادات المحلية.",
+      "customDates": "التواريخ المخصصة",
+      "fromTime": "وقت البداية",
+      "toTime": "وقت النهاية",
+      "presets": {
+        "last1h": "آخر ساعة",
+        "last6h": "آخر 6 ساعات",
+        "last24h": "آخر 24 ساعة",
+        "custom": "مخصص"
+      },
+      "validation": {
+        "invalid": "اختر فترة صحيحة يكون فيها وقت النهاية بعد البداية.",
+        "too_large": "السجل محدود بسبعة أيام. اختر فترة أقصر.",
+        "future_only": "لا يمكن اختيار فترة تقع بالكامل في المستقبل."
+      },
+      "summary": {
+        "distance": "إجمالي المسافة",
+        "maxSpeed": "السرعة القصوى",
+        "points": "النقاط",
+        "duration": "مدة المسار",
+        "from": "من",
+        "to": "إلى"
+      },
+      "controls": {
+        "play": "تشغيل",
+        "pause": "إيقاف مؤقت",
+        "restart": "إعادة التشغيل",
+        "speed": "سرعة التشغيل",
+        "speedValue": "{value}×",
+        "timeline": "الخط الزمني للتشغيل",
+        "position": "النقطة {current} من {total}"
+      },
+      "point": {
+        "time": "الوقت",
+        "speed": "السرعة",
+        "motion": "حالة العرض",
+        "segmentDistance": "مسافة المقطع",
+        "address": "العنوان"
+      },
+      "motion": {
+        "moving": "متحركة",
+        "stopped": "متوقفة"
+      },
+      "units": {
+        "meters": "{value} م",
+        "kilometers": "{value} كم",
+        "speed": "{value} كم/س",
+        "duration": "{hours} س {minutes} د"
+      },
+      "markers": {
+        "start": "بداية المسار",
+        "end": "نهاية المسار",
+        "active": "موضع إعادة التشغيل"
+      }
+    },
     "denied": {
       "title": "تتبع GPS غير متاح",
       "description": "هذه الصفحة تتطلب صلاحية gps.read."
     },
     "error": {
-      "generic": "تعذر تحميل بيانات GPS. حاول مرة أخرى."
+      "generic": "تعذر تحميل بيانات GPS. حاول مرة أخرى.",
+      "GPS_BINDING_NOT_FOUND": "لا يوجد ربط GPS نشط لهذه المركبة.",
+      "GPS_HISTORY_UNSUPPORTED": "هذا مزود GPS لا يدعم سجل المواقع.",
+      "GPS_HISTORY_INVALID_RANGE": "الفترة المطلوبة لسجل GPS غير صحيحة.",
+      "GPS_HISTORY_RANGE_TOO_LARGE": "السجل محدود بسبعة أيام.",
+      "GPS_HISTORY_RESULT_TOO_LARGE": "النتيجة كبيرة جداً. اختر فترة أقصر.",
+      "GPS_PROVIDER_AUTH_FAILED": "تعذر تسجيل الدخول إلى مزود GPS.",
+      "GPS_PROVIDER_TIMEOUT": "انتهت مهلة مزود GPS. حاول مرة أخرى.",
+      "GPS_PROVIDER_CONNECTION_FAILED": "مزود GPS غير متاح حالياً.",
+      "GPS_PROVIDER_REMOTE_ERROR": "أعاد مزود GPS خطأ.",
+      "GPS_PROVIDER_INVALID_RESPONSE": "أعاد مزود GPS بيانات سجل غير صالحة.",
+      "GPS_PROVIDER_NOT_CONFIGURED": "حساب مزود GPS غير مهيأ."
     }
   },
   "RoadLiabilities": {

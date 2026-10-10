@@ -2138,12 +2138,126 @@
       "end": "End",
       "viewContract": "View Contract"
     },
+    "mileage": {
+      "title": "Mileage summary",
+      "load": "Load mileage",
+      "loading": "Loading mileage…",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisMonth": "This month",
+      "lastMonth": "Last month"
+    },
+    "overspeed": {
+      "title": "Overspeed report",
+      "date": "Date",
+      "threshold": "Threshold (km/h)",
+      "load": "Load overspeed",
+      "loading": "Loading overspeed…",
+      "empty": "No overspeed events were returned.",
+      "start": "Start",
+      "end": "End",
+      "duration": "Duration",
+      "maxSpeed": "Maximum speed",
+      "averageSpeed": "Average speed",
+      "address": "Address"
+    },
+    "health": {
+      "title": "Device health",
+      "loading": "Checking device health…",
+      "unavailable": "Device health is unavailable right now.",
+      "unavailableValue": "Unavailable",
+      "lastCommunication": "Last communication",
+      "deviceModel": "Device model",
+      "never": "No communication recorded",
+      "status": {
+        "ONLINE": "Online",
+        "STALE": "Stale",
+        "OFFLINE": "Offline"
+      }
+    },
+    "history": {
+      "title": "History / Playback",
+      "description": "Review the read-only GPS route for {vehicle}.",
+      "descriptionFallback": "Review a read-only GPS route.",
+      "open": "History / Playback",
+      "close": "Close history",
+      "range": "History range",
+      "fetch": "Fetch history",
+      "loading": "Loading history…",
+      "empty": "No history points were returned for this range.",
+      "prompt": "Choose a range and fetch history. History is not stored in Diamond.",
+      "timezone": "Provider dates use UAE time (UTC+4). Displayed timestamps follow your locale.",
+      "customDates": "Custom dates",
+      "fromTime": "From time",
+      "toTime": "To time",
+      "presets": {
+        "last1h": "Last 1 hour",
+        "last6h": "Last 6 hours",
+        "last24h": "Last 24 hours",
+        "custom": "Custom"
+      },
+      "validation": {
+        "invalid": "Choose a valid range where the end is after the start.",
+        "too_large": "History is limited to 7 days. Choose a shorter range.",
+        "future_only": "A future-only history range is not valid."
+      },
+      "summary": {
+        "distance": "Total distance",
+        "maxSpeed": "Maximum speed",
+        "points": "Points",
+        "duration": "Route duration",
+        "from": "From",
+        "to": "To"
+      },
+      "controls": {
+        "play": "Play",
+        "pause": "Pause",
+        "restart": "Restart",
+        "speed": "Playback speed",
+        "speedValue": "{value}×",
+        "timeline": "Playback timeline",
+        "position": "Point {current} of {total}"
+      },
+      "point": {
+        "time": "Time",
+        "speed": "Speed",
+        "motion": "Display state",
+        "segmentDistance": "Segment distance",
+        "address": "Address"
+      },
+      "motion": {
+        "moving": "Moving",
+        "stopped": "Stopped"
+      },
+      "units": {
+        "meters": "{value} m",
+        "kilometers": "{value} km",
+        "speed": "{value} km/h",
+        "duration": "{hours}h {minutes}m"
+      },
+      "markers": {
+        "start": "Route start",
+        "end": "Route end",
+        "active": "Playback position"
+      }
+    },
     "denied": {
       "title": "GPS access is not available",
       "description": "This page requires the gps.read permission."
     },
     "error": {
-      "generic": "GPS data could not be loaded. Try again."
+      "generic": "GPS data could not be loaded. Try again.",
+      "GPS_BINDING_NOT_FOUND": "This vehicle has no active GPS binding.",
+      "GPS_HISTORY_UNSUPPORTED": "History is not supported by this GPS provider.",
+      "GPS_HISTORY_INVALID_RANGE": "The requested history range is invalid.",
+      "GPS_HISTORY_RANGE_TOO_LARGE": "History is limited to 7 days.",
+      "GPS_HISTORY_RESULT_TOO_LARGE": "This result is too large. Choose a shorter range.",
+      "GPS_PROVIDER_AUTH_FAILED": "The GPS provider could not authenticate.",
+      "GPS_PROVIDER_TIMEOUT": "The GPS provider timed out. Try again.",
+      "GPS_PROVIDER_CONNECTION_FAILED": "The GPS provider is unavailable.",
+      "GPS_PROVIDER_REMOTE_ERROR": "The GPS provider returned an error.",
+      "GPS_PROVIDER_INVALID_RESPONSE": "The GPS provider returned invalid history data.",
+      "GPS_PROVIDER_NOT_CONFIGURED": "The GPS provider account is not configured."
     }
   },
   "RoadLiabilities": {

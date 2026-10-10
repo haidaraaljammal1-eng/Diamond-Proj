@@ -1,11 +1,16 @@
 import { apiRequest } from "@/infrastructure/api/client";
 import type {
   GpsListQuery,
+  GpsHistoryRange,
   GpsMapPointDto,
   GpsPageMeta,
   GpsSummaryDto,
+  GpsVehicleHistoryDto,
   GpsVehicleDetailDto,
   GpsVehicleListItemDto,
+  GpsMileageSummaryDto,
+  GpsOverspeedDto,
+  GpsVehicleHealthDto,
 } from "../types/gps.types";
 import { GPS_PAGE_SIZE } from "../types/gps.types";
 import { buildGpsListQuery } from "../utils/gps-query";
@@ -65,6 +70,52 @@ export async function getGpsMapPoints(): Promise<GpsMapPointDto[]> {
 export async function getGpsVehicle(vehicleId: number): Promise<GpsVehicleDetailDto> {
   const response = await apiRequest<GpsVehicleDetailDto>(
     `${GPS_PATH}/vehicles/${vehicleId}`,
+  );
+  return response.data;
+}
+
+/** `GET /gps/vehicles/:vehicleId/history` (Backend permission: `gps.read`). */
+export async function getGpsVehicleHistory(
+  vehicleId: number,
+  range: GpsHistoryRange,
+  signal?: AbortSignal,
+): Promise<GpsVehicleHistoryDto> {
+  const query = new URLSearchParams({
+    from: range.from,
+    to: range.to,
+  });
+  const response = await apiRequest<GpsVehicleHistoryDto>(
+    `${GPS_PATH}/vehicles/${vehicleId}/history?${query.toString()}`,
+    { signal },
+  );
+  return response.data;
+}
+
+export async function getGpsVehicleMileageSummary(
+  vehicleId: number,
+): Promise<GpsMileageSummaryDto> {
+  const response = await apiRequest<GpsMileageSummaryDto>(
+    `${GPS_PATH}/vehicles/${vehicleId}/mileage-summary`,
+  );
+  return response.data;
+}
+
+export async function getGpsVehicleOverspeed(
+  vehicleId: number,
+  date: string,
+  thresholdKph: number,
+): Promise<GpsOverspeedDto> {
+  const query = new URLSearchParams({ date, thresholdKph: String(thresholdKph) });
+  const response = await apiRequest<GpsOverspeedDto>(
+    `${GPS_PATH}/vehicles/${vehicleId}/overspeed?${query.toString()}`,
+  );
+  return response.data;
+}
+
+/** `GET /gps/vehicles/:vehicleId/health` (Backend permission: `gps.read`). */
+export async function getGpsVehicleHealth(vehicleId: number): Promise<GpsVehicleHealthDto> {
+  const response = await apiRequest<GpsVehicleHealthDto>(
+    `${GPS_PATH}/vehicles/${vehicleId}/health`,
   );
   return response.data;
 }

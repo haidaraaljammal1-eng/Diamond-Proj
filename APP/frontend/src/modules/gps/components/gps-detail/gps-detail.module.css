@@ -76,6 +76,12 @@
   font-size: 13px;
 }
 
+.healthRow {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+
 .error {
   display: flex;
   align-items: center;

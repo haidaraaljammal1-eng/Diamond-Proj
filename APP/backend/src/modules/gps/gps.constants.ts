@@ -3,6 +3,7 @@
  */
 
 export const GPS_LATEST_LOCK_NS = "gps_latest";
+export const GPS_BINDING_LOCK_NS = "gps_binding";
 
 export const GPS_TRACKING_STATUSES = [
   "not_configured",

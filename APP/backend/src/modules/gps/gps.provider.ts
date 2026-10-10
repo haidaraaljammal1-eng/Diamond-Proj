@@ -11,6 +11,10 @@ export function setGpsProviderForTests(provider: GpsProvider | undefined): void 
   override = provider;
 }
 
+export function getGpsProviderTestOverride(): GpsProvider | undefined {
+  return override;
+}
+
 /**
  * Provider selection. GPS_ENABLED must never conjure a configured provider.
  * When a real adapter exists, select it here from real credentials.

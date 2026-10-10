@@ -15,10 +15,12 @@ import { resolveGpsErrorMessage } from "../../utils/resolve-gps-error";
 import { GpsDetailDrawer } from "../gps-detail/gps-detail";
 import { GpsProviderBanner } from "../gps-empty-state/gps-empty-state";
 import { GpsMap } from "../gps-map/gps-map";
+import { GpsHistoryDialog } from "../gps-history/gps-history";
 import { GpsSummaryStrip } from "../gps-summary/gps-summary";
 import { GpsVehiclePanel } from "../gps-vehicle-panel/gps-vehicle-panel";
 import { GpsVehicleRow } from "../gps-vehicle-row/gps-vehicle-row";
 import styles from "./gps-screen.module.css";
+import type { GpsVehicleSummaryDto } from "../../types/gps.types";
 
 export function GpsScreen() {
   const t = useTranslations("Gps");
@@ -32,6 +34,8 @@ export function GpsScreen() {
   const { companies, isLoading: companiesLoading } = useOperatingCompanies(gps.isAllowed);
   const now = useNow({ updateInterval: 60_000 });
   const [contractId, setContractId] = useState<string | null>(null);
+  const [historyVehicle, setHistoryVehicle] =
+    useState<GpsVehicleSummaryDto | null>(null);
 
   const deepLinkId = Number(searchParams.get("vehicleId") ?? "");
 
@@ -172,11 +176,24 @@ export function GpsScreen() {
         onRetry={() => {
           if (gps.selectedVehicleId != null) gps.selectVehicle(gps.selectedVehicleId);
         }}
+        onViewHistory={() => {
+          if (gps.selectedVehicleDetail) {
+            setHistoryVehicle(gps.selectedVehicleDetail.vehicle);
+          }
+        }}
         onViewContract={(id) => {
           gps.closeDetail();
           setContractId(id);
         }}
       />
+
+      {historyVehicle ? (
+        <GpsHistoryDialog
+          open
+          vehicle={historyVehicle}
+          onClose={() => setHistoryVehicle(null)}
+        />
+      ) : null}
 
       <ContractDetailDrawer
         contractId={contractId}

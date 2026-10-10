@@ -46,6 +46,7 @@ model OperatingCompany {
   tarsAttachmentUploads   TarsAttachmentUpload[]
   invoices                Invoice[]
   invoiceNumberSequences  InvoiceNumberSequence[]
+  gpsProviderAccounts     GpsProviderAccount[]
 
   @@index([isActive])
   @@map("operating_companies")

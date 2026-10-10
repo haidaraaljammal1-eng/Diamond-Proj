@@ -122,6 +122,7 @@ model Vehicle {
   maintenanceOrders         MaintenanceOrder[]
   manualExpenses            ManualExpense[]
   gpsBinding                VehicleGpsBinding?
+  gpsBindingHistories       VehicleGpsBindingHistory[]
   gpsLatestState            VehicleGpsLatestState?
   roadLiabilities           RoadLiability[]
   roadLiabilityObservations RoadLiabilityObservation[]

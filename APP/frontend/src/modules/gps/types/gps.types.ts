@@ -64,16 +64,21 @@ export interface GpsVehicleListItemDto {
 }
 
 export type GpsBindingDto =
-  | {
-      assigned: true;
-      providerKey: string;
-      externalDeviceId: string;
-      isActive: boolean;
-    }
+  | { assigned: true }
   | { assigned: false };
 
 export interface GpsVehicleDetailDto extends GpsVehicleListItemDto {
   binding: GpsBindingDto;
+}
+
+export type GpsHealthStatus = "ONLINE" | "STALE" | "OFFLINE";
+
+export interface GpsVehicleHealthDto {
+  vehicleId: number;
+  health: GpsHealthStatus;
+  lastCommunicationAt: string | null;
+  ageSeconds: number | null;
+  deviceModel: string | null;
 }
 
 export interface GpsMapPointDto {
@@ -128,6 +133,63 @@ export interface GpsPageMeta {
   total: number;
   totalPages: number;
 }
+
+export interface GpsHistoryPointDto {
+  capturedAt: string;
+  latitude: number;
+  longitude: number;
+  speedKph: number | null;
+  segmentDistanceMeters: number | null;
+  addressLine: string | null;
+}
+
+export interface GpsHistorySummaryDto {
+  pointCount: number;
+  totalDistanceMeters: number;
+  durationSeconds: number;
+  maxSpeedKph: number | null;
+}
+
+export interface GpsVehicleHistoryDto {
+  vehicleId: number;
+  from: string;
+  to: string;
+  points: GpsHistoryPointDto[];
+  summary: GpsHistorySummaryDto;
+}
+
+export interface GpsMileageSummaryDto {
+  vehicleId: number;
+  todayKm: number;
+  yesterdayKm: number;
+  thisMonthKm: number;
+  lastMonthKm: number;
+}
+
+export interface GpsOverspeedEventDto {
+  startedAt: string;
+  endedAt: string;
+  averageSpeedKph: number;
+  maxSpeedKph: number;
+  durationMinutes: number;
+  addressLine: string | null;
+}
+
+export interface GpsOverspeedDto {
+  vehicleId: number;
+  thresholdKph: number;
+  date: string;
+  events: GpsOverspeedEventDto[];
+  eventCount: number;
+}
+
+export interface GpsHistoryRange {
+  from: string;
+  to: string;
+}
+
+export type GpsHistoryPreset = "last1h" | "last6h" | "last24h" | "custom";
+export type GpsPlaybackSpeed = "1" | "2" | "4" | "8";
 
 export const GPS_PAGE_SIZE = 8;
 

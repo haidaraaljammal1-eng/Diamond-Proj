@@ -1,14 +1,15 @@
 // ---------------------------------------------------------------------------
 // GPS Operations — provider-neutral tracking metadata for Diamond fleet
 // vehicles. Vehicle and Contract remain the business source of truth. This
-// file stores only device binding and the latest normalized position.
+// file stores only provider accounts, device binding, and the latest
+// normalized position.
 //
 // No GPS vendor API, authentication scheme, IMEI format or webhook contract
 // is assumed. A future adapter translates vendor payloads into Diamond
-// normalized positions and calls GpsTelemetryService — never Vehicles or
-// Contracts services.
+// normalized positions and calls ingest — never Vehicles or Contracts.
 //
-// Location history / route playback is intentionally absent in this phase.
+// Location history / route playback is served as transient on-demand provider
+// reads; no history table is required.
 // ---------------------------------------------------------------------------
 
 /// Persisted motion from normalized speed (or UNKNOWN when speed is missing).
@@ -20,24 +21,90 @@ enum GpsMotionState {
   PARKED
 }
 
-/// Associates one Diamond Vehicle with one future external tracking device.
-/// Rows are never auto-created; a future management flow will write them.
+/// Technical integration account for one GPS vendor login / fleet namespace.
+/// Not the same as OperatingCompany — optional companyScopeId restricts which
+/// Diamond vehicles may be bound to this account.
+model GpsProviderAccount {
+  id                    String    @id @default(uuid())
+  /// Registry key (e.g. LIVE_GPS). Not a Prisma enum — new providers ship without migrations.
+  providerKey           String
+  /// Stable slug within providerKey (e.g. default, elite-fleet).
+  accountKey            String
+  displayName           String
+  enabled               Boolean   @default(false)
+  /// When set, only vehicles with Vehicle.companyId equal to this scope may bind.
+  companyScopeId        Int?
+  companyScope          OperatingCompany? @relation(fields: [companyScopeId], references: [id], onDelete: Restrict)
+  /// Safe non-secret settings only (base URL hints, timezone parsing hints, etc.).
+  config                Json?
+  /// AES-GCM encrypted credential blob — never returned by APIs.
+  secretEncrypted       String?
+  lastAttemptAt         DateTime?
+  lastSuccessfulSyncAt  DateTime?
+  lastFailureAt         DateTime?
+  lastFailureCode       String?
+  lastDeviceCount       Int?
+  /// Non-blocking multi-replica sync lease — owner instance token while a cycle runs.
+  syncLeaseOwner        String?
+  syncLeaseExpiresAt    DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  bindings VehicleGpsBinding[]
+
+  @@unique([providerKey, accountKey])
+  @@index([companyScopeId])
+  @@index([enabled])
+  @@map("gps_provider_accounts")
+}
+
+/// Current GPS device assignment for one Diamond vehicle (at most one row per vehicle).
 model VehicleGpsBinding {
-  id               String   @id @default(uuid())
-  vehicleId        Int      @unique
-  vehicle          Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-  /// Vendor-neutral key (e.g. future adapter name). Not a Prisma enum.
-  providerKey      String
-  externalDeviceId String
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                    String            @id @default(uuid())
+  vehicleId             Int               @unique
+  vehicle               Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  providerAccountId     String
+  providerAccount       GpsProviderAccount  @relation(fields: [providerAccountId], references: [id], onDelete: Restrict)
+  /// Denormalized from providerAccount.providerKey — must stay in sync on write.
+  providerKey           String
+  externalDeviceId      String
+  externalDeviceUid     String?
+  deviceType            String?
+  providerDeviceTypeId  String?
+  simNumber             String?
+  installationType      String?
+  installationDate      DateTime?
+  subscriptionExpiresAt DateTime?
+  /// Static provider-specific metadata — not raw fleet payloads (see DOCU).
+  providerDeviceExtras  Json?
+  isActive              Boolean           @default(true)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   latestState VehicleGpsLatestState?
 
   @@index([providerKey, externalDeviceId])
+  @@index([providerAccountId, isActive])
+  @@unique([providerAccountId, externalDeviceId], map: "vehicle_gps_bindings_active_device_key", where: { isActive: true })
   @@index([isActive])
   @@map("vehicle_gps_bindings")
+}
+
+/// Append-only record when a vehicle's GPS assignment changes (rebind / deactivate).
+model VehicleGpsBindingHistory {
+  id                    String   @id @default(uuid())
+  vehicleId             Int
+  vehicle               Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  providerAccountId     String
+  providerKey           String
+  externalDeviceId      String
+  externalDeviceUid     String?
+  endedAt               DateTime @default(now())
+  createdAt             DateTime @default(now())
+
+  @@index([vehicleId])
+  @@index([providerAccountId])
+  @@map("vehicle_gps_binding_histories")
 }
 
 /// One latest operational position per vehicle/binding. Coordinates are
@@ -59,8 +126,42 @@ model VehicleGpsLatestState {
   receivedAt     DateTime
   /// Provider event id when supplied — used for ingest idempotency.
   sourceEventId  String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+
+  previousLatitude  Decimal? @db.Decimal(10, 7)
+  previousLongitude Decimal? @db.Decimal(11, 7)
+
+  ignitionOn Boolean?
+
+  /// Provider connectivity/hardware state — not Diamond tracking offline status
+  /// and never the authority for customer/business health.
+  providerDeviceState String?
+
+  addressLine String? @db.VarChar(512)
+
+  satelliteCount Int?
+
+  fuelLevel Decimal? @db.Decimal(12, 4)
+  fuelUnit  String?
+
+  batteryLevel Decimal? @db.Decimal(12, 4)
+  batteryUnit  String?
+  isCharging   Boolean?
+
+  parkingEnabled     Boolean?
+  immobilizerCapable Boolean?
+
+  providerUpdatedAt DateTime?
+
+  odometerValue      Decimal? @db.Decimal(18, 4)
+  odometerUnit       String?
+  distanceTodayValue Decimal? @db.Decimal(18, 4)
+  distanceTodayUnit  String?
+
+  /// Small allowlisted volatile telemetry — never credentials or raw fleet JSON.
+  providerExtras Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([bindingId, sourceEventId])
   @@index([capturedAt])

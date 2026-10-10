@@ -24,7 +24,9 @@ import {
   validateNormalizedPosition,
 } from "src/modules/gps/gps.mapper";
 import { notifyGpsAcceptedPosition } from "src/modules/gps/gps.observers";
-import { createGpsProvider } from "src/modules/gps/gps.provider";
+import { isGpsProviderConfigured } from "src/modules/gps/gps-provider-configured";
+import { sanitizeGpsProviderExtras } from "src/modules/gps/gps-provider-extras";
+import { gpsProviderExtrasInvalidError } from "src/modules/gps/gps.errors";
 import type {
   GpsAcceptedPoint,
   GpsIngestOutcome,
@@ -40,8 +42,61 @@ const SORTABLE = ["vehicleName", "plateNumber", "operationalStatus", "createdAt"
 
 const MAP_POINTS_CAP = 500;
 
-function providerConfigured(): boolean {
-  return createGpsProvider().configured;
+function decimalOrNull(value: number | null | undefined, fractionDigits: number): Prisma.Decimal | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return new Prisma.Decimal(value.toFixed(fractionDigits));
+}
+
+type GpsOptionalTelemetryFields = {
+  previousLatitude: Prisma.Decimal | null;
+  previousLongitude: Prisma.Decimal | null;
+  ignitionOn: boolean | null;
+  providerDeviceState: string | null;
+  addressLine: string | null;
+  satelliteCount: number | null;
+  fuelLevel: Prisma.Decimal | null;
+  fuelUnit: string | null;
+  batteryLevel: Prisma.Decimal | null;
+  batteryUnit: string | null;
+  isCharging: boolean | null;
+  parkingEnabled: boolean | null;
+  immobilizerCapable: boolean | null;
+  providerUpdatedAt: Date | null;
+  odometerValue: Prisma.Decimal | null;
+  odometerUnit: string | null;
+  distanceTodayValue: Prisma.Decimal | null;
+  distanceTodayUnit: string | null;
+  providerExtras?: Prisma.InputJsonValue;
+};
+
+function optionalTelemetryFields(input: NormalizedGpsPositionInput): GpsOptionalTelemetryFields {
+  let providerExtras: Prisma.InputJsonValue | null | undefined;
+  try {
+    providerExtras = sanitizeGpsProviderExtras(input.providerExtras) as Prisma.InputJsonValue | null;
+  } catch {
+    throw gpsProviderExtrasInvalidError();
+  }
+  return {
+    previousLatitude: decimalOrNull(input.previousLatitude, 7),
+    previousLongitude: decimalOrNull(input.previousLongitude, 7),
+    ignitionOn: input.ignitionOn ?? null,
+    providerDeviceState: input.providerDeviceState?.trim() ? input.providerDeviceState.trim() : null,
+    addressLine: input.addressLine?.trim() ? input.addressLine.trim().slice(0, 512) : null,
+    satelliteCount: input.satelliteCount ?? null,
+    fuelLevel: decimalOrNull(input.fuelLevel, 4),
+    fuelUnit: input.fuelUnit?.trim() ? input.fuelUnit.trim() : null,
+    batteryLevel: decimalOrNull(input.batteryLevel, 4),
+    batteryUnit: input.batteryUnit?.trim() ? input.batteryUnit.trim() : null,
+    isCharging: input.isCharging ?? null,
+    parkingEnabled: input.parkingEnabled ?? null,
+    immobilizerCapable: input.immobilizerCapable ?? null,
+    providerUpdatedAt: input.providerUpdatedAt ?? null,
+    odometerValue: decimalOrNull(input.odometerValue, 4),
+    odometerUnit: input.odometerUnit?.trim() ? input.odometerUnit.trim() : null,
+    distanceTodayValue: decimalOrNull(input.distanceTodayValue, 4),
+    distanceTodayUnit: input.distanceTodayUnit?.trim() ? input.distanceTodayUnit.trim() : null,
+    providerExtras: providerExtras ?? undefined,
+  };
 }
 
 export function createGpsService(fastify: FastifyInstance) {
@@ -107,6 +162,7 @@ export function createGpsService(fastify: FastifyInstance) {
         receivedAt: validated.receivedAt,
         sourceEventId: validated.sourceEventId,
         bindingId: binding.id,
+        ...optionalTelemetryFields(input),
       };
 
       if (existing) {
@@ -160,7 +216,7 @@ export function createGpsService(fastify: FastifyInstance) {
   }
 
   async function summary(companyId?: number): Promise<GpsSummary> {
-    const configured = providerConfigured();
+    const configured = await isGpsProviderConfigured(prisma);
     const config = gpsConfig();
     const now = new Date();
     const vehiclesWhere = { isActive: true, ...(companyId != null ? { companyId } : {}) };
@@ -235,7 +291,7 @@ export function createGpsService(fastify: FastifyInstance) {
   }
 
   async function list(query: ListGpsVehiclesQuery) {
-    const configured = providerConfigured();
+    const configured = await isGpsProviderConfigured(prisma);
     const config = gpsConfig();
     const now = new Date();
     const cutoff = new Date(now.getTime() - config.offlineAfterMinutes * 60_000);
@@ -294,7 +350,7 @@ export function createGpsService(fastify: FastifyInstance) {
   }
 
   async function mapPoints() {
-    const configured = providerConfigured();
+    const configured = await isGpsProviderConfigured(prisma);
     if (!configured) return [];
     const config = gpsConfig();
     const now = new Date();
@@ -326,7 +382,7 @@ export function createGpsService(fastify: FastifyInstance) {
   }
 
   async function getVehicle(vehicleId: number) {
-    const configured = providerConfigured();
+    const configured = await isGpsProviderConfigured(prisma);
     const config = gpsConfig();
     const now = new Date();
     const row = await prisma.vehicle.findFirst({

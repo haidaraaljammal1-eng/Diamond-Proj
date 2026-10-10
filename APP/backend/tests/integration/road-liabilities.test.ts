@@ -113,14 +113,24 @@ if (!RUN) {
       return res.json().data as { id: number };
     }
 
+    let rlGpsAccountId: string | null = null;
     async function bindGps(id: number, suffix: string) {
-      await prisma.vehicleGpsBinding.create({
-        data: {
-          vehicleId: id,
+      const { createGpsProviderAccountFixture, assignVehicleGpsBindingFixture } = await import(
+        "tests/helpers/gps-fixture"
+      );
+      if (!rlGpsAccountId) {
+        const account = await createGpsProviderAccountFixture(prisma, {
           providerKey: "test",
-          externalDeviceId: `rl-dev-${run}-${suffix}`,
-          isActive: true,
-        },
+          accountKey: `rl-${run}`,
+          displayName: "Road liability GPS",
+          enabled: true,
+        });
+        rlGpsAccountId = account.id;
+      }
+      await assignVehicleGpsBindingFixture(prisma, {
+        vehicleId: id,
+        providerAccountId: rlGpsAccountId,
+        externalDeviceId: `rl-dev-${run}-${suffix}`,
       });
     }
 

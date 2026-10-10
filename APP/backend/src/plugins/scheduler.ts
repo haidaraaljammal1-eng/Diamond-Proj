@@ -1,6 +1,10 @@
 import fp from "fastify-plugin";
 import { env } from "src/config/env";
 import { createBackgroundRunner } from "src/worker/background-runner";
+import {
+  awaitGpsProviderSyncDrain,
+  requestGpsProviderSyncShutdown,
+} from "src/modules/gps/gps-provider-sync.service";
 
 /**
  * In-process background scheduler — the production driver for the automatic
@@ -62,6 +66,11 @@ export const schedulerPlugin = fp(async (fastify) => {
 
   fastify.addHook("onClose", async () => {
     if (timer) clearInterval(timer);
+    requestGpsProviderSyncShutdown();
+    const drained = await awaitGpsProviderSyncDrain(5_000);
+    if (!drained) {
+      fastify.log.warn("background scheduler: gps sync did not drain within timeout");
+    }
     fastify.log.info("background scheduler: stopped");
   });
 });

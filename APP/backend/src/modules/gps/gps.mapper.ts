@@ -358,9 +358,6 @@ export function toGpsDetail(input: {
       binding && binding.isActive
         ? {
             assigned: true,
-            providerKey: binding.providerKey,
-            externalDeviceId: binding.externalDeviceId,
-            isActive: binding.isActive,
           }
         : { assigned: false },
   };

@@ -7,6 +7,14 @@ import { countsInSummaryOnlineTotal, formatGpsCoordinates, toValidGpsDate } from
 import { buildGpsListQuery, countGpsActiveFilters } from "./gps-query.ts";
 import { shouldInvalidateLeafletSize } from "./gps-map.ts";
 import {
+  clampPlaybackIndex,
+  customUaeHistoryRange,
+  historyDisplayMotion,
+  historyPresetRange,
+  playbackDelayMs,
+  validateHistoryRange,
+} from "./gps-history.ts";
+import {
   applyGpsOverlayToSummary,
   applyGpsOverlayToVehicle,
   buildGpsSimulationOverlay,
@@ -265,6 +273,97 @@ describe("GPS API is read-only", () => {
     assert.ok(source.includes("GET /gps/summary"));
     assert.ok(source.includes("GET /gps/vehicles"));
     assert.ok(source.includes("GET /gps/map-points"));
+    assert.ok(source.includes("GET /gps/vehicles/:vehicleId/history"));
+    assert.equal(source.includes("externalDeviceId"), false);
+  });
+});
+
+describe("GPS history range and playback", () => {
+  it("builds one, six, and twenty-four hour presets", () => {
+    const now = new Date("2026-10-09T12:00:00.000Z");
+    assert.equal(
+      Date.parse(historyPresetRange("last1h", now).to) -
+        Date.parse(historyPresetRange("last1h", now).from),
+      60 * 60 * 1_000,
+    );
+    assert.equal(
+      Date.parse(historyPresetRange("last6h", now).to) -
+        Date.parse(historyPresetRange("last6h", now).from),
+      6 * 60 * 60 * 1_000,
+    );
+    assert.equal(
+      Date.parse(historyPresetRange("last24h", now).to) -
+        Date.parse(historyPresetRange("last24h", now).from),
+      24 * 60 * 60 * 1_000,
+    );
+  });
+
+  it("converts custom UAE local date/time to UTC ISO", () => {
+    assert.deepEqual(
+      customUaeHistoryRange("2026-10-09", "08:30", "2026-10-09", "09:30"),
+      {
+        from: "2026-10-09T04:30:00.000Z",
+        to: "2026-10-09T05:30:00.000Z",
+      },
+    );
+  });
+
+  it("rejects invalid and over-seven-day custom ranges before fetching", () => {
+    assert.deepEqual(
+      validateHistoryRange(
+        {
+          from: "2026-10-01T00:00:00.000Z",
+          to: "2026-10-09T00:00:00.001Z",
+        },
+        new Date("2026-10-09T12:00:00.000Z"),
+      ),
+      { valid: false, reason: "too_large" },
+    );
+    assert.deepEqual(
+      validateHistoryRange(
+        {
+          from: "2026-10-09T02:00:00.000Z",
+          to: "2026-10-09T01:00:00.000Z",
+        },
+        new Date("2026-10-09T12:00:00.000Z"),
+      ),
+      { valid: false, reason: "invalid" },
+    );
+  });
+
+  it("supports playback speeds, scrubber bounds, and display-only motion", () => {
+    assert.ok(playbackDelayMs("8") < playbackDelayMs("1"));
+    assert.equal(clampPlaybackIndex(-5, 4), 0);
+    assert.equal(clampPlaybackIndex(99, 4), 3);
+    assert.equal(historyDisplayMotion(4), "moving");
+    assert.equal(historyDisplayMotion(0), "stopped");
+    assert.equal(historyDisplayMotion(null), "stopped");
+  });
+
+  it("uses a polyline plus start, end, and one active marker", () => {
+    const canvas = readFileSync(
+      path.join(
+        import.meta.dirname,
+        "../components/gps-history/gps-history-map-canvas.tsx",
+      ),
+      "utf8",
+    );
+    assert.ok(canvas.includes("L.polyline"));
+    assert.ok(canvas.includes('historyIcon("start"'));
+    assert.ok(canvas.includes('historyIcon("end"'));
+    assert.ok(canvas.includes('historyIcon("active"'));
+    assert.equal(canvas.includes("points.map((point) => L.marker"), false);
+  });
+
+  it("keeps API-backed history in a cancellable non-persisted store", () => {
+    const store = readFileSync(
+      path.join(import.meta.dirname, "../stores/gps-history.store.ts"),
+      "utf8",
+    );
+    assert.ok(store.includes("AbortController"));
+    assert.ok(store.includes("activeController?.abort()"));
+    assert.equal(store.includes("persist("), false);
+    assert.equal(store.includes("setInterval"), false);
   });
 });
 

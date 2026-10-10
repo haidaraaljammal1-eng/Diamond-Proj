@@ -96,6 +96,19 @@ if (!RUN) {
 
   const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
+  function assertProviderNeutral(body: string) {
+    for (const field of [
+      "providerKey",
+      "providerAccountId",
+      "externalDeviceId",
+      "deviceid",
+      "IMEI",
+      "SIM",
+    ]) {
+      assert.equal(body.includes(field), false, field);
+    }
+  }
+
   async function createVehicle(payload: Record<string, unknown>) {
     const res = await app.inject({
       method: "POST",
@@ -138,6 +151,9 @@ if (!RUN) {
         color: "Black",
       })
     ).id;
+
+    const { setGpsProviderForTests } = await import("src/modules/gps/gps.provider");
+    setGpsProviderForTests({ name: "integration-gps", configured: false });
   });
 
   after(async () => {
@@ -257,18 +273,42 @@ if (!RUN) {
     assert.equal(raw.includes("authorization"), false);
   });
 
+  test("history route is staff-only and resolves binding from vehicleId", async () => {
+    const forbidden = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles/${namedVehicleId}/history`,
+      headers: auth(strangerToken),
+    });
+    assert.equal(forbidden.statusCode, 403, forbidden.body);
+
+    const unbound = await app.inject({
+      method: "GET",
+      url: `/gps/vehicles/${namedVehicleId}/history`,
+      headers: auth(readerToken),
+    });
+    assert.equal(unbound.statusCode, 409, unbound.body);
+    assert.equal(unbound.json().error.context.reason, "GPS_BINDING_NOT_FOUND");
+    assert.equal(unbound.body.includes("externalDeviceId"), false);
+  });
+
   test("ingest validates, persists, replaces newer, ignores stale, and is idempotent", async () => {
     const { createGpsService } = await import("src/modules/gps/gps.service");
     const { setGpsProviderForTests } = await import("src/modules/gps/gps.provider");
     const gps = createGpsService(app);
 
-    await prisma.vehicleGpsBinding.create({
-      data: {
-        vehicleId: namedVehicleId,
-        providerKey: "test",
-        externalDeviceId: `dev-${run}`,
-        isActive: true,
-      },
+    const { createGpsProviderAccountFixture, assignVehicleGpsBindingFixture } = await import(
+      "tests/helpers/gps-fixture"
+    );
+    const account = await createGpsProviderAccountFixture(prisma, {
+      providerKey: "test",
+      accountKey: `ingest-${run}`,
+      displayName: "Ingest test",
+      enabled: true,
+    });
+    await assignVehicleGpsBindingFixture(prisma, {
+      vehicleId: namedVehicleId,
+      providerAccountId: account.id,
+      externalDeviceId: `dev-${run}`,
     });
 
     const older = new Date("2026-09-10T08:00:00.000Z");
@@ -349,7 +389,8 @@ if (!RUN) {
     assert.equal(detail.statusCode, 200, detail.body);
     assert.equal(detail.json().data.gps.latitude, 25.2);
     assert.equal(detail.json().data.binding.assigned, true);
-    assert.equal(detail.json().data.binding.providerKey, "test");
+    assert.deepEqual(detail.json().data.binding, { assigned: true });
+    assertProviderNeutral(detail.body);
     setGpsProviderForTests(undefined);
   });
 

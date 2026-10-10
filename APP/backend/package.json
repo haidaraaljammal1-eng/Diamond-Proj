@@ -22,7 +22,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "openapi:export": "tsx scripts/export-openapi.ts",
     "test": "node --import tsx --test tests/unit/*.test.ts tests/integration/*.test.ts",
-    "test:unit": "node --import tsx --test tests/unit/*.test.ts",
+    "test:unit": "node --import tsx --test tests/unit/*.test.ts tests/unit/live-gps/*.test.ts",
     "test:integration:prepare": "tsx scripts/reset-integration-database.ts",
     "test:integration": "tsx scripts/run-integration-tests.ts",
     "verify:reports": "tsx scripts/verify-reports.ts",
@@ -39,7 +39,14 @@
     "dev:postgres:setup-db": "tsx scripts/setup-local-postgres-db.ts",
     "test:pushover": "tsx scripts/test-pushover.ts",
     "test:gemini": "tsx scripts/test-gemini.ts",
-    "test:gemini-document": "tsx scripts/test-gemini-document.ts"
+    "test:gemini-document": "tsx scripts/test-gemini-document.ts",
+    "gps:poc:store-credentials": "tsx scripts/live-gps-poc.ts store-credentials",
+    "gps:poc:run": "tsx scripts/live-gps-poc.ts run",
+    "gps:binding-audit": "tsx scripts/live-gps-binding-audit.ts",
+    "gps:elite-fleet-phase4b": "tsx scripts/live-gps-elite-fleet-phase4b.ts",
+    "gps:ingest-one": "tsx scripts/live-gps-ingest-one.ts",
+    "gps:ingest-remaining": "tsx scripts/live-gps-ingest-remaining.ts",
+    "gps:controlled-activation": "tsx scripts/gps-controlled-activation.ts"
   },
   "prisma": {
     "seed": "node prisma/seed.cjs"

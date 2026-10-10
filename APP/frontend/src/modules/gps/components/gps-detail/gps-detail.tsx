@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
@@ -7,6 +8,8 @@ import { Drawer } from "@/shared/components/ui/drawer";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
 import { VehicleStatus } from "@/modules/vehicles/components/vehicle-status/vehicle-status";
+import { useGpsReports } from "../../hooks/use-gps-reports";
+import { useGpsHealth } from "../../hooks/use-gps-health";
 import type { GpsVehicleDetailDto } from "../../types/gps.types";
 import {
   formatGpsCoordinates,
@@ -22,6 +25,7 @@ export interface GpsDetailDrawerProps {
   error: string | null;
   onClose: () => void;
   onRetry: () => void;
+  onViewHistory: () => void;
   onViewContract: (contractId: string) => void;
 }
 
@@ -42,10 +46,17 @@ export function GpsDetailDrawer({
   error,
   onClose,
   onRetry,
+  onViewHistory,
   onViewContract,
 }: GpsDetailDrawerProps) {
   const t = useTranslations("Gps");
   const format = useFormatter();
+  const reports = useGpsReports();
+  const healthState = useGpsHealth();
+  const { load: loadHealth, reset: resetHealth } = healthState;
+  const { reset: resetReports } = reports;
+  const [overspeedDate, setOverspeedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [thresholdKph, setThresholdKph] = useState("80");
   const vehicle = detail?.vehicle;
   const gps = detail?.gps;
   const rental = detail?.currentRental;
@@ -53,6 +64,14 @@ export function GpsDetailDrawer({
     gps && hasMapCoordinates(gps.latitude, gps.longitude)
       ? formatGpsCoordinates(gps.latitude!, gps.longitude!)
       : null;
+
+  useEffect(() => {
+    resetReports();
+    resetHealth();
+    if (detail?.vehicle.id != null) {
+      void loadHealth(detail.vehicle.id);
+    }
+  }, [detail?.vehicle.id, loadHealth, resetHealth, resetReports]);
 
   return (
     <Drawer
@@ -149,7 +168,130 @@ export function GpsDetailDrawer({
                   : null
               }
             />
+            {detail.binding.assigned ? (
+              <Button
+                type="button"
+                variant="secondaryStrong"
+                size="sm"
+                onClick={onViewHistory}
+              >
+                {t("history.open")}
+              </Button>
+            ) : null}
           </section>
+
+          <section aria-live="polite">
+            <h4 className={styles.section}>{t("health.title")}</h4>
+            {healthState.loading ? <p className={styles.muted}>{t("health.loading")}</p> : null}
+            {healthState.error ? <p className={styles.error}>{t("health.unavailable")}</p> : null}
+            {healthState.health ? (
+              <>
+                <div className={styles.healthRow}>
+                  <Chip
+                    tone={
+                      healthState.health.health === "ONLINE"
+                        ? "ok"
+                        : healthState.health.health === "STALE"
+                          ? "warn"
+                          : "bad"
+                    }
+                    dot
+                    solid
+                  >
+                    {t(`health.status.${healthState.health.health}`)}
+                  </Chip>
+                </div>
+                <Kv
+                  label={t("health.lastCommunication")}
+                  value={
+                    healthState.health.lastCommunicationAt
+                      ? format.relativeTime(new Date(healthState.health.lastCommunicationAt), new Date())
+                      : t("health.never")
+                  }
+                />
+                <Kv
+                  label={t("health.deviceModel")}
+                  value={healthState.health.deviceModel ?? t("health.unavailableValue")}
+                />
+              </>
+            ) : null}
+          </section>
+
+          {detail.binding.assigned ? (
+            <>
+              <section>
+                <h4 className={styles.section}>{t("mileage.title")}</h4>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void reports.loadMileage(vehicle.id)}
+                  disabled={reports.mileageLoading}
+                >
+                  {reports.mileageLoading ? t("mileage.loading") : t("mileage.load")}
+                </Button>
+                {reports.mileageError ? <p className={styles.error}>{reports.mileageError.message}</p> : null}
+                {reports.mileage ? (
+                  <div>
+                    <Kv label={t("mileage.today")} value={`${reports.mileage.todayKm} km`} />
+                    <Kv label={t("mileage.yesterday")} value={`${reports.mileage.yesterdayKm} km`} />
+                    <Kv label={t("mileage.thisMonth")} value={`${reports.mileage.thisMonthKm} km`} />
+                    <Kv label={t("mileage.lastMonth")} value={`${reports.mileage.lastMonthKm} km`} />
+                  </div>
+                ) : null}
+              </section>
+
+              <section>
+                <h4 className={styles.section}>{t("overspeed.title")}</h4>
+                <label>
+                  <span>{t("overspeed.date")}</span>
+                  <input
+                    type="date"
+                    value={overspeedDate}
+                    onChange={(event) => setOverspeedDate(event.target.value)}
+                    disabled={reports.overspeedLoading}
+                  />
+                </label>
+                <label>
+                  <span>{t("overspeed.threshold")}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={thresholdKph}
+                    onChange={(event) => setThresholdKph(event.target.value)}
+                    disabled={reports.overspeedLoading}
+                  />
+                </label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void reports.loadOverspeed(vehicle.id, overspeedDate, Number(thresholdKph))}
+                  disabled={reports.overspeedLoading || !overspeedDate || Number(thresholdKph) <= 0}
+                >
+                  {reports.overspeedLoading ? t("overspeed.loading") : t("overspeed.load")}
+                </Button>
+                {reports.overspeedError ? <p className={styles.error}>{reports.overspeedError.message}</p> : null}
+                {reports.overspeed ? (
+                  reports.overspeed.events.length ? (
+                    <div>
+                      {reports.overspeed.events.map((event, index) => (
+                        <div key={`${event.startedAt}-${index}`}>
+                          <Kv label={t("overspeed.start")} value={format.dateTime(new Date(event.startedAt), { dateStyle: "medium", timeStyle: "short" })} />
+                          <Kv label={t("overspeed.end")} value={format.dateTime(new Date(event.endedAt), { dateStyle: "medium", timeStyle: "short" })} />
+                          <Kv label={t("overspeed.duration")} value={`${event.durationMinutes} min`} />
+                          <Kv label={t("overspeed.maxSpeed")} value={`${event.maxSpeedKph} km/h`} />
+                          <Kv label={t("overspeed.averageSpeed")} value={`${event.averageSpeedKph} km/h`} />
+                          <Kv label={t("overspeed.address")} value={event.addressLine} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className={styles.muted}>{t("overspeed.empty")}</p>
+                ) : null}
+              </section>
+            </>
+          ) : null}
 
           {rental ? (
             <section>

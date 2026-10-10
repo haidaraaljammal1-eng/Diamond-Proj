@@ -59,6 +59,172 @@ async function waitForMapFilled(page: Page) {
   ).toBe(true);
 }
 
+async function mockGpsHistoryApis(
+  page: Page,
+  historyMode: "success" | "empty-then-error" = "success",
+) {
+  let historyRequestCount = 0;
+  const company = {
+    id: 2,
+    code: "ELITE",
+    displayName: "ELITE",
+    accentColor: "#C9A15C",
+  };
+  const vehicle = {
+    id: 17,
+    company,
+    vehicleName: "Synthetic Route Vehicle",
+    displayName: "Synthetic Route Vehicle",
+    vehicleType: "SUV",
+    plateNumber: "TEST-17",
+    modelYear: 2025,
+    color: "Black",
+    primaryImageUrl: null,
+    operationalStatus: "available",
+  };
+  const gps = {
+    trackingStatus: "moving",
+    latitude: 25.1,
+    longitude: 55.1,
+    speedKph: 30,
+    headingDegrees: 90,
+    accuracyMeters: null,
+    capturedAt: "2026-10-09T10:00:00.000Z",
+    receivedAt: "2026-10-09T10:00:01.000Z",
+    motionState: "moving",
+  };
+
+  await page.route("**/gps/**", async (route) => {
+    const url = new URL(route.request().url());
+    const envelope = (data: unknown, meta?: unknown) =>
+      JSON.stringify(meta ? { data, meta } : { data });
+    const fulfill = (data: unknown, meta?: unknown) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: envelope(data, meta),
+      });
+
+    if (url.pathname === "/gps/summary") {
+      return fulfill({
+        providerConfigured: true,
+        totalVehicles: 1,
+        trackedVehicles: 1,
+        moving: 1,
+        parked: 0,
+        online: 1,
+        offline: 0,
+        noData: 0,
+        unassigned: 0,
+        lastLocationUpdateAt: "2026-10-09T10:00:00.000Z",
+      });
+    }
+    if (url.pathname === "/gps/vehicles") {
+      return fulfill(
+        [{ vehicle, gps, currentRental: null }],
+        { page: 1, pageSize: 8, total: 1, totalPages: 1 },
+      );
+    }
+    if (url.pathname === "/gps/map-points") {
+      return fulfill([
+        {
+          vehicleId: 17,
+          company,
+          displayName: vehicle.displayName,
+          plateNumber: vehicle.plateNumber,
+          operationalStatus: "available",
+          trackingStatus: "moving",
+          latitude: 25.1,
+          longitude: 55.1,
+          speedKph: 30,
+          headingDegrees: 90,
+          capturedAt: "2026-10-09T10:00:00.000Z",
+          currentRental: null,
+        },
+      ]);
+    }
+    if (url.pathname === "/gps/vehicles/17/history") {
+      historyRequestCount += 1;
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      if (historyMode === "empty-then-error" && historyRequestCount === 1) {
+        return fulfill({
+          vehicleId: 17,
+          from: url.searchParams.get("from"),
+          to: url.searchParams.get("to"),
+          points: [],
+          summary: {
+            pointCount: 0,
+            totalDistanceMeters: 0,
+            durationSeconds: 0,
+            maxSpeedKph: null,
+          },
+        });
+      }
+      if (historyMode === "empty-then-error") {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: {
+              code: "CONFLICT",
+              message: "History result too large",
+              context: { reason: "GPS_HISTORY_RESULT_TOO_LARGE" },
+            },
+          }),
+        });
+      }
+      return fulfill({
+        vehicleId: 17,
+        from: url.searchParams.get("from"),
+        to: url.searchParams.get("to"),
+        points: [
+          {
+            capturedAt: "2026-10-09T09:00:00.000Z",
+            latitude: 25.1,
+            longitude: 55.1,
+            speedKph: 0,
+            segmentDistanceMeters: 0,
+            addressLine: "Synthetic start",
+          },
+          {
+            capturedAt: "2026-10-09T09:10:00.000Z",
+            latitude: 25.11,
+            longitude: 55.11,
+            speedKph: 35,
+            segmentDistanceMeters: 800,
+            addressLine: "Synthetic middle",
+          },
+          {
+            capturedAt: "2026-10-09T09:20:00.000Z",
+            latitude: 25.12,
+            longitude: 55.12,
+            speedKph: 55,
+            segmentDistanceMeters: 900,
+            addressLine: "Synthetic end",
+          },
+        ],
+        summary: {
+          pointCount: 3,
+          totalDistanceMeters: 1700,
+          durationSeconds: 1200,
+          maxSpeedKph: 55,
+        },
+      });
+    }
+    if (url.pathname === "/gps/vehicles/17") {
+      return fulfill({
+        vehicle,
+        gps,
+        currentRental: null,
+        binding: {
+          assigned: true,
+        },
+      });
+    }
+    return route.continue();
+  });
+}
+
 test.describe("GPS Operations Center", () => {
   test("Arabic desktop GPS page loads provider-not-connected operations center", async ({
     page,
@@ -205,6 +371,74 @@ test.describe("GPS Operations Center", () => {
     await waitForMapFilled(page);
     await expect(page.getByTestId("data-search-submit")).toContainText("Search");
     await page.screenshot({ path: "e2e/__screens__/gps/en-desktop.png" });
+  });
+
+  test("History playback fetches explicitly and renders one route with playback controls", async ({
+    page,
+  }) => {
+    const historyRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/gps/vehicles/17/history")) {
+        historyRequests.push(request.url());
+        expect(request.method()).toBe("GET");
+      }
+    });
+    await staffLogin(page);
+    await mockGpsHistoryApis(page);
+    await page.goto("/en/gps");
+    await page.getByTestId("gps-vehicle-row").click();
+    await page.getByRole("button", { name: "History / Playback" }).click();
+    await expect(page.getByTestId("gps-history-dialog")).toBeVisible();
+    expect(historyRequests).toHaveLength(0);
+
+    await page.getByRole("button", { name: "Last 6 hours" }).click();
+    await page.getByTestId("gps-history-fetch").click();
+    await expect(page.getByText("Loading history…")).toBeVisible();
+    await expect(page.getByTestId("gps-history-summary")).toBeVisible();
+    expect(historyRequests).toHaveLength(1);
+
+    const requestUrl = new URL(historyRequests[0]!);
+    const from = Date.parse(requestUrl.searchParams.get("from")!);
+    const to = Date.parse(requestUrl.searchParams.get("to")!);
+    expect(to - from).toBe(6 * 60 * 60 * 1_000);
+    await expect(page.getByTestId("gps-history-map")).toBeVisible();
+    await expect(page.locator(".leaflet-overlay-pane path")).toHaveCount(1);
+    await expect(page.locator(".gps-history-marker")).toHaveCount(3);
+    await expect(page.getByText("1.7 km")).toBeVisible();
+    await expect(page.getByText("55 km/h")).toBeVisible();
+
+    const scrubber = page.getByTestId("gps-history-scrubber");
+    await expect(scrubber).toHaveValue("0");
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    await expect
+      .poll(async () => Number(await scrubber.inputValue()))
+      .toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Pause" }).click();
+    await page.getByLabel("Playback speed").click();
+    await page.getByRole("option", { name: "8×" }).click();
+    await scrubber.fill("2");
+    await expect(page.getByText("Synthetic end")).toBeVisible();
+    await expect(page.getByTestId("gps-history-dialog")).not.toContainText(
+      "00000000-0000-4000-8000-000000000017",
+    );
+  });
+
+  test("History playback handles empty results and sanitized backend errors", async ({
+    page,
+  }) => {
+    await staffLogin(page);
+    await mockGpsHistoryApis(page, "empty-then-error");
+    await page.goto("/en/gps");
+    await page.getByTestId("gps-vehicle-row").click();
+    await page.getByRole("button", { name: "History / Playback" }).click();
+    await page.getByTestId("gps-history-fetch").click();
+    await expect(page.getByTestId("gps-history-empty")).toBeVisible();
+
+    await page.getByRole("button", { name: "Last 1 hour" }).click();
+    await page.getByTestId("gps-history-fetch").click();
+    await expect(
+      page.getByText("This result is too large. Choose a shorter range."),
+    ).toBeVisible();
   });
 
   test("Arabic mobile GPS stacks map above the fleet panel", async ({ page }) => {

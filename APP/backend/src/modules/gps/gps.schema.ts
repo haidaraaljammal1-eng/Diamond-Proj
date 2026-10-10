@@ -71,9 +71,6 @@ export type GpsVehicleListItem = z.infer<typeof GpsVehicleListItemSchema>;
 export const GpsBindingProjectionSchema = z.discriminatedUnion("assigned", [
   z.object({
     assigned: z.literal(true),
-    providerKey: z.string(),
-    externalDeviceId: z.string(),
-    isActive: z.boolean(),
   }),
   z.object({ assigned: z.literal(false) }),
 ]);
@@ -127,3 +124,77 @@ export type ListGpsVehiclesQuery = z.infer<typeof ListGpsVehiclesQuerySchema>;
 export const GpsVehicleIdParam = z.object({
   vehicleId: z.coerce.number().int().positive(),
 });
+
+export const GpsHealthStatusSchema = z.enum(["ONLINE", "STALE", "OFFLINE"]);
+export const GpsVehicleHealthSchema = z.object({
+  vehicleId: z.number().int().positive(),
+  health: GpsHealthStatusSchema,
+  lastCommunicationAt: z.date().nullable(),
+  ageSeconds: z.number().int().nonnegative().nullable(),
+  deviceModel: z.string().nullable(),
+});
+export type GpsVehicleHealth = z.infer<typeof GpsVehicleHealthSchema>;
+
+export const GpsHistoryQuerySchema = z.object({
+  from: z.string().trim().min(1).optional(),
+  to: z.string().trim().min(1).optional(),
+});
+export type GpsHistoryQuery = z.infer<typeof GpsHistoryQuerySchema>;
+
+export const GpsOverspeedQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  thresholdKph: z.coerce.number().finite().positive(),
+});
+export type GpsOverspeedQuery = z.infer<typeof GpsOverspeedQuerySchema>;
+
+export const GpsMileageSummarySchema = z.object({
+  vehicleId: z.number().int().positive(),
+  todayKm: z.number().nonnegative(),
+  yesterdayKm: z.number().nonnegative(),
+  thisMonthKm: z.number().nonnegative(),
+  lastMonthKm: z.number().nonnegative(),
+});
+export type GpsMileageSummary = z.infer<typeof GpsMileageSummarySchema>;
+
+export const GpsOverspeedEventSchema = z.object({
+  startedAt: z.date(),
+  endedAt: z.date(),
+  averageSpeedKph: z.number().nonnegative(),
+  maxSpeedKph: z.number().nonnegative(),
+  durationMinutes: z.number().nonnegative(),
+  addressLine: z.string().nullable(),
+});
+
+export const GpsOverspeedSchema = z.object({
+  vehicleId: z.number().int().positive(),
+  thresholdKph: z.number().positive(),
+  date: z.string(),
+  events: z.array(GpsOverspeedEventSchema),
+  eventCount: z.number().int().nonnegative(),
+});
+export type GpsOverspeed = z.infer<typeof GpsOverspeedSchema>;
+
+export const GpsHistoryPointSchema = z.object({
+  capturedAt: z.date(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  speedKph: z.number().nonnegative().nullable(),
+  segmentDistanceMeters: z.number().nonnegative().nullable(),
+  addressLine: z.string().nullable(),
+});
+
+export const GpsHistorySummarySchema = z.object({
+  pointCount: z.number().int().nonnegative(),
+  totalDistanceMeters: z.number().nonnegative(),
+  durationSeconds: z.number().int().nonnegative(),
+  maxSpeedKph: z.number().nonnegative().nullable(),
+});
+
+export const GpsVehicleHistorySchema = z.object({
+  vehicleId: z.number().int().positive(),
+  from: z.date(),
+  to: z.date(),
+  points: z.array(GpsHistoryPointSchema),
+  summary: GpsHistorySummarySchema,
+});
+export type GpsVehicleHistory = z.infer<typeof GpsVehicleHistorySchema>;

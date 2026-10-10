@@ -28,6 +28,25 @@ export interface NormalizedGpsPositionInput {
   headingDegrees?: number | null;
   accuracyMeters?: number | null;
   sourceEventId?: string | null;
+  previousLatitude?: number | null;
+  previousLongitude?: number | null;
+  ignitionOn?: boolean | null;
+  providerDeviceState?: string | null;
+  addressLine?: string | null;
+  satelliteCount?: number | null;
+  fuelLevel?: number | null;
+  fuelUnit?: string | null;
+  batteryLevel?: number | null;
+  batteryUnit?: string | null;
+  isCharging?: boolean | null;
+  parkingEnabled?: boolean | null;
+  immobilizerCapable?: boolean | null;
+  providerUpdatedAt?: Date | null;
+  odometerValue?: number | null;
+  odometerUnit?: string | null;
+  distanceTodayValue?: number | null;
+  distanceTodayUnit?: string | null;
+  providerExtras?: Record<string, unknown> | null;
 }
 
 export interface GpsBindingSnapshot {

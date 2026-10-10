@@ -7,6 +7,7 @@ import { createAttentionMonitorService } from "src/modules/notification-delivery
 import { createRoadLiabilityOutboxConsumer } from "src/modules/road-liabilities/road-liability-outbox-consumer";
 import { createInvoiceOutboxConsumer } from "src/modules/invoices/invoice-outbox-consumer";
 import { createReportExecService } from "src/modules/reports/report-exec.service";
+import { createGpsProviderSyncService } from "src/modules/gps/gps-provider-sync.service";
 
 /**
  * The background cycles of the system, driven either by the in-process
@@ -27,6 +28,7 @@ export function createBackgroundRunner(app: FastifyInstance) {
   const invoiceOutbox = createInvoiceOutboxConsumer(app);
   const businessNotifications = createBusinessNotificationOutboxConsumer(app);
   const attentionMonitor = createAttentionMonitorService(app);
+  const gpsProviderSync = createGpsProviderSyncService(app);
 
   async function runAllCycles(): Promise<void> {
     try {
@@ -93,7 +95,21 @@ export function createBackgroundRunner(app: FastifyInstance) {
     } catch (err) {
       app.log.error({ err }, "attention-monitor: cycle failed");
     }
+    try {
+      const gps = await gpsProviderSync.runGpsProviderSyncCycle();
+      if (gps.accountsAttempted > 0) {
+        app.log.info(
+          {
+            accountsConsidered: gps.accountsConsidered,
+            accountsAttempted: gps.accountsAttempted,
+          },
+          "gps-provider-sync: cycle",
+        );
+      }
+    } catch (err) {
+      app.log.error({ err }, "gps-provider-sync: cycle failed");
+    }
   }
 
-  return { runAllCycles };
+  return { runAllCycles, runGpsProviderSyncCycle: gpsProviderSync.runGpsProviderSyncCycle };
 }

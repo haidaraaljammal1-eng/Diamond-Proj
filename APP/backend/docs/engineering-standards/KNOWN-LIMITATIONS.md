@@ -31,7 +31,7 @@ Out of scope for a generic starter; add per product:
 
 Real constraints of the current design:
 
-- **Scheduler** — none is shipped. A single-instance in-process scheduler is **not** safe for horizontal scaling; if you add one, use leader election or a distributed job runner, or a DB-poll + advisory-lock design. Do not assume in-process timers are HA.
+- **Scheduler** — an in-process scheduler drives background cycles (`SCHEDULER_ENABLED`, default poll 30s). It is **not** a global leader: multiple API replicas each run the same timer unless disabled on API nodes. Domain jobs rely on idempotent DB patterns; **GPS provider sync** runs on its approximately 60-second account cadence and additionally uses a per-account DB lease (`syncLeaseOwner` / `syncLeaseExpiresAt`). Do not assume in-process timers alone are HA.
 - **Rate limiting is per-instance (in-memory)** — behind multiple instances, limits are per-process. Use a shared store (e.g. Redis) for global limits at scale.
 - **Per-request permission load** — permissions are read from the DB on each authenticated request (read-only). Fine for typical loads; add a short-TTL cache if it becomes hot.
 - **Audit is best-effort** by default — for operations needing guaranteed audit atomicity, write the audit row inside the operation's transaction.
