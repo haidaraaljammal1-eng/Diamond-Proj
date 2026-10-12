@@ -31,6 +31,7 @@ const DashboardKpisSchema = z.object({
   fleetRented: z.number().int().nullable(),
   fleetAvailable: z.number().int().nullable(),
   fleetService: z.number().int().nullable(),
+  rentedToday: z.number().int().nullable(),
   pendingLinks: z.number().int().nullable(),
   deliveriesToday: z.number().int().nullable(),
   readyForDelivery: z.number().int().nullable(),
@@ -92,12 +93,10 @@ const TodayDeliverySchema = z.object({
   company: DashboardCompanyRefSchema,
 });
 
-const RecentContractSchema = z.object({
+const TodayContractSchema = z.object({
   id: z.string(),
-  contractNumber: z.string(),
-  customerName: z.string().nullable(),
   vehicleName: z.string(),
-  employeeName: z.string().nullable(),
+  createdAt: z.date(),
   status: ContractStatusSchema,
   company: DashboardCompanyRefSchema,
 });
@@ -111,6 +110,6 @@ export const DashboardOverviewSchema = z.object({
   weeklyRentalActivity: z.array(WeeklyRentalActivityPointSchema).nullable(),
   fleetStatus: FleetStatusSchema.nullable(),
   todayDeliveries: z.array(TodayDeliverySchema).nullable(),
-  recentContracts: z.array(RecentContractSchema).nullable(),
+  todayContracts: z.array(TodayContractSchema).nullable(),
   gpsOnline: z.number().int().nullable(),
 });

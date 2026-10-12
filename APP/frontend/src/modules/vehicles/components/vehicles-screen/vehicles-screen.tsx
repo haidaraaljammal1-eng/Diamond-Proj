@@ -30,6 +30,7 @@ import { CarInDialog } from "@/modules/contracts/forms/car-in/car-in-dialog";
 import { RenewDialog } from "@/modules/contracts/forms/renew/renew-dialog";
 import { ContractLinkResultDialog } from "@/modules/contracts/components/contract-link-result/contract-link-result-dialog";
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
+import { FleetFollowUpDialog } from "../fleet-follow-up-dialog/fleet-follow-up-dialog";
 import { ReconcileDialog } from "@/modules/contracts/forms/reconcile/reconcile-dialog";
 import { CloseContractDialog } from "@/modules/contracts/forms/close/close-contract-dialog";
 import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
@@ -66,7 +67,7 @@ export function VehiclesScreen() {
   const { types, isLoading: typesLoading } = useFleetTypeLookup();
   const { companies, isLoading: companiesLoading } = useOperatingCompanies(isAllowed);
   const tCompany = useTranslations("OperatingCompanies");
-  const { generateReturnLink, generateRentalLink } = useContract();
+  const { generateRentalLink, generateReturnLink } = useContract();
   const registerNotificationTargets = useNotificationRecordTargets();
 
   const [detailVehicle, setDetailVehicle] = useState<VehicleCardDto | null>(null);
@@ -85,6 +86,7 @@ export function VehiclesScreen() {
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeId, setCloseId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
+  const [followUpVehicle, setFollowUpVehicle] = useState<VehicleCardDto | null>(null);
 
   useEffect(() => {
     registerNotificationTargets(
@@ -149,17 +151,14 @@ export function VehiclesScreen() {
         case "car-out":
           setCarOutId(intent.contractId);
           return;
-        case "maintenance":
-          router.push(`/${locale}/maintenance`);
-          return;
-        case "generate-return-link":
-          void generateReturnLink(intent.contractId);
-          return;
         case "open-contract":
           setContractDrawerId(intent.contractId);
           return;
-        case "reconcile":
-          setReconcileId(intent.contractId);
+        case "urgent-follow-up":
+          setContractDrawerId(intent.contractId);
+          return;
+        case "urgent-follow-up-choose":
+          setFollowUpVehicle(vehicle);
           return;
         case "no-contract":
           showNotice(t("boundary.noContract"));
@@ -169,7 +168,7 @@ export function VehiclesScreen() {
           return;
       }
     },
-    [locale, router, showNotice, t, generateReturnLink],
+    [showNotice, t],
   );
 
   const header = (
@@ -360,9 +359,21 @@ export function VehiclesScreen() {
         onClose={() => setDetailVehicle(null)}
         onSetPrice={setModeDialogVehicle}
         onPrimaryAction={handlePrimaryAction}
-        onGps={(vehicle) => router.push(`/${locale}/gps?vehicleId=${vehicle.id}`)}
-        onMaintenance={() => router.push(`/${locale}/maintenance`)}
+        onCarIn={setCarInId}
+        onFleetChanged={() => void refreshVehicles()}
+        onNavigateToMaintenance={(vehicleId, options) => {
+          const params = new URLSearchParams({ vehicleId: String(vehicleId) });
+          if (options?.create) params.set("create", "1");
+          if (options?.orderId != null) params.set("orderId", String(options.orderId));
+          router.push(`/${locale}/maintenance?${params.toString()}`);
+        }}
         onPhotoNotice={showNotice}
+      />
+
+      <FleetFollowUpDialog
+        vehicle={followUpVehicle}
+        onClose={() => setFollowUpVehicle(null)}
+        onSelectContract={(contractId) => setContractDrawerId(contractId)}
       />
 
       <RentalCollectionModeDialog

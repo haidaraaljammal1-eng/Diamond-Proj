@@ -79,6 +79,13 @@ export async function completeReturnLinks(tx: Db, contractId: string): Promise<v
   });
 }
 
+export async function revokeUnusedRentalLinks(tx: Db, contractId: string): Promise<void> {
+  await tx.contractLink.updateMany({
+    where: { contractId, type: "RENTAL", usedAt: null, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
 export async function revokeUnusedRenewalLinks(tx: Db, contractId: string): Promise<void> {
   await tx.contractLink.updateMany({
     where: { contractId, type: "RENEWAL", usedAt: null, revokedAt: null },

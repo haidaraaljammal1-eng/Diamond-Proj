@@ -42,7 +42,7 @@ export async function signContractViaPublicRental(
     customerName?: string;
     mobile?: string;
   },
-): Promise<{ contractId: string; contractNumber: string; vehicleId: number }> {
+): Promise<{ contractId: string; contractNumber: string; vehicleId: number; rentalToken: string }> {
   const cid = await companyId(prisma, input.companyCode);
   const vehicleRes = await app.inject({
     method: "POST",
@@ -105,5 +105,32 @@ export async function signContractViaPublicRental(
   assert.equal(accept.statusCode, 200, accept.body);
   assert.equal(accept.json().data.contract.status, "SIGNED");
 
-  return { contractId, contractNumber, vehicleId };
+  return { contractId, contractNumber, vehicleId, rentalToken };
+}
+
+export async function confirmSignedElectronicRentalPayment(
+  app: FastifyInstance,
+  input: {
+    run: string;
+    contractId: string;
+    rentalToken: string;
+  },
+): Promise<void> {
+  const { setPaymentProviderForTests } = await import(
+    "src/modules/contracts/payment/payment-provider.factory"
+  );
+  const {
+    confirmRentalPaymentViaStatusToken,
+    createFakePaymentProvider,
+    linkCardViaFakeProvider,
+  } = await import("tests/helpers/fake-payment-provider");
+  const payments = createFakePaymentProvider(input.run);
+  setPaymentProviderForTests(payments.provider);
+  await linkCardViaFakeProvider(app, payments, input.rentalToken, input.contractId);
+  await confirmRentalPaymentViaStatusToken(
+    app,
+    payments,
+    input.rentalToken,
+    `inv-confirm-${input.contractId}`,
+  );
 }

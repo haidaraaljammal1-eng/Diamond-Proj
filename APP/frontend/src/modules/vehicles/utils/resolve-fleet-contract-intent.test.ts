@@ -4,62 +4,97 @@ import { resolveFleetPrimaryIntent } from "./resolve-fleet-contract-intent.ts";
 
 const paid = {
   contractId: "ct-paid",
+  contractNumber: "C-PAID",
   customerName: "Omar",
   endAt: "2026-12-01T00:00:00.000Z",
   status: "paid" as const,
+  awaitingHandover: true,
 };
-const active = { ...paid, contractId: "ct-active", status: "active" as const };
-const retout = { ...paid, contractId: "ct-retout", status: "retout" as const };
+const active = { ...paid, contractId: "ct-active", status: "active" as const, awaitingHandover: false };
+const retout = { ...paid, contractId: "ct-retout", status: "retout" as const, awaitingHandover: false };
 
 describe("resolveFleetPrimaryIntent", () => {
-  it("A. AVAILABLE + no currentRental → Set Rental Price", () => {
+  it("AVAILABLE + no context → set rental price", () => {
     assert.deepEqual(
-      resolveFleetPrimaryIntent({ operationalStatus: "available", currentRental: null }),
+      resolveFleetPrimaryIntent({
+        operationalStatus: "available",
+        currentRental: null,
+        prePaymentFollowUps: [],
+      }),
       { type: "set-rental-price" },
     );
   });
 
-  it("D. PAID vehicle → Car-Out using currentRental.contractId", () => {
+  it("PAID handover → car-out", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
         operationalStatus: "available",
         currentRental: paid,
+        prePaymentFollowUps: [],
       }),
       { type: "car-out", contractId: "ct-paid" },
     );
   });
 
-  it("E/F. RENTED + active → Generate Return Link", () => {
+  it("RENTED active → open contract", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
         operationalStatus: "rented",
         currentRental: active,
+        prePaymentFollowUps: [],
       }),
-      { type: "generate-return-link", contractId: "ct-active" },
+      { type: "open-contract", contractId: "ct-active" },
     );
   });
 
-  it("RETOUT opens contract detail instead of minting a new link", () => {
+  it("RETOUT → open contract", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
         operationalStatus: "rented",
         currentRental: retout,
+        prePaymentFollowUps: [],
       }),
       { type: "open-contract", contractId: "ct-retout" },
     );
   });
 
-  it("G. After Car-In the vehicle is AVAILABLE with no currentRental → Set Rental Price", () => {
+  it("urgent follow-up with one offer opens that contract", () => {
     assert.deepEqual(
-      resolveFleetPrimaryIntent({ operationalStatus: "available", currentRental: null }),
-      { type: "set-rental-price" },
+      resolveFleetPrimaryIntent({
+        operationalStatus: "available",
+        currentRental: null,
+        prePaymentFollowUps: [
+          { contractId: "a", contractNumber: "1", status: "awaiting", customerName: null },
+        ],
+      }),
+      { type: "urgent-follow-up", contractId: "a" },
     );
   });
 
-  it("H. CLOSED vehicle is AVAILABLE again → Set Rental Price", () => {
+  it("urgent follow-up with legacy duplicates requires explicit choice", () => {
     assert.deepEqual(
-      resolveFleetPrimaryIntent({ operationalStatus: "available", currentRental: null }),
-      { type: "set-rental-price" },
+      resolveFleetPrimaryIntent({
+        operationalStatus: "available",
+        currentRental: null,
+        prePaymentFollowUps: [
+          { contractId: "a", contractNumber: "1", status: "awaiting", customerName: null },
+          { contractId: "b", contractNumber: "2", status: "signed", customerName: null },
+        ],
+      }),
+      { type: "urgent-follow-up-choose", contractIds: ["a", "b"] },
+    );
+  });
+
+  it("blocking rental wins over urgent offers", () => {
+    assert.deepEqual(
+      resolveFleetPrimaryIntent({
+        operationalStatus: "rented",
+        currentRental: active,
+        prePaymentFollowUps: [
+          { contractId: "a", contractNumber: "1", status: "awaiting", customerName: null },
+        ],
+      }),
+      { type: "open-contract", contractId: "ct-active" },
     );
   });
 });

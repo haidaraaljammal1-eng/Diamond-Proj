@@ -31,6 +31,36 @@ export const contractError = {
   linkUsed: () => err(ErrorCode.TOKEN_INVALID, "Contract link has already been used", "CONTRACT_LINK_USED"),
   paymentRequired: () =>
     err(ErrorCode.CONFLICT, "A confirmed payment is required", "CONTRACT_PAYMENT_REQUIRED"),
+  rentalRequestNotCancellable: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This rental request cannot be cancelled in its current state",
+      "CONTRACT_RENTAL_REQUEST_NOT_CANCELLABLE",
+    ),
+  rentalRequestHasInvoice: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This rental request has an issued invoice and cannot be deleted",
+      "CONTRACT_RENTAL_REQUEST_HAS_INVOICE",
+    ),
+  rentalRequestDeleteBlocked: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This rental request cannot be deleted due to linked operational or financial records",
+      "CONTRACT_RENTAL_REQUEST_DELETE_BLOCKED",
+    ),
+  paymentInFlight: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "A payment attempt is still in progress for this contract",
+      "CONTRACT_PAYMENT_IN_FLIGHT",
+    ),
+  paymentAlreadyConfirmed: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Payment is already confirmed for this contract",
+      "CONTRACT_PAYMENT_ALREADY_CONFIRMED",
+    ),
   carOutRequired: () =>
     err(ErrorCode.CONFLICT, "Car-Out is required before this action", "CONTRACT_CAR_OUT_REQUIRED"),
   carInRequired: () =>

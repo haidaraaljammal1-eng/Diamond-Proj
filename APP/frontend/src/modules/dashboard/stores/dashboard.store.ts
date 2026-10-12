@@ -30,7 +30,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   setCompanyId(companyId) {
     if (get().companyId === companyId) return;
-    set({ companyId });
+    // Drop the previous scope immediately so a slower response cannot paint stale KPIs.
+    set({ companyId, overview: null, status: "loading", error: null });
   },
 
   async load() {
@@ -40,9 +41,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     try {
       const overview = await getDashboardOverview(companyId);
       if (!isLatestDashboardRequest(requestId, requestSeq)) return;
+      if (get().companyId !== companyId) return;
       set({ overview, status: "ready", error: null });
     } catch (error) {
       if (!isLatestDashboardRequest(requestId, requestSeq)) return;
+      if (get().companyId !== companyId) return;
       set({
         status: "error",
         error: normalizeApiError(error),

@@ -1,6 +1,6 @@
 # Vehicles Page — Frontend
 
-Diamond HTML Demo (`demo.html` → Fleet / Vehicles) is the behavioral source of truth. The **latest approved Fleet screenshot** is the visual reference for `VehicleCard`. Backend contract: [vehicles-backend.md](./vehicles-backend.md).
+Diamond HTML Demo (`demo.html` → Fleet / Vehicles) is the behavioral source of truth. Fleet cards are **photo-free** (premium typography: name, plate, company corner, color swatch, default rates). Photos remain on Vehicle Detail only. Backend contract: [vehicles-backend.md](./vehicles-backend.md).
 
 > **Operating company (UNIQUE / ELITE):** implemented end to end. Active options come from `GET /operating-companies`; Add Vehicle requires `companyId`; cards/details show the backend company and accent; the toolbar sends `?companyId=`. Read [operating-companies.md](../00-system-overview/operating-companies.md).
 
@@ -59,6 +59,7 @@ The Fleet page shows **active vehicles only**. `active=true` is always sent inte
 - Search, status, vehicle type, sort, and clear filters reset `page` to **1** before refetch.
 - After deactivate (or any mutation that shrinks `totalPages`), an out-of-range current page is corrected to the last valid page and refetched — no false empty state.
 - No runtime fleet cap (e.g. no `slice(0, 100)`); any number of active vehicles is reachable page by page.
+- **Requires Attention** (`تحتاج متابعة`): Backend sorts **handover** (PAID · awaiting Car-Out) then **urgent pre-payment follow-up** (AWAITING/FORM/SIGNED with a **usable** RENTAL link — not revoked, used, or expired) across the full filtered fleet **before** pagination; the UI renders that block first with a thin divider when non-empty.
 
 ## Approved toolbar
 
@@ -85,18 +86,29 @@ Every filter is server-side; changing any filter resets to page 1.
 - Clear filters resets all user filters including search.
 - Reuse `DataSearch` for future data-heavy pages with the same explicit-submit pattern.
 
-## Vehicle Card Action Matrix
+## Fleet primary control (card)
 
-Central policy: `utils/vehicle-card-actions.ts` → `getVehicleCardActions(vehicle, canManage)`.
+Policy: `utils/fleet-primary-presentation.ts` + `utils/resolve-fleet-contract-intent.ts`. Footer icon actions: `utils/vehicle-card-actions.ts`.
 
-| Status | Visible actions |
-| ------ | ---------------- |
-| **AVAILABLE** + no `currentRental` | Set Rental Price · Edit Default Rates* · Delete* |
-| **AVAILABLE** + `currentRental.status = paid` | Car-Out (real Contracts flow; no Set Price / Edit / Delete) |
-| **RENTED** (`active` / `retout` / `review`) | Return Link · GPS only |
-| **SERVICE** | Go to Maintenance only |
+| Context | Label (EN / AR) | Primary click |
+| ------- | ----------------- | ------------- |
+| Available | Available / متاحة | Existing rental-offer flow |
+| PAID · awaiting Car-Out | Deliver Vehicle / تسليم السيارة | Car-Out dialog |
+| Pre-payment + usable RENTAL link | Urgent Follow-up / متابعة مستعجلة | Opens that contract directly; legacy duplicate offers use a minimal picker |
+| Rented (ACTIVE/RETOUT) | Rented / مؤجرة | Contract drawer (Return Now lives in Detail) |
+| SERVICE | Maintenance / صيانة | Disabled control; card still opens Detail |
 
-\* Requires `vehicles.manage`. Inner buttons use `stopPropagation()`.
+Pre-payment offers do **not** reserve the vehicle; blocking PAID/ACTIVE/RETOUT always wins.
+
+## Vehicle Detail (limited)
+
+- **Send to Maintenance** / **إدخال إلى الصيانة** (`maintenance.manage`) → `/[locale]/maintenance?vehicleId=&create=1` (Maintenance Center form only; no operational-status toggle here).
+- **View Maintenance** / **عرض الصيانة** when `operationalStatus = service` → Maintenance Center with `orderId` when known.
+- **Cancel Rental Request** / **إلغاء طلب التأجير** (`contracts.manage`): premium warning dialog, then **`POST /contracts/:id/rental-request/cancel`** permanently deletes eligible AWAITING/FORM/SIGNED requests without confirmed payment (body may include `vehicleId` for association). Rejects PAID+ lifecycle, in-flight payments, and linked invoices. Fleet refreshes after success; vehicle is not forced AVAILABLE unless no other blocking state exists.
+- **Return Now** / **إرجاع الآن** (`contracts.return` → `POST /contracts/:id/return/start`, then staged Car-In).
+- Return-due banner when contractual `endAt` is reached (minute refresh while open).
+
+\* Edit/delete rates: `vehicles.manage`. Inner controls use `stopPropagation()` on the card.
 
 `currentRental.status = paid` is Backend authority: the vehicle stays AVAILABLE until Car-Out, but the chip reads **Ready for Car-Out** / **جاهزة للتسليم** and rental/edit/delete actions are hidden. Do not invent a RESERVED operational status.
 

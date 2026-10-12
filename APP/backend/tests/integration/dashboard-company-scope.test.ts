@@ -28,6 +28,8 @@ if (!RUN) {
     let customerId = 0;
     let uniqueCompanyId = 0;
     let eliteCompanyId = 0;
+    let uniqueActiveContractId = "";
+    let eliteActiveContractId = "";
     const run = Date.now().toString(36).toUpperCase();
     const admin = { email: `dash-scope-${run}@example.test`, password: "dash-scope-pass-123" };
     const auth = () => ({ authorization: `Bearer ${token}` });
@@ -56,7 +58,7 @@ if (!RUN) {
       weeklyFinance: { collected: number; expenses: number; netMovement: number } | null;
       weeklyRentalActivity: Array<{ rented: number; returned: number }> | null;
       todayDeliveries: Array<{ contractNumber: string; company: { code: string } }> | null;
-      recentContracts: Array<{ contractNumber: string; company: { code: string } }> | null;
+      todayContracts: Array<{ id: string; company: { code: string } }> | null;
     }
 
     async function seedUser() {
@@ -194,6 +196,7 @@ if (!RUN) {
         status: "ACTIVE",
         startAt: today,
       });
+      uniqueActiveContractId = uniqueActive.id;
       const eliteActive = await createContract({
         number: `SCP-AE-${run}`,
         companyId: eliteCompanyId,
@@ -201,6 +204,7 @@ if (!RUN) {
         status: "ACTIVE",
         startAt: today,
       });
+      eliteActiveContractId = eliteActive.id;
       await createContract({
         number: `SCP-DU-${run}`,
         companyId: uniqueCompanyId,
@@ -301,7 +305,7 @@ if (!RUN) {
       assert.ok(unique.kpis.activeRentals! < all.kpis.activeRentals!);
     });
 
-    test("today deliveries and recent contracts keep identity and follow the scope", async () => {
+    test("today deliveries and today contracts keep identity and follow the scope", async () => {
       const unique = await overview(`?companyId=${uniqueCompanyId}`);
       const elite = await overview(`?companyId=${eliteCompanyId}`);
       const uniqueDeliveries = unique.todayDeliveries ?? [];
@@ -312,12 +316,12 @@ if (!RUN) {
       assert.ok(uniqueDeliveries.every((row) => row.company.code === "UNIQUE"));
       assert.ok(eliteDeliveries.every((row) => row.company.code === "ELITE"));
 
-      const uniqueRecent = unique.recentContracts ?? [];
-      const eliteRecent = elite.recentContracts ?? [];
-      assert.ok(uniqueRecent.some((row) => row.contractNumber === `SCP-AU-${run}`));
-      assert.equal(uniqueRecent.some((row) => row.company.code === "ELITE"), false);
-      assert.ok(eliteRecent.some((row) => row.contractNumber === `SCP-AE-${run}`));
-      assert.ok(eliteRecent.every((row) => row.company.code === "ELITE"));
+      const uniqueToday = unique.todayContracts ?? [];
+      const eliteToday = elite.todayContracts ?? [];
+      assert.ok(uniqueToday.some((row) => row.id === uniqueActiveContractId));
+      assert.equal(uniqueToday.some((row) => row.company.code === "ELITE"), false);
+      assert.ok(eliteToday.some((row) => row.id === eliteActiveContractId));
+      assert.ok(eliteToday.every((row) => row.company.code === "ELITE"));
     });
 
     test("weekly finance scopes the ledger and All Companies includes GENERAL", async () => {

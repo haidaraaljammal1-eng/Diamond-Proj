@@ -9,6 +9,7 @@ import { createFakeWhatsAppProvider } from "tests/helpers/fake-whatsapp-provider
 import {
   configureTestInvoiceSequences,
   drainInvoiceOutbox,
+  confirmSignedElectronicRentalPayment,
   signContractViaPublicRental,
 } from "tests/helpers/invoice-integration";
 import { companyId } from "tests/helpers/operating-company";
@@ -104,8 +105,8 @@ if (!RUN) {
       await app.close();
     });
 
-    test("A: ELITE rental invoice on contract SIGNED via outbox (number 1100, idempotent)", async () => {
-      const { contractId } = await signContractViaPublicRental(app, prisma, {
+    test("A: ELITE rental invoice on contract PAID via outbox (number 1100, idempotent)", async () => {
+      const { contractId, rentalToken } = await signContractViaPublicRental(app, prisma, {
         authHeaders: auth(),
         companyCode: "ELITE",
         run: `${run}-ELITE`,
@@ -113,10 +114,21 @@ if (!RUN) {
         customerName: "Elite Renter",
         mobile: "+971500011101",
       });
-      const contract = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      let contract = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
       assert.equal(contract.status, "SIGNED");
       const eliteId = await companyId(prisma, "ELITE");
       assert.equal(contract.companyId, eliteId);
+
+      await drainInvoiceOutbox(app);
+      assert.equal(await prisma.invoice.count({ where: { contractId } }), 0);
+
+      await confirmSignedElectronicRentalPayment(app, {
+        run: `${run}-ELITE-pay`,
+        contractId,
+        rentalToken,
+      });
+      contract = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      assert.equal(contract.status, "PAID");
 
       await drainInvoiceOutbox(app);
 
@@ -126,6 +138,8 @@ if (!RUN) {
       assert.equal(invoices[0]!.companyId, eliteId);
       assert.equal(invoices[0]!.invoiceNumber, APPROVED_INVOICE_SEQUENCE_START);
       assert.equal(invoices[0]!.totalAmount, 1800);
+      assert.equal(invoices[0]!.balanceDueSnapshot, 0);
+      assert.equal(invoices[0]!.termsSnapshot, "Paid in full");
 
       const seq = await prisma.invoiceNumberSequence.findUniqueOrThrow({
         where: { companyId: eliteId },
@@ -145,13 +159,20 @@ if (!RUN) {
     });
 
     test("B: UNIQUE rental uses independent sequence (also starts at 1100)", async () => {
-      const { contractId } = await signContractViaPublicRental(app, prisma, {
+      const { contractId, rentalToken } = await signContractViaPublicRental(app, prisma, {
         authHeaders: auth(),
         companyCode: "UNIQUE",
         run: `${run}-UNQ`,
         agreedAmount: 1500,
         customerName: "Unique Renter",
         mobile: "+971500011102",
+      });
+      await drainInvoiceOutbox(app);
+      assert.equal(await prisma.invoice.count({ where: { contractId } }), 0);
+      await confirmSignedElectronicRentalPayment(app, {
+        run: `${run}-UNQ-pay`,
+        contractId,
+        rentalToken,
       });
       await drainInvoiceOutbox(app);
       const uniqueId = await companyId(prisma, "UNIQUE");

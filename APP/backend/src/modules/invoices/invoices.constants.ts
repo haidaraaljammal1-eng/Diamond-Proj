@@ -5,11 +5,14 @@ export const INVOICE_TEMPLATE_VERSION = "v1";
 
 export const INVOICE_TERMS_NET_30 = "Net 30";
 
+/** Fully collected rental invoices (issued only after authoritative payment). */
+export const INVOICE_TERMS_PAID_IN_FULL = "Paid in full";
+
 export const INVOICE_CURRENCY = "AED";
 
 /** Outbox event types consumed by the invoice issuance worker. */
 export const INVOICE_OUTBOX_EVENT_TYPES = [
-  "contract.signed",
+  "contract.paid",
   "reconciliation.finalized",
   "road_liability.customer_charge.confirmed",
 ] as const;

@@ -70,7 +70,7 @@ export function getVehicleCardActions(
       return {
         showSetRentalPrice: false,
         showCarOut: false,
-        showReturnLink: true,
+        showReturnLink: false,
         showGps: true,
         showEditRates: false,
         showDelete: false,
@@ -84,7 +84,7 @@ export function getVehicleCardActions(
         showGps: false,
         showEditRates: false,
         showDelete: false,
-        showMaintenance: true,
+        showMaintenance: false,
       };
     default:
       return NO_ACTIONS;

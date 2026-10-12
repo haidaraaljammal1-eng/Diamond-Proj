@@ -290,7 +290,8 @@ test("dashboard overview hides contract summaries without contracts.read", async
   assert.equal(data.kpis.deliveriesToday, null);
   assert.equal(data.weeklyRentalActivity, null);
   assert.equal(data.todayDeliveries, null);
-  assert.equal(data.recentContracts, null);
+  assert.equal(data.todayContracts, null);
+  assert.equal(data.kpis.rentedToday, null);
   assert.equal(data.weeklyFinance?.collected, 0);
   assert.equal(data.weeklyFinance?.expenses, 0);
   assert.equal(data.weeklyFinance?.netMovement, 0);

@@ -81,6 +81,22 @@ export const VehicleReservationSchema = z.object({
   awaitingHandover: z.boolean(),
 });
 
+export const VehiclePrePaymentFollowUpSchema = z.object({
+  contractId: z.string(),
+  contractNumber: z.string(),
+  status: z.enum(["awaiting", "form", "signed"]),
+  customerName: z.string().nullable(),
+});
+
+export const FleetAttentionTierSchema = z.enum(["handover", "urgent_follow_up"]).nullable();
+
+export const VehicleActiveMaintenanceOrderSchema = z
+  .object({
+    id: z.number().int(),
+    status: z.enum(["SCHEDULED", "IN_SERVICE", "READY_FOR_PICKUP"]),
+  })
+  .nullable();
+
 export const VehicleCardSchema = VehiclePublicSchema.extend({
   displayName: z.string(),
   model: ModelRefSchema.nullable(),
@@ -88,11 +104,15 @@ export const VehicleCardSchema = VehiclePublicSchema.extend({
   currentRental: VehicleCurrentRentalSchema,
   reservation: VehicleReservationSchema,
   isBookable: z.boolean(),
+  /** Global Requires Attention tier for this card, when applicable. */
+  fleetAttentionTier: FleetAttentionTierSchema,
+  prePaymentFollowUps: z.array(VehiclePrePaymentFollowUpSchema),
 });
 export type VehicleCard = z.infer<typeof VehicleCardSchema>;
 
 export const VehicleDetailSchema = VehicleCardSchema.extend({
   gallery: z.array(VehicleImageSchema),
+  activeMaintenanceOrder: VehicleActiveMaintenanceOrderSchema,
 });
 export type VehicleDetail = z.infer<typeof VehicleDetailSchema>;
 

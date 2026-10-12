@@ -37,6 +37,7 @@ const emptyOverview = (partial: Partial<DashboardOverviewDto> = {}): DashboardOv
     fleetRented: null,
     fleetAvailable: null,
     fleetService: null,
+    rentedToday: null,
     pendingLinks: null,
     deliveriesToday: null,
     readyForDelivery: null,
@@ -46,7 +47,7 @@ const emptyOverview = (partial: Partial<DashboardOverviewDto> = {}): DashboardOv
   weeklyRentalActivity: null,
   fleetStatus: null,
   todayDeliveries: null,
-  recentContracts: null,
+  todayContracts: null,
   gpsOnline: null,
   ...partial,
 });
@@ -142,7 +143,7 @@ describe("dashboard selectors — real API mappings", () => {
   it("does not invent dashboard sections when the API returns nulls", () => {
     assert.equal(hasAnyDashboardSection(emptyOverview()), false);
     assert.equal(
-      hasAnyDashboardSection(emptyOverview({ kpis: { ...emptyOverview().kpis, activeRentals: 2 } })),
+      hasAnyDashboardSection(emptyOverview({ kpis: { ...emptyOverview().kpis, fleetRented: 2 } })),
       true,
     );
   });

@@ -19,8 +19,8 @@ import {
 import { DashboardCompanyScope } from "../dashboard-company-scope/dashboard-company-scope";
 import { ExpenseBreakdownCard } from "../expense-breakdown-card/expense-breakdown-card";
 import { FleetStatusCard } from "../fleet-status-card/fleet-status-card";
-import { QuickAccessCard } from "../quick-access-card/quick-access-card";
-import { RecentContractsCard } from "../recent-contracts-card/recent-contracts-card";
+import { DashboardReservedSlot } from "../dashboard-reserved-slot/dashboard-reserved-slot";
+import { TodayContractsCard } from "../today-contracts-card/today-contracts-card";
 import { TodayDeliveriesCard } from "../today-deliveries-card/today-deliveries-card";
 import { WeeklyMovementCard } from "../weekly-movement-card/weekly-movement-card";
 import { useNotificationRecordTargets } from "@/modules/notifications/simulation/use-notification-record-targets";
@@ -39,7 +39,6 @@ export function DashboardScreen() {
     canReadContracts,
     canReadVehicles,
     canGenerateLink,
-    quickAccess,
     refresh,
     companyId,
     setCompanyId,
@@ -55,7 +54,7 @@ export function DashboardScreen() {
 
   useEffect(() => {
     const records = [
-      ...(realOverview?.recentContracts ?? []),
+      ...(realOverview?.todayContracts ?? []),
       ...(realOverview?.todayDeliveries ?? []),
     ];
     registerNotificationTargets(
@@ -65,7 +64,7 @@ export function DashboardScreen() {
           entityType: "contract" as const,
           entityId: record.id,
           route: "/contracts" as const,
-          label: record.contractNumber,
+          label: record.vehicleName,
           reference: record.vehicleName,
         })),
     );
@@ -161,66 +160,35 @@ export function DashboardScreen() {
   }
 
   const kpis = overview.kpis;
-  const showKpis =
-    kpis.activeRentals != null ||
-    kpis.fleetTotal != null ||
-    kpis.pendingLinks != null ||
-    kpis.deliveriesToday != null;
+  const showTopKpis =
+    kpis.fleetRented != null ||
+    kpis.fleetAvailable != null ||
+    kpis.rentedToday != null;
 
   return (
     <>
       {header}
 
-      {showKpis ? (
+      {showTopKpis ? (
         <div className={styles.kpis}>
-          {kpis.activeRentals != null ? (
-            <StatCard
-              label={t("kpi.activeRentals")}
-              value={kpis.activeRentals}
-              note={t("kpi.activeRentalsNote")}
-            />
+          {kpis.fleetRented != null ? (
+            <StatCard label={t("kpi.rentedCars")} value={kpis.fleetRented} />
           ) : null}
-          {kpis.fleetTotal != null && kpis.fleetRented != null ? (
-            <StatCard
-              label={t("kpi.fleet")}
-              value={kpis.fleetRented}
-              suffix={`/${kpis.fleetTotal}`}
-              note={t("kpi.fleetNote")}
-            />
+          {kpis.fleetAvailable != null ? (
+            <StatCard label={t("kpi.availableCars")} value={kpis.fleetAvailable} />
           ) : null}
-          {kpis.pendingLinks != null ? (
-            <StatCard
-              label={t("kpi.pendingLinks")}
-              value={kpis.pendingLinks}
-              note={t("kpi.pendingLinksNote")}
-            />
-          ) : null}
-          {kpis.deliveriesToday != null ? (
-            <StatCard
-              label={t("kpi.deliveriesToday")}
-              value={kpis.deliveriesToday}
-              note={t("kpi.deliveriesTodayNote", {
-                count: kpis.readyForDelivery ?? 0,
-              })}
-            />
+          {kpis.rentedToday != null ? (
+            <StatCard label={t("kpi.rentedToday")} value={kpis.rentedToday} />
           ) : null}
         </div>
       ) : null}
 
-      {overview.recentContracts != null || quickAccess.length > 0 ? (
+      {overview.todayContracts != null ? (
         <div className={styles.grid}>
-          <RecentContractsCard
-            contracts={overview.recentContracts}
+          <DashboardReservedSlot />
+          <TodayContractsCard
+            contracts={overview.todayContracts}
             onOpenContract={openContract}
-            onGenerateLink={canGenerateLink ? goVehicles : undefined}
-          />
-          <QuickAccessCard
-            items={quickAccess}
-            locale={locale}
-            contractsTotal={kpis.contractsTotal}
-            fleetRented={kpis.fleetRented}
-            vehiclesInService={kpis.fleetService}
-            gpsOnline={overview.gpsOnline}
           />
         </div>
       ) : null}
@@ -243,7 +211,7 @@ export function DashboardScreen() {
         </div>
       ) : null}
 
-      {!hasAnyDashboardSection(overview) && quickAccess.length === 0 ? (
+      {!hasAnyDashboardSection(overview) ? (
         <section className={styles.panel} role="status">
           <p className={styles.panelTitle}>{t("restricted.title")}</p>
           <p className={styles.panelText}>{t("restricted.description")}</p>

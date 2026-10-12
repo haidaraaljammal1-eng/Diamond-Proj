@@ -222,6 +222,35 @@ export async function generateReturnLink(
   return response.data;
 }
 
+export interface RentalRequestDeletedDto {
+  contractId: string;
+  vehicleId: number;
+  contractNumber: string;
+  deleted: true;
+}
+
+/** `POST /contracts/:id/rental-request/cancel` — permanently delete eligible pre-payment request. */
+export async function deletePendingRentalRequest(
+  id: string,
+  options: { vehicleId?: number } = {},
+): Promise<RentalRequestDeletedDto> {
+  const body = options.vehicleId != null ? { vehicleId: options.vehicleId } : {};
+  const response = await apiRequest<RentalRequestDeletedDto>(
+    `${CONTRACTS_PATH}/${id}/rental-request/cancel`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
+  return response.data;
+}
+
+/** `POST /contracts/:id/return/start` — staff return intent ACTIVE → RETOUT. */
+export async function startContractReturnStaff(id: string): Promise<ContractDetailDto> {
+  const response = await apiRequest<ContractDetailDto>(
+    `${CONTRACTS_PATH}/${id}/return/start`,
+    { method: "POST" },
+  );
+  return response.data;
+}
+
 /** `GET /contracts/:id/car-in` (`contracts.read`). */
 export async function getCarIn(id: string): Promise<ContractCarInHandoverDto> {
   const response = await apiRequest<ContractCarInHandoverDto>(`${CONTRACTS_PATH}/${id}/car-in`);

@@ -25,6 +25,8 @@ export interface AddMaintenanceDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** Pre-select fleet vehicle when opened from Vehicles → Send to Maintenance. */
+  initialVehicleId?: number | null;
 }
 
 const TYPE_KEYS = [
@@ -41,6 +43,7 @@ export function AddMaintenanceDialog({
   open,
   onClose,
   onSuccess,
+  initialVehicleId = null,
 }: AddMaintenanceDialogProps) {
   const t = useTranslations("Maintenance");
   const {
@@ -58,9 +61,13 @@ export function AddMaintenanceDialog({
   useEffect(() => {
     if (open) {
       clearCreateError();
-      form.reset(EMPTY_ADD_MAINTENANCE_VALUES);
+      form.reset({
+        ...EMPTY_ADD_MAINTENANCE_VALUES,
+        vehicleId:
+          initialVehicleId != null ? String(initialVehicleId) : EMPTY_ADD_MAINTENANCE_VALUES.vehicleId,
+      });
     }
-  }, [open, clearCreateError, form]);
+  }, [open, clearCreateError, form, initialVehicleId]);
 
   const typeOptions: SelectOption<(typeof TYPE_KEYS)[number]>[] = TYPE_KEYS.map(
     (key) => ({

@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 import type { z } from "zod";
 import { AppError } from "src/lib/errors/app-error";
-import { paginate, parseSort } from "src/lib/http/pagination";
+import { buildPageMeta, parseSort } from "src/lib/http/pagination";
 import { COMPANY_REF_SELECT } from "src/modules/operating-companies/company-ref";
 import {
   assertFieldUnchanged,
@@ -27,9 +27,15 @@ import {
   vehicleDisplayName,
 } from "src/modules/vehicles/vehicles.mapper";
 import { loadCurrentRentalsByVehicleIds } from "src/modules/contracts/current-rental";
+import { loadPrePaymentFollowUpsByVehicleIds } from "src/modules/contracts/pre-payment-follow-up";
+import { ACTIVE_MAINTENANCE_STATUSES } from "src/modules/maintenance/maintenance.constants";
+import {
+  resolveFleetAttentionTier,
+  sortFleetVehicleIds,
+  type FleetSortRow,
+} from "src/modules/vehicles/vehicle-fleet-sort";
 import { vehicleHasBlockingContract } from "src/modules/contracts/vehicle-rental-guard";
 import { assertVehicleOperationalStatusAllowedWithActiveMaintenance } from "src/modules/maintenance/maintenance-vehicle-guard";
-import { buildVehicleListOrderBy } from "src/modules/vehicles/vehicles-sort";
 import type {
   CreateVehicleSchema,
   FleetVehicleTypeOption,
@@ -127,7 +133,16 @@ function toVehiclePublic(row: VehicleCardRow): VehiclePublic {
 function toVehicleCard(
   row: VehicleCardRow,
   currentRental: VehicleCard["currentRental"],
+  prePaymentFollowUps: VehicleCard["prePaymentFollowUps"],
 ): VehicleCard {
+  const fleetAttentionTier = resolveFleetAttentionTier(
+    {
+      operationalStatus: row.operationalStatus,
+      isActive: row.isActive,
+    },
+    currentRental,
+    prePaymentFollowUps,
+  );
   return {
     ...toVehiclePublic(row),
     displayName: vehicleDisplayName({
@@ -141,22 +156,49 @@ function toVehicleCard(
     currentRental,
     reservation: deriveVehicleReservation(currentRental),
     isBookable: isVehicleBookable(row.operationalStatus, row.isActive, currentRental),
+    fleetAttentionTier,
+    prePaymentFollowUps,
   };
 }
 
 function toVehicleDetail(
   row: VehicleCardRow,
   currentRental: VehicleCard["currentRental"],
+  prePaymentFollowUps: VehicleCard["prePaymentFollowUps"],
+  activeMaintenanceOrder: VehicleDetail["activeMaintenanceOrder"],
 ): VehicleDetail {
-  const card = toVehicleCard(row, currentRental);
+  const card = toVehicleCard(row, currentRental, prePaymentFollowUps);
   return {
     ...card,
     gallery: row.photos.map((p) => toVehicleImage(row.id, p)),
+    activeMaintenanceOrder,
   };
 }
 
 export function createVehiclesService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
+
+  async function loadActiveMaintenanceOrderForVehicle(
+    vehicleId: number,
+  ): Promise<VehicleDetail["activeMaintenanceOrder"]> {
+    const row = await prisma.maintenanceOrder.findFirst({
+      where: {
+        vehicleId,
+        status: { in: ACTIVE_MAINTENANCE_STATUSES },
+      },
+      select: { id: true, status: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!row) return null;
+    if (
+      row.status !== "SCHEDULED" &&
+      row.status !== "IN_SERVICE" &&
+      row.status !== "READY_FOR_PICKUP"
+    ) {
+      return null;
+    }
+    return { id: row.id, status: row.status };
+  }
 
   async function loadOrThrow(id: number) {
     const vehicle = await prisma.vehicle.findUnique({
@@ -268,30 +310,61 @@ export function createVehiclesService(fastify: FastifyInstance) {
       field: "createdAt",
       direction: "desc",
     });
-    const orderBy = buildVehicleListOrderBy(field, direction);
-    return paginate({
-      page: query.page,
-      pageSize: query.pageSize,
-      count: () => prisma.vehicle.count({ where }),
-      findMany: async (skip, take) => {
-        const rows = await prisma.vehicle.findMany({
-          where,
-          include: VEHICLE_CARD_INCLUDE,
-          orderBy,
-          skip,
-          take,
-        });
-        const rentals = await loadCurrentRentalsByVehicleIds(
-          prisma,
-          rows.map((row) => row.id),
-          {
-            onDuplicate: (info) =>
-              fastify.log.error(info, "multiple blocking contracts for vehicle"),
-          },
-        );
-        return rows.map((row) => toVehicleCard(row, rentals.get(row.id) ?? null));
+    const sortRows = await prisma.vehicle.findMany({
+      where,
+      select: {
+        id: true,
+        createdAt: true,
+        dailyRate: true,
+        monthlyRate: true,
+        modelYear: true,
+        plateNumber: true,
+        vin: true,
+        operationalStatus: true,
+        isActive: true,
       },
     });
+
+    const allIds = sortRows.map((row) => row.id);
+    const [rentals, followUps] = await Promise.all([
+      loadCurrentRentalsByVehicleIds(prisma, allIds, {
+        onDuplicate: (info) =>
+          fastify.log.error(info, "multiple blocking contracts for vehicle"),
+      }),
+      loadPrePaymentFollowUpsByVehicleIds(prisma, allIds),
+    ]);
+
+    const sortedIds = sortFleetVehicleIds(
+      sortRows as FleetSortRow[],
+      rentals,
+      followUps,
+      field,
+      direction,
+    );
+
+    const total = sortedIds.length;
+    const skip = (query.page - 1) * query.pageSize;
+    const pageIds = sortedIds.slice(skip, skip + query.pageSize);
+
+    if (pageIds.length === 0) {
+      return { data: [], meta: buildPageMeta(query.page, query.pageSize, total) };
+    }
+
+    const rows = await prisma.vehicle.findMany({
+      where: { id: { in: pageIds } },
+      include: VEHICLE_CARD_INCLUDE,
+    });
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    const orderedRows = pageIds
+      .map((id) => rowById.get(id))
+      .filter((row): row is VehicleCardRow => row != null);
+
+    return {
+      data: orderedRows.map((row) =>
+        toVehicleCard(row, rentals.get(row.id) ?? null, followUps.get(row.id) ?? []),
+      ),
+      meta: buildPageMeta(query.page, query.pageSize, total),
+    };
   }
 
   async function listFilterOptions(): Promise<FleetVehicleTypeOption[]> {
@@ -316,11 +389,20 @@ export function createVehiclesService(fastify: FastifyInstance) {
 
   async function get(id: number): Promise<VehicleDetail> {
     const row = await loadOrThrow(id);
-    const rentals = await loadCurrentRentalsByVehicleIds(prisma, [id], {
-      onDuplicate: (info) =>
-        fastify.log.error(info, "multiple blocking contracts for vehicle"),
-    });
-    return toVehicleDetail(row, rentals.get(id) ?? null);
+    const [rentals, followUps, activeMaintenanceOrder] = await Promise.all([
+      loadCurrentRentalsByVehicleIds(prisma, [id], {
+        onDuplicate: (info) =>
+          fastify.log.error(info, "multiple blocking contracts for vehicle"),
+      }),
+      loadPrePaymentFollowUpsByVehicleIds(prisma, [id]),
+      loadActiveMaintenanceOrderForVehicle(id),
+    ]);
+    return toVehicleDetail(
+      row,
+      rentals.get(id) ?? null,
+      followUps.get(id) ?? [],
+      activeMaintenanceOrder,
+    );
   }
 
   async function create(

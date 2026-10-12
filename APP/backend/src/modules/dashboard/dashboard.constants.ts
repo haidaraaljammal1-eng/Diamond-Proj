@@ -21,4 +21,5 @@ export const READY_FOR_DELIVERY_STATUS: ContractStatus = "PAID";
 
 /** Consecutive calendar days in the business timezone, including weekends. */
 export const DASHBOARD_WEEK_DAYS = 7;
-export const DASHBOARD_RECENT_CONTRACTS_LIMIT = 5;
+/** Upper bound for today's contract list — UI scrolls; rows are not truncated for layout. */
+export const DASHBOARD_TODAY_CONTRACTS_LIMIT = 500;

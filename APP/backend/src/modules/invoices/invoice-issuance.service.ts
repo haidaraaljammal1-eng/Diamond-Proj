@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { Invoice, OperatingCompany, Prisma } from "@prisma/client";
+import type { ContractStatus, Invoice, OperatingCompany, Prisma } from "@prisma/client";
 import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { invoiceBrandingForCompany } from "src/modules/invoices/invoice-company-branding";
@@ -20,6 +20,7 @@ import {
   INVOICE_CURRENCY,
   INVOICE_TEMPLATE_VERSION,
   INVOICE_TERMS_NET_30,
+  INVOICE_TERMS_PAID_IN_FULL,
   rentalInvoiceOriginKey,
   reconciliationLineInvoiceOriginKey,
   roadLiabilityInvoiceOriginKey,
@@ -69,11 +70,13 @@ async function createIssuedInvoice(
       sourceId: string;
     }>;
     issuedByUserId?: number | null;
+    rentalCollectedInFull?: boolean;
   },
 ): Promise<Invoice> {
   const branding = invoiceBrandingForCompany(input.company);
   const issueDate = toUtcDateOnly(new Date());
-  const dueDate = addCalendarDaysUtc(issueDate, 30);
+  const collectedInFull = input.rentalCollectedInFull === true;
+  const dueDate = collectedInFull ? issueDate : addCalendarDaysUtc(issueDate, 30);
   const totalAmount = input.lines.reduce((sum, line) => sum + line.amount, 0);
   if (totalAmount <= 0) throw invoiceSourceIncompleteError("Invoice total must be positive");
 
@@ -91,7 +94,7 @@ async function createIssuedInvoice(
         customerId: input.customerId,
         issueDate,
         dueDate,
-        termsSnapshot: INVOICE_TERMS_NET_30,
+        termsSnapshot: collectedInFull ? INVOICE_TERMS_PAID_IN_FULL : INVOICE_TERMS_NET_30,
         currency: INVOICE_CURRENCY,
         customerNameSnapshot: input.customerName.trim(),
         contractNumberSnapshot: input.contractNumber,
@@ -103,7 +106,7 @@ async function createIssuedInvoice(
         companyBrandKeySnapshot: branding.brandKey,
         subtotalAmount: totalAmount,
         totalAmount,
-        balanceDueSnapshot: totalAmount,
+        balanceDueSnapshot: collectedInFull ? 0 : totalAmount,
         templateVersion: INVOICE_TEMPLATE_VERSION,
         originEventKey: input.originEventKey,
         issuedByUserId: input.issuedByUserId ?? null,
@@ -144,6 +147,38 @@ function requireCustomerName(name: string | null | undefined): string {
   return trimmed;
 }
 
+const RENTAL_INVOICE_ELIGIBLE_STATUSES: ContractStatus[] = [
+  "PAID",
+  "ACTIVE",
+  "RETOUT",
+  "REVIEW",
+  "CLOSED",
+];
+
+/** Guard for RENTAL invoice issuance — exported for unit tests. */
+export async function assertRentalInvoicePaymentConfirmed(
+  tx: Tx,
+  contract: { id: string; status: ContractStatus; agreedAmount: number },
+): Promise<void> {
+  if (!RENTAL_INVOICE_ELIGIBLE_STATUSES.includes(contract.status)) {
+    throw invoiceSourceIncompleteError("Rental invoice requires a paid contract");
+  }
+  const payment = await tx.contractPayment.findFirst({
+    where: {
+      contractId: contract.id,
+      purpose: "RENTAL",
+      status: "CONFIRMED",
+    },
+    orderBy: { confirmedAt: "desc" },
+  });
+  if (!payment) {
+    throw invoiceSourceIncompleteError("Confirmed RENTAL payment is required before issuing invoice");
+  }
+  if (payment.amount !== contract.agreedAmount) {
+    throw invoiceSourceIncompleteError("Confirmed payment amount does not match contract agreed amount");
+  }
+}
+
 function vehicleLabel(vehicle: { vehicleName: string | null; plateNumber: string | null }): {
   vehicleName: string;
   plateNumber: string;
@@ -172,6 +207,7 @@ export function createInvoiceIssuanceService(fastify: FastifyInstance) {
         if (!contract.customerId || !contract.customer) {
           throw invoiceSourceIncompleteError("Contract customer is required for rental invoice");
         }
+        await assertRentalInvoicePaymentConfirmed(tx, contract);
 
         const { vehicleName, plateNumber } = vehicleLabel(contract.vehicle);
         const branding = invoiceBrandingForCompany(contract.company);
@@ -200,6 +236,7 @@ export function createInvoiceIssuanceService(fastify: FastifyInstance) {
           plateNumber,
           company: contract.company,
           issuedByUserId,
+          rentalCollectedInFull: true,
           lines: [
             {
               lineType: "RENTAL",

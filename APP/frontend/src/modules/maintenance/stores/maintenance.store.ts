@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
+import { requestDashboardRefresh } from "@/modules/dashboard/utils/request-dashboard-refresh";
 import { useVehiclesStore } from "@/modules/vehicles/stores/vehicles.store";
 import {
   cancelMaintenance as cancelMaintenanceRequest,
@@ -284,6 +285,7 @@ export const useMaintenanceStore = create<MaintenanceState>((set, get) => {
 
   async function refreshAfterMutation(): Promise<void> {
     await Promise.all([refreshAll(), useVehiclesStore.getState().refresh()]);
+    requestDashboardRefresh();
   }
 
   return {

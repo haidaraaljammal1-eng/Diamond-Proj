@@ -143,6 +143,9 @@
     "quickAccess": "Quick Access",
     "loading": "Loading dashboard…",
     "kpi": {
+      "rentedCars": "Rented Cars",
+      "availableCars": "Available Cars",
+      "rentedToday": "Rented Today",
       "activeRentals": "Active Rentals",
       "activeRentalsNote": "Currently with customers",
       "fleet": "Fleet",
@@ -151,6 +154,16 @@
       "pendingLinksNote": "Not completed by the customer yet",
       "deliveriesToday": "Deliveries Today",
       "deliveriesTodayNote": "{count} ready to hand over"
+    },
+    "todayContracts": {
+      "title": "Today's Contracts",
+      "empty": "No contracts created today"
+    },
+    "fleetRentedPercent": {
+      "title": "Rented Cars",
+      "currentLabel": "Currently Rented",
+      "rentedLegend": "Rented {percent}%",
+      "notRentedLegend": "Not rented {percent}%"
     },
     "quick": {
       "carsMeta": "Fleet · Generate link",
@@ -535,6 +548,26 @@
     "dailyRateSuffix": "AED/day",
     "monthlyRateSuffix": "monthly",
     "priceNote": "Default rate · non-binding · final price confirmed at booking",
+    "rateNotSet": "Not set",
+    "fleetPrimary": {
+      "available": "Available",
+      "deliverVehicle": "Deliver Vehicle",
+      "rented": "Rented",
+      "urgentFollowUp": "Urgent Follow-up",
+      "maintenance": "Maintenance"
+    },
+    "prioritySection": {
+      "title": "Requires Attention"
+    },
+    "followUpPicker": {
+      "title": "Pre-payment follow-up",
+      "description": "Select the contract that needs staff follow-up for {name}.",
+      "status": {
+        "awaiting": "Awaiting",
+        "form": "Customer form",
+        "signed": "Signed · unpaid"
+      }
+    },
     "statusAvailable": "Available",
     "statusRented": "Rented",
     "statusService": "Service",
@@ -623,6 +656,34 @@
       "filteredDescription": "No vehicles match this filter."
     },
     "detail": {
+      "scheduledReturn": "Scheduled return",
+      "returnDue": "The contractual return time has been reached. Use Return Now or the contract return workflow when the customer is ready.",
+      "returnNow": "Return Now",
+      "returnNowScheduled": "Scheduled return: {when}",
+      "returnNowNotice": "This starts an early return. The vehicle stays rented until Car-In evidence is completed.",
+      "returnNowFailed": "Return could not be started. Check permissions and contract state.",
+      "continueCarIn": "Continue Car-In",
+      "sendToMaintenance": "Send to Maintenance",
+      "viewMaintenance": "View Maintenance",
+      "cancelRentalRequest": "Cancel Rental Request",
+      "deleteRentalRequestWarningTitle": "Warning — Delete Rental Request",
+      "deleteRentalRequestWarningBody1": "Are you sure you want to cancel the rental request for this vehicle?",
+      "deleteRentalRequestWarningBody2": "Confirming deletion will remove the rental request and its related data from the operational system. You will not be able to restore the request from within the system.",
+      "deleteRentalRequestGoBack": "Go Back",
+      "deleteRentalRequestConfirm": "Confirm Deletion",
+      "deleteRentalRequestVehicleLabel": "Vehicle",
+      "deleteRentalRequestContractLabel": "Contract",
+      "deleteRentalRequestCustomerLabel": "Customer",
+      "deleteRentalRequestFailed": "The rental request could not be deleted. Check permissions, payment state, linked invoices, and contract status.",
+      "releaseFromMaintenance": "Release from Maintenance",
+      "maintenanceEnterNotice": "The vehicle will become unavailable for rental while in maintenance.",
+      "maintenanceManualReleaseNotice": "The vehicle will return to available fleet status.",
+      "maintenanceCompleteNotice": "This will complete the active maintenance order and record any configured actual cost.",
+      "maintenanceEnterFailed": "Could not send the vehicle to maintenance.",
+      "maintenanceReleaseFailed": "Could not release the vehicle from maintenance.",
+      "maintenanceOrderBlocksRelease": "An active maintenance order must be completed through Maintenance Center before this vehicle can be released.",
+      "cancelConfirm": "Cancel",
+      "confirmAction": "Confirm",
       "close": "Close",
       "loading": "Loading vehicle details…",
       "error": "Vehicle details could not be loaded.",

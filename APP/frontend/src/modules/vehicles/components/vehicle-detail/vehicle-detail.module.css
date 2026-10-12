@@ -242,6 +242,17 @@
   color: var(--diamond-warn);
 }
 
+.returnDue {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7c2d12;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
 .actions {
   display: flex;
   gap: 8px;

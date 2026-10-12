@@ -27,6 +27,8 @@ if (!INTEGRATION_ENABLED) {
     let customerId = 0;
     let uniqueCompanyId = 0;
     let eliteCompanyId = 0;
+    let uniqueContractId = "";
+    let eliteContractId = "";
     const run = Date.now().toString(36).toUpperCase();
     const admin = { email: `dash-admin-${run}@example.test`, password: "dash-admin-pass-123" };
     const auth = () => ({ authorization: `Bearer ${token}` });
@@ -129,8 +131,8 @@ if (!INTEGRATION_ENABLED) {
           contractNumber: string;
           company: { code: string; displayName: string; accentColor: string };
         }> | null;
-        recentContracts: Array<{
-          contractNumber: string;
+        todayContracts: Array<{
+          id: string;
           company: { code: string; displayName: string; accentColor: string };
         }> | null;
       };
@@ -159,18 +161,22 @@ if (!INTEGRATION_ENABLED) {
       const businessToday = resolveBusinessDay(new Date(), env.BUSINESS_TIMEZONE_OFFSET_MINUTES);
       const today = new Date(businessToday.from.getTime() + 60 * 60 * 1000);
 
-      await createContract({
-        number: `DSH-U-${run}`,
-        companyId: uniqueCompanyId,
-        vehicleId: await createVehicle(uniqueCompanyId, "U"),
-        startAt: today,
-      });
-      await createContract({
-        number: `DSH-E-${run}`,
-        companyId: eliteCompanyId,
-        vehicleId: await createVehicle(eliteCompanyId, "E"),
-        startAt: today,
-      });
+      uniqueContractId = (
+        await createContract({
+          number: `DSH-U-${run}`,
+          companyId: uniqueCompanyId,
+          vehicleId: await createVehicle(uniqueCompanyId, "U"),
+          startAt: today,
+        })
+      ).id;
+      eliteContractId = (
+        await createContract({
+          number: `DSH-E-${run}`,
+          companyId: eliteCompanyId,
+          vehicleId: await createVehicle(eliteCompanyId, "E"),
+          startAt: today,
+        })
+      ).id;
     });
 
     after(async () => {
@@ -191,12 +197,12 @@ if (!INTEGRATION_ENABLED) {
       assert.ok(elite!.company.accentColor.startsWith("#"));
     });
 
-    test("recent contracts carry the Contract company", async () => {
+    test("today contracts carry the Contract company", async () => {
       const data = await overview();
-      assert.ok(data.recentContracts, "recentContracts was not readable");
-      const unique = data.recentContracts!.find((row) => row.contractNumber === `DSH-U-${run}`);
-      const elite = data.recentContracts!.find((row) => row.contractNumber === `DSH-E-${run}`);
-      assert.ok(unique && elite, "the seeded contracts are not in the recent list");
+      assert.ok(data.todayContracts, "todayContracts was not readable");
+      const unique = data.todayContracts!.find((row) => row.id === uniqueContractId);
+      const elite = data.todayContracts!.find((row) => row.id === eliteContractId);
+      assert.ok(unique && elite, "the seeded contracts are not in today's list");
       assert.equal(unique!.company.code, "UNIQUE");
       assert.equal(elite!.company.code, "ELITE");
     });
@@ -206,15 +212,17 @@ if (!INTEGRATION_ENABLED) {
       // companies, so this row is built directly and only proves the read path takes
       // the Contract, never the Vehicle.
       const uniqueVehicleId = await createVehicle(uniqueCompanyId, "X");
-      await createContract({
-        number: `DSH-X-${run}`,
-        companyId: eliteCompanyId,
-        vehicleId: uniqueVehicleId,
-        startAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-      });
+      const crossedId = (
+        await createContract({
+          number: `DSH-X-${run}`,
+          companyId: eliteCompanyId,
+          vehicleId: uniqueVehicleId,
+          startAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        })
+      ).id;
       const data = await overview();
-      const crossed = data.recentContracts!.find((row) => row.contractNumber === `DSH-X-${run}`);
-      assert.ok(crossed, "the crossed contract is missing from the recent list");
+      const crossed = data.todayContracts!.find((row) => row.id === crossedId);
+      assert.ok(crossed, "the crossed contract is missing from today's list");
       assert.equal(crossed!.company.code, "ELITE");
     });
 

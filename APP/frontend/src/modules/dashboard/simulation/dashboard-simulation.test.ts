@@ -38,6 +38,7 @@ const realOverview = (partial: Partial<DashboardOverviewDto> = {}): DashboardOve
     fleetRented: 3,
     fleetAvailable: 5,
     fleetService: 1,
+    rentedToday: 0,
     pendingLinks: 0,
     deliveriesToday: 0,
     readyForDelivery: 0,
@@ -63,7 +64,7 @@ const realOverview = (partial: Partial<DashboardOverviewDto> = {}): DashboardOve
   ],
   fleetStatus: { total: 9, available: 5, rented: 3, service: 1 },
   todayDeliveries: [],
-  recentContracts: [],
+  todayContracts: [],
   gpsOnline: 0,
   ...partial,
 });
@@ -112,7 +113,7 @@ describe("dashboard simulation overlay", () => {
     assert.equal(fixture.kpis.activeRentals, 8);
     assert.equal(fixture.kpis.fleetTotal, 20);
     assert.equal(fixture.todayDeliveries?.length, 4);
-    assert.equal(fixture.recentContracts?.length, 5);
+    assert.equal(fixture.todayContracts?.length, 3);
     assert.equal(fixture.fleetStatus?.available, 10);
     assert.equal(
       (fixture.fleetStatus?.available ?? 0) +
@@ -121,7 +122,7 @@ describe("dashboard simulation overlay", () => {
       fixture.fleetStatus?.total,
     );
     assert.ok(fixture.todayDeliveries?.every((row) => isDashboardSimulationId(row.id)));
-    assert.ok(fixture.recentContracts?.every((row) => isDashboardSimulationId(row.id)));
+    assert.ok(fixture.todayContracts?.every((row) => isDashboardSimulationId(row.id)));
     assert.equal(DASHBOARD_SIMULATION_ID_PREFIX, "dash-sim-");
   });
 

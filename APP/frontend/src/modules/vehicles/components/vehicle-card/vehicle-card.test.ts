@@ -28,6 +28,8 @@ function fixture(partial: Partial<VehicleCardDto> & Pick<VehicleCardDto, "operat
     model: { id: 1, code: "RR", name: "Range Rover" },
     primaryImage: null,
     currentRental: null,
+    fleetAttentionTier: null,
+    prePaymentFollowUps: [],
     ...partial,
   };
 }

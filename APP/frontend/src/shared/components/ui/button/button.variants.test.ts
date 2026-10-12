@@ -58,14 +58,20 @@ describe("Vehicles button hierarchy", () => {
     assert.match(filters, /<Button[^>]*variant="secondary"/);
     assert.doesNotMatch(filters, /<Button[^>]*variant="ghost"/);
     assert.equal((card.match(/variant="secondary"/g) ?? []).length, 3);
-    assert.match(card, /variant="primary"[\s\S]*primaryAction/);
+    assert.match(card, /onPrimaryAction/);
+    assert.match(card, /className=\{primaryClass\}/);
+    assert.doesNotMatch(card, /<Button[^>]*variant="primary"[\s\S]*onPrimaryAction/);
   });
 
-  it("uses secondaryStrong for Vehicle Detail photo actions", () => {
+  it("uses secondaryStrong for Vehicle Detail photos and return actions", () => {
     const detail = readSource(
       "modules/vehicles/components/vehicle-detail/vehicle-detail.tsx",
     );
-    assert.equal((detail.match(/variant="secondaryStrong"/g) ?? []).length, 2);
+    assert.equal(
+      (detail.match(/VehiclePhotoButton[\s\S]*?variant="secondaryStrong"/g) ?? []).length,
+      2,
+    );
+    assert.equal((detail.match(/variant="secondaryStrong"/g) ?? []).length, 4);
     assert.match(detail, /iconName="mdi:image-edit-outline"/);
     assert.doesNotMatch(detail, /variant="primary"[\s\S]*replacePhoto/);
   });

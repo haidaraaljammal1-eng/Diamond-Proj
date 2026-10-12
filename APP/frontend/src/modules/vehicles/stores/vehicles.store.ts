@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
+import { requestDashboardRefresh } from "@/modules/dashboard/utils/request-dashboard-refresh";
 import {
   createVehicle as createVehicleRequest,
   deactivateVehicle as deactivateVehicleRequest,
@@ -96,13 +97,19 @@ interface VehiclesState {
 
 let listInFlight: Promise<void> | null = null;
 let detailInFlight: Promise<void> | null = null;
+let listRequestSeq = 0;
 
 export const useVehiclesStore = create<VehiclesState>((set, get) => {
   async function fetchVehicles(): Promise<void> {
     const { query } = get();
+    const requestSeq = ++listRequestSeq;
+    const companyId = query.companyId;
     set({ status: "loading", error: null });
     try {
       const result = await getVehicles(query);
+      if (requestSeq !== listRequestSeq || get().query.companyId !== companyId) {
+        return;
+      }
       const correctedPage = resolveFleetPageAfterFetch(
         query.page,
         result.meta,
@@ -114,6 +121,9 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
           query: { ...state.query, page: correctedPage },
         }));
         const corrected = await getVehicles(get().query);
+        if (requestSeq !== listRequestSeq || get().query.companyId !== companyId) {
+          return;
+        }
         set({
           vehicles: corrected.data,
           meta: corrected.meta,
@@ -130,6 +140,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         error: null,
       });
     } catch (error) {
+      if (requestSeq !== listRequestSeq) return;
       set({ status: "error", error: normalizeApiError(error) });
     }
   }
@@ -185,7 +196,8 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     setQuery(partial) {
       set((state) => ({
         query: { ...state.query, ...partial },
-        status: "idle",
+        status: partial.companyId !== undefined ? "loading" : "idle",
+        ...(partial.companyId !== undefined ? { vehicles: [], meta: null } : {}),
       }));
       void refreshList();
     },
@@ -247,6 +259,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
           }
         }
         await Promise.all([refreshList(), refreshFleetTypeOptions()]);
+        requestDashboardRefresh();
         set({ isCreating: false });
         return photoUploadFailed
           ? { ok: true, photoUploadFailed: true }
@@ -288,6 +301,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         }
         await refreshList();
         await refreshFleetTypeOptions();
+        requestDashboardRefresh();
         set({ isDeactivating: false });
         return true;
       } catch (error) {

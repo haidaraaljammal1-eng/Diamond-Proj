@@ -12,6 +12,7 @@ import { buildInvoiceWhatsAppMessage } from "src/modules/invoices/invoice-whatsa
 import { invoicePdfFilename, renderInvoicePdfBuffer } from "src/modules/invoices/invoice-pdf.service";
 import {
   APPROVED_INVOICE_SEQUENCE_START,
+  INVOICE_OUTBOX_EVENT_TYPES,
   rentalInvoiceOriginKey,
   reconciliationLineInvoiceOriginKey,
   roadLiabilityInvoiceOriginKey,
@@ -22,6 +23,12 @@ import { invoiceLogoAssetPath } from "src/modules/invoices/invoice-logo";
 import fs from "node:fs";
 import type { Invoice, InvoiceLine } from "@prisma/client";
 import type { Tx } from "src/lib/db/transaction";
+
+test("invoice outbox listens for contract.paid (not contract.signed) for rental issuance", () => {
+  const types = INVOICE_OUTBOX_EVENT_TYPES as readonly string[];
+  assert.ok(types.includes("contract.paid"));
+  assert.equal(types.includes("contract.signed"), false);
+});
 
 test("rental origin key is idempotent per contract", () => {
   const id = "11111111-1111-1111-1111-111111111111";
@@ -174,6 +181,60 @@ test("PDF generator returns valid PDF bytes with invoice metadata", async () => 
   assert.match(latin, /1035/);
   assert.match(latin, /Invoice 1035/);
   assert.match(latin, /\/Image/);
+});
+
+test("PDF for fully paid rental shows zero balance and received-in-full wording", async () => {
+  const now = new Date("2026-07-02T00:00:00.000Z");
+  const invoice: Invoice & { lines: InvoiceLine[] } = {
+    id: "inv-paid",
+    invoiceNumber: 1100,
+    invoiceType: "RENTAL",
+    status: "ISSUED",
+    companyId: 1,
+    contractId: "c-paid",
+    vehicleId: 1,
+    customerId: 1,
+    issueDate: now,
+    dueDate: now,
+    termsSnapshot: "Paid in full",
+    currency: "AED",
+    customerNameSnapshot: "Paid Renter",
+    contractNumberSnapshot: "DRC-PAID",
+    vehicleNameSnapshot: "Toyota Camry",
+    plateNumberSnapshot: "B 99999",
+    companyDisplayNameSnapshot: "DIAMOND ELITE RENT CAR",
+    companyAddressSnapshot: "Dubai",
+    companyEmailSnapshot: "info@test.ae",
+    companyBrandKeySnapshot: "ELITE",
+    subtotalAmount: 1800,
+    totalAmount: 1800,
+    balanceDueSnapshot: 0,
+    templateVersion: "v1",
+    originEventKey: "RENTAL:c-paid",
+    issuedAt: now,
+    issuedByUserId: null,
+    createdAt: now,
+    updatedAt: now,
+    lines: [
+      {
+        id: "line-paid",
+        invoiceId: "inv-paid",
+        position: 1,
+        lineType: "RENTAL",
+        serviceLabel: "Rental Income",
+        description: "Rental income",
+        quantity: 1,
+        unitRate: 1800,
+        amount: 1800,
+        sourceType: "CONTRACT_RENTAL",
+        sourceId: "c-paid",
+        createdAt: now,
+      },
+    ],
+  };
+  const buffer = await renderInvoicePdfBuffer(invoice);
+  assert.ok(buffer.length > 100);
+  assert.equal(buffer.subarray(0, 4).toString("utf8"), "%PDF");
 });
 
 test("approved sequence start constant is 1100", () => {

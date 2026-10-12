@@ -15,6 +15,7 @@ export interface DashboardKpisDto {
   fleetRented: number | null;
   fleetAvailable: number | null;
   fleetService: number | null;
+  rentedToday: number | null;
   pendingLinks: number | null;
   deliveriesToday: number | null;
   readyForDelivery: number | null;
@@ -67,14 +68,12 @@ export interface TodayDeliveryDto {
   company?: DashboardCompanyDto | null;
 }
 
-export interface RecentContractDto {
+export interface TodayContractDto {
   id: string;
-  contractNumber: string;
-  customerName: string | null;
   vehicleName: string;
-  employeeName: string | null;
+  createdAt: string;
   status: ContractStatus;
-  company?: DashboardCompanyDto | null;
+  company: DashboardCompanyDto;
 }
 
 export interface DashboardOverviewDto {
@@ -86,7 +85,7 @@ export interface DashboardOverviewDto {
   weeklyRentalActivity: WeeklyRentalActivityPointDto[] | null;
   fleetStatus: FleetStatusDto | null;
   todayDeliveries: TodayDeliveryDto[] | null;
-  recentContracts: RecentContractDto[] | null;
+  todayContracts: TodayContractDto[] | null;
   gpsOnline: number | null;
 }
 

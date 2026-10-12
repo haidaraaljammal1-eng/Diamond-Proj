@@ -56,13 +56,13 @@ export function hasAnyDashboardSection(overview: DashboardOverviewDto | null): b
   if (!overview) return false;
   const k = overview.kpis;
   return (
-    k.activeRentals != null ||
-    k.fleetTotal != null ||
-    k.pendingLinks != null ||
+    k.fleetRented != null ||
+    k.fleetAvailable != null ||
+    k.rentedToday != null ||
     overview.weeklyFinance != null ||
     overview.weeklyRentalActivity != null ||
     overview.fleetStatus != null ||
     overview.todayDeliveries != null ||
-    overview.recentContracts != null
+    overview.todayContracts != null
   );
 }

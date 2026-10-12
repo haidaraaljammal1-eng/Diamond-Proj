@@ -1,0 +1,75 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, 520px);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 4px;
+  padding-inline-end: 2px;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  /* Physical left status badge in both ar/en; body text keeps its own dir. */
+  direction: ltr;
+  align-items: center;
+  gap: 10px;
+  margin: 7px 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 161, 92, 0.14);
+  border-radius: 4px;
+  background: rgba(201, 161, 92, 0.03);
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background 0.22s,
+    border-color 0.22s;
+}
+
+.row:hover {
+  background: rgba(201, 161, 92, 0.05);
+  border-color: rgba(201, 161, 92, 0.26);
+}
+
+.statusSlot {
+  flex: none;
+  display: inline-flex;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vehicle {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--diamond-ivory);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--diamond-dim);
+}
+
+.companyCode {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}

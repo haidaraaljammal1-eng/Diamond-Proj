@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { startDashboardRevalidation } from "../utils/dashboard-revalidation";
 import { useAuth, usePermissions } from "@/modules/auth";
 import { CONTRACTS_MANAGE_PERMISSION, CONTRACTS_READ_PERMISSION } from "@/modules/contracts/contracts.permissions";
 import { VEHICLES_READ_PERMISSION } from "@/modules/vehicles/vehicles.permissions";
@@ -41,6 +42,17 @@ export function useDashboardOverview() {
   useEffect(() => {
     if (isAllowed) void load();
   }, [isAllowed, companyId, load]);
+
+  useEffect(() => {
+    if (!isAllowed) return;
+    return startDashboardRevalidation(refresh, {
+      window,
+      document,
+      setInterval: window.setInterval.bind(window),
+      clearInterval: window.clearInterval.bind(window),
+      now: () => Date.now(),
+    });
+  }, [isAllowed, refresh]);
 
   return {
     overview,

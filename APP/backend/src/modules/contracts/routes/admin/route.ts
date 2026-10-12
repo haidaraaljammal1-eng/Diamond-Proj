@@ -414,6 +414,68 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
     },
   );
 
+  app.post(
+    "/:id/rental-request/cancel",
+    {
+      schema: {
+        summary: "Permanently delete an eligible pre-payment rental request",
+        operationId: "deletePendingRentalRequest",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_MANAGE],
+        params: ContractIdParam,
+        body: z.object({ vehicleId: z.number().int().positive().optional() }).optional(),
+        response: {
+          200: dataResponse(
+            z.object({
+              contractId: z.string().uuid(),
+              vehicleId: z.number().int(),
+              contractNumber: z.string(),
+              deleted: z.literal(true),
+            }),
+          ),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const body = request.body ?? {};
+      const data = await contracts.deletePendingRentalRequest(request.params.id, actor.id, {
+        expectedVehicleId: body.vehicleId,
+      });
+      request.setAudit({
+        action: "contracts.rental_request_delete",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data: { ...data, deleted: true as const } };
+    },
+  );
+
+  app.post(
+    "/:id/return/start",
+    {
+      schema: {
+        summary: "Staff return intent — ACTIVE to RETOUT (early or scheduled return)",
+        operationId: "startContractReturnStaff",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RETURN],
+        params: ContractIdParam,
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.confirmReturnStaff(request.params.id, actor.id);
+      request.setAudit({
+        action: "contracts.return_start",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
   app.get(
     "/:id/car-in",
     {

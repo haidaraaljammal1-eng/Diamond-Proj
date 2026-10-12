@@ -1,0 +1,36 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-height: min(70vh, 520px);
+}
+
+.shell {
+  position: relative;
+  flex: 1;
+  min-height: 200px;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.image {
+  object-fit: cover;
+  /* Panoramic asset: keep cabin/showroom focal band centered on wide layouts. */
+  object-position: 44% center;
+}
+
+@media (max-width: 1080px) {
+  .shell {
+    min-height: min(46vw, 320px);
+  }
+
+  .image {
+    object-position: 48% center;
+  }
+}
+
+@media (max-width: 560px) {
+  .image {
+    object-position: 38% center;
+  }
+}

@@ -51,12 +51,20 @@ function renderV1(doc: InstanceType<typeof PDFDocument>, invoice: InvoicePdfSnap
   doc.font(REPORT_FONT_BOLD).text(invoice.customerNameSnapshot, MARGIN, y + 14);
 
   const metaX = MARGIN + contentWidth * 0.55;
-  const metaRows: Array<[string, string]> = [
-    ["INVOICE", String(invoice.invoiceNumber)],
-    ["DATE", formatInvoiceDateDdMmYyyy(invoice.issueDate)],
-    ["TERMS", invoice.termsSnapshot],
-    ["DUE DATE", formatInvoiceDateDdMmYyyy(invoice.dueDate)],
-  ];
+  const paidInFull = invoice.balanceDueSnapshot === 0;
+  const metaRows: Array<[string, string]> = paidInFull
+    ? [
+        ["INVOICE", String(invoice.invoiceNumber)],
+        ["DATE", formatInvoiceDateDdMmYyyy(invoice.issueDate)],
+        ["PAYMENT", "Received in full"],
+        ["TERMS", invoice.termsSnapshot],
+      ]
+    : [
+        ["INVOICE", String(invoice.invoiceNumber)],
+        ["DATE", formatInvoiceDateDdMmYyyy(invoice.issueDate)],
+        ["TERMS", invoice.termsSnapshot],
+        ["DUE DATE", formatInvoiceDateDdMmYyyy(invoice.dueDate)],
+      ];
   let metaY = y;
   for (const [label, value] of metaRows) {
     doc.font(REPORT_FONT_BOLD).text(label, metaX, metaY, { width: 80 });
@@ -101,7 +109,7 @@ function renderV1(doc: InstanceType<typeof PDFDocument>, invoice: InvoicePdfSnap
   }
 
   y = Math.max(y + 24, PAGE_HEIGHT - MARGIN - 60);
-  doc.font(REPORT_FONT_BOLD).fontSize(11).text("BALANCE DUE", MARGIN, y);
+  doc.font(REPORT_FONT_BOLD).fontSize(11).text(paidInFull ? "BALANCE DUE" : "BALANCE DUE", MARGIN, y);
   doc.font(REPORT_FONT_BOLD).fontSize(12).text(formatInvoiceAed(invoice.balanceDueSnapshot), MARGIN, y, {
     width: contentWidth,
     align: "right",

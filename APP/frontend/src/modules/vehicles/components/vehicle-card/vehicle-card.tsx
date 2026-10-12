@@ -7,14 +7,14 @@ import { Card } from "@/shared/components/ui/card";
 import { Icon } from "@/shared/components/ui/icon";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import type { VehicleCardDto } from "../../types/vehicle.types";
-import {
-  shouldShowCurrentRental,
-  shouldShowRentalTimer,
-} from "../../utils/rental-timer";
+import { shouldShowCurrentRental } from "../../utils/rental-timer";
 import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
-import { VehicleImage } from "../vehicle-image/vehicle-image";
+import { getFleetPrimaryPresentation } from "../../utils/fleet-primary-presentation";
+import {
+  resolveVehicleColorCss,
+  vehicleColorSwatchNeedsBorder,
+} from "../../utils/vehicle-color-swatch";
 import { VehicleRentalTimer } from "../vehicle-rental-timer/vehicle-rental-timer";
-import { VehicleStatus } from "../vehicle-status/vehicle-status";
 import styles from "./vehicle-card.module.css";
 
 export interface VehicleCardProps {
@@ -43,36 +43,34 @@ export function VehicleCard({
   const t = useTranslations("Vehicles");
   const format = useFormatter();
   const actions = getVehicleCardActions(vehicle, canManage);
+  const primary = getFleetPrimaryPresentation(vehicle);
   const showRenter = shouldShowCurrentRental(
     vehicle.operationalStatus,
     vehicle.currentRental,
   );
-  const showTimer = shouldShowRentalTimer(
-    vehicle.operationalStatus,
-    vehicle.currentRental,
-  );
+  const showTimer =
+    vehicle.operationalStatus === "rented" &&
+    (vehicle.currentRental?.status === "active" ||
+      vehicle.currentRental?.status === "retout");
 
-  const primaryLabel = actions.showMaintenance
-    ? t("actions.goMaintenanceShort")
-    : actions.showReturnLink
-      ? t("actions.generateReturnLinkShort")
-      : actions.showCarOut
-        ? t("actions.carOutShort")
-        : t("actions.generateLinkSetPriceShort");
+  const missingLabel = t("rateNotSet");
+  const colorCss = resolveVehicleColorCss(vehicle.color);
+  const swatchBorder = vehicleColorSwatchNeedsBorder(colorCss);
 
-  const primaryTitle = actions.showMaintenance
-    ? t("actions.goMaintenance")
-    : actions.showReturnLink
-      ? t("actions.generateReturnLink")
-      : actions.showCarOut
-        ? t("actions.carOut")
-        : t("actions.generateLinkSetPrice");
+  const primaryLabel = t(`fleetPrimary.${primary.labelKey}`);
+  const primaryClass = [
+    styles.primaryControl,
+    primary.labelKey === "available" ? styles.primaryAvailable : "",
+    primary.labelKey === "deliverVehicle" ? styles.primaryDeliver : "",
+    primary.labelKey === "rented" ? styles.primaryRented : "",
+    primary.labelKey === "urgentFollowUp" ? styles.primaryUrgent : "",
+    primary.labelKey === "maintenance" ? styles.primaryMaintenance : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  const showPrimary =
-    actions.showSetRentalPrice ||
-    actions.showReturnLink ||
-    actions.showMaintenance ||
-    actions.showCarOut;
+  const showSecondary =
+    actions.showEditRates || actions.showDelete || actions.showGps;
 
   return (
     <Card
@@ -82,6 +80,7 @@ export function VehicleCard({
       data-testid="vehicle-card"
       data-record-id={String(vehicle.id)}
       data-record-external-id={vehicle.externalId ?? undefined}
+      data-fleet-attention={vehicle.fleetAttentionTier ?? undefined}
       onClick={() => onOpen(vehicle)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -93,83 +92,77 @@ export function VehicleCard({
       role="button"
       aria-label={vehicle.displayName}
     >
-      <div className={styles.photo}>
-        <VehicleImage
-          path={vehicle.primaryImage?.url}
-          alt={vehicle.displayName}
-          className={styles.image}
-        />
-        <VehicleStatus
-          status={vehicle.operationalStatus}
-          currentRentalStatus={vehicle.currentRental?.status ?? null}
-          solid
-          className={styles.status}
-        />
+      <div className={styles.companyCorner}>
+        <CompanyIdentity company={vehicle.company} compact />
       </div>
 
-      <div className={styles.body}>
-        <div className={styles.identityRow}>
-          <h4 className={styles.title}>{vehicle.displayName}</h4>
-          <CompanyIdentity company={vehicle.company} compact />
-        </div>
-        <div className={styles.meta}>
-          {vehicle.modelYear != null ? (
-            <span className={styles.metaItem}>{format.number(vehicle.modelYear)}</span>
-          ) : null}
+      <div className={styles.identityBlock}>
+        <h4 className={styles.vehicleName}>{vehicle.displayName}</h4>
+        <div className={styles.plateWrap}>
           {vehicle.plateNumber ? (
-            <span className={styles.metaItem} dir="ltr">{vehicle.plateNumber}</span>
-          ) : null}
-          {vehicle.color ? <span className={styles.metaItem}>{vehicle.color}</span> : null}
+            <span className={styles.plate} dir="ltr">
+              {vehicle.plateNumber}
+            </span>
+          ) : (
+            <span className={`${styles.plate} ${styles.plateMissing}`}>{missingLabel}</span>
+          )}
         </div>
-        {showRenter ? (
-          <p className={styles.renter}>
-            {t("currentRenter", { name: vehicle.currentRental!.customerName })}
-          </p>
+        {vehicle.color ? (
+          <div className={styles.colorRow}>
+            <span
+              className={`${styles.swatch} ${swatchBorder ? styles.swatchBorder : ""}`}
+              style={colorCss ? { background: colorCss } : undefined}
+              aria-hidden="true"
+            />
+            <span className={styles.colorLabel}>{vehicle.color}</span>
+          </div>
         ) : null}
       </div>
 
+      {showRenter ? (
+        <p className={styles.renter}>
+          {t("currentRenter", { name: vehicle.currentRental!.customerName })}
+        </p>
+      ) : null}
+
       <div className={styles.rate}>
-        <b className={styles.rateValue}>{format.number(vehicle.dailyRate ?? 0)}</b>
-        <span className={styles.rateUnit}>{t("dailyRateSuffix")}</span>
-        <span className={styles.monthly}>
-          {format.number(vehicle.monthlyRate ?? 0)} {t("monthlyRateSuffix")}
+        <div className={styles.ratePrimary}>
+          {vehicle.dailyRate != null ? (
+            <>
+              <b className={styles.rateValue}>{format.number(vehicle.dailyRate)}</b>
+              <span className={styles.rateUnit}>{t("dailyRateSuffix")}</span>
+            </>
+          ) : (
+            <span className={styles.rateMissing}>{missingLabel}</span>
+          )}
+        </div>
+        <span className={styles.rateSecondary}>
+          {vehicle.monthlyRate != null
+            ? `${format.number(vehicle.monthlyRate)} ${t("monthlyRateSuffix")}`
+            : `${missingLabel} · ${t("monthlyRateSuffix")}`}
         </span>
       </div>
 
-      <div className={styles.note}>
-        <span className={styles.dot} aria-hidden="true" />
-        <span>{t("priceNote")}</span>
-      </div>
-
-      {showPrimary || actions.showEditRates || actions.showDelete || actions.showGps ? (
+      {canManage && (primary.labelKey !== "maintenance" || showSecondary) ? (
         <div className={styles.actions}>
-          {showPrimary ? (
-            <Button
+          {primary.labelKey !== "maintenance" ? (
+            <button
               type="button"
-              variant="primary"
-              size="sm"
-              className={styles.primaryAction}
-              title={primaryTitle}
-              aria-label={primaryTitle}
+              className={primaryClass}
+              disabled={primary.disabled}
+              aria-label={primaryLabel}
               onClick={(event) => {
                 stopOpen(event);
                 onPrimaryAction(vehicle);
               }}
             >
-              <Icon
-                name={
-                  actions.showMaintenance
-                    ? "mdi:wrench-outline"
-                    : actions.showReturnLink
-                      ? "mdi:keyboard-return"
-                      : actions.showCarOut
-                        ? "mdi:car-arrow-right"
-                        : "mdi:link-variant"
-                }
-              />
               {primaryLabel}
-            </Button>
-          ) : null}
+            </button>
+          ) : (
+            <span className={primaryClass} aria-disabled="true">
+              {primaryLabel}
+            </span>
+          )}
           {actions.showEditRates ? (
             <Button
               type="button"
@@ -219,10 +212,16 @@ export function VehicleCard({
             </Button>
           ) : null}
         </div>
+      ) : primary.labelKey === "maintenance" ? (
+        <div className={styles.actions}>
+          <span className={primaryClass} aria-disabled="true">
+            {primaryLabel}
+          </span>
+        </div>
       ) : null}
 
-      {showTimer ? (
-        <VehicleRentalTimer endAt={vehicle.currentRental!.endAt} />
+      {showTimer && vehicle.currentRental ? (
+        <VehicleRentalTimer endAt={vehicle.currentRental.endAt} />
       ) : null}
     </Card>
   );

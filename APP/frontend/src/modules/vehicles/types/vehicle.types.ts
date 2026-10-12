@@ -17,9 +17,27 @@ export type VehicleCurrentRentalStatus = "paid" | "active" | "retout";
 
 export interface VehicleCurrentRentalDto {
   contractId: string;
+  contractNumber?: string;
   customerName: string;
   endAt: string;
   status: VehicleCurrentRentalStatus;
+  awaitingHandover?: boolean;
+}
+
+export type FleetAttentionTier = "handover" | "urgent_follow_up";
+
+export interface VehiclePrePaymentFollowUpDto {
+  contractId: string;
+  contractNumber: string;
+  status: "awaiting" | "form" | "signed";
+  customerName: string | null;
+}
+
+export type ActiveMaintenanceOrderStatus = "SCHEDULED" | "IN_SERVICE" | "READY_FOR_PICKUP";
+
+export interface VehicleActiveMaintenanceOrderDto {
+  id: number;
+  status: ActiveMaintenanceOrderStatus;
 }
 
 export interface VehicleModelRefDto {
@@ -57,10 +75,13 @@ export interface VehicleCardDto {
   model: VehicleModelRefDto | null;
   primaryImage: VehicleImageDto | null;
   currentRental: VehicleCurrentRentalDto | null;
+  fleetAttentionTier: FleetAttentionTier | null;
+  prePaymentFollowUps: VehiclePrePaymentFollowUpDto[];
 }
 
 export interface VehicleDetailDto extends VehicleCardDto {
   gallery: VehicleImageDto[];
+  activeMaintenanceOrder: VehicleActiveMaintenanceOrderDto | null;
 }
 
 /** Fleet ordering presets (mapped to the Backend `sort` param). */

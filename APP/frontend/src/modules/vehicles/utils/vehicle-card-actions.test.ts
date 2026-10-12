@@ -73,7 +73,7 @@ describe("getVehicleCardActions", () => {
     assert.equal(actions.showGps, false);
   });
 
-  it("RENTED + active shows return link and GPS only even with manage", () => {
+  it("RENTED + active shows GPS only on the card footer", () => {
     const actions = getVehicleCardActions(
       {
         ...activeRented,
@@ -86,7 +86,7 @@ describe("getVehicleCardActions", () => {
       },
       true,
     );
-    assert.equal(actions.showReturnLink, true);
+    assert.equal(actions.showReturnLink, false);
     assert.equal(actions.showGps, true);
     assert.equal(actions.showSetRentalPrice, false);
     assert.equal(actions.showCarOut, false);
@@ -96,13 +96,13 @@ describe("getVehicleCardActions", () => {
 
   it("RENTED without currentRental still uses rented action matrix", () => {
     const actions = getVehicleCardActions(activeRented, true);
-    assert.equal(actions.showReturnLink, true);
+    assert.equal(actions.showReturnLink, false);
     assert.equal(actions.showEditRates, false);
   });
 
-  it("SERVICE shows maintenance only", () => {
+  it("SERVICE exposes no fleet-card maintenance shortcut", () => {
     const actions = getVehicleCardActions(activeService, true);
-    assert.equal(actions.showMaintenance, true);
+    assert.equal(actions.showMaintenance, false);
     assert.equal(actions.showSetRentalPrice, false);
     assert.equal(actions.showEditRates, false);
     assert.equal(actions.showDelete, false);

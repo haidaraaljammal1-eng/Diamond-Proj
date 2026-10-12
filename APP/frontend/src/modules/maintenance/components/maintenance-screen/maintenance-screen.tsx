@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Icon } from "@/shared/components/ui/icon";
@@ -29,6 +30,9 @@ import styles from "./maintenance-screen.module.css";
 
 export function MaintenanceScreen() {
   const t = useTranslations("Maintenance");
+  const locale = useLocale();
+  const searchParams = useSearchParams();
+  const deepLinkHandled = useRef(false);
   const {
     items,
     meta,
@@ -61,6 +65,7 @@ export function MaintenanceScreen() {
   const { companies, isLoading: companiesLoading } = useOperatingCompanies(isAllowed);
 
   const [addOpen, setAddOpen] = useState(false);
+  const [addInitialVehicleId, setAddInitialVehicleId] = useState<number | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [editTarget, setEditTarget] = useState<MaintenanceOrderDetailDto | null>(
     null,
@@ -75,6 +80,33 @@ export function MaintenanceScreen() {
     setNotice(message);
     window.setTimeout(() => setNotice(null), 3200);
   }, []);
+
+  useEffect(() => {
+    if (deepLinkHandled.current || !isAllowed) return;
+    const vehicleRaw = searchParams.get("vehicleId");
+    const orderRaw = searchParams.get("orderId");
+    const createRaw = searchParams.get("create");
+    const vehicleId = vehicleRaw ? Number(vehicleRaw) : Number.NaN;
+    const orderId = orderRaw ? Number(orderRaw) : Number.NaN;
+
+    if (Number.isFinite(orderId) && orderId > 0) {
+      deepLinkHandled.current = true;
+      setDetailId(orderId);
+    } else if (
+      createRaw === "1" &&
+      Number.isFinite(vehicleId) &&
+      vehicleId > 0 &&
+      canManage
+    ) {
+      deepLinkHandled.current = true;
+      setAddInitialVehicleId(vehicleId);
+      setAddOpen(true);
+    }
+
+    if (deepLinkHandled.current && typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/${locale}/maintenance`);
+    }
+  }, [canManage, isAllowed, locale, searchParams]);
 
   const filterLabels = useMemo(
     () => ({
@@ -378,7 +410,11 @@ export function MaintenanceScreen() {
 
       <AddMaintenanceDialog
         open={addOpen}
-        onClose={() => setAddOpen(false)}
+        initialVehicleId={addInitialVehicleId}
+        onClose={() => {
+          setAddOpen(false);
+          setAddInitialVehicleId(null);
+        }}
         onSuccess={() => showNotice(t("notice.created"))}
       />
       <MaintenanceDetailDialog

@@ -9,3 +9,115 @@
 .error p {
   margin: 0 0 12px;
 }
+
+.confirmBody {
+  padding: 4px 2px 8px;
+  font-size: 0.9rem;
+  color: var(--diamond-muted);
+  line-height: 1.45;
+}
+
+.confirmWarningHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.confirmWarningIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(180, 40, 40, 0.12);
+  border: 1px solid rgba(180, 40, 40, 0.35);
+  color: #8b1e1e;
+  font-weight: 800;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.confirmLead {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--diamond-ink, #2c2418);
+}
+
+.confirmWarningHeader .confirmLead {
+  margin: 0;
+  flex: 1;
+}
+
+.confirmPlate {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.confirmNotice {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(201, 161, 92, 0.08);
+  border: 1px solid rgba(201, 161, 92, 0.22);
+  color: var(--diamond-ink, #2c2418);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.confirmActionsStack {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.confirmMeta {
+  margin: 16px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.confirmMeta dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--diamond-muted);
+}
+
+.confirmMeta dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--diamond-ink, #2c2418);
+}
+
+.confirmError {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(180, 40, 40, 0.08);
+  border: 1px solid rgba(180, 40, 40, 0.25);
+  color: #8b1e1e;
+  font-size: 0.85rem;
+}
+
+.destructiveConfirm {
+  background: #8b1e1e !important;
+  border-color: #6f1515 !important;
+  color: #fff !important;
+}
+
+.destructiveConfirm:disabled {
+  opacity: 0.65;
+}

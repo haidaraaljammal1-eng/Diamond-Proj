@@ -7,6 +7,8 @@ import { VehiclePhotoButton } from "../../forms/add-vehicle/vehicle-photo-button
 import type { VehicleDetailDto } from "../../types/vehicle.types";
 import { getVehicleStatusPresentation } from "../../utils/vehicle-status";
 import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
+import { getFleetPrimaryPresentation } from "../../utils/fleet-primary-presentation";
+import { useRentalReturnDue } from "../../hooks/use-rental-return-due";
 import { VehicleImage } from "../vehicle-image/vehicle-image";
 import { VehicleStatus } from "../vehicle-status/vehicle-status";
 import styles from "./vehicle-detail.module.css";
@@ -14,27 +16,43 @@ import styles from "./vehicle-detail.module.css";
 export interface VehicleDetailProps {
   vehicle: VehicleDetailDto;
   canManage: boolean;
+  canReturn: boolean;
+  canManageMaintenance: boolean;
+  canCancelRental: boolean;
   isPhotoActionPending: boolean;
+  isFleetOpsPending: boolean;
   photoActionErrorMessage: string | null;
+  fleetOpsErrorMessage: string | null;
   onUploadPhoto: (file: File) => void;
   onReplacePhoto: (file: File) => void;
   onSetPrice: () => void;
   onPrimaryAction: () => void;
-  onGps: () => void;
-  onMaintenance: () => void;
+  onSendToMaintenance: () => void;
+  onViewMaintenance: () => void;
+  onCancelRentalRequest: () => void;
+  onReturnNow: () => void;
+  onContinueCarIn: () => void;
 }
 
 export function VehicleDetail({
   vehicle,
   canManage,
+  canReturn,
+  canManageMaintenance,
+  canCancelRental,
   isPhotoActionPending,
+  isFleetOpsPending,
   photoActionErrorMessage,
+  fleetOpsErrorMessage,
   onUploadPhoto,
   onReplacePhoto,
   onSetPrice,
   onPrimaryAction,
-  onGps,
-  onMaintenance,
+  onSendToMaintenance,
+  onViewMaintenance,
+  onCancelRentalRequest,
+  onReturnNow,
+  onContinueCarIn,
 }: VehicleDetailProps) {
   const t = useTranslations("Vehicles");
   const format = useFormatter();
@@ -44,10 +62,30 @@ export function VehicleDetail({
   );
   const rental = vehicle.currentRental;
   const actions = getVehicleCardActions(vehicle, canManage);
+  const primary = getFleetPrimaryPresentation(vehicle);
   const hasRental =
     rental != null &&
     (vehicle.operationalStatus === "rented" || rental.status === "paid");
   const primaryImage = vehicle.primaryImage;
+  const returnDue = useRentalReturnDue(
+    rental?.status === "active" ? rental.endAt : null,
+  );
+
+  const showReturnNow =
+    canReturn &&
+    vehicle.operationalStatus === "rented" &&
+    rental?.status === "active";
+
+  const showContinueCarIn =
+    canReturn &&
+    vehicle.operationalStatus === "rented" &&
+    rental?.status === "retout";
+
+  const showMaintenanceEnter =
+    canManageMaintenance && vehicle.operationalStatus === "available";
+
+  const showViewMaintenance =
+    canManageMaintenance && vehicle.operationalStatus === "service";
 
   return (
     <div className={styles.root} data-testid="vehicle-detail">
@@ -99,6 +137,9 @@ export function VehicleDetail({
         {photoActionErrorMessage ? (
           <p className={styles.photoError} role="alert">{photoActionErrorMessage}</p>
         ) : null}
+        {fleetOpsErrorMessage ? (
+          <p className={styles.photoError} role="alert">{fleetOpsErrorMessage}</p>
+        ) : null}
 
         {!primaryImage ? (
           <div className={styles.photoEmpty}>
@@ -144,19 +185,19 @@ export function VehicleDetail({
             <div className={styles.rates}>
               <div className={styles.rate}>
                 <span>{t("detail.hourly")}</span>
-                <b>{format.number(vehicle.hourlyRate ?? 0)}</b>
+                <b>{vehicle.hourlyRate != null ? format.number(vehicle.hourlyRate) : t("rateNotSet")}</b>
               </div>
               <div className={styles.rate}>
                 <span>{t("detail.daily")}</span>
-                <b>{format.number(vehicle.dailyRate ?? 0)}</b>
+                <b>{vehicle.dailyRate != null ? format.number(vehicle.dailyRate) : t("rateNotSet")}</b>
               </div>
               <div className={styles.rate}>
                 <span>{t("detail.weekly")}</span>
-                <b>{format.number(vehicle.weeklyRate ?? 0)}</b>
+                <b>{vehicle.weeklyRate != null ? format.number(vehicle.weeklyRate) : t("rateNotSet")}</b>
               </div>
               <div className={styles.rate}>
                 <span>{t("detail.monthly")}</span>
-                <b>{format.number(vehicle.monthlyRate ?? 0)}</b>
+                <b>{vehicle.monthlyRate != null ? format.number(vehicle.monthlyRate) : t("rateNotSet")}</b>
               </div>
             </div>
           </>
@@ -171,8 +212,19 @@ export function VehicleDetail({
             </div>
             <div className={styles.kv}>
               <span>{t("detail.contractId")}</span>
-              <b className={styles.contractId} dir="ltr">{rental!.contractId}</b>
+              <b className={styles.contractId} dir="ltr">
+                {rental!.contractNumber ?? rental!.contractId}
+              </b>
             </div>
+            {rental!.status === "active" ? (
+              <div className={styles.kv}>
+                <span>{t("detail.scheduledReturn")}</span>
+                <b>{format.dateTime(new Date(rental!.endAt), { dateStyle: "medium", timeStyle: "short" })}</b>
+              </div>
+            ) : null}
+            {returnDue && rental!.status === "active" ? (
+              <p className={styles.returnDue} role="status">{t("detail.returnDue")}</p>
+            ) : null}
           </>
         ) : null}
 
@@ -187,10 +239,10 @@ export function VehicleDetail({
         ) : null}
 
         <div className={styles.actions}>
-          {actions.showSetRentalPrice ? (
+          {actions.showSetRentalPrice && primary.labelKey === "available" ? (
             <>
               <Button type="button" size="sm" onClick={onPrimaryAction}>
-                {t("actions.generateLinkSetPrice")}
+                {t("fleetPrimary.available")}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={onSetPrice}>
                 {t("actions.setPriceDetail")}
@@ -199,24 +251,55 @@ export function VehicleDetail({
           ) : null}
           {actions.showCarOut ? (
             <Button type="button" size="sm" onClick={onPrimaryAction}>
-              {t("actions.carOut")}
+              {t("fleetPrimary.deliverVehicle")}
             </Button>
           ) : null}
-          {actions.showReturnLink ? (
-            <>
-              <Button type="button" size="sm" onClick={onPrimaryAction}>
-                {t("actions.generateReturnLink")}
-              </Button>
-              {actions.showGps ? (
-                <Button type="button" size="sm" variant="ghost" onClick={onGps}>
-                  {t("actions.gpsTrack")}
-                </Button>
-              ) : null}
-            </>
+          {primary.labelKey === "rented" ? (
+            <Button type="button" size="sm" onClick={onPrimaryAction}>
+              {t("fleetPrimary.rented")}
+            </Button>
           ) : null}
-          {actions.showMaintenance ? (
-            <Button type="button" size="sm" onClick={onMaintenance}>
-              {t("actions.goMaintenance")}
+          {showReturnNow ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondaryStrong"
+              disabled={isFleetOpsPending}
+              onClick={onReturnNow}
+            >
+              {t("detail.returnNow")}
+            </Button>
+          ) : null}
+          {showContinueCarIn ? (
+            <Button type="button" size="sm" variant="secondaryStrong" onClick={onContinueCarIn}>
+              {t("detail.continueCarIn")}
+            </Button>
+          ) : null}
+          {showMaintenanceEnter ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={isFleetOpsPending}
+              onClick={onSendToMaintenance}
+            >
+              {t("detail.sendToMaintenance")}
+            </Button>
+          ) : null}
+          {showViewMaintenance ? (
+            <Button type="button" size="sm" variant="secondary" onClick={onViewMaintenance}>
+              {t("detail.viewMaintenance")}
+            </Button>
+          ) : null}
+          {canCancelRental ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={isFleetOpsPending}
+              onClick={onCancelRentalRequest}
+            >
+              {t("detail.cancelRentalRequest")}
             </Button>
           ) : null}
         </div>

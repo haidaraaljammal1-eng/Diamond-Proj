@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
+import { requestDashboardRefresh } from "@/modules/dashboard/utils/request-dashboard-refresh";
 import { useVehiclesStore } from "@/modules/vehicles/stores/vehicles.store";
 import {
   closeContract as closeContractRequest,
@@ -341,6 +342,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
           }
         }
         await refreshAll();
+        requestDashboardRefresh();
         return contract;
       } catch (error) {
         set({ offer: { pending: false, error: normalizeApiError(error) } });
@@ -394,6 +396,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         );
         set({ carOut: IDLE_SLOT, detail, detailStatus: "ready" });
         await refreshAll();
+        requestDashboardRefresh();
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -463,6 +466,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         const detail = await completeCarOutRequest(id, idempotencyKey);
         set({ carOut: IDLE_SLOT, detail, detailStatus: "ready", carOutHandover: detail.carOutHandover });
         await refreshAll();
+        requestDashboardRefresh();
         return true;
       } catch (error) {
         set({ carOut: { pending: false, error: normalizeApiError(error) } });
@@ -531,6 +535,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         const detail = await completeCarInRequest(id, idempotencyKey);
         set({ carIn: IDLE_SLOT, detail, detailStatus: "ready", carInHandover: detail.carInHandover });
         await refreshAll();
+        requestDashboardRefresh();
         return true;
       } catch (error) {
         set({ carIn: { pending: false, error: normalizeApiError(error) } });

@@ -6,13 +6,15 @@ Backend-only customer invoice documents. Invoices are **immutable snapshots** is
 
 | Event | Source | Invoice type | Idempotency |
 |-------|--------|--------------|-------------|
-| `contract.signed` | `Contract` (`agreedAmount`) | `RENTAL` | `RENTAL:<contractId>` |
+| `contract.paid` | `Contract` (`agreedAmount`, **CONFIRMED** RENTAL payment) | `RENTAL` | `RENTAL:<contractId>` |
 | `road_liability.customer_charge.confirmed` | `RoadLiabilityCustomerCharge` | `ROAD_LIABILITY` | `ROAD_LIABILITY:<chargeId>` |
 | `reconciliation.finalized` | `ContractReconciliationLine` (non–road-liability lines) | `RECONCILIATION` (one invoice per line) | `RECONCILIATION_LINE:<lineId>` |
 
 **Renewal:** model supports `RENEWAL`; automatic generation is **deferred** until renewal payment semantics are unambiguous.
 
 **Double billing:** Road liability amounts invoice from `RoadLiabilityCustomerCharge` only. Reconciliation invoice generation skips lines with `roadLiabilityId`.
+
+**RENTAL payment timing:** Electronic rentals stay `SIGNED` until trusted payment confirmation → `PAID`; only then is the RENTAL invoice issued. CASH rentals still settle on signature in the same authoritative flow, emit `contract.paid`, and issue the invoice immediately after commit. New RENTAL PDFs for fully collected rentals show **Paid in full**, **balance due 0**, and **Received in full** (not Net 30 / full balance due).
 
 ## Company authority
 

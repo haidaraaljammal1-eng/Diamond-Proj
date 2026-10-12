@@ -1,9 +1,13 @@
 # Home Dashboard Page
 
-Live operational home for Diamond Rent Car. The layout stays the Demo
-`vDash()` identity (KPI tiles, latest contracts, Quick Access, weekly charts,
-today’s deliveries, fleet status). Values come from `GET /dashboard/overview`,
-not from demo fixtures.
+Live operational home for Diamond Rent Car. The approved layout: three fleet KPI
+tiles, **Today’s Contracts** (former Quick Access column), **owner feature image**
+(former Latest Contracts column), weekly charts, today’s deliveries, and fleet
+rented-percentage. Values come from `GET /dashboard/overview`, not demo fixtures.
+
+The owner panel is a static PNG at
+`APP/frontend/public/dashboard/owner-feature-panel.png`, rendered with
+`object-fit: cover` inside `DashboardReservedSlot` (no captions or overlays).
 
 ## Route
 

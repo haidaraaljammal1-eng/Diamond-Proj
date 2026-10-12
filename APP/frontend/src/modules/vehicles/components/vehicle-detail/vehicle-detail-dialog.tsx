@@ -1,9 +1,19 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
+import { usePermissions } from "@/modules/auth/hooks/use-permissions";
+import {
+  deletePendingRentalRequest,
+  startContractReturnStaff,
+} from "@/modules/contracts/api/contracts.api";
+import {
+  CONTRACTS_MANAGE_PERMISSION,
+  CONTRACTS_RETURN_PERMISSION,
+} from "@/modules/contracts/contracts.permissions";
+import { MAINTENANCE_MANAGE_PERMISSION } from "@/modules/maintenance/maintenance.permissions";
 import { useVehicle } from "../../hooks/use-vehicle";
 import { resolveVehiclesErrorMessage } from "../../utils/resolve-vehicles-error";
 import type { VehicleCardDto } from "../../types/vehicle.types";
@@ -16,10 +26,13 @@ export interface VehicleDetailDialogProps {
   onClose: () => void;
   onSetPrice: (vehicle: VehicleCardDto) => void;
   onPrimaryAction: (vehicle: VehicleCardDto) => void;
-  onGps: (vehicle: VehicleCardDto) => void;
-  onMaintenance: () => void;
+  onCarIn: (contractId: string) => void;
+  onFleetChanged: () => void;
+  onNavigateToMaintenance: (vehicleId: number, options?: { create?: boolean; orderId?: number }) => void;
   onPhotoNotice?: (message: string) => void;
 }
+
+type ConfirmKind = "return-now" | "cancel-rental-request" | null;
 
 export function VehicleDetailDialog({
   vehicle,
@@ -27,11 +40,18 @@ export function VehicleDetailDialog({
   onClose,
   onSetPrice,
   onPrimaryAction,
-  onGps,
-  onMaintenance,
+  onCarIn,
+  onFleetChanged,
+  onNavigateToMaintenance,
   onPhotoNotice,
 }: VehicleDetailDialogProps) {
   const t = useTranslations("Vehicles");
+  const format = useFormatter();
+  const { hasPermission } = usePermissions();
+  const canReturn = hasPermission(CONTRACTS_RETURN_PERMISSION);
+  const canCancelRental = hasPermission(CONTRACTS_MANAGE_PERMISSION);
+  const canManageMaintenance = hasPermission(MAINTENANCE_MANAGE_PERMISSION);
+
   const {
     detail,
     isLoading,
@@ -46,16 +66,22 @@ export function VehicleDetailDialog({
     clearPhotoActionError,
   } = useVehicle();
 
+  const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
+  const [fleetOpsPending, setFleetOpsPending] = useState(false);
+  const [fleetOpsError, setFleetOpsError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!vehicle) {
       clearVehicle();
       return;
     }
     clearPhotoActionError();
+    setFleetOpsError(null);
     void loadVehicle(vehicle.id);
   }, [vehicle, loadVehicle, clearVehicle, clearPhotoActionError]);
 
   const photoActionErrorMessage = resolveVehiclesErrorMessage(t, photoActionError);
+  const pendingFollowUp = detail?.prePaymentFollowUps?.[0] ?? null;
 
   const handleUploadPhoto = useCallback(
     async (file: File) => {
@@ -86,51 +112,213 @@ export function VehicleDetailDialog({
     [detail, replaceVehiclePhoto, onPhotoNotice, t],
   );
 
+  const runReturnNow = useCallback(async () => {
+    if (!detail?.currentRental?.contractId) return;
+    setFleetOpsPending(true);
+    setFleetOpsError(null);
+    try {
+      await startContractReturnStaff(detail.currentRental.contractId);
+      await loadVehicle(detail.id);
+      onFleetChanged();
+      onCarIn(detail.currentRental.contractId);
+      onClose();
+    } catch {
+      setFleetOpsError(t("detail.returnNowFailed"));
+    } finally {
+      setFleetOpsPending(false);
+      setConfirmKind(null);
+    }
+  }, [detail, loadVehicle, onCarIn, onClose, onFleetChanged, t]);
+
+  const runDeleteRentalRequest = useCallback(async () => {
+    if (!detail || !pendingFollowUp) return;
+    setFleetOpsPending(true);
+    setFleetOpsError(null);
+    try {
+      await deletePendingRentalRequest(pendingFollowUp.contractId, { vehicleId: detail.id });
+      await loadVehicle(detail.id);
+      onFleetChanged();
+      setConfirmKind(null);
+      onClose();
+    } catch {
+      setFleetOpsError(t("detail.deleteRentalRequestFailed"));
+    } finally {
+      setFleetOpsPending(false);
+    }
+  }, [detail, loadVehicle, onClose, onFleetChanged, pendingFollowUp, t]);
+
   const open = vehicle != null;
+  const rental = detail?.currentRental;
+  const isDeleteDialog = confirmKind === "cancel-rental-request";
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={vehicle?.displayName ?? t("title")}
-      closeLabel={t("detail.close")}
-      presentation="flush"
-    >
-      {isLoading ? (
-        <div className={styles.loading} role="status">{t("detail.loading")}</div>
-      ) : null}
-      {error ? (
-        <div className={styles.error} role="alert">
-          <p>{t("detail.error")}</p>
-          <Button type="button" size="sm" onClick={onClose}>{t("detail.close")}</Button>
-        </div>
-      ) : null}
-      {isReady && detail ? (
-        <VehicleDetail
-          vehicle={detail}
-          canManage={canManage}
-          isPhotoActionPending={isPhotoActionPending}
-          photoActionErrorMessage={photoActionErrorMessage}
-          onUploadPhoto={(file) => void handleUploadPhoto(file)}
-          onReplacePhoto={(file) => void handleReplacePhoto(file)}
-          onSetPrice={() => {
-            onClose();
-            onSetPrice(detail);
-          }}
-          onPrimaryAction={() => {
-            onClose();
-            onPrimaryAction(detail);
-          }}
-          onGps={() => {
-            onClose();
-            onGps(detail);
-          }}
-          onMaintenance={() => {
-            onClose();
-            onMaintenance();
-          }}
-        />
-      ) : null}
-    </Dialog>
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        title={vehicle?.displayName ?? t("title")}
+        closeLabel={t("detail.close")}
+        presentation="flush"
+      >
+        {isLoading ? (
+          <div className={styles.loading} role="status">{t("detail.loading")}</div>
+        ) : null}
+        {error ? (
+          <div className={styles.error} role="alert">
+            <p>{t("detail.error")}</p>
+            <Button type="button" size="sm" onClick={onClose}>{t("detail.close")}</Button>
+          </div>
+        ) : null}
+        {isReady && detail ? (
+          <VehicleDetail
+            vehicle={detail}
+            canManage={canManage}
+            canReturn={canReturn}
+            canManageMaintenance={canManageMaintenance}
+            canCancelRental={canCancelRental && pendingFollowUp != null}
+            isPhotoActionPending={isPhotoActionPending}
+            isFleetOpsPending={fleetOpsPending}
+            photoActionErrorMessage={photoActionErrorMessage}
+            fleetOpsErrorMessage={fleetOpsError}
+            onUploadPhoto={(file) => void handleUploadPhoto(file)}
+            onReplacePhoto={(file) => void handleReplacePhoto(file)}
+            onSetPrice={() => {
+              onClose();
+              onSetPrice(detail);
+            }}
+            onPrimaryAction={() => {
+              onClose();
+              onPrimaryAction(detail);
+            }}
+            onSendToMaintenance={() => {
+              onClose();
+              onNavigateToMaintenance(detail.id, { create: true });
+            }}
+            onViewMaintenance={() => {
+              onClose();
+              onNavigateToMaintenance(detail.id, {
+                orderId: detail.activeMaintenanceOrder?.id,
+              });
+            }}
+            onReturnNow={() => setConfirmKind("return-now")}
+            onCancelRentalRequest={() => setConfirmKind("cancel-rental-request")}
+            onContinueCarIn={() => {
+              if (rental?.contractId) {
+                onClose();
+                onCarIn(rental.contractId);
+              }
+            }}
+          />
+        ) : null}
+      </Dialog>
+
+      <Dialog
+        open={confirmKind != null}
+        onClose={() => {
+          if (fleetOpsPending) return;
+          setConfirmKind(null);
+        }}
+        title={
+          isDeleteDialog
+            ? t("detail.deleteRentalRequestWarningTitle")
+            : t("detail.returnNow")
+        }
+        closeLabel={isDeleteDialog ? t("detail.deleteRentalRequestGoBack") : t("detail.cancelConfirm")}
+      >
+        {detail ? (
+          <div className={styles.confirmBody}>
+            {isDeleteDialog && pendingFollowUp ? (
+              <>
+                <div className={styles.confirmWarningHeader}>
+                  <span className={styles.confirmWarningIcon} aria-hidden="true">!</span>
+                  <p className={styles.confirmLead}>{t("detail.deleteRentalRequestWarningBody1")}</p>
+                </div>
+                <p className={styles.confirmNotice}>{t("detail.deleteRentalRequestWarningBody2")}</p>
+                <dl className={styles.confirmMeta}>
+                  <div>
+                    <dt>{t("detail.deleteRentalRequestVehicleLabel")}</dt>
+                    <dd>{detail.displayName}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("detail.plate")}</dt>
+                    <dd dir="ltr">{detail.plateNumber ?? t("rateNotSet")}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("detail.deleteRentalRequestContractLabel")}</dt>
+                    <dd dir="ltr">{pendingFollowUp.contractNumber}</dd>
+                  </div>
+                  {pendingFollowUp.customerName ? (
+                    <div>
+                      <dt>{t("detail.deleteRentalRequestCustomerLabel")}</dt>
+                      <dd>{pendingFollowUp.customerName}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {fleetOpsError ? (
+                  <p className={styles.confirmError} role="alert">{fleetOpsError}</p>
+                ) : null}
+                <div className={styles.confirmActionsStack}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={fleetOpsPending}
+                    onClick={() => setConfirmKind(null)}
+                  >
+                    {t("detail.deleteRentalRequestGoBack")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={styles.destructiveConfirm}
+                    loading={fleetOpsPending}
+                    onClick={() => void runDeleteRentalRequest()}
+                  >
+                    {t("detail.deleteRentalRequestConfirm")}
+                  </Button>
+                </div>
+              </>
+            ) : null}
+            {!isDeleteDialog ? (
+              <>
+                <p className={styles.confirmLead}>{detail.displayName}</p>
+                <p className={styles.confirmPlate} dir="ltr">
+                  {detail.plateNumber ?? t("rateNotSet")}
+                </p>
+                {confirmKind === "return-now" && rental ? (
+                  <>
+                    <p dir="ltr">{rental.contractNumber ?? rental.contractId}</p>
+                    <p>
+                      {t("detail.returnNowScheduled", {
+                        when: format.dateTime(new Date(rental.endAt), {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }),
+                      })}
+                    </p>
+                    <p className={styles.confirmNotice}>{t("detail.returnNowNotice")}</p>
+                  </>
+                ) : null}
+                <div className={styles.confirmActions}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmKind(null)}>
+                    {t("detail.cancelConfirm")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={fleetOpsPending}
+                    onClick={() => {
+                      if (confirmKind === "return-now") void runReturnNow();
+                    }}
+                  >
+                    {t("detail.confirmAction")}
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+      </Dialog>
+    </>
   );
 }

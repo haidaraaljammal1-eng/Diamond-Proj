@@ -250,6 +250,7 @@ Staff only. Public token routes have no staff permissions.
 | GET | `/contracts/:id` | read |
 | POST | `/contracts/offers` | manage |
 | POST | `/contracts/:id/rental-link` | manage |
+| POST | `/contracts/:id/rental-request/cancel` | manage (permanent delete of eligible AWAITING/FORM/SIGNED pre-payment request; optional body `{ vehicleId }`) |
 | POST | `/contracts/:id/payment/confirm` | manage |
 | POST | `/contracts/:id/car-out` | car_out + activate |
 | GET | `/contracts/:id/car-out` | read |

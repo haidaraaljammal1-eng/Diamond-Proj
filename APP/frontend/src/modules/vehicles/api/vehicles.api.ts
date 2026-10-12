@@ -8,6 +8,7 @@ import type {
   VehicleCardDto,
   VehicleDetailDto,
   VehicleImageDto,
+  VehicleOperationalStatus,
   VehiclePublicDto,
   VehiclesListQuery,
 } from "../types/vehicle.types";
@@ -145,6 +146,18 @@ export async function updateVehicleRates(
       body: payload,
     },
   );
+  return response.data;
+}
+
+/** `PUT /vehicles/:id` — operational status (`vehicles.manage`). */
+export async function updateVehicleOperationalStatus(
+  id: number,
+  operationalStatus: VehicleOperationalStatus,
+): Promise<VehiclePublicDto> {
+  const response = await apiRequest<VehiclePublicDto>(`${VEHICLES_PATH}/${id}`, {
+    method: "PUT",
+    body: { operationalStatus },
+  });
   return response.data;
 }
 

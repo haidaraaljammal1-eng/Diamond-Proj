@@ -15,7 +15,7 @@ import {
 } from "src/modules/reports/periods";
 import {
   ACTIVE_RENTAL_STATUSES,
-  DASHBOARD_RECENT_CONTRACTS_LIMIT,
+  DASHBOARD_TODAY_CONTRACTS_LIMIT,
   DASHBOARD_WEEK_DAYS,
   PENDING_LINK_STATUSES,
   READY_FOR_DELIVERY_STATUS,
@@ -72,9 +72,19 @@ export function createDashboardService(fastify: FastifyInstance) {
     const week = resolveLastNCalendarDays(clock, offsetMinutes, DASHBOARD_WEEK_DAYS);
     const today = resolveBusinessDay(clock, offsetMinutes);
 
-    const [fleetStatus, contractKpis, weeklyFinance, weeklyRentalActivity, todayDeliveries, recentContracts, gpsOnline] =
+    const [fleetStatus, rentedToday, contractKpis, weeklyFinance, weeklyRentalActivity, todayDeliveries, todayContracts, gpsOnline] =
       await Promise.all([
         runSection("fleetStatus", P.VEHICLES_READ, () => vehicles.activeFleetStatusCounts(companyId)),
+        runSection("rentedToday", P.CONTRACTS_READ, async () => {
+          const rows = await prisma.contractCarOut.findMany({
+            where: {
+              occurredAt: { gte: today.from, lt: today.to },
+              ...(companyId != null ? { contract: { companyId } } : {}),
+            },
+            select: { contract: { select: { vehicleId: true } } },
+          });
+          return new Set(rows.map((row) => row.contract.vehicleId)).size;
+        }),
         runSection("kpis", P.CONTRACTS_READ, async () => {
           const [activeRentals, pendingLinks, deliveries, readyForDelivery, contractsTotal] = await Promise.all([
             prisma.contract.count({ where: { status: { in: [...ACTIVE_RENTAL_STATUSES] }, ...contractWhere } }),
@@ -173,32 +183,31 @@ export function createDashboardService(fastify: FastifyInstance) {
             company: row.company,
           }));
         }),
-        runSection("recentContracts", P.CONTRACTS_READ, async () => {
+        runSection("todayContracts", P.CONTRACTS_READ, async () => {
           const rows = await prisma.contract.findMany({
-            where: contractWhere,
+            where: {
+              createdAt: { gte: today.from, lt: today.to },
+              ...contractWhere,
+            },
             orderBy: { createdAt: "desc" },
-            take: DASHBOARD_RECENT_CONTRACTS_LIMIT,
+            take: DASHBOARD_TODAY_CONTRACTS_LIMIT,
             select: {
               id: true,
-              contractNumber: true,
               status: true,
+              createdAt: true,
               company: { select: COMPANY_REF_SELECT },
-              customer: { select: { name: true } },
-              createdBy: { select: { name: true } },
               vehicle: { select: VEHICLE_NAME_SELECT },
             },
           });
           return rows.map((row) => ({
             id: row.id,
-            contractNumber: row.contractNumber,
-            customerName: row.customer?.name ?? null,
             vehicleName: vehicleDisplayName({
               vehicleName: row.vehicle.vehicleName,
               modelName: row.vehicle.model?.name ?? null,
               modelYear: row.vehicle.modelYear,
               plateNumber: row.vehicle.plateNumber,
             }),
-            employeeName: row.createdBy.name ?? null,
+            createdAt: row.createdAt,
             status: row.status,
             company: row.company,
           }));
@@ -219,6 +228,7 @@ export function createDashboardService(fastify: FastifyInstance) {
         fleetRented: fleetStatus?.rented ?? null,
         fleetAvailable: fleetStatus?.available ?? null,
         fleetService: fleetStatus?.service ?? null,
+        rentedToday: rentedToday ?? null,
         pendingLinks: contractKpis?.pendingLinks ?? null,
         deliveriesToday: contractKpis?.deliveriesToday ?? null,
         readyForDelivery: contractKpis?.readyForDelivery ?? null,
@@ -228,7 +238,7 @@ export function createDashboardService(fastify: FastifyInstance) {
       weeklyRentalActivity,
       fleetStatus,
       todayDeliveries,
-      recentContracts,
+      todayContracts,
       gpsOnline,
     };
   }

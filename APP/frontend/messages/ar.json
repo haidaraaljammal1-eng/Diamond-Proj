@@ -143,6 +143,9 @@
     "quickAccess": "وصول سريع",
     "loading": "جاري تحميل لوحة التحكم…",
     "kpi": {
+      "rentedCars": "السيارات المؤجرة",
+      "availableCars": "السيارات المتاحة",
+      "rentedToday": "مؤجر اليوم",
       "activeRentals": "الإيجارات النشطة",
       "activeRentalsNote": "بحوزة العملاء الآن",
       "fleet": "الأسطول",
@@ -151,6 +154,16 @@
       "pendingLinksNote": "لم يُكملها العميل بعد",
       "deliveriesToday": "تسليمات اليوم",
       "deliveriesTodayNote": "{count} جاهزة للتسليم الآن"
+    },
+    "todayContracts": {
+      "title": "عقود اليوم",
+      "empty": "لا توجد عقود أُنشئت اليوم"
+    },
+    "fleetRentedPercent": {
+      "title": "السيارات المؤجرة",
+      "currentLabel": "مؤجر حاليًا",
+      "rentedLegend": "مؤجرة {percent}%",
+      "notRentedLegend": "غير مؤجرة {percent}%"
     },
     "quick": {
       "carsMeta": "الأسطول · توليد رابط",
@@ -535,6 +548,26 @@
     "dailyRateSuffix": "درهم/يوم",
     "monthlyRateSuffix": "شهرياً",
     "priceNote": "السعر الافتراضي · غير ملزم · يحدَّد نهائياً عند تأكيد الحجز",
+    "rateNotSet": "غير محدد",
+    "fleetPrimary": {
+      "available": "متاحة",
+      "deliverVehicle": "تسليم السيارة",
+      "rented": "مؤجرة",
+      "urgentFollowUp": "متابعة مستعجلة",
+      "maintenance": "صيانة"
+    },
+    "prioritySection": {
+      "title": "تحتاج متابعة"
+    },
+    "followUpPicker": {
+      "title": "متابعة ما قبل الدفع",
+      "description": "اختر العقد الذي يحتاج متابعة موظف لـ {name}.",
+      "status": {
+        "awaiting": "بانتظار العميل",
+        "form": "نموذج العميل",
+        "signed": "موقّع · غير مدفوع"
+      }
+    },
     "statusAvailable": "متاحة",
     "statusRented": "مؤجرة",
     "statusService": "صيانة",
@@ -623,6 +656,34 @@
       "filteredDescription": "لا توجد سيارات تطابق هذا الفلتر."
     },
     "detail": {
+      "scheduledReturn": "موعد الإرجاع المحدد",
+      "returnDue": "حان وقت الإرجاع التعاقدي. استخدم «إرجاع الآن» أو مسار الإرجاع في العقد عند جاهزية العميل.",
+      "returnNow": "إرجاع الآن",
+      "returnNowScheduled": "موعد الإرجاع: {when}",
+      "returnNowNotice": "يبدأ هذا إرجاعاً مبكراً. تبقى السيارة مؤجرة حتى اكتمال أدلة Car-In.",
+      "returnNowFailed": "تعذّر بدء الإرجاع. تحقق من الصلاحيات وحالة العقد.",
+      "continueCarIn": "متابعة Car-In",
+      "sendToMaintenance": "إدخال إلى الصيانة",
+      "viewMaintenance": "عرض الصيانة",
+      "cancelRentalRequest": "إلغاء طلب التأجير",
+      "deleteRentalRequestWarningTitle": "تحذير — حذف طلب التأجير",
+      "deleteRentalRequestWarningBody1": "هل أنت متأكد من إلغاء طلب التأجير لهذه السيارة؟",
+      "deleteRentalRequestWarningBody2": "سيؤدي تأكيد الحذف إلى إزالة طلب التأجير وبياناته المرتبطة به من النظام التشغيلي، ولن تتمكن من استرجاع الطلب من داخل النظام.",
+      "deleteRentalRequestGoBack": "تراجع",
+      "deleteRentalRequestConfirm": "تأكيد الحذف",
+      "deleteRentalRequestVehicleLabel": "السيارة",
+      "deleteRentalRequestContractLabel": "العقد",
+      "deleteRentalRequestCustomerLabel": "العميل",
+      "deleteRentalRequestFailed": "تعذّر حذف طلب التأجير. تحقق من الصلاحيات وحالة الدفع والفواتير المرتبطة وحالة العقد.",
+      "releaseFromMaintenance": "إخراج من الصيانة",
+      "maintenanceEnterNotice": "ستصبح السيارة غير متاحة للإيجار أثناء الصيانة.",
+      "maintenanceManualReleaseNotice": "ستعود السيارة إلى حالة متاحة في الأسطول.",
+      "maintenanceCompleteNotice": "سيُكمَل أمر الصيانة النشط ويُسجَّل أي تكلفة فعلية مُعدّة.",
+      "maintenanceEnterFailed": "تعذّر إدخال السيارة إلى الصيانة.",
+      "maintenanceReleaseFailed": "تعذّر إخراج السيارة من الصيانة.",
+      "maintenanceOrderBlocksRelease": "يجب إكمال أمر الصيانة النشط عبر مركز الصيانة قبل إخراج هذه السيارة.",
+      "cancelConfirm": "إلغاء",
+      "confirmAction": "تأكيد",
       "close": "إغلاق",
       "loading": "جارٍ تحميل تفاصيل السيارة…",
       "error": "تعذّر تحميل تفاصيل السيارة.",

@@ -1,38 +1,50 @@
-import type { VehicleCardDto } from "../types/vehicle.types";
+import type { VehicleCardDto } from "../types/vehicle.types.ts";
+import { getFleetPrimaryPresentation } from "./fleet-primary-presentation.ts";
 
 export type FleetPrimaryIntent =
   | { type: "set-rental-price" }
   | { type: "car-out"; contractId: string }
-  | { type: "generate-return-link"; contractId: string }
   | { type: "open-contract"; contractId: string }
-  | { type: "reconcile"; contractId: string }
-  | { type: "maintenance" }
+  | { type: "urgent-follow-up"; contractId: string }
+  | { type: "urgent-follow-up-choose"; contractIds: string[] }
   | { type: "no-contract" };
 
-type FleetIntentSource = Pick<VehicleCardDto, "operationalStatus" | "currentRental">;
+type FleetIntentSource = Pick<
+  VehicleCardDto,
+  "operationalStatus" | "currentRental" | "prePaymentFollowUps"
+>;
 
 /**
  * Maps a fleet card primary action to the real Contracts V1 flow.
- * `currentRental.status` is Backend authority — never inferred from chips.
  */
 export function resolveFleetPrimaryIntent(vehicle: FleetIntentSource): FleetPrimaryIntent {
+  const presentation = getFleetPrimaryPresentation(vehicle);
   const rental = vehicle.currentRental;
 
-  if (rental?.status === "paid") {
+  if (presentation.labelKey === "deliverVehicle" && rental?.status === "paid") {
     return { type: "car-out", contractId: rental.contractId };
   }
 
-  if (vehicle.operationalStatus === "service") {
-    return { type: "maintenance" };
-  }
-
-  if (vehicle.operationalStatus === "rented") {
-    if (rental?.status === "active") {
-      return { type: "generate-return-link", contractId: rental.contractId };
-    }
-    if (rental?.status === "retout") {
+  if (presentation.labelKey === "rented") {
+    if (rental?.status === "active" || rental?.status === "retout") {
       return { type: "open-contract", contractId: rental.contractId };
     }
+    return { type: "no-contract" };
+  }
+
+  if (presentation.labelKey === "urgentFollowUp") {
+    const offers = vehicle.prePaymentFollowUps ?? [];
+    if (offers.length === 0) return { type: "no-contract" };
+    if (offers.length === 1) {
+      return { type: "urgent-follow-up", contractId: offers[0]!.contractId };
+    }
+    return {
+      type: "urgent-follow-up-choose",
+      contractIds: offers.map((row) => row.contractId),
+    };
+  }
+
+  if (presentation.labelKey === "maintenance") {
     return { type: "no-contract" };
   }
 

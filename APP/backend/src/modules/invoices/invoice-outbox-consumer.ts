@@ -14,7 +14,7 @@ export function createInvoiceOutboxConsumer(app: FastifyInstance) {
   async function handleEvent(ev: { eventType: string; payload: Prisma.JsonValue }): Promise<boolean> {
     const payload = (ev.payload ?? {}) as Prisma.JsonObject;
 
-    if (ev.eventType === "contract.signed") {
+    if (ev.eventType === "contract.paid") {
       const contractId = String(payload.contractId ?? "");
       if (!contractId) return true;
       await issuance.ensureRentalInvoiceForContract(contractId);

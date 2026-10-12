@@ -40,8 +40,10 @@ import {
   markLinkUsed,
   resolveContractLink,
   revokeUnusedRenewalLinks,
+  revokeUnusedRentalLinks,
 } from "src/modules/contracts/contracts-links";
 import { assertVehicleBookableForRental, assertVehicleFreeForRental, canCarOutFromState, findBlockingContract } from "src/modules/contracts/vehicle-rental-guard";
+import { createPendingRentalRequestDeleteService } from "src/modules/contracts/pending-rental-request-delete.service";
 import { contractError } from "src/modules/contracts/contracts.errors";
 import {
   CONTRACT_DETAIL_INCLUDE,
@@ -214,6 +216,7 @@ export function createContractsService(fastify: FastifyInstance) {
   const customerCharges = createRoadLiabilityCustomerChargeService(fastify);
   const paymentService = createContractPaymentService(prisma);
   const tars = createTarsWorkflowOrchestrator(fastify);
+  const pendingRentalDelete = createPendingRentalRequestDeleteService(prisma);
 
   function assertSimulationEnabled(): void {
     if (!devPaymentSimulationEnabled()) {
@@ -525,7 +528,7 @@ export function createContractsService(fastify: FastifyInstance) {
     offer?: z.infer<typeof RenewSchema>,
   ) {
     return withTransaction(prisma, async (tx) => {
-      if (type !== "RENTAL") await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, contractId);
+      await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, contractId);
       const contract = await tx.contract.findUnique({ where: { id: contractId } });
       if (!contract) throw contractError.notFound();
       if (contract.status === "CLOSED") throw contractError.alreadyClosed();
@@ -1980,6 +1983,23 @@ export function createContractsService(fastify: FastifyInstance) {
    * event. Serialised with renewal on the lifecycle lock; repeating it once the
    * contract has moved on is a no-op that returns the current view.
    */
+  async function beginContractReturnInTx(
+    tx: Tx,
+    contract: { id: string; status: ContractStatus },
+  ): Promise<boolean> {
+    if (contract.status === "RETOUT" || contract.status === "REVIEW" || contract.status === "CLOSED") {
+      return false;
+    }
+    assertTransition(contract.status, "RETOUT");
+    await tx.contract.update({
+      where: { id: contract.id },
+      data: { status: "RETOUT", revision: { increment: 1 } },
+    });
+    await revokeUnusedRenewalLinks(tx, contract.id);
+    await emit(tx, "contract.return_started", contract.id);
+    return true;
+  }
+
   async function confirmReturnPublic(token: string) {
     return withTransaction(prisma, async (tx) => {
       const link = await resolveContractLink(tx, token, "RETURN", { allowCompleted: true });
@@ -1990,18 +2010,49 @@ export function createContractsService(fastify: FastifyInstance) {
       };
       const contract = await tx.contract.findUnique({ where: { id: link.contractId }, include });
       if (!contract) throw contractError.notFound();
-      if (contract.status === "RETOUT" || contract.status === "REVIEW" || contract.status === "CLOSED") {
-        return publicView(contract);
-      }
-      assertTransition(contract.status, "RETOUT");
-      await tx.contract.update({
-        where: { id: contract.id },
-        data: { status: "RETOUT", revision: { increment: 1 } },
-      });
-      // A renewal offer can no longer be accepted once the return is confirmed.
-      await revokeUnusedRenewalLinks(tx, contract.id);
-      await emit(tx, "contract.return_started", contract.id);
+      await beginContractReturnInTx(tx, contract);
       return publicView(await tx.contract.findUniqueOrThrow({ where: { id: contract.id }, include }));
+    });
+  }
+
+  /**
+   * Staff-initiated return intent (Return Now): ACTIVE → RETOUT with the same
+   * lifecycle guards as the public return confirmation path.
+   */
+  /** Staff deletes an eligible pre-payment rental request (permanent operational removal). */
+  async function deletePendingRentalRequest(
+    contractId: string,
+    actorUserId: number,
+    options: { expectedVehicleId?: number } = {},
+  ) {
+    void actorUserId;
+    return pendingRentalDelete.deletePendingRentalRequest(contractId, options);
+  }
+
+  async function confirmReturnStaff(contractId: string, actorUserId: number) {
+    void actorUserId;
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, contractId);
+      const contract = await tx.contract.findUnique({
+        where: { id: contractId },
+        select: {
+          id: true,
+          status: true,
+          vehicleId: true,
+          carOut: { select: { id: true } },
+          vehicle: { select: { operationalStatus: true } },
+        },
+      });
+      if (!contract) throw contractError.notFound();
+      if (contract.status === "RETOUT" || contract.status === "REVIEW" || contract.status === "CLOSED") {
+        return get(contractId);
+      }
+      assertStatus(contract.status, "ACTIVE");
+      if (!contract.carOut) throw contractError.carOutRequired();
+      if (contract.vehicle.operationalStatus !== "RENTED") throw contractError.vehicleNotRented();
+      await acquireAdvisoryLock(tx, VEHICLE_RENTAL_LOCK_NS, contract.vehicleId);
+      await beginContractReturnInTx(tx, contract);
+      return get(contractId);
     });
   }
 
@@ -3202,6 +3253,8 @@ export function createContractsService(fastify: FastifyInstance) {
     renew,
     settleRenewalCash,
     confirmReturnPublic,
+    confirmReturnStaff,
+    deletePendingRentalRequest,
     confirmRenewalPublic,
     getPublic,
     getPublicRental,
