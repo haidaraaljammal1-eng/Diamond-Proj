@@ -1,8 +1,13 @@
 import type { GpsProviderAdapter, GpsProviderKey } from "src/modules/gps/gps-provider.adapter";
 import { GpsUnconfiguredAdapter } from "src/modules/gps/providers/gps-unconfigured.adapter";
 import { LiveGpsAdapter } from "src/modules/gps/providers/live-gps/live-gps.adapter";
+import { SevenStarsAdapter } from "src/modules/gps/providers/seven-stars/seven-stars.adapter";
 
-const adapters: GpsProviderAdapter[] = [new LiveGpsAdapter(), new GpsUnconfiguredAdapter()];
+const adapters: GpsProviderAdapter[] = [
+  new LiveGpsAdapter(),
+  new SevenStarsAdapter(),
+  new GpsUnconfiguredAdapter(),
+];
 
 const byKey = new Map<GpsProviderKey, GpsProviderAdapter>(
   adapters.map((adapter) => [adapter.providerKey, adapter]),

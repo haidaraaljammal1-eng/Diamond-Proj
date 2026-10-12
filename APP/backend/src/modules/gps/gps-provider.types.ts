@@ -120,9 +120,9 @@ export type GpsProviderHistoryFetchContext = GpsProviderAccountContext & {
   to: Date;
 };
 
-/** Shared runtime dependencies for provider adapters. */
+/** Provider-neutral runtime dependencies for provider adapters. */
 export type GpsProviderRuntime = {
-  liveGpsSessionManager: import("src/modules/gps/providers/live-gps/live-gps.session").LiveGpsSessionManager;
+  getSessionManager<T>(providerKey: string): T;
 };
 
 export type GpsProviderSyncRuntime = GpsProviderRuntime;

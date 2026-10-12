@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { GpsProviderAccount } from "@prisma/client";
 import { AppError } from "src/lib/errors/app-error";
 import { decryptSecretBlob } from "src/modules/integrations/secret-blob";
-import { getSharedLiveGpsSessionManager } from "src/modules/gps/gps-live-gps-sessions";
+import { getSharedGpsProviderRuntime } from "src/modules/gps/gps-live-gps-sessions";
 import {
   isGpsProviderAccountLocallyConfigured,
   isGpsProviderAccountSyncEnabled,
@@ -10,9 +10,11 @@ import {
 import type { GpsProviderAdapter } from "src/modules/gps/gps-provider.adapter";
 import { getGpsProviderAdapter } from "src/modules/gps/gps-provider.registry";
 import { providerSnapshotToIngestInput } from "src/modules/gps/gps-provider-ingest";
+import { gpsConfig } from "src/modules/gps/gps.config";
+import { LIVE_GPS_PROVIDER_KEY } from "src/modules/gps/providers/live-gps/live-gps.constants";
 import {
-  GPS_PROVIDER_SYNC_CADENCE_MS,
   GpsProviderSyncFailureCode,
+  providerSyncCadenceMs,
 } from "src/modules/gps/gps-provider-sync.constants";
 import { mapErrorToGpsSyncFailureCode } from "src/modules/gps/gps-provider-sync.failure";
 import {
@@ -96,7 +98,11 @@ function emptyCounters(): GpsProviderSyncCycleCounters {
 
 function isAccountDue(account: GpsProviderAccount, now: Date): boolean {
   if (!account.lastAttemptAt) return true;
-  return now.getTime() - account.lastAttemptAt.getTime() >= GPS_PROVIDER_SYNC_CADENCE_MS;
+  const cadence = providerSyncCadenceMs(
+    account.providerKey,
+    gpsConfig().liveGpsSyncCadenceMs,
+  );
+  return now.getTime() - account.lastAttemptAt.getTime() >= cadence;
 }
 
 function snapshotByDeviceId(
@@ -121,9 +127,7 @@ export function createGpsProviderSyncService(
   const resolveAdapter =
     options.resolveAdapter ?? ((key: string) => getGpsProviderAdapter(key));
 
-  const runtime = {
-    liveGpsSessionManager: getSharedLiveGpsSessionManager(),
-  };
+  const runtime = getSharedGpsProviderRuntime();
 
   async function persistAttemptStarted(accountId: string, at: Date): Promise<void> {
     await prisma.gpsProviderAccount.update({
@@ -325,7 +329,9 @@ export function createGpsProviderSyncService(
     }
   }
 
-  async function runGpsProviderSyncCycle(): Promise<GpsProviderSyncCycleSummary> {
+  async function runProviderSyncCycleFiltered(
+    match: (providerKey: string) => boolean,
+  ): Promise<GpsProviderSyncCycleSummary> {
     if (shutdownRequested) {
       return { accountsConsidered: 0, accountsAttempted: 0, results: [] };
     }
@@ -337,7 +343,8 @@ export function createGpsProviderSyncService(
     const eligible = accounts.filter(
       (account) =>
         isGpsProviderAccountSyncEnabled(account) &&
-        isGpsProviderAccountLocallyConfigured(account),
+        isGpsProviderAccountLocallyConfigured(account) &&
+        match(account.providerKey),
     );
 
     const results: GpsProviderAccountSyncResult[] = [];
@@ -356,8 +363,17 @@ export function createGpsProviderSyncService(
     };
   }
 
+  async function runGpsProviderSyncCycle(): Promise<GpsProviderSyncCycleSummary> {
+    return runProviderSyncCycleFiltered((key) => key !== LIVE_GPS_PROVIDER_KEY);
+  }
+
+  async function runLiveGpsFastSyncCycle(): Promise<GpsProviderSyncCycleSummary> {
+    return runProviderSyncCycleFiltered((key) => key === LIVE_GPS_PROVIDER_KEY);
+  }
+
   return {
     runGpsProviderSyncCycle,
+    runLiveGpsFastSyncCycle,
     syncOneAccount,
   };
 }

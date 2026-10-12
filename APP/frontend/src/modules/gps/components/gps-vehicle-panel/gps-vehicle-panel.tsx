@@ -11,12 +11,13 @@ import type {
   GpsListQuery,
   GpsOperationalFilter,
   GpsPageMeta,
+  GpsProviderFilter,
   GpsTrackingFilter,
   GpsVehicleListItemDto,
 } from "../../types/gps.types";
 import {
   GPS_OPERATIONAL_FILTERS,
-  GPS_TRACKING_FILTERS,
+  GPS_TRACKING_FILTER_OPTIONS,
 } from "../../types/gps.types";
 import { GpsVehicleRow } from "../gps-vehicle-row/gps-vehicle-row";
 import styles from "./gps-vehicle-panel.module.css";
@@ -38,9 +39,11 @@ export interface GpsVehiclePanelProps {
   onTrackingFilter: (value: GpsTrackingFilter) => void;
   onOperationalFilter: (value: GpsOperationalFilter) => void;
   onCompanyFilter: (companyId: number | null) => void;
+  onProviderFilter: (providerKey: GpsProviderFilter) => void;
   onPage: (page: number) => void;
   now: Date;
-  onSelect: (vehicleId: number) => void;
+  onViewDetails: (vehicleId: number) => void;
+  onShowOnMap: (vehicleId: number) => void;
   onRetry: () => void;
 }
 
@@ -59,9 +62,11 @@ export function GpsVehiclePanel({
   onTrackingFilter,
   onOperationalFilter,
   onCompanyFilter,
+  onProviderFilter,
   onPage,
   now,
-  onSelect,
+  onViewDetails,
+  onShowOnMap,
   onRetry,
 }: GpsVehiclePanelProps) {
   const t = useTranslations("Gps");
@@ -79,7 +84,7 @@ export function GpsVehiclePanel({
   }, [selectedVehicleId]);
 
   const trackingOptions: SelectOption<GpsTrackingFilter>[] =
-    GPS_TRACKING_FILTERS.map((value) => ({
+    GPS_TRACKING_FILTER_OPTIONS.map((value) => ({
       value,
       label: value === "all" ? t("filters.all") : t(`status.${value}`),
     }));
@@ -97,6 +102,11 @@ export function GpsVehiclePanel({
       value: String(company.id),
       label: company.displayName,
     })),
+  ];
+  const providerOptions: SelectOption<GpsProviderFilter>[] = [
+    { value: "all", label: t("filters.providerAll") },
+    { value: "LIVE_GPS", label: t("filters.liveGps") },
+    { value: "SEVEN_STARS", label: t("filters.sevenStars") },
   ];
 
   const page = meta?.page ?? query.page;
@@ -120,6 +130,14 @@ export function GpsVehiclePanel({
           className={styles.search}
         />
         <div className={styles.filters}>
+          <Select
+            size="sm"
+            variant="ghost"
+            value={query.providerKey ?? "all"}
+            options={providerOptions}
+            onChange={onProviderFilter}
+            aria-label={t("filters.provider")}
+          />
           <Select
             size="sm"
             variant="ghost"
@@ -177,7 +195,8 @@ export function GpsVehiclePanel({
             item={item}
             selected={item.vehicle.id === selectedVehicleId}
             now={now}
-            onSelect={onSelect}
+            onViewDetails={onViewDetails}
+            onShowOnMap={onShowOnMap}
           />
         ))}
       </div>

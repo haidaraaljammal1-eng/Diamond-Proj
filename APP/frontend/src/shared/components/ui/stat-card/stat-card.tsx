@@ -18,6 +18,8 @@ export interface StatCardProps {
   noteTone?: StatCardTone;
   /** Denser KPI for operational strips (GPS). Default remains the Dashboard tile. */
   compact?: boolean;
+  /** Optional page-local class on the root tile (e.g. GPS KPI accent). */
+  className?: string;
 }
 
 /**
@@ -35,9 +37,14 @@ export function StatCard({
   note,
   noteTone = "neutral",
   compact = false,
+  className,
 }: StatCardProps) {
   return (
-    <article className={[styles.kpi, compact ? styles.compact : ""].filter(Boolean).join(" ")}>
+    <article
+      className={[styles.kpi, compact ? styles.compact : "", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <p className={styles.label}>
         {icon ? (
           <span className={styles.icon} aria-hidden="true">

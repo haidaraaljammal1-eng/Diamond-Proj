@@ -22,6 +22,8 @@ import type {
   ProviderHistoryFetchResult,
 } from "src/modules/gps/gps-provider.types";
 import { LiveGpsSessionManager } from "src/modules/gps/providers/live-gps/live-gps.session";
+import { createGpsProviderRuntime } from "src/modules/gps/gps-provider-runtime";
+import { LIVE_GPS_PROVIDER_KEY } from "src/modules/gps/providers/live-gps/live-gps.constants";
 
 const NOW = new Date("2026-10-09T12:00:00.000Z");
 
@@ -90,7 +92,9 @@ function serviceFixture(input?: {
   const gps = createGpsHistoryService(fastify, {
     now: () => NOW,
     resolveAdapter: () => input?.adapter ?? null,
-    runtime: { liveGpsSessionManager: new LiveGpsSessionManager() },
+    runtime: createGpsProviderRuntime(
+      new Map([[LIVE_GPS_PROVIDER_KEY, new LiveGpsSessionManager()]]),
+    ),
   });
   return { gps, reads };
 }

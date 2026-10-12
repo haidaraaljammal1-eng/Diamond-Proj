@@ -20,6 +20,7 @@ import {
   GpsVehicleIdParam,
   GpsVehicleListItemSchema,
   ListGpsVehiclesQuerySchema,
+  MapPointsQuerySchema,
 } from "src/modules/gps/gps.schema";
 
 const T = ["GPS"];
@@ -131,13 +132,14 @@ export default async function gpsRoutes(fastify: FastifyInstance) {
         operationId: "listGpsMapPoints",
         tags: T,
         permissions: [PERMISSIONS.GPS_READ],
+        querystring: MapPointsQuerySchema,
         response: {
           200: dataResponse(z.array(GpsMapPointSchema)),
           ...commonErrorResponses,
         },
       },
     },
-    async () => ({ data: await gps.mapPoints() }),
+    async (request) => ({ data: await gps.mapPoints(MapPointsQuerySchema.parse(request.query)) }),
   );
 
   app.get(

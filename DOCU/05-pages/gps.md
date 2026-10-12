@@ -11,7 +11,7 @@ Demo Simulation, if used, is frontend-only and must never persist fake GPS to th
 
 Route: `/ar/gps` and `/en/gps`. Permission: `gps.read`. Architecture: Page → `useGps` → Zustand store → `gps.api.ts` → Fastify.
 
-Visual hierarchy: map is the working surface, then selected vehicle, then fleet panel, then compact KPIs. Desktop uses a ~70/30 map/panel split filling remaining viewport height. Mobile stacks map (~45vh), selected row, then the list.
+Visual hierarchy: compact page header and KPI strip, then an operations workspace with a narrow fleet control column (~32%) and a large map hero (~68%, `clamp(520px, 65vh, 760px)` map height). The GPS page uses natural vertical document flow inside `#app-main` (not a fixed viewport-height shell) so KPIs stay in flow while the map stays large; AppShell scroll handles overflow. Mobile stacks map first, selected row, then the fleet list.
 
 Map: Leaflet + OpenStreetMap tiles, `dynamic(..., { ssr: false })`. Markers only from `GET /gps/map-points` in real mode. Custom champagne pins — no default Leaflet blue markers.
 
@@ -94,6 +94,8 @@ Derived centrally (`deriveTrackingStatus`). `OFFLINE` is never stored. These val
 | `online` | Fresh location + motion UNKNOWN (speed missing) |
 
 List filter `trackingStatus=online` still matches this row-level value (fresh + unknown motion), not the summary Online total.
+
+Connectivity freshness uses `GPS_OFFLINE_AFTER_MINUTES` (default 10). Display motion (row badges, summary Moving/Idle/Parked, and list/map filters `moving` / `idle` / `parked`) uses `GPS_MOTION_STALE_AFTER_MINUTES` (default 2): if the latest `capturedAt` is older than that window, display motion is **parked** even when connectivity is still online.
 
 ## Summary KPIs (`GET /gps/summary`)
 
@@ -207,6 +209,7 @@ See [operating-companies.md](../00-system-overview/operating-companies.md).
 ```
 GPS_ENABLED=false
 GPS_OFFLINE_AFTER_MINUTES=10
+GPS_MOTION_STALE_AFTER_MINUTES=2
 GPS_MOVING_SPEED_THRESHOLD_KPH=3
 ```
 

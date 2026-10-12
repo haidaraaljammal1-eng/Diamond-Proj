@@ -111,5 +111,9 @@ export function createBackgroundRunner(app: FastifyInstance) {
     }
   }
 
-  return { runAllCycles, runGpsProviderSyncCycle: gpsProviderSync.runGpsProviderSyncCycle };
+  return {
+    runAllCycles,
+    runGpsProviderSyncCycle: gpsProviderSync.runGpsProviderSyncCycle,
+    runLiveGpsFastSyncCycle: gpsProviderSync.runLiveGpsFastSyncCycle,
+  };
 }

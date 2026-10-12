@@ -2043,17 +2043,25 @@
   "Gps": {
     "crumbs": "العمليات · التتبع",
     "title": "مركز عمليات GPS",
-    "subtitle": "مواقع الأسطول الحية والحركة وسياق التأجير.",
+    "subtitle": "مواقع الأسطول الحية والحركة.",
     "refresh": "تحديث",
     "retry": "إعادة المحاولة",
     "noPlate": "بدون لوحة",
+    "gpsVehicle": "مركبة GPS",
     "noUpdate": "لا يوجد تحديث GPS",
     "kpi": {
+      "total": "إجمالي السيارات",
+      "totalNote": "الأسطول النشط",
+      "moving": "متحركة",
+      "movingNote": "سيارة تتحرك الآن",
+      "idle": "خمول",
+      "idleNote": "المحرك يعمل بدون حركة",
+      "parked": "متوقفة",
+      "parkedNote": "متوقفة أو بدون إشارة حديثة",
       "tracked": "المركبات المتتبعة",
       "trackedNote": "ارتباطات GPS النشطة",
       "online": "متصلة",
       "onlineNote": "مواقع GPS حديثة",
-      "moving": "متحركة",
       "parkedCount": "{count} متوقفة",
       "offline": "غير متصلة",
       "offlineNote": "موقع قديم"
@@ -2064,6 +2072,7 @@
     },
     "status": {
       "moving": "متحركة",
+      "idle": "خمول",
       "parked": "متوقفة",
       "online": "متصلة",
       "offline": "غير متصلة",
@@ -2091,13 +2100,22 @@
     "filters": {
       "all": "الكل",
       "tracking": "حالة التتبع",
-      "operational": "الحالة التشغيلية"
+      "operational": "الحالة التشغيلية",
+      "provider": "مزود GPS",
+      "providerAll": "كل المزودين",
+      "liveGps": "LIVE MY GPS",
+      "sevenStars": "Seven Stars"
     },
     "panel": {
       "title": "الأسطول",
       "results": "{count} مركبة",
       "loading": "جاري تحميل المركبات…",
       "empty": "لا توجد مركبات مطابقة لهذه عوامل التصفية."
+    },
+    "row": {
+      "showOnMap": "عرض على الخريطة",
+      "viewDetails": "عرض التفاصيل",
+      "mapUnavailable": "لا يوجد موقع متاح حاليًا"
     },
     "pagination": {
       "label": "صفحات المركبات",
@@ -2110,33 +2128,43 @@
       "zoomIn": "تكبير",
       "zoomOut": "تصغير",
       "fit": "ملاءمة المركبات",
-      "recenter": "إعادة التمركز"
+      "recenter": "إعادة التمركز",
+      "showAllVehicles": "عرض كل السيارات",
+      "basemapLabel": "نوع الخريطة",
+      "basemapMap": "الخريطة",
+      "basemapSatellite": "القمر الصناعي"
     },
     "detail": {
       "title": "تتبع المركبة",
       "close": "إغلاق",
       "loading": "جاري تحميل بيانات GPS…",
-      "vehicle": "المركبة",
-      "gps": "GPS",
-      "rental": "التأجير الحالي",
-      "year": "السنة",
-      "type": "النوع",
-      "color": "اللون",
-      "coordinates": "الإحداثيات",
-      "noCoordinates": "لا توجد بيانات GPS لهذه المركبة.",
-      "speed": "السرعة",
-      "speedValue": "{value} كم/س",
-      "heading": "الاتجاه",
-      "accuracy": "الدقة",
-      "accuracyValue": "{value} م",
-      "capturedAt": "وقت الالتقاط",
-      "receivedAt": "وقت الاستلام",
-      "contract": "العقد",
-      "customer": "العميل",
-      "rentalStatus": "حالة التأجير",
-      "start": "البداية",
-      "end": "النهاية",
-      "viewContract": "عرض العقد"
+      "company": "الشركة",
+      "provider": "مزود GPS",
+      "liveStatus": "الحالة المباشرة",
+      "currentSpeed": "السرعة الحالية",
+      "speedUnit": "كم/س",
+      "engine": "المحرك",
+      "ignition": {
+        "on": "يعمل",
+        "off": "متوقف",
+        "unknown": "غير معروف"
+      },
+      "heading": "اتجاه الحركة",
+      "headingCardinal": {
+        "N": "شمال",
+        "NE": "شمال شرق",
+        "E": "شرق",
+        "SE": "جنوب شرق",
+        "S": "جنوب",
+        "SW": "جنوب غرب",
+        "W": "غرب",
+        "NW": "شمال غرب"
+      },
+      "currentLocation": "الموقع الحالي",
+      "addressUnavailable": "العنوان غير متوفر",
+      "latitude": "خط العرض",
+      "longitude": "خط الطول",
+      "lastLocationUpdate": "آخر تحديث للموقع"
     },
     "mileage": {
       "title": "ملخص المسافة",

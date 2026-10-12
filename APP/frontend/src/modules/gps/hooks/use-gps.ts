@@ -11,18 +11,29 @@ import type {
   GpsMapPointDto,
   GpsOperationalFilter,
   GpsPageMeta,
+  GpsProviderFilter,
   GpsSummaryDto,
   GpsTrackingFilter,
   GpsVehicleDetailDto,
   GpsVehicleListItemDto,
 } from "../types/gps.types";
 import { countGpsActiveFilters } from "../utils/gps-query";
+import { GpsRealtimeClient } from "../realtime/gps-realtime-client";
 import {
   applyGpsOverlayToDetail,
   applyGpsOverlayToSummary,
   applyGpsOverlayToVehicle,
   resolveDisplayMapPoints,
 } from "../utils/gps-simulation";
+
+export const GPS_AUTO_REFRESH_INTERVAL_MS = 15_000;
+/** Faster REST refresh when staff filters to LIVE MY GPS (no LIVE SSE). */
+export const GPS_LIVE_AUTO_REFRESH_INTERVAL_MS = 5_000;
+
+function gpsVisibleRefreshIntervalMs(providerKey: GpsListQuery["providerKey"]): number {
+  if (providerKey === "LIVE_GPS") return GPS_LIVE_AUTO_REFRESH_INTERVAL_MS;
+  return GPS_AUTO_REFRESH_INTERVAL_MS;
+}
 
 export interface UseGpsResult {
   summary: GpsSummaryDto | null;
@@ -34,6 +45,7 @@ export interface UseGpsResult {
   selectedVehicleId: number | null;
   selectedVehicleDetail: GpsVehicleDetailDto | null;
   detailOpen: boolean;
+  focusedMapVehicleId: number | null;
   mapFocusToken: number;
   isAllowed: boolean;
   isSummaryLoading: boolean;
@@ -53,9 +65,12 @@ export interface UseGpsResult {
   setTrackingFilter: (status: GpsTrackingFilter) => void;
   setOperationalFilter: (status: GpsOperationalFilter) => void;
   setCompanyFilter: (companyId: number | null) => void;
+  setProviderFilter: (providerKey: GpsProviderFilter) => void;
   setPage: (page: number) => void;
   clearFilters: () => void;
   selectVehicle: (vehicleId: number, options?: { openDetail?: boolean }) => void;
+  focusMapVehicle: (vehicleId: number) => void;
+  clearMapFocus: () => void;
   clearSelection: () => void;
   closeDetail: () => void;
 }
@@ -82,14 +97,18 @@ export function useGps(): UseGpsResult {
   const detailStatus = useGpsStore((state) => state.detailStatus);
   const detailError = useGpsStore((state) => state.detailError);
   const detailOpen = useGpsStore((state) => state.detailOpen);
+  const focusedMapVehicleId = useGpsStore((state) => state.focusedMapVehicleId);
   const mapFocusToken = useGpsStore((state) => state.mapFocusToken);
   const load = useGpsStore((state) => state.load);
   const refresh = useGpsStore((state) => state.refresh);
   const setQuery = useGpsStore((state) => state.setQuery);
   const resetFilters = useGpsStore((state) => state.resetFilters);
   const selectVehicle = useGpsStore((state) => state.selectVehicle);
+  const focusMapVehicle = useGpsStore((state) => state.focusMapVehicle);
+  const clearMapFocus = useGpsStore((state) => state.clearMapFocus);
   const clearSelection = useGpsStore((state) => state.clearSelection);
   const closeDetail = useGpsStore((state) => state.closeDetail);
+  const applyRealtimeEvent = useGpsStore((state) => state.applyRealtimeEvent);
 
   const gpsOverlay = useDemoSimulationStore((state) => state.gpsOverlay);
   const simulationEnabledActive = useDemoSimulationStore((state) => state.active);
@@ -97,6 +116,51 @@ export function useGps(): UseGpsResult {
   useEffect(() => {
     if (isAllowed) void load();
   }, [isAllowed, load]);
+
+  useEffect(() => {
+    if (!isAllowed) return;
+
+    let disposed = false;
+    let timer: number | null = null;
+
+    const schedule = () => {
+      if (disposed) return;
+      const delay =
+        document.visibilityState === "hidden"
+          ? GPS_AUTO_REFRESH_INTERVAL_MS * 2
+          : gpsVisibleRefreshIntervalMs(query.providerKey ?? "all");
+      timer = window.setTimeout(async () => {
+        if (disposed) return;
+        if (document.visibilityState === "visible") {
+          await refresh();
+        }
+        schedule();
+      }, delay);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || disposed) return;
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+      void refresh().finally(schedule);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    schedule();
+
+    return () => {
+      disposed = true;
+      if (timer !== null) window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isAllowed, query.providerKey, refresh]);
+
+  useEffect(() => {
+    if (!isAllowed) return;
+    const client = new GpsRealtimeClient(applyRealtimeEvent);
+    client.start();
+    return () => client.stop();
+  }, [applyRealtimeEvent, isAllowed]);
 
   const displayVehicles = useMemo(
     () => vehicles.map((item) => applyGpsOverlayToVehicle(item, gpsOverlay)),
@@ -126,6 +190,7 @@ export function useGps(): UseGpsResult {
       selectedVehicleId,
       selectedVehicleDetail: displayDetail,
       detailOpen,
+      focusedMapVehicleId,
       mapFocusToken,
       isAllowed,
       isSummaryLoading:
@@ -163,11 +228,16 @@ export function useGps(): UseGpsResult {
       setCompanyFilter: (companyId: number | null) => {
         void setQuery({ companyId, page: 1 });
       },
+      setProviderFilter: (providerKey: GpsProviderFilter) => {
+        void setQuery({ providerKey, page: 1 });
+      },
       setPage: (page: number) => {
         void setQuery({ page });
       },
       clearFilters: resetFilters,
       selectVehicle,
+      focusMapVehicle,
+      clearMapFocus,
       clearSelection,
       closeDetail,
     }),
@@ -180,6 +250,7 @@ export function useGps(): UseGpsResult {
       selectedVehicleId,
       displayDetail,
       detailOpen,
+      focusedMapVehicleId,
       mapFocusToken,
       isAllowed,
       summaryStatus,
@@ -197,6 +268,8 @@ export function useGps(): UseGpsResult {
       setQuery,
       resetFilters,
       selectVehicle,
+      focusMapVehicle,
+      clearMapFocus,
       clearSelection,
       closeDetail,
     ],

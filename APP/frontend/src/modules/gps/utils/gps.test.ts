@@ -3,9 +3,43 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { createFormatter } from "use-intl/core";
-import { countsInSummaryOnlineTotal, formatGpsCoordinates, toValidGpsDate } from "./gps-status.ts";
-import { buildGpsListQuery, countGpsActiveFilters } from "./gps-query.ts";
-import { shouldInvalidateLeafletSize } from "./gps-map.ts";
+import {
+  countsInSummaryOnlineTotal,
+  deriveDisplayMotionStatus,
+  formatGpsCoordinates,
+  toValidGpsDate,
+} from "./gps-status.ts";
+import {
+  buildGpsListQuery,
+  buildGpsMapQuery,
+  countGpsActiveFilters,
+} from "./gps-query.ts";
+import {
+  filterMapPointsForFocus,
+  GPS_MAP_FOCUS_FLY_DURATION_S,
+  GPS_MAP_FOCUS_MIN_ZOOM,
+  interpolateCoordinate,
+  markerAnimationDurationMs,
+  shouldInvalidateLeafletSize,
+  shouldSnapMarker,
+} from "./gps-map.ts";
+import {
+  GPS_MAP_DEFAULT_SATELLITE_ATTRIBUTION,
+  GPS_MAP_DEFAULT_SATELLITE_TILE_URL,
+  GPS_MAP_OSM_TILE_URL,
+  gpsMapBasemapAttributionLabel,
+  isGpsSatelliteBasemapEnabled,
+  resolveGpsSatelliteBasemap,
+} from "./gps-map-basemap-config.ts";
+import {
+  formatGpsDetailCoordinate,
+  formatGpsDetailHeading,
+  formatGpsDetailSpeedValue,
+  gpsDetailDisplayedSpeedKph,
+  gpsDetailEnginePresentationFromMotion,
+  gpsDetailProviderLabel,
+  headingCardinalKey,
+} from "./gps-detail-present.ts";
 import {
   clampPlaybackIndex,
   customUaeHistoryRange,
@@ -21,6 +55,7 @@ import {
   advanceGpsSimulationPath,
   resolveDisplayMapPoints,
 } from "./gps-simulation.ts";
+import { GPS_TRACKING_FILTER_OPTIONS } from "../types/gps.types.ts";
 import type {
   GpsSummaryDto,
   GpsTrackingStatus,
@@ -28,11 +63,157 @@ import type {
 } from "../types/gps.types.ts";
 import { GPS_TRACKING_FILTERS } from "../types/gps.types.ts";
 
+describe("deriveDisplayMotionStatus (row badge)", () => {
+  const NOW = new Date("2026-09-10T12:00:00.000Z");
+  const FRESH = new Date("2026-09-10T11:55:00.000Z");
+  const STALE = new Date("2026-09-10T11:40:00.000Z");
+  const base = {
+    providerConfigured: true,
+    bindingActive: true,
+    capturedAt: FRESH,
+    motionState: "parked" as const,
+    speedKph: 0,
+    ignitionOn: false as boolean | null,
+    now: NOW,
+    motionStaleAfterMinutes: 15,
+    movingThresholdKph: 3,
+  };
+
+  it("fresh + moving → moving", () => {
+    assert.equal(
+      deriveDisplayMotionStatus({
+        ...base,
+        speedKph: 12,
+        motionState: "parked",
+        ignitionOn: false,
+      }),
+      "moving",
+    );
+  });
+
+  it("fresh + not moving + ignitionOn=true → idle", () => {
+    assert.equal(
+      deriveDisplayMotionStatus({
+        ...base,
+        speedKph: 0,
+        motionState: "parked",
+        ignitionOn: true,
+      }),
+      "idle",
+    );
+  });
+
+  it("fresh + not moving + ignitionOn=false → parked", () => {
+    assert.equal(
+      deriveDisplayMotionStatus({
+        ...base,
+        speedKph: 0,
+        motionState: "parked",
+        ignitionOn: false,
+      }),
+      "parked",
+    );
+  });
+
+  it("ignition unknown → parked", () => {
+    assert.equal(
+      deriveDisplayMotionStatus({
+        ...base,
+        speedKph: 0,
+        motionState: "unknown",
+        ignitionOn: null,
+      }),
+      "parked",
+    );
+  });
+
+  it("stale capture → parked", () => {
+    assert.equal(
+      deriveDisplayMotionStatus({
+        ...base,
+        capturedAt: STALE,
+        speedKph: 40,
+        motionState: "moving",
+        ignitionOn: true,
+      }),
+      "parked",
+    );
+  });
+
+  it("default 2 min motion stale: T0+1m59s moving, T0+2m01s parked", () => {
+    const t0 = new Date("2026-09-10T12:00:00.000Z");
+    const freshNow = new Date(t0.getTime() + 119_000);
+    const staleNow = new Date(t0.getTime() + 121_000);
+    const movingSnapshot = {
+      ...base,
+      capturedAt: t0,
+      motionState: "moving" as const,
+      speedKph: 19,
+      ignitionOn: true,
+      motionStaleAfterMinutes: 2,
+    };
+    assert.equal(
+      deriveDisplayMotionStatus({ ...movingSnapshot, now: freshNow }),
+      "moving",
+    );
+    assert.equal(
+      deriveDisplayMotionStatus({ ...movingSnapshot, now: staleNow }),
+      "parked",
+    );
+  });
+});
+
 describe("GPS summary online semantics", () => {
   it("counts moving, parked, and row-level online as summary online", () => {
     assert.equal(countsInSummaryOnlineTotal("moving"), true);
     assert.equal(countsInSummaryOnlineTotal("parked"), true);
     assert.equal(countsInSummaryOnlineTotal("online"), true);
+  });
+
+  describe("GPS smooth marker movement", () => {
+    const pointA = { latitude: 25, longitude: 55 };
+    const pointB = { latitude: 25.001, longitude: 55.001 };
+    const pointC = { latitude: 25.002, longitude: 55.002 };
+    const timeA = "2026-01-01T00:00:00.000Z";
+    const timeB = "2026-01-01T00:00:10.000Z";
+
+    it("interpolates A to B and ends exactly at B", () => {
+      const middle = interpolateCoordinate(pointA, pointB, 0.5);
+      assert.notDeepEqual(middle, pointA);
+      assert.deepEqual(interpolateCoordinate(pointA, pointB, 1), pointB);
+    });
+
+    it("uses the current rendered point as the new start for an interrupted update", () => {
+      const current = interpolateCoordinate(pointA, pointB, 0.4);
+      assert.deepEqual(interpolateCoordinate(current, pointC, 1), pointC);
+      assert.notDeepEqual(current, pointB);
+    });
+
+    it("snaps initial, stale, and large-gap data instead of animating it", () => {
+      assert.equal(shouldSnapMarker(pointA, pointB, null, timeB), true);
+      assert.equal(shouldSnapMarker(pointA, pointB, timeB, timeA), true);
+      assert.equal(
+        shouldSnapMarker(pointA, { latitude: 25.05, longitude: 55.05 }, timeA, timeB),
+        true,
+      );
+    });
+
+    it("adapts animation duration to cadence without exceeding the cap", () => {
+      assert.equal(shouldSnapMarker(pointA, pointB, timeA, timeB), false);
+      assert.equal(markerAnimationDurationMs(timeA, timeB), 3800);
+      assert.equal(
+        markerAnimationDurationMs(timeA, "2026-01-01T00:00:02.000Z"),
+        1600,
+      );
+      assert.equal(
+        markerAnimationDurationMs(timeA, "2026-01-01T00:00:00.100Z"),
+        500,
+      );
+      assert.equal(
+        markerAnimationDurationMs(timeA, "2026-01-01T00:00:15.000Z"),
+        3800,
+      );
+    });
   });
 
   it("does not count offline, no_data, or unassigned as summary online", () => {
@@ -75,6 +256,20 @@ describe("GPS query", () => {
     assert.ok(query.includes("trackingStatus=moving"));
   });
 
+  it("composes provider and company filters independently", () => {
+    const query = buildGpsListQuery({
+      search: "",
+      status: "all",
+      trackingStatus: "all",
+      companyId: 2,
+      providerKey: "SEVEN_STARS",
+      page: 1,
+      pageSize: 8,
+    });
+    assert.ok(query.includes("providerKey=SEVEN_STARS"));
+    assert.ok(query.includes("companyId=2"));
+  });
+
   it("counts the operating-company filter as an active filter", () => {
     assert.equal(
       countGpsActiveFilters({
@@ -96,6 +291,29 @@ describe("GPS query", () => {
     );
   });
 
+  it("counts a provider filter and omits the all-provider value", () => {
+    assert.equal(
+      countGpsActiveFilters({
+        search: "",
+        status: "all",
+        trackingStatus: "all",
+        companyId: null,
+        providerKey: "all",
+      }),
+      0,
+    );
+    assert.equal(
+      countGpsActiveFilters({
+        search: "",
+        status: "all",
+        trackingStatus: "all",
+        companyId: null,
+        providerKey: "LIVE_GPS",
+      }),
+      1,
+    );
+  });
+
   it("omits all-filters so pagination stays server-side", () => {
     const query = buildGpsListQuery({
       search: "",
@@ -108,6 +326,53 @@ describe("GPS query", () => {
     assert.equal(query.includes("search="), false);
     assert.equal(query.includes("status="), false);
     assert.equal(query.includes("trackingStatus="), false);
+  });
+
+  it("serializes display motion tracking filters including idle", () => {
+    for (const trackingStatus of ["moving", "idle", "parked"] as const) {
+      const query = buildGpsListQuery({
+        search: "",
+        status: "all",
+        trackingStatus,
+        companyId: null,
+        providerKey: "SEVEN_STARS",
+        page: 1,
+        pageSize: 8,
+      });
+      assert.ok(query.includes(`trackingStatus=${trackingStatus}`));
+      assert.ok(query.includes("providerKey=SEVEN_STARS"));
+    }
+  });
+});
+
+describe("GPS map query", () => {
+  it("serializes provider, company, and display motion for map-points", () => {
+    const query = buildGpsMapQuery({
+      companyId: 1,
+      providerKey: "SEVEN_STARS",
+      trackingStatus: "idle",
+    });
+    assert.ok(query.includes("companyId=1"));
+    assert.ok(query.includes("providerKey=SEVEN_STARS"));
+    assert.ok(query.includes("trackingStatus=idle"));
+  });
+
+  it("omits trackingStatus when filter is all", () => {
+    const query = buildGpsMapQuery({
+      companyId: null,
+      providerKey: "all",
+      trackingStatus: "all",
+    });
+    assert.equal(query.includes("trackingStatus="), false);
+  });
+});
+
+describe("GPS tracking filter options", () => {
+  it("exposes only All / Moving / Idle / Parked on the GPS page", () => {
+    assert.deepEqual(GPS_TRACKING_FILTER_OPTIONS, ["all", "moving", "idle", "parked"]);
+    assert.equal(GPS_TRACKING_FILTER_OPTIONS.includes("offline"), false);
+    assert.equal(GPS_TRACKING_FILTER_OPTIONS.includes("no_data"), false);
+    assert.equal(GPS_TRACKING_FILTER_OPTIONS.includes("online"), false);
   });
 });
 
@@ -197,6 +462,7 @@ function vehicle(id: number, status: GpsTrackingStatus): GpsVehicleListItemDto {
       longitude: null,
       speedKph: null,
       headingDegrees: null,
+      ignitionOn: null,
       accuracyMeters: null,
       capturedAt: null,
       receivedAt: null,
@@ -242,7 +508,8 @@ describe("GPS simulation overlay", () => {
       totalVehicles: 20,
       trackedVehicles: 0,
       moving: 0,
-      parked: 0,
+      idle: 0,
+      parked: 20,
       online: 0,
       offline: 0,
       noData: 0,
@@ -250,7 +517,7 @@ describe("GPS simulation overlay", () => {
       lastLocationUpdateAt: null,
     };
     const next = applyGpsOverlayToSummary(summary, overlay)!;
-    assert.equal(next.online, next.moving + next.parked + 1);
+    assert.equal(next.moving + next.idle + next.parked, next.totalVehicles);
     assert.equal(next.online, 5);
     assert.equal(next.offline, 1);
   });
@@ -394,11 +661,456 @@ describe("GPS store selection", () => {
   });
 });
 
+describe("GPS map interaction scroll guard", () => {
+  it("disables Leaflet keyboard focus and uses natural GPS page height flow", () => {
+    const canvas = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-map/gps-map-canvas.tsx"),
+      "utf8",
+    );
+    const screenCss = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-screen/gps-screen.module.css"),
+      "utf8",
+    );
+    assert.ok(canvas.includes("keyboard: false"));
+    assert.equal(screenCss.includes("height: calc(100dvh - 118px)"), false);
+    assert.ok(screenCss.includes("height: auto"));
+    assert.ok(screenCss.includes("overflow: visible"));
+  });
+});
+
+describe("GPS operations workspace layout", () => {
+  it("composes fleet column and map hero without touching data hooks", () => {
+    const screen = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-screen/gps-screen.tsx"),
+      "utf8",
+    );
+    const layout = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-screen/gps-screen.module.css"),
+      "utf8",
+    );
+    assert.ok(screen.includes("styles.workspace"));
+    assert.ok(screen.includes("styles.fleetCol"));
+    assert.ok(screen.includes("styles.mapCol"));
+    assert.ok(screen.includes("className={styles.fleetCol}"));
+    assert.ok(screen.includes("className={styles.mapCol}"));
+    assert.ok(layout.includes("0.68fr"));
+    assert.ok(layout.includes("clamp(520px, 65vh, 760px)"));
+    assert.ok(layout.includes("@media (min-width: 1081px)"));
+    assert.ok(layout.includes("max-height: var(--gps-map-min-h)"));
+    assert.equal(screen.includes("apiRequest"), false);
+  });
+
+  it("keeps StatCard shared defaults while allowing GPS KPI className", () => {
+    const statCard = readFileSync(
+      path.join(
+        import.meta.dirname,
+        "../../../shared/components/ui/stat-card/stat-card.tsx",
+      ),
+      "utf8",
+    );
+    const summary = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-summary/gps-summary.tsx"),
+      "utf8",
+    );
+    assert.ok(statCard.includes("className?"));
+    assert.ok(summary.includes("className={styles.kpiTotal}"));
+  });
+});
+
+describe("GPS vehicle row actions", () => {
+  const modulesRoot = path.join(import.meta.dirname, "..");
+
+  it("exposes map and details buttons with distinct handlers", () => {
+    const row = readFileSync(
+      path.join(modulesRoot, "components/gps-vehicle-row/gps-vehicle-row.tsx"),
+      "utf8",
+    );
+    const screen = readFileSync(
+      path.join(modulesRoot, "components/gps-screen/gps-screen.tsx"),
+      "utf8",
+    );
+    assert.ok(row.includes('data-testid="gps-row-show-map"'));
+    assert.ok(row.includes('data-testid="gps-row-view-details"'));
+    assert.ok(row.includes("onShowOnMap"));
+    assert.ok(row.includes("onViewDetails"));
+    assert.ok(row.includes("event.stopPropagation()"));
+    assert.ok(row.includes("hasMapCoordinates"));
+    assert.ok(row.includes("disabled={!canShowOnMap}"));
+    assert.ok(screen.includes("openDetail: false"));
+    assert.ok(screen.includes("openDetail: true"));
+    assert.ok(screen.includes("focusMapVehicle(vehicleId)"));
+    assert.ok(screen.includes("scrollIntoView"));
+  });
+});
+
+describe("GPS detail speed display", () => {
+  it("shows real speed only when display motion is moving", () => {
+    assert.equal(gpsDetailDisplayedSpeedKph("moving", 72), 72);
+    assert.equal(gpsDetailDisplayedSpeedKph("idle", 4), 0);
+    assert.equal(gpsDetailDisplayedSpeedKph("parked", 11), 0);
+    assert.equal(gpsDetailDisplayedSpeedKph("moving", null), null);
+  });
+
+  it("derives drawer speed from display motion in gps-detail", () => {
+    const source = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-detail/gps-detail.tsx"),
+      "utf8",
+    );
+    assert.ok(
+      source.includes("gpsDetailDisplayedSpeedKph(displayMotion, gps?.speedKph)"),
+    );
+    assert.equal(
+      source.includes("formatGpsDetailSpeedValue(gps?.speedKph)"),
+      false,
+    );
+  });
+});
+
+describe("GPS detail engine display", () => {
+  it("derives engine ON for moving and idle display motion", () => {
+    assert.equal(gpsDetailEnginePresentationFromMotion("moving"), "on");
+    assert.equal(gpsDetailEnginePresentationFromMotion("idle"), "on");
+  });
+
+  it("derives engine OFF for parked display motion", () => {
+    assert.equal(gpsDetailEnginePresentationFromMotion("parked"), "off");
+  });
+
+  it("does not use raw ignitionOn in the detail drawer", () => {
+    const source = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-detail/gps-detail.tsx"),
+      "utf8",
+    );
+    assert.ok(source.includes("gpsDetailEnginePresentationFromMotion(displayMotion)"));
+    assert.equal(source.includes("gps.ignitionOn"), false);
+  });
+});
+
+describe("GPS detail provider label", () => {
+  const t = (key: "filters.liveGps" | "filters.sevenStars") =>
+    key === "filters.liveGps" ? "LIVE MY GPS" : "Seven Stars";
+
+  it("maps vehicle binding providerKey to display labels", () => {
+    assert.equal(
+      gpsDetailProviderLabel({ assigned: true, providerKey: "LIVE_GPS" }, t),
+      "LIVE MY GPS",
+    );
+    assert.equal(
+      gpsDetailProviderLabel({ assigned: true, providerKey: "SEVEN_STARS" }, t),
+      "Seven Stars",
+    );
+    assert.equal(gpsDetailProviderLabel({ assigned: false }, t), "—");
+  });
+
+  it("does not read provider from screen list filters", () => {
+    const screen = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-screen/gps-screen.tsx"),
+      "utf8",
+    );
+    const detail = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-detail/gps-detail.tsx"),
+      "utf8",
+    );
+    assert.equal(screen.includes("detailProviderLabel"), false);
+    assert.equal(screen.includes("providerLabel={"), false);
+    assert.ok(detail.includes("gpsDetailProviderLabel"));
+    assert.ok(detail.includes("detail?.binding"));
+  });
+});
+
+describe("GPS detail compact left drawer", () => {
+  const modulesRoot = path.join(import.meta.dirname, "..");
+
+  const forbidden = [
+    "receivedAt",
+    "accuracyMeters",
+    "useGpsHealth",
+    "useGpsReports",
+    "history.open",
+    "mileage.",
+    "overspeed.",
+    "health.",
+    "VehicleImage",
+    "VehicleStatus",
+    "onViewHistory",
+    "onViewContract",
+    "detail.receivedAt",
+    "deviceModel",
+    "externalDevice",
+  ];
+
+  it("renders only approved detail fields and blocks technical metadata", () => {
+    const source = readFileSync(
+      path.join(modulesRoot, "components/gps-detail/gps-detail.tsx"),
+      "utf8",
+    );
+    assert.ok(source.includes("displayMotionStatusFromGpsLocation"));
+    assert.ok(source.includes('data-testid="gps-detail-motion-badge"'));
+    assert.ok(source.includes("detail.currentSpeed"));
+    assert.ok(source.includes("detail.engine"));
+    assert.ok(source.includes("detail.currentLocation"));
+    assert.ok(source.includes("detail.lastLocationUpdate"));
+    assert.ok(source.includes("format.relativeTime(captured"));
+    assert.ok(source.includes('anchor="left"'));
+    assert.ok(source.includes('width="compact"'));
+    assert.ok(source.includes('closePresentation="icon"'));
+    assert.ok(source.includes('headerTone="minimal"'));
+    assert.equal(source.includes("styles.divider"), false);
+    assert.ok(source.includes("ltrIsolate"));
+    assert.equal(source.includes("Dialog"), false);
+    assert.equal(source.includes("@/shared/components/ui/card"), false);
+    for (const token of forbidden) {
+      assert.equal(source.includes(token), false, `forbidden token: ${token}`);
+    }
+  });
+
+  it("uses display motion status labels moving idle parked", () => {
+    const source = readFileSync(
+      path.join(modulesRoot, "components/gps-detail/gps-detail.tsx"),
+      "utf8",
+    );
+    assert.ok(source.includes('t(`status.${displayMotion}`)'));
+    assert.equal(source.includes("gps.trackingStatus"), false);
+  });
+
+  it("formats null fallbacks for speed heading coordinates and ignition", () => {
+    const present = readFileSync(
+      path.join(modulesRoot, "utils/gps-detail-present.ts"),
+      "utf8",
+    );
+    assert.ok(present.includes('GPS_DETAIL_PLACEHOLDER = "—"'));
+    assert.equal(formatGpsDetailSpeedValue(null), null);
+    assert.equal(formatGpsDetailHeading(null), "—");
+    assert.equal(formatGpsDetailCoordinate(null), "—");
+    assert.equal(headingCardinalKey(216), "detail.headingCardinal.SW");
+  });
+
+  it("opens a left compact drawer via shared Drawer anchor", () => {
+    const drawer = readFileSync(
+      path.join(import.meta.dirname, "../../../shared/components/ui/drawer/drawer.tsx"),
+      "utf8",
+    );
+    assert.ok(drawer.includes('data-drawer-anchor={anchor}'));
+    assert.ok(drawer.includes("panelLeft"));
+    const css = readFileSync(
+      path.join(import.meta.dirname, "../../../shared/components/ui/drawer/drawer.module.css"),
+      "utf8",
+    );
+    assert.ok(css.includes(".panelLeft"));
+    assert.ok(css.includes(".panelCompact"));
+    assert.ok(css.includes("width: min(440px"));
+    assert.ok(drawer.includes("closeIcon"));
+  });
+
+  it("keeps RTL-friendly layout hooks in detail styles", () => {
+    const css = readFileSync(
+      path.join(modulesRoot, "components/gps-detail/gps-detail.module.css"),
+      "utf8",
+    );
+    assert.ok(css.includes("unicode-bidi: isolate"));
+    assert.ok(css.includes("telemetryStrip"));
+    assert.equal(css.includes(".divider"), false);
+  });
+});
+
+describe("GPS map single vehicle focus", () => {
+  const modulesRoot = path.join(import.meta.dirname, "..");
+
+  const mapPoint = (vehicleId: number) => ({
+    vehicleId,
+    company: null,
+    latitude: 25.2,
+    longitude: 55.27,
+    operationalStatus: "available" as const,
+    trackingStatus: "moving" as const,
+    displayName: `Vehicle ${vehicleId}`,
+    plateNumber: null,
+    capturedAt: "2026-01-01T00:00:00.000Z",
+    speedKph: 40,
+    headingDegrees: 90,
+    currentRental: null,
+  });
+
+  it("focusMapVehicle sets focusedMapVehicleId and map focus token", () => {
+    const store = readFileSync(path.join(modulesRoot, "stores/gps.store.ts"), "utf8");
+    const focusBlock = store.slice(
+      store.indexOf("focusMapVehicle(vehicleId)"),
+      store.indexOf("clearMapFocus()"),
+    );
+    assert.ok(focusBlock.includes("focusedMapVehicleId: vehicleId"));
+    assert.ok(focusBlock.includes("mapFocusToken: get().mapFocusToken + 1"));
+    const selectBlock = store.slice(
+      store.indexOf("selectVehicle(vehicleId"),
+      store.indexOf("focusMapVehicle(vehicleId)"),
+    );
+    assert.equal(selectBlock.includes("mapFocusToken"), false);
+  });
+
+  it("focused mode renders only the selected map marker via display filter", () => {
+    const points = [mapPoint(1), mapPoint(2), mapPoint(3)];
+    const focused = filterMapPointsForFocus(points, 2);
+    assert.equal(focused.length, 1);
+    assert.equal(focused[0]?.vehicleId, 2);
+    const screen = readFileSync(
+      path.join(modulesRoot, "components/gps-screen/gps-screen.tsx"),
+      "utf8",
+    );
+    assert.ok(screen.includes("filterMapPointsForFocus"));
+    assert.ok(screen.includes("mapRenderPoints"));
+  });
+
+  it("show all clears focus without touching query filters", () => {
+    const store = readFileSync(path.join(modulesRoot, "stores/gps.store.ts"), "utf8");
+    assert.ok(store.includes("clearMapFocus()"));
+    assert.ok(store.includes("focusedMapVehicleId: null"));
+    const canvas = readFileSync(
+      path.join(modulesRoot, "components/gps-map/gps-map-canvas.tsx"),
+      "utf8",
+    );
+    assert.ok(canvas.includes('data-testid="gps-map-show-all"'));
+    assert.ok(canvas.includes("onClearMapFocus"));
+  });
+
+  it("details selection does not enter map focus mode", () => {
+    const store = readFileSync(path.join(modulesRoot, "stores/gps.store.ts"), "utf8");
+    const selectBlock = store.slice(
+      store.indexOf("selectVehicle(vehicleId"),
+      store.indexOf("focusMapVehicle(vehicleId)"),
+    );
+    assert.equal(selectBlock.includes("focusedMapVehicleId"), false);
+    assert.equal(selectBlock.includes("mapFocusToken"), false);
+    const screen = readFileSync(
+      path.join(modulesRoot, "components/gps-screen/gps-screen.tsx"),
+      "utf8",
+    );
+    assert.ok(
+      screen.includes("selectVehicle(vehicleId, { openDetail: true })"),
+    );
+    const detailsBlock = screen.slice(
+      screen.indexOf("viewVehicleDetails = useCallback"),
+      screen.indexOf("useEffect(() => {"),
+    );
+    assert.equal(detailsBlock.includes("focusMapVehicle"), false);
+  });
+
+  it("realtime updates do not retrigger map flyTo", () => {
+    const store = readFileSync(path.join(modulesRoot, "stores/gps.store.ts"), "utf8");
+    const realtime = store.slice(
+      store.indexOf("applyRealtimeEvent(event)"),
+      store.indexOf("}));"),
+    );
+    assert.equal(realtime.includes("mapFocusToken"), false);
+    const canvas = readFileSync(
+      path.join(modulesRoot, "components/gps-map/gps-map-canvas.tsx"),
+      "utf8",
+    );
+    assert.ok(canvas.includes("[focusedMapVehicleId, focusToken]"));
+    assert.ok(canvas.includes("GPS_MAP_FOCUS_MIN_ZOOM"));
+    assert.equal(GPS_MAP_FOCUS_MIN_ZOOM, 16);
+    assert.equal(GPS_MAP_FOCUS_FLY_DURATION_S, 1);
+  });
+
+  it("map action stays disabled without valid coordinates", () => {
+    const row = readFileSync(
+      path.join(modulesRoot, "components/gps-vehicle-row/gps-vehicle-row.tsx"),
+      "utf8",
+    );
+    assert.ok(row.includes("hasMapCoordinates"));
+    assert.ok(row.includes("disabled={!canShowOnMap}"));
+  });
+});
+
+describe("GPS live refresh and vehicle presentation", () => {
+  const modulesRoot = path.join(import.meta.dirname, "..");
+
+  it("uses faster visible refresh when LIVE_GPS provider filter is selected", () => {
+    const source = readFileSync(path.join(modulesRoot, "hooks/use-gps.ts"), "utf8");
+    assert.ok(source.includes("GPS_LIVE_AUTO_REFRESH_INTERVAL_MS = 5_000"));
+    assert.ok(source.includes('providerKey === "LIVE_GPS"'));
+    assert.ok(source.includes("gpsVisibleRefreshIntervalMs(query.providerKey"));
+  });
+
+  it("polls once while mounted, pauses hidden tabs, and cleans up on unmount", () => {
+    const source = readFileSync(path.join(modulesRoot, "hooks/use-gps.ts"), "utf8");
+    assert.ok(source.includes("GPS_AUTO_REFRESH_INTERVAL_MS = 15_000"));
+    assert.ok(source.includes("window.setTimeout"));
+    assert.ok(source.includes("document.addEventListener(\"visibilitychange\""));
+    assert.ok(source.includes("document.removeEventListener(\"visibilitychange\""));
+    assert.ok(source.includes("document.visibilityState === \"hidden\""));
+    assert.ok(source.includes("await refresh()"));
+  });
+
+  it("refreshes summary, vehicles, and map points through one guarded store refresh", () => {
+    const source = readFileSync(path.join(modulesRoot, "stores/gps.store.ts"), "utf8");
+    assert.ok(source.includes("let refreshInFlight: Promise<void> | null = null;"));
+    assert.ok(source.includes("if (refreshInFlight) return refreshInFlight;"));
+    assert.ok(source.includes("loadSummary(set), loadList(get, set), loadMap(get, set)"));
+    assert.ok(source.includes("if (summaryInFlight) return summaryInFlight;"));
+    assert.ok(source.includes("const requestId = ++listRequestId;"));
+    assert.ok(source.includes("if (requestId !== listRequestId) return;"));
+    assert.ok(source.includes("const requestId = ++mapRequestId;"));
+    assert.ok(source.includes("if (requestId !== mapRequestId) return;"));
+    assert.ok(source.includes("providerKey: query.providerKey"));
+    assert.ok(source.includes("trackingStatus: query.trackingStatus"));
+    assert.ok(source.includes("void Promise.all([loadList(get, set), loadMap(get, set)])"));
+  });
+
+  it("does not apply realtime events from another provider to a filtered list", () => {
+    const source = readFileSync(path.join(modulesRoot, "stores/gps.store.ts"), "utf8");
+    assert.ok(source.includes('state.query.providerKey !== "all"'));
+    assert.ok(source.includes('state.query.providerKey !== event.providerKey'));
+  });
+
+  it("keeps the last successful data when a refresh request fails", () => {
+    const source = readFileSync(path.join(modulesRoot, "stores/gps.store.ts"), "utf8");
+    assert.equal(source.includes("summary: null"), true);
+    assert.equal(source.includes("vehicles: []"), true);
+    assert.equal(source.includes("mapPoints: []"), true);
+    assert.equal(source.includes("summaryStatus: \"error\""), true);
+    assert.equal(source.includes("listStatus: \"error\""), true);
+    assert.equal(source.includes("mapStatus: \"error\""), true);
+    assert.equal(source.includes("set({ summary, summaryStatus: \"ready\""), true);
+    assert.equal(source.includes("vehicles: result.data"), true);
+    assert.equal(source.includes("set({ mapPoints, mapStatus: \"ready\""), true);
+  });
+
+  it("uses a neutral localized fallback instead of a missing-plate error label", () => {
+    const row = readFileSync(
+      path.join(modulesRoot, "components/gps-vehicle-row/gps-vehicle-row.tsx"),
+      "utf8",
+    );
+    const detail = readFileSync(
+      path.join(modulesRoot, "components/gps-detail/gps-detail.tsx"),
+      "utf8",
+    );
+    assert.ok(row.includes('vehicle.plateNumber?.trim() || t("gpsVehicle")'));
+    assert.ok(detail.includes("plateNumber?.trim()"));
+    assert.equal(row.includes('t("noPlate")'), false);
+    assert.equal(detail.includes('t("noPlate")'), false);
+  });
+
+  it("preserves the vehicle name and supports existing plate numbers", () => {
+    const row = readFileSync(
+      path.join(modulesRoot, "components/gps-vehicle-row/gps-vehicle-row.tsx"),
+      "utf8",
+    );
+    const detail = readFileSync(
+      path.join(modulesRoot, "components/gps-detail/gps-detail.tsx"),
+      "utf8",
+    );
+    assert.ok(row.includes("vehicle.displayName"));
+    assert.ok(detail.includes("vehicle.displayName"));
+    assert.ok(row.includes("vehicle.plateNumber?.trim()"));
+    assert.ok(detail.includes("plateNumber?.trim()"));
+  });
+});
+
 describe("GPS filters", () => {
   it("exposes tracking filters for server-side queries", () => {
     assert.deepEqual(GPS_TRACKING_FILTERS, [
       "all",
       "moving",
+      "idle",
       "parked",
       "online",
       "offline",
@@ -474,4 +1186,63 @@ describe("GPS operating company", () => {
     // A simulated overlay point has no real row behind it, so it has no company.
     assert.ok(simulation.includes("existing?.company ?? null"));
   });
+});
+
+describe("GPS map basemap", () => {
+  it("defaults to Esri World Imagery satellite tiles without mt0.google.com", () => {
+    const satellite = resolveGpsSatelliteBasemap();
+    assert.ok(satellite);
+    assert.ok(satellite!.url.includes("World_Imagery"));
+    assert.equal(satellite!.url.includes("mt0.google.com"), false);
+    assert.equal(GPS_MAP_DEFAULT_SATELLITE_TILE_URL.includes("mt0.google.com"), false);
+    assert.equal(isGpsSatelliteBasemapEnabled(), true);
+  });
+
+  it("defines OSM and satellite tile URLs for Leaflet base layers", () => {
+    const basemap = readFileSync(
+      path.join(import.meta.dirname, "./gps-map-basemap-config.ts"),
+      "utf8",
+    );
+    const basemapLayer = readFileSync(
+      path.join(import.meta.dirname, "./gps-map-basemap.ts"),
+      "utf8",
+    );
+    assert.ok(basemapLayer.includes("createGpsBasemapTileLayer"));
+    assert.ok(basemap.includes("tile.openstreetmap.org"));
+    assert.ok(basemap.includes("World_Imagery"));
+    assert.equal(basemap.includes("imagery/labels/static"), false);
+    assert.equal(basemap.includes("SELF_HOSTED"), false);
+    assert.equal(basemap.includes("mt0.google.com"), false);
+    assert.equal(GPS_MAP_OSM_TILE_URL.includes("openstreetmap"), true);
+  });
+
+  it("swaps base tiles without remounting the map or touching vehicle layers", () => {
+    const basemapLayer = readFileSync(
+      path.join(import.meta.dirname, "./gps-map-basemap.ts"),
+      "utf8",
+    );
+    const canvas = readFileSync(
+      path.join(import.meta.dirname, "../components/gps-map/gps-map-canvas.tsx"),
+      "utf8",
+    );
+    assert.ok(canvas.includes("createGpsBasemapTileLayer"));
+    assert.ok(canvas.includes("baseTileRef"));
+    assert.equal(canvas.includes("baseReferenceTileRef"), false);
+    assert.ok(canvas.includes("bringToBack"));
+    assert.ok(canvas.includes('data-testid="gps-map-basemap-toggle"'));
+    assert.ok(canvas.includes("toggleBasemap"));
+    assert.ok(canvas.includes("styles.controls"));
+    assert.equal(canvas.includes("basemapToggle"), false);
+    assert.ok(canvas.includes("map.removeLayer(previousBase)"));
+    assert.equal(basemapLayer.includes("resolveGpsSatelliteLabelsBasemap"), false);
+    assert.ok(canvas.includes("map.setView(center, zoom, { animate: false })"));
+    assert.equal(canvas.includes("fitBounds"), true);
+    assert.ok(gpsMapBasemapAttributionLabel("map").includes("OpenStreetMap"));
+    assert.ok(
+      gpsMapBasemapAttributionLabel("satellite").includes(
+        GPS_MAP_DEFAULT_SATELLITE_ATTRIBUTION.split(",")[0]!,
+      ),
+    );
+  });
+
 });

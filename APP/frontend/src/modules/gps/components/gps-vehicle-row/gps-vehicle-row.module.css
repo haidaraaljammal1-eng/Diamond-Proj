@@ -1,25 +1,18 @@
 .row {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   border: 1px solid transparent;
   border-radius: 10px;
   background: var(--diamond-onyx);
   color: inherit;
   text-align: start;
-  cursor: pointer;
-  font: inherit;
 }
 
 .row:hover {
   background: rgba(201, 161, 92, 0.08);
-}
-
-.row:focus-visible {
-  outline: 2px solid var(--diamond-gold);
-  outline-offset: 2px;
 }
 
 .selected {
@@ -32,9 +25,29 @@
   box-shadow: inset -3px 0 0 var(--diamond-gold);
 }
 
+.main {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+}
+
+.main:focus-visible {
+  outline: 2px solid var(--diamond-gold);
+  outline-offset: 2px;
+}
+
 .photo {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 8px;
   object-fit: cover;
   background: rgba(201, 161, 92, 0.08);
@@ -44,7 +57,6 @@
   min-width: 0;
 }
 
-/* The row owns the layout so the shared marker keeps its own display. */
 .identityRow {
   display: flex;
   align-items: center;
@@ -83,4 +95,38 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.mapAction,
+.detailsAction {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: 32px;
+  min-height: 32px;
+  font-size: 11px;
+  font-weight: 600;
+  padding-inline: 10px;
+}
+
+.mapAction {
+  color: #0d4f5c;
+  border-color: rgba(13, 127, 148, 0.45);
+  background: linear-gradient(180deg, #f0fafc, #d9f0f5);
+}
+
+.mapAction:hover:not(:disabled) {
+  border-color: rgba(13, 127, 148, 0.65);
+  background: linear-gradient(180deg, #f5fcfe, #cfe9f0);
+}
+
+.detailsAction {
+  flex: 1 1 0;
 }

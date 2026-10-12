@@ -14,7 +14,7 @@ import {
   resolveGpsHistoryRange,
   type GpsHistoryRangeQuery,
 } from "src/modules/gps/gps-history";
-import { getSharedLiveGpsSessionManager } from "src/modules/gps/gps-live-gps-sessions";
+import { getSharedGpsProviderRuntime } from "src/modules/gps/gps-live-gps-sessions";
 import type { GpsProviderAdapter } from "src/modules/gps/gps-provider.adapter";
 import { getGpsProviderAdapter } from "src/modules/gps/gps-provider.registry";
 import type { GpsProviderRuntime } from "src/modules/gps/gps-provider.types";
@@ -37,9 +37,7 @@ export function createGpsHistoryService(
     options.resolveAdapter ?? ((providerKey: string) => getGpsProviderAdapter(providerKey));
   const runtime =
     options.runtime ??
-    ({
-      liveGpsSessionManager: getSharedLiveGpsSessionManager(),
-    } satisfies GpsProviderRuntime);
+    getSharedGpsProviderRuntime();
 
   async function getVehicleHistory(vehicleId: number, query: GpsHistoryRangeQuery) {
     const range = resolveGpsHistoryRange(query, now());

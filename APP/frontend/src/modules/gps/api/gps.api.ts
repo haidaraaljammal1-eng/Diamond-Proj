@@ -13,7 +13,7 @@ import type {
   GpsVehicleHealthDto,
 } from "../types/gps.types";
 import { GPS_PAGE_SIZE } from "../types/gps.types";
-import { buildGpsListQuery } from "../utils/gps-query";
+import { buildGpsListQuery, buildGpsMapQuery } from "../utils/gps-query";
 
 const GPS_PATH = "/gps";
 
@@ -61,8 +61,13 @@ export async function getGpsVehicles(
 }
 
 /** `GET /gps/map-points` (Backend permission: `gps.read`). */
-export async function getGpsMapPoints(): Promise<GpsMapPointDto[]> {
-  const response = await apiRequest<GpsMapPointDto[]>(`${GPS_PATH}/map-points`);
+export async function getGpsMapPoints(
+  params?: Pick<GpsListQuery, "companyId" | "providerKey" | "trackingStatus">,
+): Promise<GpsMapPointDto[]> {
+  const suffix = params ? buildGpsMapQuery(params) : "";
+  const response = await apiRequest<GpsMapPointDto[]>(
+    `${GPS_PATH}/map-points${suffix ? `?${suffix}` : ""}`,
+  );
   return response.data;
 }
 

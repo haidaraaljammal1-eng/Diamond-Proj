@@ -18,6 +18,7 @@ import type {
   GpsVehicleListItemDto,
 } from "../types/gps.types";
 import { GPS_PAGE_SIZE } from "../types/gps.types";
+import type { GpsRealtimeEvent } from "../realtime/gps-realtime-client";
 
 export type GpsLoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -38,14 +39,18 @@ interface GpsState {
   detailStatus: GpsLoadStatus;
   detailError: ApiRequestError | null;
   detailOpen: boolean;
+  focusedMapVehicleId: number | null;
   mapFocusToken: number;
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   setQuery: (partial: Partial<GpsListQuery>) => void;
   resetFilters: () => void;
   selectVehicle: (vehicleId: number, options?: { openDetail?: boolean }) => void;
+  focusMapVehicle: (vehicleId: number) => void;
+  clearMapFocus: () => void;
   clearSelection: () => void;
   closeDetail: () => void;
+  applyRealtimeEvent: (event: GpsRealtimeEvent) => void;
 }
 
 const DEFAULT_QUERY: GpsListQuery = {
@@ -53,17 +58,20 @@ const DEFAULT_QUERY: GpsListQuery = {
   status: "all",
   trackingStatus: "all",
   companyId: null,
+  providerKey: "all",
   page: 1,
   pageSize: GPS_PAGE_SIZE,
 };
 
-let listInFlight: Promise<void> | null = null;
 let summaryInFlight: Promise<void> | null = null;
-let mapInFlight: Promise<void> | null = null;
 let detailInFlight: Promise<void> | null = null;
+let refreshInFlight: Promise<void> | null = null;
 let detailRequestId = 0;
+let listRequestId = 0;
+let mapRequestId = 0;
 
 async function loadSummary(set: (partial: Partial<GpsState>) => void) {
+  if (summaryInFlight) return summaryInFlight;
   const run = (async () => {
     set({ summaryStatus: "loading", summaryError: null });
     try {
@@ -77,18 +85,24 @@ async function loadSummary(set: (partial: Partial<GpsState>) => void) {
     }
   })();
   summaryInFlight = run;
-  await run;
-  if (summaryInFlight === run) summaryInFlight = null;
+  try {
+    await run;
+  } finally {
+    if (summaryInFlight === run) summaryInFlight = null;
+  }
 }
 
 async function loadList(
   get: () => GpsState,
   set: (partial: Partial<GpsState>) => void,
 ) {
+  const requestId = ++listRequestId;
+  const query = get().query;
   const run = (async () => {
     set({ listStatus: "loading", listError: null });
     try {
-      const result = await getGpsVehicles(get().query);
+      const result = await getGpsVehicles(query);
+      if (requestId !== listRequestId) return;
       set({
         vehicles: result.data,
         meta: result.meta,
@@ -96,33 +110,41 @@ async function loadList(
         listError: null,
       });
     } catch (error) {
+      if (requestId !== listRequestId) return;
       set({
         listStatus: "error",
         listError: normalizeApiError(error),
       });
     }
   })();
-  listInFlight = run;
   await run;
-  if (listInFlight === run) listInFlight = null;
 }
 
-async function loadMap(set: (partial: Partial<GpsState>) => void) {
+async function loadMap(
+  get: () => GpsState,
+  set: (partial: Partial<GpsState>) => void,
+) {
+  const requestId = ++mapRequestId;
+  const query = get().query;
   const run = (async () => {
     set({ mapStatus: "loading", mapError: null });
     try {
-      const mapPoints = await getGpsMapPoints();
+      const mapPoints = await getGpsMapPoints({
+        companyId: query.companyId,
+        providerKey: query.providerKey,
+        trackingStatus: query.trackingStatus,
+      });
+      if (requestId !== mapRequestId) return;
       set({ mapPoints, mapStatus: "ready", mapError: null });
     } catch (error) {
+      if (requestId !== mapRequestId) return;
       set({
         mapStatus: "error",
         mapError: normalizeApiError(error),
       });
     }
   })();
-  mapInFlight = run;
   await run;
-  if (mapInFlight === run) mapInFlight = null;
 }
 
 async function loadDetail(
@@ -171,29 +193,55 @@ export const useGpsStore = create<GpsState>((set, get) => ({
   detailStatus: "idle",
   detailError: null,
   detailOpen: false,
+  focusedMapVehicleId: null,
   mapFocusToken: 0,
 
   async load() {
-    await Promise.allSettled([loadSummary(set), loadList(get, set), loadMap(set)]);
+    await Promise.allSettled([loadSummary(set), loadList(get, set), loadMap(get, set)]);
   },
 
   async refresh() {
+    if (refreshInFlight) return refreshInFlight;
     const selectedId = get().selectedVehicleId;
     const detailOpen = get().detailOpen;
-    await Promise.allSettled([loadSummary(set), loadList(get, set), loadMap(set)]);
-    if (selectedId != null && detailOpen) {
-      await loadDetail(selectedId, set);
+    const run = (async () => {
+      await Promise.allSettled([loadSummary(set), loadList(get, set), loadMap(get, set)]);
+      if (selectedId != null && detailOpen) {
+        await loadDetail(selectedId, set);
+      }
+    })();
+    refreshInFlight = run;
+    try {
+      await run;
+    } finally {
+      if (refreshInFlight === run) refreshInFlight = null;
     }
   },
 
   setQuery(partial) {
-    set({ query: { ...get().query, ...partial } });
-    void loadList(get, set);
+    set({
+      query: { ...get().query, ...partial },
+      vehicles: [],
+      meta: null,
+      mapPoints: [],
+      focusedMapVehicleId: null,
+      listStatus: "loading",
+      mapStatus: "loading",
+    });
+    void Promise.all([loadList(get, set), loadMap(get, set)]);
   },
 
   resetFilters() {
-    set({ query: DEFAULT_QUERY });
-    void loadList(get, set);
+    set({
+      query: DEFAULT_QUERY,
+      vehicles: [],
+      meta: null,
+      mapPoints: [],
+      focusedMapVehicleId: null,
+      listStatus: "loading",
+      mapStatus: "loading",
+    });
+    void Promise.all([loadList(get, set), loadMap(get, set)]);
   },
 
   selectVehicle(vehicleId, options) {
@@ -205,9 +253,19 @@ export const useGpsStore = create<GpsState>((set, get) => ({
       detailStatus: openDetail ? "loading" : get().detailStatus,
       detailError: sameVehicle ? get().detailError : null,
       detailOpen: openDetail,
-      mapFocusToken: get().mapFocusToken + 1,
     });
     if (openDetail) void loadDetail(vehicleId, set);
+  },
+
+  focusMapVehicle(vehicleId) {
+    set({
+      focusedMapVehicleId: vehicleId,
+      mapFocusToken: get().mapFocusToken + 1,
+    });
+  },
+
+  clearMapFocus() {
+    set({ focusedMapVehicleId: null });
   },
 
   clearSelection() {
@@ -223,5 +281,65 @@ export const useGpsStore = create<GpsState>((set, get) => ({
 
   closeDetail() {
     set({ detailOpen: false });
+  },
+
+  applyRealtimeEvent(event) {
+    set((state) => {
+      if (
+        state.query.providerKey !== "all" &&
+        state.query.providerKey !== event.providerKey
+      ) {
+        return state;
+      }
+      const vehicle = state.vehicles.find((item) => item.vehicle.id === event.vehicleId);
+      if (!vehicle) return state;
+      if (
+        vehicle.gps.capturedAt &&
+        new Date(event.capturedAt).getTime() <= new Date(vehicle.gps.capturedAt).getTime()
+      ) {
+        return state;
+      }
+      const motionState: GpsVehicleListItemDto["gps"]["motionState"] =
+        event.motionState === "MOVING"
+          ? "moving"
+          : event.motionState === "PARKED"
+            ? "parked"
+            : "unknown";
+      const trackingStatus: GpsVehicleListItemDto["gps"]["trackingStatus"] =
+        motionState === "moving" || motionState === "parked" ? motionState : "online";
+      const updated = {
+        ...vehicle,
+        gps: {
+          ...vehicle.gps,
+          trackingStatus,
+          latitude: event.latitude,
+          longitude: event.longitude,
+          speedKph: event.speedKph,
+          headingDegrees: event.headingDegrees,
+          ignitionOn: event.ignitionOn,
+          capturedAt: event.capturedAt,
+          receivedAt: new Date().toISOString(),
+          motionState,
+        },
+      };
+      return {
+        vehicles: state.vehicles.map((item) =>
+          item.vehicle.id === event.vehicleId ? updated : item,
+        ),
+        mapPoints: state.mapPoints.map((point) =>
+          point.vehicleId === event.vehicleId
+            ? {
+                ...point,
+                trackingStatus,
+                latitude: event.latitude,
+                longitude: event.longitude,
+                speedKph: event.speedKph,
+                headingDegrees: event.headingDegrees,
+                capturedAt: event.capturedAt,
+              }
+            : point,
+        ),
+      };
+    });
   },
 }));

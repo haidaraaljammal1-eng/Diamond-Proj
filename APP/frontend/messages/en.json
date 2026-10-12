@@ -2047,13 +2047,21 @@
     "refresh": "Refresh",
     "retry": "Retry",
     "noPlate": "No plate",
+    "gpsVehicle": "GPS Vehicle",
     "noUpdate": "No GPS update",
     "kpi": {
+      "total": "Total Vehicles",
+      "totalNote": "Active fleet",
+      "moving": "Moving",
+      "movingNote": "Above motion speed threshold",
+      "idle": "Idle",
+      "idleNote": "Engine on, not moving",
+      "parked": "Parked",
+      "parkedNote": "Stopped or no fresh signal",
       "tracked": "Tracked",
       "trackedNote": "Active GPS bindings",
       "online": "Online",
       "onlineNote": "Fresh GPS locations",
-      "moving": "Moving",
       "parkedCount": "{count} parked",
       "offline": "Offline",
       "offlineNote": "Stale location"
@@ -2064,6 +2072,7 @@
     },
     "status": {
       "moving": "Moving",
+      "idle": "Idle",
       "parked": "Parked",
       "online": "Online",
       "offline": "Offline",
@@ -2091,13 +2100,22 @@
     "filters": {
       "all": "All",
       "tracking": "Tracking status",
-      "operational": "Operational status"
+      "operational": "Operational status",
+      "provider": "GPS provider",
+      "providerAll": "All providers",
+      "liveGps": "LIVE MY GPS",
+      "sevenStars": "Seven Stars"
     },
     "panel": {
       "title": "Fleet",
       "results": "{count} vehicles",
       "loading": "Loading vehicles…",
       "empty": "No vehicles match these filters."
+    },
+    "row": {
+      "showOnMap": "Show on Map",
+      "viewDetails": "View Details",
+      "mapUnavailable": "Location currently unavailable"
     },
     "pagination": {
       "label": "Vehicle pages",
@@ -2110,33 +2128,43 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
       "fit": "Fit vehicles",
-      "recenter": "Recenter"
+      "recenter": "Recenter",
+      "showAllVehicles": "Show All Vehicles",
+      "basemapLabel": "Map type",
+      "basemapMap": "Map",
+      "basemapSatellite": "Satellite"
     },
     "detail": {
       "title": "Vehicle GPS",
       "close": "Close",
       "loading": "Loading vehicle GPS…",
-      "vehicle": "Vehicle",
-      "gps": "GPS",
-      "rental": "Current rental",
-      "year": "Year",
-      "type": "Type",
-      "color": "Color",
-      "coordinates": "Coordinates",
-      "noCoordinates": "No GPS data available for this vehicle.",
-      "speed": "Speed",
-      "speedValue": "{value} km/h",
+      "company": "Company",
+      "provider": "GPS provider",
+      "liveStatus": "Live status",
+      "currentSpeed": "Current speed",
+      "speedUnit": "km/h",
+      "engine": "Engine",
+      "ignition": {
+        "on": "ON",
+        "off": "OFF",
+        "unknown": "Unknown"
+      },
       "heading": "Heading",
-      "accuracy": "Accuracy",
-      "accuracyValue": "{value} m",
-      "capturedAt": "Captured",
-      "receivedAt": "Received",
-      "contract": "Contract",
-      "customer": "Customer",
-      "rentalStatus": "Rental status",
-      "start": "Start",
-      "end": "End",
-      "viewContract": "View Contract"
+      "headingCardinal": {
+        "N": "N",
+        "NE": "NE",
+        "E": "E",
+        "SE": "SE",
+        "S": "S",
+        "SW": "SW",
+        "W": "W",
+        "NW": "NW"
+      },
+      "currentLocation": "Current location",
+      "addressUnavailable": "Address not available",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "lastLocationUpdate": "Last location update"
     },
     "mileage": {
       "title": "Mileage summary",

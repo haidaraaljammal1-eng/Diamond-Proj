@@ -12,6 +12,7 @@ import {
   gpsVehicleNotFoundError,
 } from "src/modules/gps/gps.errors";
 import {
+  deriveDisplayMotionStatus,
   deriveMotionState,
   deriveTrackingStatus,
   GPS_VEHICLE_INCLUDE,
@@ -19,6 +20,9 @@ import {
   toGpsDetail,
   toGpsListItem,
   toGpsMapPoint,
+  gpsSummaryFleetWhere,
+  mapPointsVehicleWhere,
+  tallyDisplayMotionStatuses,
   tallyGpsSummaryStatuses,
   trackingStatusWhere,
   validateNormalizedPosition,
@@ -35,6 +39,7 @@ import type {
 import type {
   GpsSummary,
   ListGpsVehiclesQuery,
+  MapPointsQuery,
 } from "src/modules/gps/gps.schema";
 import type { GpsTrackingStatusDto } from "src/modules/gps/gps.constants";
 
@@ -219,8 +224,8 @@ export function createGpsService(fastify: FastifyInstance) {
     const configured = await isGpsProviderConfigured(prisma);
     const config = gpsConfig();
     const now = new Date();
-    const vehiclesWhere = { isActive: true, ...(companyId != null ? { companyId } : {}) };
-    const totalVehicles = await prisma.vehicle.count({ where: vehiclesWhere });
+    const fleetWhere = gpsSummaryFleetWhere(companyId);
+    const totalVehicles = await prisma.vehicle.count({ where: fleetWhere });
 
     if (!configured) {
       return {
@@ -228,7 +233,8 @@ export function createGpsService(fastify: FastifyInstance) {
         totalVehicles,
         trackedVehicles: 0,
         moving: 0,
-        parked: 0,
+        idle: 0,
+        parked: totalVehicles,
         online: 0,
         offline: 0,
         noData: 0,
@@ -237,55 +243,87 @@ export function createGpsService(fastify: FastifyInstance) {
       };
     }
 
-    const bindings = await prisma.vehicleGpsBinding.findMany({
-      where: { vehicle: vehiclesWhere },
+    const fleetRows = await prisma.vehicle.findMany({
+      where: fleetWhere,
       select: {
-        isActive: true,
-        latestState: {
-          select: { capturedAt: true, motionState: true },
+        gpsBinding: { select: { isActive: true } },
+        gpsLatestState: {
+          select: {
+            capturedAt: true,
+            motionState: true,
+            speedKph: true,
+            ignitionOn: true,
+          },
         },
       },
     });
 
-    let trackedVehicles = 0;
+    const displayStatuses = fleetRows.map((row) => {
+      const raw = row.gpsLatestState;
+      const latest = raw
+        ? {
+            capturedAt: raw.capturedAt,
+            motionState: raw.motionState,
+            speedKph:
+              raw.speedKph == null
+                ? null
+                : typeof raw.speedKph === "number"
+                  ? raw.speedKph
+                  : raw.speedKph.toNumber(),
+            ignitionOn: raw.ignitionOn,
+          }
+        : null;
+      return deriveDisplayMotionStatus({
+        providerConfigured: true,
+        binding: row.gpsBinding
+          ? { id: "binding", isActive: row.gpsBinding.isActive }
+          : null,
+        latest,
+        now,
+        motionStaleAfterMinutes: config.motionStaleAfterMinutes,
+        movingThresholdKph: config.movingSpeedThresholdKph,
+      });
+    });
+    const displayTallies = tallyDisplayMotionStatuses(displayStatuses);
+
     const statuses: GpsTrackingStatusDto[] = [];
     let lastLocationUpdateAt: Date | null = null;
 
-    for (const binding of bindings) {
-      if (!binding.isActive) continue;
-      trackedVehicles += 1;
+    for (const row of fleetRows) {
       statuses.push(
         deriveTrackingStatus({
           providerConfigured: true,
           binding: { id: "binding", isActive: true },
-          latest: binding.latestState
+          latest: row.gpsLatestState
             ? {
-                capturedAt: binding.latestState.capturedAt,
-                motionState: binding.latestState.motionState,
+                capturedAt: row.gpsLatestState.capturedAt,
+                motionState: row.gpsLatestState.motionState,
               }
             : null,
           now,
           offlineAfterMinutes: config.offlineAfterMinutes,
         }),
       );
-      const captured = binding.latestState?.capturedAt;
+      const captured = row.gpsLatestState?.capturedAt;
       if (captured && (!lastLocationUpdateAt || captured > lastLocationUpdateAt)) {
         lastLocationUpdateAt = captured;
       }
     }
 
     const tallies = tallyGpsSummaryStatuses(statuses);
+    const trackedVehicles = fleetRows.length;
 
     return {
       providerConfigured: true,
       totalVehicles,
       trackedVehicles,
-      moving: tallies.moving,
-      parked: tallies.parked,
+      moving: displayTallies.moving,
+      idle: displayTallies.idle,
+      parked: displayTallies.parked,
       online: tallies.online,
       offline: tallies.offline,
       noData: tallies.noData,
-      unassigned: Math.max(0, totalVehicles - trackedVehicles),
+      unassigned: 0,
       lastLocationUpdateAt,
     };
   }
@@ -294,10 +332,21 @@ export function createGpsService(fastify: FastifyInstance) {
     const configured = await isGpsProviderConfigured(prisma);
     const config = gpsConfig();
     const now = new Date();
-    const cutoff = new Date(now.getTime() - config.offlineAfterMinutes * 60_000);
+    const connectivityCutoff = new Date(
+      now.getTime() - config.offlineAfterMinutes * 60_000,
+    );
+    const motionCutoff = new Date(
+      now.getTime() - config.motionStaleAfterMinutes * 60_000,
+    );
 
     const where: Prisma.VehicleWhereInput = {
       isActive: true,
+      gpsBinding: {
+        isActive: true,
+        ...(query.providerKey
+          ? { providerAccount: { providerKey: query.providerKey } }
+          : {}),
+      },
       ...(query.companyId ? { companyId: query.companyId } : {}),
       ...(query.status && query.status !== "all"
         ? { operationalStatus: operationalStatusFromDto(query.status) }
@@ -311,7 +360,13 @@ export function createGpsService(fastify: FastifyInstance) {
           }
         : {}),
       ...(query.trackingStatus
-        ? trackingStatusWhere(query.trackingStatus, configured, cutoff)
+        ? trackingStatusWhere(
+            query.trackingStatus,
+            configured,
+            connectivityCutoff,
+            motionCutoff,
+            config.movingSpeedThresholdKph,
+          )
         : {}),
     };
 
@@ -349,17 +404,22 @@ export function createGpsService(fastify: FastifyInstance) {
     });
   }
 
-  async function mapPoints() {
+  async function mapPoints(query: MapPointsQuery = {}) {
     const configured = await isGpsProviderConfigured(prisma);
     if (!configured) return [];
     const config = gpsConfig();
     const now = new Date();
+    const motionCutoff = new Date(
+      now.getTime() - config.motionStaleAfterMinutes * 60_000,
+    );
     const rows = await prisma.vehicle.findMany({
-      where: {
-        isActive: true,
-        gpsBinding: { isActive: true },
-        gpsLatestState: { isNot: null },
-      },
+      where: mapPointsVehicleWhere({
+        companyId: query.companyId,
+        providerKey: query.providerKey,
+        trackingStatus: query.trackingStatus,
+        cutoff: motionCutoff,
+        movingThresholdKph: config.movingSpeedThresholdKph,
+      }),
       include: GPS_VEHICLE_INCLUDE,
       take: MAP_POINTS_CAP,
       orderBy: { gpsLatestState: { capturedAt: "desc" } },

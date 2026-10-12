@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
+import { Icon } from "@/shared/components/ui/icon";
 import styles from "./drawer.module.css";
+
+export type DrawerAnchor = "left" | "right";
+export type DrawerWidth = "default" | "compact";
+export type DrawerClosePresentation = "text" | "icon";
+export type DrawerHeaderTone = "default" | "minimal";
 
 export interface DrawerProps {
   open: boolean;
@@ -13,6 +19,13 @@ export interface DrawerProps {
   closeLabel: string;
   /** Optional eyebrow shown beside the close control (e.g. contract number). */
   heading?: string;
+  /** Physical screen edge — `left` stays left even in RTL (e.g. GPS fleet detail). */
+  anchor?: DrawerAnchor;
+  /** `compact` ≈ 450px; default matches the standard operational drawer. */
+  width?: DrawerWidth;
+  closePresentation?: DrawerClosePresentation;
+  /** Slim top chrome — icon close only (e.g. GPS fleet detail). */
+  headerTone?: DrawerHeaderTone;
   children: ReactNode;
 }
 
@@ -26,6 +39,10 @@ export function Drawer({
   title,
   closeLabel,
   heading,
+  anchor = "right",
+  width = "default",
+  closePresentation = "text",
+  headerTone = "default",
   children,
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -65,20 +82,41 @@ export function Drawer({
     >
       <aside
         ref={panelRef}
-        className={styles.panel}
+        className={[
+          styles.panel,
+          anchor === "left" ? styles.panelLeft : "",
+          width === "compact" ? styles.panelCompact : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        data-drawer-anchor={anchor}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
         data-testid="shared-drawer"
       >
-        <div className={styles.header}>
+        <div
+          className={[
+            styles.header,
+            headerTone === "minimal" ? styles.headerMinimal : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <button
             type="button"
-            className={styles.close}
+            className={
+              closePresentation === "icon" ? styles.closeIcon : styles.close
+            }
             onClick={onClose}
+            aria-label={closeLabel}
           >
-            {closeLabel}
+            {closePresentation === "icon" ? (
+              <Icon name="mdi:close" size={18} aria-hidden />
+            ) : (
+              closeLabel
+            )}
           </button>
           {heading ? (
             <p className={styles.heading} dir="ltr">
@@ -89,7 +127,16 @@ export function Drawer({
             {title}
           </h2>
         </div>
-        <div className={styles.body}>{children}</div>
+        <div
+          className={[
+            styles.body,
+            width === "compact" ? styles.bodyCompact : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {children}
+        </div>
       </aside>
     </div>,
     document.body,

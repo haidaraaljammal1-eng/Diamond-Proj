@@ -1,10 +1,12 @@
 import fp from "fastify-plugin";
 import { env } from "src/config/env";
+import { gpsConfig } from "src/modules/gps/gps.config";
 import { createBackgroundRunner } from "src/worker/background-runner";
 import {
   awaitGpsProviderSyncDrain,
   requestGpsProviderSyncShutdown,
 } from "src/modules/gps/gps-provider-sync.service";
+import { SevenStarsLiveConnectionManager } from "src/modules/gps/providers/seven-stars/seven-stars-live.manager";
 
 /**
  * In-process background scheduler — the production driver for the automatic
@@ -36,6 +38,8 @@ export const schedulerPlugin = fp(async (fastify) => {
   const pollMs = env.SCHEDULER_POLL_MS;
   let running = false; // overlap guard: skip a tick while the previous is still in flight
   let timer: NodeJS.Timeout | undefined;
+  let liveGpsRunning = false;
+  let liveGpsTimer: NodeJS.Timeout | undefined;
 
   async function tick(): Promise<void> {
     if (running) return;
@@ -51,9 +55,12 @@ export const schedulerPlugin = fp(async (fastify) => {
   // notifications, …) is present. onListen fires after the full plugin tree and
   // app.ready(), so all are available here.
   let runner: ReturnType<typeof createBackgroundRunner>;
+  let sevenStarsLive: SevenStarsLiveConnectionManager | undefined;
 
   fastify.addHook("onListen", async () => {
     runner = createBackgroundRunner(fastify);
+    sevenStarsLive = new SevenStarsLiveConnectionManager(fastify);
+    await sevenStarsLive.startEnabledAccounts();
     fastify.log.info({ pollMs }, "background scheduler: started (in-process)");
     timer = setInterval(() => void tick(), pollMs);
     // Don't let the poll timer alone keep the process alive; the listening
@@ -62,10 +69,30 @@ export const schedulerPlugin = fp(async (fastify) => {
     // Kick once right away so a job that is already due isn't held for a full
     // interval after boot.
     void tick();
+
+    const liveGpsCadenceMs = gpsConfig().liveGpsSyncCadenceMs;
+    const liveGpsTick = (): void => {
+      if (liveGpsRunning) return;
+      liveGpsRunning = true;
+      void runner
+        .runLiveGpsFastSyncCycle()
+        .catch((err) => {
+          fastify.log.error({ err }, "live-gps-fast-sync: cycle failed");
+        })
+        .finally(() => {
+          liveGpsRunning = false;
+        });
+    };
+    fastify.log.info({ liveGpsCadenceMs }, "live-gps-fast-sync: started");
+    liveGpsTimer = setInterval(liveGpsTick, liveGpsCadenceMs);
+    liveGpsTimer.unref?.();
+    liveGpsTick();
   });
 
   fastify.addHook("onClose", async () => {
     if (timer) clearInterval(timer);
+    if (liveGpsTimer) clearInterval(liveGpsTimer);
+    await sevenStarsLive?.shutdown();
     requestGpsProviderSyncShutdown();
     const drained = await awaitGpsProviderSyncDrain(5_000);
     if (!drained) {
