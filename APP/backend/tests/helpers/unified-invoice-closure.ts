@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { drainInvoiceOutbox } from "tests/helpers/invoice-integration";
 
@@ -20,7 +20,7 @@ export async function enqueueInvoiceOutboxEvent(
       aggregateType: input.aggregateType ?? "contract",
       aggregateId: input.aggregateId ?? String(input.payload.contractId ?? "unknown"),
       dedupeKey: input.dedupeKey,
-      payload: input.payload,
+      payload: input.payload as Prisma.InputJsonValue,
       status: "PENDING",
       availableAt: new Date(),
       maxAttempts: 5,

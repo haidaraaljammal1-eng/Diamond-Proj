@@ -9,7 +9,27 @@ import {
 } from "src/modules/road-liabilities/road-liability.constants";
 import { assertReturnedContractEligible } from "src/modules/road-liabilities/staff-returned-contracts.service";
 import { createRoadLiabilityCollectionService } from "src/modules/road-liabilities/road-liability-collection.service";
-import type { StaffManualChargeInput } from "src/modules/road-liabilities/staff-manual-charge.schema";
+import type {
+  StaffManualChargeInput,
+} from "src/modules/road-liabilities/staff-manual-charge.schema";
+import type { z } from "zod";
+import { StaffManualChargeResultSchema } from "src/modules/road-liabilities/staff-manual-charge.schema";
+
+type StaffManualChargeResult = z.infer<typeof StaffManualChargeResultSchema>;
+type StaffManualChargeStatus = StaffManualChargeResult["status"];
+
+function normalizeStaffManualChargeStatus(status: string): StaffManualChargeStatus {
+  if (
+    status === "succeeded" ||
+    status === "processing" ||
+    status === "failed" ||
+    status === "requires_action" ||
+    status === "blocked"
+  ) {
+    return status;
+  }
+  return "processing";
+}
 
 function mapCategoryToLiabilityType(category: StaffRoadChargeCategory): RoadLiabilityType {
   return category === "SALIK" ? "SALIK_TOLL" : "RTA_VIOLATION";
@@ -90,7 +110,7 @@ export function createStaffManualChargeService(fastify: FastifyInstance) {
     input: StaffManualChargeInput,
     actorUserId: number,
     idempotencyKey: string,
-  ) {
+  ): Promise<StaffManualChargeResult> {
     const fingerprint = fingerprintIdempotentPayload({ contractId, ...input });
 
     const outcome = await runIdempotent(
@@ -126,16 +146,17 @@ export function createStaffManualChargeService(fastify: FastifyInstance) {
         if (obs?.liabilityId) {
           const view = await collection.getCollection(obs.liabilityId);
           const paid = view.operationalState === "paid";
+          const status: StaffManualChargeStatus = paid
+            ? "succeeded"
+            : view.operationalState === "failed"
+              ? "failed"
+              : view.operationalState === "requires_action"
+                ? "requires_action"
+                : "processing";
           return {
             roadLiabilityId: obs.liabilityId,
-            status: paid
-              ? "succeeded"
-              : view.operationalState === "failed"
-                ? "failed"
-                : view.operationalState === "requires_action"
-                  ? "requires_action"
-                  : "processing",
-            operationalState: view.operationalState,
+            status,
+            operationalState: view.operationalState ?? null,
             invoicePending: paid,
             failure: null,
           };
@@ -154,7 +175,7 @@ export function createStaffManualChargeService(fastify: FastifyInstance) {
     const result = outcome.result;
     return {
       roadLiabilityId: result.roadLiabilityId,
-      status: result.collectResult.status,
+      status: normalizeStaffManualChargeStatus(result.collectResult.status),
       operationalState: result.collectResult.operationalState,
       failure: result.collectResult.failure ?? null,
       invoicePending: result.collectResult.status === "succeeded",

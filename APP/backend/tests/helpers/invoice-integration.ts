@@ -119,7 +119,7 @@ export async function confirmSignedElectronicRentalPayment(
     contractId: string;
     rentalToken: string;
     payments: ReturnType<
-      Awaited<ReturnType<typeof import("tests/helpers/fake-payment-provider")>>["createFakePaymentProvider"]
+      typeof import("tests/helpers/fake-payment-provider").createFakePaymentProvider
     >;
   },
 ): Promise<void> {

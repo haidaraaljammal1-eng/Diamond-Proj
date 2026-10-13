@@ -51,7 +51,7 @@ export function ReturnedContractsPanel({ companies }: ReturnedContractsPanelProp
             { value: ALL_COMPANIES, label: t("filters.all") },
             ...companies.map((c) => ({ value: String(c.id), label: c.displayName })),
           ]}
-          ariaLabel={t("filters.channel")}
+          aria-label={t("filters.channel")}
         />
       </div>
 

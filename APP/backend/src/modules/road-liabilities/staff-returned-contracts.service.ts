@@ -83,8 +83,8 @@ export async function listReturnedContracts(
       return {
         contractId: row.id,
         contractNumber: row.contractNumber,
-        status: row.status,
-        collectionMode: row.collectionMode,
+        status: row.status as "REVIEW" | "CLOSED",
+        collectionMode: row.collectionMode ?? "",
         company: row.company,
         customerName: row.customer?.name ?? null,
         vehicleDisplayName: row.vehicle
