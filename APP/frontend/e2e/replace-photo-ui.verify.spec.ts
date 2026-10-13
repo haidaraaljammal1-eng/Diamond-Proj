@@ -80,8 +80,8 @@ function photoButton(dialog: Locator, name: string): Locator {
 
 async function assertNoOverlap(dialog: Locator, buttonName: string) {
   const button = photoButton(dialog, buttonName);
-  const title = dialog.getByTestId("vehicle-detail").locator("h3").first();
-  const plate = dialog.getByTestId("vehicle-detail").locator("h3 + p").first();
+  const title = dialog.getByTestId("vehicle-detail").locator("h2").first();
+  const plate = dialog.getByTestId("vehicle-detail-plate-line");
   const buttonBox = await button.boundingBox();
   const titleBox = await title.boundingBox();
   const plateBox = await plate.boundingBox();

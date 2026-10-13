@@ -189,185 +189,48 @@ function vehicleLabel(vehicle: { vehicleName: string | null; plateNumber: string
   };
 }
 
+async function consolidationService(fastify: FastifyInstance) {
+  const { createContractInvoiceConsolidationService } = await import(
+    "src/modules/invoices/contract-invoice-consolidation.service"
+  );
+  return createContractInvoiceConsolidationService(fastify);
+}
+
 export function createInvoiceIssuanceService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
   return {
     async ensureRentalInvoiceForContract(contractId: string, issuedByUserId?: number | null) {
-      const originEventKey = rentalInvoiceOriginKey(contractId);
-      return withTransaction(prisma, async (tx) => {
-        const existing = await loadExistingByOrigin(tx, originEventKey);
-        if (existing) return existing;
-
-        const contract = await tx.contract.findUnique({
-          where: { id: contractId },
-          ...CONTRACT_FOR_INVOICE,
-        });
-        if (!contract) throw invoiceNotFoundError();
-        if (!contract.customerId || !contract.customer) {
-          throw invoiceSourceIncompleteError("Contract customer is required for rental invoice");
-        }
-        await assertRentalInvoicePaymentConfirmed(tx, contract);
-
-        const { vehicleName, plateNumber } = vehicleLabel(contract.vehicle);
-        const branding = invoiceBrandingForCompany(contract.company);
-        const rentalDate = contract.startAt ?? contract.activatedAt ?? new Date();
-        const { quantity, unitRate } = deriveRentalQuantityAndRate({
-          durationValue: contract.durationValue,
-          durationUnit: contract.durationUnit,
-          priceType: contract.priceType,
-          agreedAmount: contract.agreedAmount,
-        });
-
-        const description = `Rental income from ${formatInvoiceDateDdMmYyyy(
-          toUtcDateOnly(rentalDate),
-        )}`;
-
-        return createIssuedInvoice(tx, {
-          invoiceType: "RENTAL",
-          originEventKey,
-          companyId: contract.companyId,
-          contractId: contract.id,
-          vehicleId: contract.vehicleId,
-          customerId: contract.customerId,
-          customerName: requireCustomerName(contract.customer.name),
-          contractNumber: contract.contractNumber,
-          vehicleName,
-          plateNumber,
-          company: contract.company,
-          issuedByUserId,
-          rentalCollectedInFull: true,
-          lines: [
-            {
-              lineType: "RENTAL",
-              serviceLabel: branding.serviceLabelRental,
-              description,
-              quantity,
-              unitRate,
-              amount: contract.agreedAmount,
-              sourceType: "CONTRACT_RENTAL",
-              sourceId: contract.id,
-            },
-          ],
-        });
-      });
+      return (await consolidationService(fastify)).ensureConsolidatedContractInvoice(
+        contractId,
+        issuedByUserId,
+      );
     },
 
     async ensureRoadLiabilityInvoiceForCustomerCharge(customerChargeId: string) {
-      const originEventKey = roadLiabilityInvoiceOriginKey(customerChargeId);
-      return withTransaction(prisma, async (tx) => {
-        const existing = await loadExistingByOrigin(tx, originEventKey);
-        if (existing) return existing;
-
-        const charge = await tx.roadLiabilityCustomerCharge.findUnique({
-          where: { id: customerChargeId },
-          include: {
-            roadLiability: true,
-            contract: { include: { company: true, customer: true, vehicle: true } },
-          },
-        });
-        if (!charge) throw invoiceSourceIncompleteError("Road liability customer charge not found");
-        if (!charge.contract.customerId || !charge.contract.customer) {
-          throw invoiceSourceIncompleteError("Contract customer is required");
-        }
-
-        const { vehicleName, plateNumber } = vehicleLabel(charge.contract.vehicle);
-        const serviceLabel = roadLiabilityServiceLabel(charge.roadLiability.type);
-        const description = `${serviceLabel} related to Contract ${charge.contract.contractNumber}`;
-
-        return createIssuedInvoice(tx, {
-          invoiceType: "ROAD_LIABILITY",
-          originEventKey,
-          companyId: charge.contract.companyId,
-          contractId: charge.contract.id,
-          vehicleId: charge.contract.vehicleId,
-          customerId: charge.contract.customerId,
-          customerName: requireCustomerName(charge.contract.customer.name),
-          contractNumber: charge.contract.contractNumber,
-          vehicleName,
-          plateNumber,
-          company: charge.contract.company,
-          lines: [
-            {
-              lineType: roadLiabilityToInvoiceLineType(charge.roadLiability.type),
-              serviceLabel,
-              description,
-              quantity: 1,
-              unitRate: charge.customerChargeAmount,
-              amount: charge.customerChargeAmount,
-              sourceType: "ROAD_LIABILITY_CUSTOMER_CHARGE",
-              sourceId: charge.id,
-            },
-          ],
-        });
+      const simulatedFailId = process.env.INVOICE_ISSUANCE_INTEGRATION_FAIL_ONCE_CHARGE_ID;
+      if (simulatedFailId && simulatedFailId === customerChargeId) {
+        delete process.env.INVOICE_ISSUANCE_INTEGRATION_FAIL_ONCE_CHARGE_ID;
+        throw new Error("INVOICE_ISSUANCE_INTEGRATION_SIMULATED_FAILURE");
+      }
+      const charge = await prisma.roadLiabilityCustomerCharge.findUnique({
+        where: { id: customerChargeId },
+        select: { contractId: true },
       });
+      if (!charge) throw invoiceSourceIncompleteError("Road liability customer charge not found");
+      return (await consolidationService(fastify)).ensureConsolidatedContractInvoice(charge.contractId);
     },
 
     async ensureReconciliationInvoicesForReconciliation(reconciliationId: string) {
-      return withTransaction(prisma, async (tx) => {
-        const reconciliation = await tx.contractReconciliation.findUnique({
-          where: { id: reconciliationId },
-          include: {
-            contract: { include: { company: true, customer: true, vehicle: true } },
-            lines: true,
-          },
-        });
-        if (!reconciliation) throw invoiceSourceIncompleteError("Reconciliation not found");
-        if (!reconciliation.finalizedAt && !reconciliation.approvedAt) {
-          throw invoiceSourceIncompleteError("Reconciliation is not finalized");
-        }
-        if (!reconciliation.contract.customerId || !reconciliation.contract.customer) {
-          throw invoiceSourceIncompleteError("Contract customer is required");
-        }
-
-        const created: Invoice[] = [];
-        const { vehicleName, plateNumber } = vehicleLabel(reconciliation.contract.vehicle);
-        const customerName = requireCustomerName(reconciliation.contract.customer.name);
-
-        for (const line of reconciliation.lines) {
-          if (line.roadLiabilityId) continue;
-          if (line.amount <= 0) continue;
-
-          const originEventKey = reconciliationLineInvoiceOriginKey(line.id);
-          const prior = await loadExistingByOrigin(tx, originEventKey);
-          if (prior) {
-            created.push(prior);
-            continue;
-          }
-
-          const serviceLabel = reconciliationServiceLabel(line.type);
-          const description = line.description?.trim() || serviceLabel;
-
-          const invoice = await createIssuedInvoice(tx, {
-            invoiceType: "RECONCILIATION",
-            originEventKey,
-            companyId: reconciliation.contract.companyId,
-            contractId: reconciliation.contract.id,
-            vehicleId: reconciliation.contract.vehicleId,
-            customerId: reconciliation.contract.customerId,
-            customerName,
-            contractNumber: reconciliation.contract.contractNumber,
-            vehicleName,
-            plateNumber,
-            company: reconciliation.contract.company,
-            lines: [
-              {
-                lineType: reconciliationLineToInvoiceLineType(line.type),
-                serviceLabel,
-                description,
-                quantity: 1,
-                unitRate: line.amount,
-                amount: line.amount,
-                sourceType: "RECONCILIATION_LINE",
-                sourceId: line.id,
-              },
-            ],
-          });
-          created.push(invoice);
-        }
-
-        return created;
+      const reconciliation = await prisma.contractReconciliation.findUnique({
+        where: { id: reconciliationId },
+        select: { contractId: true },
       });
+      if (!reconciliation) throw invoiceSourceIncompleteError("Reconciliation not found");
+      const invoice = await (await consolidationService(fastify)).ensureConsolidatedContractInvoice(
+        reconciliation.contractId,
+      );
+      return [invoice];
     },
 
     async getById(id: string) {

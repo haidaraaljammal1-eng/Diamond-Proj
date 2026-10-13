@@ -1,3 +1,34 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shellReady {
+  /*
+   * Must stay inside the shared flush dialog cap (max-height: 88vh + overflow: hidden).
+   * Using only 100dvh caused the shell to exceed the modal box and clip the footer row.
+   */
+  --vehicle-detail-shell-max: min(
+    calc(100dvh - 128px),
+    calc(88vh - 28px),
+    792px
+  );
+  height: var(--vehicle-detail-shell-max);
+  max-height: var(--vehicle-detail-shell-max);
+  box-sizing: border-box;
+  padding-bottom: 2px;
+}
+
+.shellReady > [data-testid="vehicle-detail"] {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+}
+
 .loading,
 .error {
   padding: 28px 22px;

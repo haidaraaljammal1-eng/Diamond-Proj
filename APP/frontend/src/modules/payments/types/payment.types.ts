@@ -43,5 +43,10 @@ export interface PaymentStatusDto {
     cardLast4: string | null;
     cardBrand: string | null;
     paymentMethodSavedForFutureUse?: boolean;
+    rentalPaymentAuthorizationState?:
+      | "not_required"
+      | "pending"
+      | "complete"
+      | "incomplete";
   };
 }

@@ -22,6 +22,7 @@ import {
   buildMaintenanceStartedMessage,
   buildManualExpenseMessage,
   buildPaymentFailedMessage,
+  buildPaymentAuthorizationIncompleteMessage,
   buildPaymentReceivedMessage,
   buildRentalExtendedMessage,
   buildRoadLiabilityCollectedMessage,
@@ -166,6 +167,32 @@ export function createBusinessNotificationService(
         }
 
         await deliverOnce(`payment.failed:${paymentId}`, message);
+        return;
+      }
+      case "payment.authorization_incomplete": {
+        const paymentId = String(payload.paymentId ?? "");
+        const ctx = await loadPaymentContext(prisma, paymentId);
+        if (!ctx) return;
+        const stripeReference =
+          (payload.providerReference as string | undefined) ??
+          ctx.payment.providerReference ??
+          null;
+        await deliverOnce(
+          `payment.authorization_incomplete:${paymentId}`,
+          buildPaymentAuthorizationIncompleteMessage({
+            contractNumber: ctx.contractNumber,
+            customerName: ctx.customerName,
+            vehicleName: ctx.vehicleName,
+            operatingCompanyCode: ctx.operatingCompanyCode,
+            amount: ctx.payment.amount,
+            currency: ctx.payment.currency,
+            paymentStatus: "CONFIRMED",
+            authorizationStatus: "INCOMPLETE",
+            stripeReference,
+            errorCode: "CARD_AUTHORIZATION_INCOMPLETE",
+            occurredAt: ctx.payment.confirmedAt ?? new Date(),
+          }),
+        );
         return;
       }
       case "contract.activated": {

@@ -11,7 +11,7 @@ export type FleetPrimaryIntent =
 
 type FleetIntentSource = Pick<
   VehicleCardDto,
-  "operationalStatus" | "currentRental" | "prePaymentFollowUps"
+  "operationalStatus" | "currentRental" | "prePaymentFollowUps" | "isActive"
 >;
 
 /**

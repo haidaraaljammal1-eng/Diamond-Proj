@@ -38,7 +38,9 @@ export function createInvoiceService(fastify: FastifyInstance) {
         }
       }
 
+      const includeSuperseded = query.includeSuperseded === true;
       const where: Prisma.InvoiceWhereInput = {
+        ...(!includeSuperseded ? { isCurrent: true } : {}),
         ...(companyId ? { companyId } : {}),
         ...(query.invoiceType ? { invoiceType: query.invoiceType } : {}),
         ...(query.contractId ? { contractId: query.contractId } : {}),
@@ -99,10 +101,10 @@ export function createInvoiceService(fastify: FastifyInstance) {
       return toInvoiceDetail(row);
     },
 
-    async listForContract(contractId: string) {
+    async listForContract(contractId: string, includeHistory = false) {
       const rows = await prisma.invoice.findMany({
-        where: { contractId },
-        orderBy: { issueDate: "desc" },
+        where: { contractId, ...(includeHistory ? {} : { isCurrent: true }) },
+        orderBy: [{ revisionNumber: "desc" }, { issueDate: "desc" }],
         include: {
           company: { select: { code: true, displayName: true } },
           deliveries: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true } },

@@ -35,6 +35,20 @@ export interface PaymentFailedMessageInput {
   occurredAt: Date;
 }
 
+export interface PaymentAuthorizationIncompleteMessageInput {
+  contractNumber: string;
+  customerName: string;
+  vehicleName: string | null;
+  operatingCompanyCode: string;
+  amount: number;
+  currency: string;
+  paymentStatus: string;
+  authorizationStatus: string;
+  stripeReference: string | null;
+  errorCode: string;
+  occurredAt: Date;
+}
+
 export interface CarOutMessageInput {
   contractNumber: string;
   vehicleName: string;
@@ -186,6 +200,29 @@ export function buildPaymentReceivedMessage(input: PaymentReceivedMessageInput) 
       `Amount Collected: ${formatMoney(input.amount, input.currency)}`,
       `Payment Source: ${input.paymentSource}`,
       `Time: ${formatDateTime(input.occurredAt)}`,
+    ].join("\n"),
+  };
+}
+
+export function buildPaymentAuthorizationIncompleteMessage(
+  input: PaymentAuthorizationIncompleteMessageInput,
+) {
+  const stripeRef = input.stripeReference?.trim() || "—";
+  return {
+    title: "تنبيه مالي — حفظ البطاقة غير متاح",
+    message: [
+      "🟠 HIGH — تم استلام قيمة الإيجار بنجاح، ولكن تعذر حفظ بطاقة العميل للتحصيل المستقبلي. يمكن متابعة إجراءات تسليم المركبة، مع العلم أن تحصيل المخالفات لاحقًا من البطاقة قد لا يكون متاحًا.",
+      `العقد: ${input.contractNumber}`,
+      `العميل: ${input.customerName}`,
+      ...(input.vehicleName ? [`المركبة: ${input.vehicleName}`] : []),
+      `الشركة: ${input.operatingCompanyCode}`,
+      `المبلغ: ${formatMoney(input.amount, input.currency)}`,
+      `حالة التحصيل: ${input.paymentStatus}`,
+      `حالة تفويض البطاقة: ${input.authorizationStatus}`,
+      `مرجع Stripe: ${stripeRef}`,
+      `رمز الخطأ: ${input.errorCode}`,
+      `الوقت: ${formatDateTime(input.occurredAt)}`,
+      "الإجراء المقترح: راجع الدفع المؤكد في Stripe، ثم عالج حفظ البطاقة قبل أي تحصيل off-session للمخالفات.",
     ].join("\n"),
   };
 }

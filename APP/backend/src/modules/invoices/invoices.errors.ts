@@ -69,3 +69,11 @@ export function invoiceNotIssuedError(): AppError {
     context: { reason: R.NOT_ISSUED },
   });
 }
+
+export function invoiceSupersededError(): AppError {
+  return new AppError({
+    code: ErrorCode.CONFLICT,
+    message: "Only the current contract invoice can be sent to the customer",
+    context: { reason: "INVOICE_SUPERSEDED" },
+  });
+}

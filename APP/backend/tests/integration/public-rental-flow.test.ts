@@ -8,6 +8,7 @@ import { setPaymentProviderForTests } from "src/modules/contracts/payment/paymen
 import { UnconfiguredPaymentProvider } from "src/modules/contracts/payment/unconfigured-payment.provider";
 import {
   createFakePaymentProvider,
+  ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD,
   flushStripeWebhookInbox,
   reconcileFailedFakeProviderPayment,
   reconcileFakeProviderPayment,
@@ -78,7 +79,7 @@ if (!RUN) {
           "content-type": "application/json",
           "idempotency-key": idempotencyKey,
         },
-        payload: { savePaymentMethodForFutureUse: false },
+        payload: ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD,
       };
     }
 

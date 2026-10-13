@@ -185,9 +185,20 @@ endpoint or an external reference.
   `ContractPostCloseReceivable` deliberately have no `companyId`: both reach it
   through their Contract.
 
-## No manual creation
+## Returned contracts — staff manual charge (30 days)
 
-There are no staff routes to create or patch RTA violations, Salik tolls, or Salik violations.
+Staff with `violations.charge` may create a **staff-attested** liability (`STAFF_MANUAL` provenance, not RTA/Salik provider confirmation) for contracts with completed Car-In in the last **30×24h** (UTC), status `REVIEW` or `CLOSED`, then collect via existing **DIRECT_COLLECTION** off-session when consent v2 is present.
+
+- `GET /road-liabilities/returned-contracts` (`violations.read`)
+- `POST /road-liabilities/returned-contracts/:contractId/manual-charge` (`violations.charge`, `Idempotency-Key` required)
+- Charge category is **TRAFFIC_VIOLATION** or **SALIK** only (no custom “other” type).
+- Confirmed **DIRECT_COLLECTION** payments enqueue `road_liability.customer_charge.confirmed` for invoice issuance (same outbox as reconciliation/post-close charges).
+
+The main liabilities list and history are unchanged; the 30-day window is UI-only.
+
+## No provider manual creation
+
+Staff cannot create or patch rows that impersonate RTA/Salik/TARS provider ingestion. Official liabilities still enter only through provider/ingestion boundaries.
 
 ## API endpoints
 

@@ -24,20 +24,20 @@ describe("vehicle fleet priority sort", () => {
   it("orders handover before urgent before standard", () => {
     const rows = [row(3), row(1), row(2)];
     const rentals = new Map([
-      [
-        2,
-        {
-          contractId: "c2",
-          contractNumber: "2",
-          customerName: "A",
-          endAt: new Date(),
-          status: "paid" as const,
-          awaitingHandover: true,
-        },
-      ],
+      [2, { status: "paid" as const, awaitingHandover: true }],
     ]);
     const followUps = new Map([
-      [3, [{ contractId: "u", contractNumber: "U", status: "awaiting" as const }]],
+      [
+        3,
+        [
+          {
+            contractId: "u",
+            contractNumber: "U",
+            status: "awaiting" as const,
+            customerName: null,
+          },
+        ],
+      ],
     ]);
     const ids = sortFleetVehicleIds(rows, rentals, followUps, "createdAt", "desc");
     assert.deepEqual(ids, [2, 3, 1]);
@@ -46,15 +46,15 @@ describe("vehicle fleet priority sort", () => {
   it("does not mark urgent when a blocking rental exists", () => {
     const tier = resolveFleetAttentionTier(
       { operationalStatus: "RENTED", isActive: true },
-      {
-        contractId: "c",
-        contractNumber: "C",
-        customerName: "X",
-        endAt: new Date(),
-        status: "active",
-        awaitingHandover: false,
-      },
-      [{ contractId: "u", contractNumber: "U", status: "awaiting" }],
+      { status: "active", awaitingHandover: false },
+      [
+        {
+          contractId: "u",
+          contractNumber: "U",
+          status: "awaiting",
+          customerName: null,
+        },
+      ],
     );
     assert.equal(tier, null);
   });

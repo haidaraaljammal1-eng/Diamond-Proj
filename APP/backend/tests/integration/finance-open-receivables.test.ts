@@ -337,10 +337,15 @@ if (!RUN) {
       );
       const paymentService = createContractPaymentService(prisma);
 
+      const { PAYMENT_METHOD_AUTHORIZATION_VERSION_V2 } = await import(
+        "src/modules/contracts/payment/payment-consent.catalog"
+      );
       const rentalStarted = await paymentService.startPayment({
         purpose: "RENTAL",
         targetId: rentalContract.id,
         createdByUserId: adminUserId,
+        savePaymentMethodForFutureUse: true,
+        consentVersion: PAYMENT_METHOD_AUTHORIZATION_VERSION_V2,
       });
       payments.confirm();
       await settlePayment(app, payments, rentalStarted.payment.id);

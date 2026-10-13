@@ -420,7 +420,10 @@ export function VehiclesScreen() {
       <EditDefaultRateDialog
         vehicle={editRatesVehicle}
         onClose={() => setEditRatesVehicle(null)}
-        onSuccess={() => showNotice(t("editRates.success"))}
+        onSuccess={() => {
+          showNotice(t("editRates.success"));
+          void refreshVehicles();
+        }}
       />
 
       <VehicleDeactivateDialog

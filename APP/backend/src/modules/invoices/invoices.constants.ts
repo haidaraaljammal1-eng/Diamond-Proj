@@ -13,6 +13,8 @@ export const INVOICE_CURRENCY = "AED";
 /** Outbox event types consumed by the invoice issuance worker. */
 export const INVOICE_OUTBOX_EVENT_TYPES = [
   "contract.paid",
+  "contract.renewed",
+  "payment.confirmed",
   "reconciliation.finalized",
   "road_liability.customer_charge.confirmed",
 ] as const;
@@ -32,4 +34,9 @@ export function roadLiabilityInvoiceOriginKey(customerChargeId: string): string 
 
 export function reconciliationLineInvoiceOriginKey(reconciliationLineId: string): string {
   return `RECONCILIATION_LINE:${reconciliationLineId}`;
+}
+
+/** One revision of the unified contract invoice (new number each revision). */
+export function consolidatedContractInvoiceOriginKey(contractId: string, revisionNumber: number): string {
+  return `CONTRACT_INVOICE:${contractId}:r${revisionNumber}`;
 }

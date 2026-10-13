@@ -23,7 +23,10 @@ import { useNotificationRecordTargets } from "@/modules/notifications/simulation
 import { useRecordFocus } from "@/shared/hooks/use-record-focus";
 import rowStyles from "../road-liability-row/road-liability-row.module.css";
 import { isSimulatedRoadLiabilityId } from "../../utils/road-liability-status";
+import { ReturnedContractsPanel } from "../returned-contracts/returned-contracts-panel";
 import styles from "./road-liabilities-screen.module.css";
+
+type ViolationsTab = "liabilities" | "returned";
 
 export function RoadLiabilitiesScreen() {
   const t = useTranslations("RoadLiabilities");
@@ -39,6 +42,7 @@ export function RoadLiabilitiesScreen() {
   const { companies, isLoading: companiesLoading } = useOperatingCompanies(page.isAllowed);
   const registerNotificationTargets = useNotificationRecordTargets();
   const [contractId, setContractId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ViolationsTab>("liabilities");
 
   useEffect(() => {
     registerNotificationTargets(
@@ -110,6 +114,30 @@ export function RoadLiabilitiesScreen() {
   return (
     <div className={styles.screen} data-testid="road-liabilities-screen">
       {header}
+      <div className={styles.tabs} role="tablist" aria-label={t("title")}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "liabilities"}
+          className={activeTab === "liabilities" ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab("liabilities")}
+        >
+          {t("pageTabs.liabilities")}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "returned"}
+          className={activeTab === "returned" ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab("returned")}
+          data-testid="violations-tab-returned-contracts"
+        >
+          {t("pageTabs.returnedContracts")}
+        </button>
+      </div>
+
+      {activeTab === "liabilities" ? (
+        <>
       <RoadLiabilitiesSummaryStrip
         summary={page.summary}
         loading={page.isSummaryLoading}
@@ -167,6 +195,12 @@ export function RoadLiabilitiesScreen() {
           }}
         />
       </div>
+        </>
+      ) : (
+        <div className={styles.surface}>
+          <ReturnedContractsPanel companies={companies} />
+        </div>
+      )}
 
       <RoadLiabilityDetailDrawer
         open={page.detailOpen}

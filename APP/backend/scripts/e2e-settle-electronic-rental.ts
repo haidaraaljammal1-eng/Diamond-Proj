@@ -8,6 +8,7 @@ import { buildApp } from "src/app";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import {
   createFakePaymentProvider,
+  ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD,
   flushStripeWebhookInbox,
   reconcileFakeProviderPayment,
   sendTestStripeWebhook,
@@ -46,7 +47,7 @@ async function main() {
       "content-type": "application/json",
       "idempotency-key": `e2e-rental-${run}`,
     },
-    payload: { savePaymentMethodForFutureUse: false },
+    payload: ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD,
   });
   if (start.statusCode !== 200) {
     throw new Error(`Rental payment start failed (${start.statusCode}): ${start.body}`);

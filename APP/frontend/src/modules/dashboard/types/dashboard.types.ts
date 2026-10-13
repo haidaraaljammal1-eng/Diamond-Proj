@@ -76,6 +76,17 @@ export interface TodayContractDto {
   company: DashboardCompanyDto;
 }
 
+/** Latest-contracts list row (company + assignee from contract snapshot). */
+export interface RecentContractDto {
+  id: string;
+  contractNumber: string;
+  customerName: string | null;
+  vehicleName: string;
+  status: ContractStatus;
+  company?: DashboardCompanyDto | null;
+  employeeName?: string | null;
+}
+
 export interface DashboardOverviewDto {
   generatedAt: string;
   range: { from: string; to: string };

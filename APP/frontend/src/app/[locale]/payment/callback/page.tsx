@@ -6,6 +6,31 @@ import { useTranslations } from "next-intl";
 import { getPublicPaymentStatus } from "@/modules/payments/api/payments.api";
 import type { PaymentStatusDto } from "@/modules/payments/types/payment.types";
 
+function resolveCallbackMessage(
+  status: PaymentStatusDto | null,
+  failedToken: string | null,
+  statusToken: string | null,
+  t: (key: string) => string,
+): string {
+  if (!statusToken) return t("failed");
+  if (failedToken === statusToken && !status) return t("paymentUnknown");
+  if (!status) return t("checking");
+
+  if (status.status === "FAILED") return t("failed");
+  if (status.status === "CANCELLED") return t("cancelled");
+  if (status.status === "PENDING" || status.status === "PROCESSING") return t("checking");
+
+  const paymentVerified = status.status === "CONFIRMED";
+  if (!paymentVerified) return t("checking");
+
+  if (status.purpose === "RENTAL" && status.contractStatus !== "PAID") return t("checking");
+
+  const authState = status.summary?.rentalPaymentAuthorizationState;
+  if (authState === "incomplete") return t("successAuthorizationIncomplete");
+
+  return t("success");
+}
+
 function PaymentCallbackContent() {
   const t = useTranslations("Payments.callback");
   const searchParams = useSearchParams();
@@ -39,16 +64,13 @@ function PaymentCallbackContent() {
     };
   }, [statusToken]);
 
-  const verified = status?.status === "CONFIRMED" &&
+  const paymentVerified =
+    status?.status === "CONFIRMED" &&
     (status.purpose !== "RENTAL" || status.contractStatus === "PAID");
-  const summary = verified ? status?.summary : null;
-  const message =
-    !statusToken ? t("failed")
-      : failedToken === statusToken ? t("checkingFailed")
-        : verified ? t("success")
-          : status?.status === "FAILED" ? t("failed")
-            : status?.status === "CANCELLED" ? t("cancelled")
-              : t("checking");
+  const authIncomplete =
+    paymentVerified && status?.summary?.rentalPaymentAuthorizationState === "incomplete";
+  const summary = paymentVerified ? status?.summary : null;
+  const message = resolveCallbackMessage(status, failedToken, statusToken, t);
   const card =
     summary?.cardLast4
       ? `${summary.cardBrand ?? "Card"} \u2022\u2022\u2022\u2022 ${summary.cardLast4}`
@@ -58,6 +80,11 @@ function PaymentCallbackContent() {
     <main style={{ margin: "2rem auto", maxWidth: 480, padding: "0 1rem" }}>
       <h1>{t("title")}</h1>
       <p role="status">{summary ? `\u2713 ${message}` : message}</p>
+      {authIncomplete ? (
+        <p role="status" className="payment-callback-info">
+          {t("savedCardUnavailableInfo")}
+        </p>
+      ) : null}
       {(status?.status === "PROCESSING" || status?.status === "PENDING") && status.checkoutUrl ? (
         <p><a href={status.checkoutUrl}>{t("continueCheckout")}</a></p>
       ) : null}
@@ -85,6 +112,8 @@ function PaymentCallbackContent() {
           <p>{t("readyForHandover")}</p>
           {summary.paymentMethodSavedForFutureUse ? (
             <p role="status">{t("paymentMethodSaved")}</p>
+          ) : authIncomplete ? (
+            <p role="status">{t("savedCardNotAvailable")}</p>
           ) : null}
         </>
       ) : null}

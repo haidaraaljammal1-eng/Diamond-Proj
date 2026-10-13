@@ -12,8 +12,15 @@ import type {
   ProviderPaymentStatus,
   WebhookVerifyResult,
 } from "src/modules/contracts/payment/payment-provider.types";
+import { PAYMENT_METHOD_AUTHORIZATION_VERSION_V2 } from "src/modules/contracts/payment/payment-consent.catalog";
 
 export const TEST_STRIPE_WEBHOOK_SIGNATURE = "whsec_test_signature";
+
+/** Electronic rental checkout requires consent V2 and saved payment method authorization. */
+export const ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD = {
+  savePaymentMethodForFutureUse: true,
+  consentVersion: PAYMENT_METHOD_AUTHORIZATION_VERSION_V2,
+} as const;
 
 export interface TestWebhookPayload {
   stripeEventId: string;
@@ -211,7 +218,7 @@ export function createFakePaymentProvider(run: string) {
       if (!input?.savePaymentMethodForFutureUse) return null;
       return {
         stripeCustomerId: input.stripeCustomerId ?? "cus_test_fake",
-        stripePaymentMethodId: "pm_test_fake",
+        stripePaymentMethodId: `pm_test_${input.paymentId}`,
         cardBrand: "visa",
         cardLast4: "4242",
       };
@@ -437,12 +444,63 @@ export async function linkCardViaFakeProvider(
   assert.equal(returned.json().data.status, "CONFIRMED");
 }
 
+/** Avoid live Stripe Customer API when using sk_test_integration_fake. */
+export async function seedRentalStripeCustomerForTests(
+  app: FastifyInstance,
+  contractId: string,
+): Promise<{ stripeCustomerId: string }> {
+  const contract = await app.prisma.contract.findUniqueOrThrow({
+    where: { id: contractId },
+    select: { customerId: true },
+  });
+  assert.ok(contract.customerId, "contract must have customerId before electronic rental payment");
+  const stripeCustomerId = `cus_test_${contractId.slice(0, 12)}`;
+  const customerId = contract.customerId;
+  await app.prisma.customer.update({
+    where: { id: customerId },
+    data: { stripeCustomerId },
+  });
+  const { env } = await import("src/config/env");
+  if (env.STRIPE_SECRET_KEY) {
+    const Stripe = (await import("stripe")).default;
+    const { resetStripeAccountKeyCache, resolveStripeProviderAccountKey, stripeLivemodeConfigured } =
+      await import("src/modules/contracts/payment/stripe-account-identity");
+    resetStripeAccountKeyCache();
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+    const providerAccountKey = await resolveStripeProviderAccountKey(stripe);
+    const livemode = stripeLivemodeConfigured();
+    await app.prisma.customerPaymentProfile.upsert({
+      where: {
+        customerId_provider_providerAccountKey_livemode: {
+          customerId,
+          provider: "STRIPE",
+          providerAccountKey,
+          livemode,
+        },
+      },
+      create: {
+        customerId,
+        provider: "STRIPE",
+        providerAccountKey,
+        livemode,
+        providerCustomerId: stripeCustomerId,
+      },
+      update: { providerCustomerId: stripeCustomerId },
+    });
+  }
+  return { stripeCustomerId };
+}
+
 export async function confirmRentalPaymentViaStatusToken(
   app: FastifyInstance,
   payments: ReturnType<typeof createFakePaymentProvider>,
   rentalToken: string,
   idempotencyKey = `test-pay-${rentalToken.slice(0, 12)}`,
+  contractId?: string,
 ) {
+  if (contractId) {
+    await seedRentalStripeCustomerForTests(app, contractId);
+  }
   const payStart = await app.inject({
     method: "POST",
     url: `/contracts/rental/${rentalToken}/payment`,
@@ -450,7 +508,7 @@ export async function confirmRentalPaymentViaStatusToken(
       "content-type": "application/json",
       "idempotency-key": idempotencyKey,
     },
-    payload: { savePaymentMethodForFutureUse: false },
+    payload: ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD,
   });
   assert.equal(payStart.statusCode, 200, payStart.body);
   const statusToken = payStart.json().data.statusToken as string;

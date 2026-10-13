@@ -17,6 +17,7 @@ export const RoadLiabilityCollectionReason = {
   CASH_COLLECTION_REQUIRED: "ROAD_LIABILITY_CASH_COLLECTION_REQUIRED",
   MANUAL_COLLECTION_NOT_SUPPORTED: "ROAD_LIABILITY_MANUAL_COLLECTION_NOT_SUPPORTED",
   PROVIDER_SETTLEMENT_ANOMALY: "ROAD_LIABILITY_PROVIDER_SETTLEMENT_ANOMALY",
+  RETURNED_CONTRACT_NOT_ELIGIBLE: "RETURNED_CONTRACT_NOT_ELIGIBLE",
 } as const;
 
 function collectionError(
@@ -33,7 +34,11 @@ export const roadLiabilityCollectionError = {
   alreadySettled: () =>
     collectionError(ErrorCode.CONFLICT, "Road liability is already settled", RoadLiabilityCollectionReason.ALREADY_SETTLED),
   authorizationMissing: () =>
-    collectionError(ErrorCode.VALIDATION_ERROR, "No saved-card authorization for this contract", RoadLiabilityCollectionReason.AUTHORIZATION_MISSING),
+    collectionError(
+      ErrorCode.VALIDATION_ERROR,
+      "Card collection is unavailable because this contract has no valid saved and authorized payment method. The liability remains outstanding and requires staff review.",
+      RoadLiabilityCollectionReason.AUTHORIZATION_MISSING,
+    ),
   authorizationRevoked: () =>
     collectionError(ErrorCode.VALIDATION_ERROR, "Saved-card authorization was revoked", RoadLiabilityCollectionReason.AUTHORIZATION_REVOKED),
   authorizationScopeIneligible: () =>
@@ -65,5 +70,11 @@ export const roadLiabilityCollectionError = {
       ErrorCode.CONFLICT,
       "Provider collected after liability was already settled",
       RoadLiabilityCollectionReason.PROVIDER_SETTLEMENT_ANOMALY,
+    ),
+  returnedContractNotEligible: () =>
+    collectionError(
+      ErrorCode.VALIDATION_ERROR,
+      "Contract is not eligible for returned-contract manual charge",
+      RoadLiabilityCollectionReason.RETURNED_CONTRACT_NOT_ELIGIBLE,
     ),
 };

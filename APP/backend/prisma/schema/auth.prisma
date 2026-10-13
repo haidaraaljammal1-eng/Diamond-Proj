@@ -90,6 +90,7 @@ model User {
   roadLiabilityChargesConfirmed        RoadLiabilityCustomerCharge[] @relation("RoadLiabilityCustomerChargeConfirmedBy")
   roadLiabilityManualSelected          RoadLiabilityCustomerCharge[] @relation("RoadLiabilityManualSelectedBy")
   roadLiabilityManualConfirmed         RoadLiabilityCustomerCharge[] @relation("RoadLiabilityManualConfirmedBy")
+  roadLiabilitiesStaffEntered          RoadLiability[]               @relation("RoadLiabilityStaffEnteredBy")
   contractRenewalsCreated              ContractRenewal[]             @relation("ContractRenewalCreatedBy")
   maintenanceOrdersCreated             MaintenanceOrder[]            @relation("MaintenanceOrderCreatedBy")
   manualExpensesCreated                ManualExpense[]               @relation("ManualExpenseCreatedBy")

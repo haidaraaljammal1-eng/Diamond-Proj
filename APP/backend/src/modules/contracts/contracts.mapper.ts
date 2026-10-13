@@ -16,6 +16,7 @@ import {
   type FullReconciliationRow,
 } from "src/modules/contracts/contracts-reconciliation";
 import { deriveRenewalCollectionState } from "src/modules/contracts/contracts-renewal-collection";
+import { rentalPaymentAuthorizationState } from "src/modules/contracts/payment/payment-authorization.policy";
 
 const DETAIL_INCLUDE = {
   company: { select: { id: true, code: true, displayName: true, accentColor: true } },
@@ -25,7 +26,17 @@ const DETAIL_INCLUDE = {
     where: { purpose: "RENTAL" },
     orderBy: { createdAt: "desc" as const },
     take: 1,
+    select: {
+      id: true,
+      amount: true,
+      currency: true,
+      method: true,
+      status: true,
+      confirmedAt: true,
+      savePaymentMethodForFutureUse: true,
+    },
   },
+  paymentAuthorization: { select: { id: true } },
   carOut: {
     include: {
       photos: {
@@ -285,6 +296,14 @@ export function toDetail(
           method: payment.method,
           status: payment.status,
           confirmedAt: payment.confirmedAt,
+          savedCardAuthorizationState: rentalPaymentAuthorizationState(
+            {
+              savePaymentMethodForFutureUse: payment.savePaymentMethodForFutureUse,
+              status: payment.status,
+              contract: { collectionMode: row.collectionMode ?? "ELECTRONIC" },
+            },
+            Boolean(row.paymentAuthorization),
+          ),
         }
       : null,
     carOutHandover: {

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
-import { createInvoiceIssuanceService } from "src/modules/invoices/invoice-issuance.service";
+import { createContractInvoiceConsolidationService } from "src/modules/invoices/contract-invoice-consolidation.service";
 import {
   INVOICE_OUTBOX_EVENT_TYPES,
   INVOICE_OUTBOX_RECONCILIATION_FINALIZED,
@@ -9,33 +9,52 @@ import {
 
 export function createInvoiceOutboxConsumer(app: FastifyInstance) {
   const prisma = app.prisma;
-  const issuance = createInvoiceIssuanceService(app);
+  const consolidation = createContractInvoiceConsolidationService(app);
 
-  async function handleEvent(ev: { eventType: string; payload: Prisma.JsonValue }): Promise<boolean> {
+  async function resolveContractId(
+    ev: { eventType: string; payload: Prisma.JsonValue },
+  ): Promise<string | null> {
     const payload = (ev.payload ?? {}) as Prisma.JsonObject;
+    const direct = payload.contractId;
+    if (typeof direct === "string" && direct.length > 0) return direct;
 
-    if (ev.eventType === "contract.paid") {
-      const contractId = String(payload.contractId ?? "");
-      if (!contractId) return true;
-      await issuance.ensureRentalInvoiceForContract(contractId);
-      return true;
+    if (ev.eventType === INVOICE_OUTBOX_RECONCILIATION_FINALIZED) {
+      const reconciliationId = String(payload.reconciliationId ?? "");
+      if (!reconciliationId) return null;
+      const recon = await prisma.contractReconciliation.findUnique({
+        where: { id: reconciliationId },
+        select: { contractId: true },
+      });
+      return recon?.contractId ?? null;
     }
 
     if (ev.eventType === INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE) {
       const customerChargeId = String(payload.customerChargeId ?? "");
-      if (!customerChargeId) return true;
-      await issuance.ensureRoadLiabilityInvoiceForCustomerCharge(customerChargeId);
-      return true;
+      if (!customerChargeId) return null;
+      const charge = await prisma.roadLiabilityCustomerCharge.findUnique({
+        where: { id: customerChargeId },
+        select: { contractId: true },
+      });
+      return charge?.contractId ?? null;
     }
 
-    if (ev.eventType === INVOICE_OUTBOX_RECONCILIATION_FINALIZED) {
-      const reconciliationId = String(payload.reconciliationId ?? "");
-      if (!reconciliationId) return true;
-      await issuance.ensureReconciliationInvoicesForReconciliation(reconciliationId);
-      return true;
-    }
+    return null;
+  }
 
-    return false;
+  async function handleEvent(ev: { eventType: string; payload: Prisma.JsonValue }): Promise<boolean> {
+    if (ev.eventType === INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE) {
+      const payload = (ev.payload ?? {}) as Prisma.JsonObject;
+      const customerChargeId = String(payload.customerChargeId ?? "");
+      const simulatedFailId = process.env.INVOICE_ISSUANCE_INTEGRATION_FAIL_ONCE_CHARGE_ID;
+      if (simulatedFailId && simulatedFailId === customerChargeId) {
+        delete process.env.INVOICE_ISSUANCE_INTEGRATION_FAIL_ONCE_CHARGE_ID;
+        throw new Error("INVOICE_ISSUANCE_INTEGRATION_SIMULATED_FAILURE");
+      }
+    }
+    const contractId = await resolveContractId(ev);
+    if (!contractId) return true;
+    await consolidation.ensureConsolidatedContractInvoice(contractId);
+    return true;
   }
 
   async function runInvoiceOutboxCycle(): Promise<{ processed: number }> {

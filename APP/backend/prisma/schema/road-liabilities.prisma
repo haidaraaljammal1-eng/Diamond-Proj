@@ -16,6 +16,12 @@ enum RoadLiabilityType {
   SALIK_VIOLATION
 }
 
+/// Staff-entered charge category on returned-contract manual collections.
+enum StaffRoadChargeCategory {
+  TRAFFIC_VIOLATION
+  SALIK
+}
+
 enum RoadLiabilityConfirmationStatus {
   PENDING_CONFIRMATION
   CONFIRMED
@@ -133,6 +139,12 @@ model RoadLiability {
   attributedContractId           String?
   attributedContract             Contract?                       @relation(fields: [attributedContractId], references: [id], onDelete: Restrict)
   confirmedAt                    DateTime?
+  /// Staff manual entry audit (not a verified RTA/Salik provider event).
+  staffEnteredByUserId           Int?
+  staffEnteredBy                 User?                           @relation("RoadLiabilityStaffEnteredBy", fields: [staffEnteredByUserId], references: [id], onDelete: SetNull)
+  staffEnteredAt                 DateTime?
+  staffChargeCategory            StaffRoadChargeCategory?
+  staffChargeDescription         String?
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
 

@@ -43,6 +43,8 @@ export function toInvoiceListItem(
     sourceLabel: invoiceSourceLabel(row.invoiceType),
     latestDeliveryStatus: row.deliveries[0]?.status ?? null,
     createdAt: row.createdAt,
+    revisionNumber: row.revisionNumber,
+    isCurrent: row.isCurrent,
   };
 }
 

@@ -174,6 +174,11 @@ export function ContractDetailDrawer({
                 label={t("detail.method")}
                 value={contractPaymentMethodLabel(detail.payment.method, t)}
               />
+              {detail.payment.savedCardAuthorizationState === "incomplete" ? (
+                <p className={styles.muted} role="status">
+                  {t("detail.savedCardAuthorizationWarning")}
+                </p>
+              ) : null}
             </section>
           ) : null}
 

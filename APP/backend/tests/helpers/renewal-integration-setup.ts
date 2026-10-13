@@ -7,7 +7,6 @@ import { seedReadyIdentity } from "./public-identity";
 import {
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
-  linkCardViaFakeProvider,
 } from "./fake-payment-provider";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
 
@@ -92,6 +91,7 @@ export async function createActiveRentalContract(
   authHeaders: () => Record<string, string>,
   run: string,
   seq: number,
+  sharedPayments?: ReturnType<typeof createFakePaymentProvider>,
 ) {
   let localSeq = seq;
   const nextAttachment = async () => {
@@ -167,13 +167,20 @@ export async function createActiveRentalContract(
   });
   assert.equal(accept.statusCode, 200, accept.body);
 
-  const payments = createFakePaymentProvider(`${run}-rental-${seq}`);
-  const { setPaymentProviderForTests } = await import(
-    "src/modules/contracts/payment/payment-provider.factory"
+  const payments = sharedPayments ?? createFakePaymentProvider(`${run}-rental-${seq}`);
+  if (!sharedPayments) {
+    const { setPaymentProviderForTests } = await import(
+      "src/modules/contracts/payment/payment-provider.factory"
+    );
+    setPaymentProviderForTests(payments.provider);
+  }
+  await confirmRentalPaymentViaStatusToken(
+    app,
+    payments,
+    rentalToken,
+    `rg-pay-${contractId}`,
+    contractId,
   );
-  setPaymentProviderForTests(payments.provider);
-  await linkCardViaFakeProvider(app, payments, rentalToken, contractId);
-  await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `rg-pay-${contractId}`);
 
   const photos = await Promise.all(CAR_OUT_REQUIRED_ANGLES.map(async () => nextAttachment()));
   const carOut = await app.inject({

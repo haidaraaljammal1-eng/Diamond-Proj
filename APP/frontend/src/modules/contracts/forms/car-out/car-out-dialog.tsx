@@ -191,7 +191,15 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
     await completeCarOut(contractId, createIdempotencyKey());
   }
 
+  const savedCardAuthWarning =
+    detail.payment?.savedCardAuthorizationState === "incomplete";
+
   return <div className={styles.handover} data-testid="car-out-handover">
+      {savedCardAuthWarning ? (
+        <p className={styles.error} role="status" data-testid="car-out-saved-card-warning">
+          {t("carOut.savedCardAuthorizationWarning")}
+        </p>
+      ) : null}
       <header className={styles.context}>
         <div className={styles.identity}>
           <div className={styles.vehicle}>

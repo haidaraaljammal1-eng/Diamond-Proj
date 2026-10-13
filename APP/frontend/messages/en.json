@@ -691,6 +691,7 @@
       "year": "Model year",
       "color": "Color",
       "plate": "Plate number",
+      "company": "Company",
       "status": "Status",
       "galleryEmpty": "No additional photos for this vehicle",
       "noPhoto": "No photo uploaded",
@@ -935,6 +936,7 @@
       "payment": "Payment",
       "paidAmount": "Paid",
       "method": "Method",
+      "savedCardAuthorizationWarning": "Rental payment is confirmed. The customer's card could not be saved for future charges — off-session violation collection may be unavailable. Vehicle handover is not blocked.",
       "carOut": "Car-Out",
       "carIn": "Car-In",
       "carInReturned": "Vehicle returned",
@@ -1084,6 +1086,7 @@
       "paymentStatusLabel": "Payment",
       "paymentConfirmed": "Confirmed",
       "title": "Car-out handover",
+      "savedCardAuthorizationWarning": "Payment is confirmed. The saved card is unavailable for future charges — you may still complete handover. Violation collection from card may require staff follow-up.",
       "loading": "Loading handover data…",
       "vehicleOut": "Vehicle OUT",
       "photosTitle": "Vehicle Condition Photos",
@@ -1441,6 +1444,10 @@
       "readyForHandover": "Your rental is ready for vehicle handover.",
       "paymentMethodSaved": "Payment method saved for authorized future charges.",
       "checkingFailed": "We could not check the payment yet. Verification will retry automatically.",
+      "paymentUnknown": "We have not confirmed the payment result yet. Please do not try to pay again until we verify the transaction.",
+      "successAuthorizationIncomplete": "Your rental payment was received successfully.",
+      "savedCardUnavailableInfo": "We could not save your card for future contract-related charges. Our team has been notified. Please do not pay the rental amount again.",
+      "savedCardNotAvailable": "Future card charging for violations or Salik is not available until staff resolve card saving.",
       "continueCheckout": "Continue in Stripe Checkout"
     }
   },
@@ -1679,6 +1686,7 @@
       "notCompleted": "Payment was not completed. You can try again.",
       "futureUseConsentTitle": "Save payment method for authorized future charges",
       "futureUseConsentOptional": "Optional — save card for authorized future charges",
+      "futureUseConsentRequired": "Required — authorize saving your card for contract-related charges",
       "futureUseConsentBody": "I authorize my payment method to be saved with Stripe for future charges directly related to this rental agreement, subject to the rental terms.",
       "futureUseConsentUnavailable": "Payment is available. Saving your card for future authorized charges is not available for this contract.",
       "futureUseConsentLegal": "Operational consent copy — requires owner/legal approval before production.",
@@ -2479,7 +2487,42 @@
       "description": "This page requires the violations.read permission."
     },
     "error": {
-      "generic": "Road liabilities could not be loaded. Try again."
+      "generic": "Road liabilities could not be loaded. Try again.",
+      "RETURNED_CONTRACT_NOT_ELIGIBLE": "This contract is not in the returned-contracts window or is not eligible for manual charge.",
+      "ROAD_LIABILITY_AUTHORIZATION_MISSING": "No authorized saved card is available for this contract."
+    },
+    "pageTabs": {
+      "liabilities": "Road Liabilities",
+      "returnedContracts": "Returned Contracts — Last 30 Days"
+    },
+    "returnedContracts": {
+      "searchPlaceholder": "Search contract, customer or plate…",
+      "search": "Search",
+      "collect": "Collect Charge",
+      "cardAvailable": "Available",
+      "cardUnavailable": "Unavailable",
+      "carIn": "Car-In",
+      "status": "Status",
+      "empty": "No returned contracts in the last 30 days.",
+      "loading": "Loading returned contracts…",
+      "results": "{count} contracts"
+    },
+    "staffCharge": {
+      "title": "Collect Customer Charge",
+      "close": "Close",
+      "typeTraffic": "Traffic Violation",
+      "typeSalik": "Salik",
+      "amountLabel": "Charge Amount (AED)",
+      "cancel": "Cancel",
+      "review": "Continue",
+      "back": "Back",
+      "confirm": "Confirm Charge of AED {amount}",
+      "noCard": "No saved card on file",
+      "noAuthorizedCard": "No authorized card — collection is unavailable.",
+      "resultSuccess": "Successfully collected.",
+      "resultProcessing": "Processing — please wait.",
+      "resultRequiresAction": "Customer action is required — this was not collected.",
+      "resultFailed": "Charge failed — amount was not collected."
     },
     "charge": {
       "section": "Customer Charge",

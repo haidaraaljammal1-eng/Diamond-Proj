@@ -84,8 +84,16 @@ model Invoice {
 
   templateVersion String @default("v1")
 
-  /// Idempotency for automatic issuance (e.g. RENTAL:<contractId>).
+  /// Idempotency for automatic issuance (e.g. CONTRACT_INVOICE:<contractId>:r2).
   originEventKey String @unique
+
+  revisionNumber Int @default(1)
+  isCurrent      Boolean @default(true)
+  supersedesInvoiceId String?
+  supersedesInvoice   Invoice?  @relation("InvoiceRevisionChain", fields: [supersedesInvoiceId], references: [id], onDelete: SetNull)
+  supersededBy        Invoice[] @relation("InvoiceRevisionChain")
+  /// Stable hash of line sources/amounts + balance for skip-no-op revisions.
+  contentFingerprint String?
 
   issuedAt DateTime @default(now())
   issuedByUserId Int?
@@ -99,6 +107,7 @@ model Invoice {
 
   @@unique([companyId, invoiceNumber])
   @@index([contractId])
+  @@index([contractId, isCurrent])
   @@index([vehicleId])
   @@index([customerId])
   @@index([companyId, issueDate])
@@ -129,7 +138,7 @@ model InvoiceLine {
 
   createdAt DateTime @default(now())
 
-  @@unique([sourceType, sourceId])
+  @@unique([invoiceId, sourceType, sourceId])
   @@index([invoiceId, position])
   @@map("invoice_lines")
 }

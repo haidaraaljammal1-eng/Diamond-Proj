@@ -2,7 +2,19 @@
  * Road liabilities constants. Diamond-owned names — not a vendor API contract.
  */
 
-export const ROAD_LIABILITY_SOURCE_KEYS = ["RTA", "SALIK", "GPS_INFERENCE", "TARS"] as const;
+export const ROAD_LIABILITY_SOURCE_KEYS = [
+  "RTA",
+  "SALIK",
+  "GPS_INFERENCE",
+  "TARS",
+  "STAFF_MANUAL",
+] as const;
+
+/** Provenance for employee-entered liabilities (not RTA/Salik provider confirmation). */
+export const STAFF_MANUAL_SOURCE_KEY = "STAFF_MANUAL";
+
+/** Rolling returned-contract window (server UTC instant). */
+export const RETURNED_CONTRACT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 export type RoadLiabilitySourceKey = (typeof ROAD_LIABILITY_SOURCE_KEYS)[number];
 
 export const ROAD_LIABILITY_INGEST_LOCK_NS = "road_liability_ingest";

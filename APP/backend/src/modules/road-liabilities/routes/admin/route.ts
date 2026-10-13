@@ -18,6 +18,14 @@ import {
 import { ConfirmRoadLiabilityChargeSchema } from "src/modules/contracts/contracts.schema";
 import { createRoadLiabilityCustomerChargeService } from "src/modules/road-liabilities/road-liability-customer-charge.service";
 import { createRoadLiabilityCollectionService } from "src/modules/road-liabilities/road-liability-collection.service";
+import { createStaffManualChargeService } from "src/modules/road-liabilities/staff-manual-charge.service";
+import { listReturnedContracts } from "src/modules/road-liabilities/staff-returned-contracts.service";
+import {
+  ReturnedContractListItemSchema,
+  ReturnedContractsQuerySchema,
+  StaffManualChargeInputSchema,
+  StaffManualChargeResultSchema,
+} from "src/modules/road-liabilities/staff-manual-charge.schema";
 import {
   ManualCollectionConfirmInputSchema,
   OffSessionCollectionInputSchema,
@@ -32,6 +40,7 @@ export default async function roadLiabilityRoutes(fastify: FastifyInstance) {
   const service = createRoadLiabilityService(fastify);
   const charges = createRoadLiabilityCustomerChargeService(fastify);
   const collection = createRoadLiabilityCollectionService(fastify);
+  const staffCharges = createStaffManualChargeService(fastify);
   const inference = createSalikCrossingInferenceService(fastify);
   const unregister = registerGpsAcceptedPositionObserver({
     onAcceptedPosition: (event) => inference.handleAcceptedPosition(event),
@@ -73,6 +82,77 @@ export default async function roadLiabilityRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => service.list(request.query),
+  );
+
+  app.get(
+    "/returned-contracts",
+    {
+      schema: {
+        summary: "Contracts with completed Car-In in the last 30 days",
+        operationId: "listReturnedContractsForRoadCharges",
+        tags: T,
+        permissions: [PERMISSIONS.VIOLATIONS_READ],
+        querystring: ReturnedContractsQuerySchema,
+        response: {
+          200: listResponse(ReturnedContractListItemSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const q = request.query;
+      const data = await listReturnedContracts(fastify.prisma, {
+        page: q.page,
+        pageSize: q.pageSize,
+        companyId: q.companyId,
+        search: q.search,
+      });
+      return { data: data.items, meta: data.meta };
+    },
+  );
+
+  const ContractIdPathParam = z.object({ contractId: z.string().uuid() });
+
+  app.post(
+    "/returned-contracts/:contractId/manual-charge",
+    {
+      schema: {
+        summary: "Create a staff manual road liability and collect off-session",
+        operationId: "staffManualChargeReturnedContract",
+        tags: T,
+        permissions: [PERMISSIONS.VIOLATIONS_CHARGE],
+        params: ContractIdPathParam,
+        body: StaffManualChargeInputSchema,
+        response: {
+          200: dataResponse(StaffManualChargeResultSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      if (typeof key !== "string" || !key.trim()) {
+        const { AppError } = await import("src/lib/errors/app-error");
+        const { ErrorCode } = await import("src/constants/error-codes");
+        throw new AppError({
+          code: ErrorCode.VALIDATION_ERROR,
+          message: "Idempotency-Key header is required",
+        });
+      }
+      const data = await staffCharges.manualChargeAndCollect(
+        request.params.contractId,
+        request.body,
+        actor.id,
+        key.trim(),
+      );
+      request.setAudit({
+        action: "road_liabilities.staff_manual_charge",
+        entityType: "contract",
+        entityId: request.params.contractId,
+      });
+      return { data };
+    },
   );
 
   app.get(

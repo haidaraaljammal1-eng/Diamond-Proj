@@ -1,0 +1,54 @@
+.summary {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.radioRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+.amountRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.confirmBox {
+  border: 1px solid var(--border-subtle, #e8e0d0);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.error {
+  color: var(--status-danger, #b42318);
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.success {
+  color: var(--status-success, #1a6b3c);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}

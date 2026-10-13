@@ -9,6 +9,7 @@ import { sendInvoiceDocumentViaWhatsApp } from "src/modules/invoices/invoice-wha
 import {
   invoiceNotFoundError,
   invoiceNotIssuedError,
+  invoiceSupersededError,
   whatsAppProviderUnconfiguredError,
 } from "src/modules/invoices/invoices.errors";
 
@@ -35,6 +36,7 @@ export function createInvoiceDeliveryService(fastify: FastifyInstance) {
       const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
       if (!invoice) throw invoiceNotFoundError();
       if (invoice.status !== "ISSUED") throw invoiceNotIssuedError();
+      if (!invoice.isCurrent) throw invoiceSupersededError();
 
       const phone = await issuance.resolveCustomerPhone(invoice.customerId);
       const customer = await prisma.customer.findUnique({

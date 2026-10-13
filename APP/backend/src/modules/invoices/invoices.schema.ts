@@ -15,6 +15,7 @@ export const InvoiceListQuerySchema = PaginationQuerySchema.extend({
   customerId: z.coerce.number().int().positive().optional(),
   vehicleId: z.coerce.number().int().positive().optional(),
   sort: z.string().optional(),
+  includeSuperseded: z.coerce.boolean().optional(),
 });
 
 export const InvoiceLineSchema = z.object({
@@ -52,6 +53,8 @@ export const InvoiceListItemSchema = z.object({
   sourceLabel: z.string(),
   latestDeliveryStatus: z.string().nullable(),
   createdAt: z.coerce.date(),
+  revisionNumber: z.number().int(),
+  isCurrent: z.boolean(),
 });
 
 export const InvoiceDetailSchema = InvoiceListItemSchema.extend({

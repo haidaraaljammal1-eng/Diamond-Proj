@@ -13,10 +13,13 @@ const paid = {
 const active = { ...paid, contractId: "ct-active", status: "active" as const, awaitingHandover: false };
 const retout = { ...paid, contractId: "ct-retout", status: "retout" as const, awaitingHandover: false };
 
+const activeFleetCard = { isActive: true as const };
+
 describe("resolveFleetPrimaryIntent", () => {
   it("AVAILABLE + no context → set rental price", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
+        ...activeFleetCard,
         operationalStatus: "available",
         currentRental: null,
         prePaymentFollowUps: [],
@@ -28,6 +31,7 @@ describe("resolveFleetPrimaryIntent", () => {
   it("PAID handover → car-out", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
+        ...activeFleetCard,
         operationalStatus: "available",
         currentRental: paid,
         prePaymentFollowUps: [],
@@ -39,6 +43,7 @@ describe("resolveFleetPrimaryIntent", () => {
   it("RENTED active → open contract", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
+        ...activeFleetCard,
         operationalStatus: "rented",
         currentRental: active,
         prePaymentFollowUps: [],
@@ -50,6 +55,7 @@ describe("resolveFleetPrimaryIntent", () => {
   it("RETOUT → open contract", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
+        ...activeFleetCard,
         operationalStatus: "rented",
         currentRental: retout,
         prePaymentFollowUps: [],
@@ -61,6 +67,7 @@ describe("resolveFleetPrimaryIntent", () => {
   it("urgent follow-up with one offer opens that contract", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
+        ...activeFleetCard,
         operationalStatus: "available",
         currentRental: null,
         prePaymentFollowUps: [
@@ -74,6 +81,7 @@ describe("resolveFleetPrimaryIntent", () => {
   it("urgent follow-up with legacy duplicates requires explicit choice", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
+        ...activeFleetCard,
         operationalStatus: "available",
         currentRental: null,
         prePaymentFollowUps: [
@@ -88,6 +96,7 @@ describe("resolveFleetPrimaryIntent", () => {
   it("blocking rental wins over urgent offers", () => {
     assert.deepEqual(
       resolveFleetPrimaryIntent({
+        ...activeFleetCard,
         operationalStatus: "rented",
         currentRental: active,
         prePaymentFollowUps: [

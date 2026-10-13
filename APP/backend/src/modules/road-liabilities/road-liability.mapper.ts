@@ -146,11 +146,25 @@ export type ChargeableRoadLiabilityInput = {
   attributedContractId: string | null;
   amount: number | null;
   collectionStatus: RoadLiabilityCollectionStatus;
+  authoritativeSourceKey?: string | null;
+  staffEnteredAt?: Date | null;
 };
 
+export function isStaffManualRoadLiability(input: {
+  authoritativeSourceKey?: string | null;
+  staffEnteredAt?: Date | null;
+}): boolean {
+  return input.authoritativeSourceKey === "STAFF_MANUAL" && input.staffEnteredAt != null;
+}
+
 export function isChargeableRoadLiability(input: ChargeableRoadLiabilityInput): boolean {
-  return (
+  const staffAttested =
+    isStaffManualRoadLiability(input) && input.confirmationStatus === "CONFIRMED";
+  const providerConfirmed =
     input.confirmationStatus === "CONFIRMED" &&
+    !isStaffManualRoadLiability(input);
+  if (!staffAttested && !providerConfirmed) return false;
+  return (
     input.attributionStatus === "MATCHED" &&
     Boolean(input.attributedContractId) &&
     input.amount != null &&

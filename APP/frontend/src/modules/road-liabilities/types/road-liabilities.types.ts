@@ -343,3 +343,47 @@ export interface RoadLiabilityPaymentLinkResultDto {
   checkoutUrl: string | null;
   paymentId: string;
 }
+
+export type StaffRoadChargeCategory = "TRAFFIC_VIOLATION" | "SALIK";
+
+export interface ReturnedContractsListQuery {
+  page: number;
+  pageSize: number;
+  companyId?: number;
+  search?: string;
+}
+
+export interface ReturnedContractListItemDto {
+  contractId: string;
+  contractNumber: string;
+  status: "REVIEW" | "CLOSED";
+  collectionMode: string;
+  company: {
+    id: number;
+    code: string;
+    displayName: string;
+    accentColor: string;
+  } | null;
+  customerName: string | null;
+  vehicleDisplayName: string;
+  plateNumber: string | null;
+  carInOccurredAt: string;
+  cardAvailability: "available" | "unavailable";
+  capabilityReasonCode: string | null;
+  savedPaymentMethod: RoadLiabilitySavedPaymentMethodDto | null;
+}
+
+export interface StaffManualChargeInput {
+  chargeCategory: StaffRoadChargeCategory;
+  amountAed: number;
+}
+
+export interface StaffManualChargeResultDto {
+  roadLiabilityId: string;
+  status: "succeeded" | "processing" | "failed" | "requires_action" | "blocked";
+  operationalState: string | null;
+  invoicePending: boolean;
+  failure?: RoadLiabilityCollectionFailureDto | null;
+}
+
+export const RETURNED_CONTRACTS_PAGE_SIZE = 20;

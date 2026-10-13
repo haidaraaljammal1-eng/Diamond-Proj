@@ -2,6 +2,12 @@ import type { CurrentRentalDto } from "src/modules/contracts/current-rental";
 import type { PrePaymentFollowUpDto } from "src/modules/contracts/pre-payment-follow-up";
 import type { SortDirection } from "src/lib/http/pagination";
 
+/** Fields used for fleet attention tiering — matches public Vehicle card rental shape. */
+export type FleetAttentionCurrentRental = Pick<
+  CurrentRentalDto,
+  "status" | "awaitingHandover"
+>;
+
 export type FleetAttentionTier = "handover" | "urgent_follow_up" | null;
 
 export type FleetSortRow = {
@@ -24,7 +30,7 @@ const TIER_RANK: Record<"handover" | "urgent_follow_up" | "standard", number> = 
 
 export function resolveFleetAttentionTier(
   row: Pick<FleetSortRow, "operationalStatus" | "isActive">,
-  currentRental: CurrentRentalDto | null,
+  currentRental: FleetAttentionCurrentRental | null,
   followUps: PrePaymentFollowUpDto[] | undefined,
 ): FleetAttentionTier {
   if (!row.isActive) return null;
@@ -95,7 +101,7 @@ function compareUserSort(a: FleetSortRow, b: FleetSortRow, field: string, direct
  */
 export function sortFleetVehicleIds(
   rows: FleetSortRow[],
-  rentals: Map<number, CurrentRentalDto>,
+  rentals: Map<number, FleetAttentionCurrentRental>,
   followUps: Map<number, PrePaymentFollowUpDto[]>,
   field: string,
   direction: SortDirection,

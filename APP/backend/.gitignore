@@ -12,3 +12,4 @@ prisma/generated
 coverage
 .local/
 .DS_Store
+db-backups/

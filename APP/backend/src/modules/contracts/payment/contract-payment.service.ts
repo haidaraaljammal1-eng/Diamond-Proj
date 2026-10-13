@@ -12,6 +12,7 @@ import {
 } from "src/lib/http/public-frontend-url";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
 import { writeOutboxEvent } from "src/lib/db/outbox";
+import { enqueueRoadLiabilityInvoiceOutbox } from "src/modules/road-liabilities/road-liability-invoice-outbox";
 import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { expiryFromNow, generateOpaqueToken, hashToken } from "src/lib/security/tokens";
@@ -36,6 +37,11 @@ import {
   getPaymentConsent,
   PAYMENT_METHOD_AUTHORIZATION_VERSION,
 } from "src/modules/contracts/payment/payment-consent.constants";
+import {
+  loadRentalAuthorizationState,
+  rentalPaymentAuthorizationState,
+  type RentalPaymentAuthorizationState,
+} from "src/modules/contracts/payment/payment-authorization.policy";
 import type { ProviderPaymentStatus } from "src/modules/contracts/payment/payment-provider.types";
 import { ensureContractCustomerForPayment } from "src/modules/contracts/contract-customer-materialization";
 import {
@@ -545,30 +551,30 @@ export function createContractPaymentService(prisma: PrismaClient) {
   async function reconcileSavedPaymentMethodAfterPayment(
     payment: ContractPayment,
     audit?: { ip?: string | null; userAgent?: string | null },
-  ): Promise<void> {
-    if (!payment.savePaymentMethodForFutureUse || !payment.providerReference) return;
+  ): Promise<boolean> {
+    if (!payment.savePaymentMethodForFutureUse || !payment.providerReference) return true;
 
     const already = await prisma.contractPaymentAuthorization.findUnique({
       where: { sourcePaymentId: payment.id },
     });
-    if (already) return;
+    if (already) return true;
 
     const pm = await provider().getPaymentSessionPaymentMethod(payment.providerReference);
-    if (!pm?.stripeCustomerId) return;
+    if (!pm?.stripeCustomerId) return false;
 
     const contract = await prisma.contract.findUnique({
       where: { id: payment.contractId },
       select: { customerId: true },
     });
-    if (!contract?.customerId) return;
+    if (!contract?.customerId) return false;
 
     const consentVersion = payment.futureUseConsentVersion;
     const consentLocale = payment.futureUseConsentLocale;
-    if (!consentVersion || !consentLocale) return;
+    if (!consentVersion || !consentLocale) return false;
     const consent = getPaymentConsent(consentVersion, consentLocale as PublicFrontendLocale);
-    if (!consent) return;
+    if (!consent) return false;
 
-    if (!env.STRIPE_SECRET_KEY) return;
+    if (!env.STRIPE_SECRET_KEY) return false;
     const stripe = new Stripe(env.STRIPE_SECRET_KEY);
     const providerAccountKey = await resolveStripeProviderAccountKey(stripe);
     const livemode = stripeLivemodeConfigured();
@@ -601,6 +607,31 @@ export function createContractPaymentService(prisma: PrismaClient) {
         futureUseConsentPaymentId: payment.id,
       });
     });
+    return true;
+  }
+
+  async function notifyAuthorizationGapIfNeeded(payment: ContractPayment): Promise<void> {
+    const state = await loadRentalAuthorizationState(prisma, payment.id);
+    if (state !== "incomplete") return;
+    await withTransaction(prisma, async (tx) => {
+      await emitPayment(tx, "payment.authorization_incomplete", payment.contractId, {
+        paymentId: payment.id,
+        purpose: payment.purpose,
+        providerReference: payment.providerReference,
+        amount: payment.amount,
+        currency: payment.currency,
+        dedupe: payment.id,
+      });
+    });
+  }
+
+  async function reconcileAuthorizationAfterConfirmedPayment(
+    payment: ContractPayment,
+    audit?: { ip?: string | null; userAgent?: string | null },
+  ): Promise<void> {
+    if (payment.status !== "CONFIRMED" || !payment.savePaymentMethodForFutureUse) return;
+    const authorized = await reconcileSavedPaymentMethodAfterPayment(payment, audit);
+    if (!authorized) await notifyAuthorizationGapIfNeeded(payment);
   }
 
   const LIABILITY_ALREADY_SETTLED_FAILURE = "LIABILITY_ALREADY_SETTLED";
@@ -683,6 +714,12 @@ export function createContractPaymentService(prisma: PrismaClient) {
       await applyDomainSettlement(tx, updated);
       if (payment.purpose === "ROAD_LIABILITY") {
         await recordRoadLiabilityPaymentLedger(tx, updated);
+        const charge = await tx.roadLiabilityCustomerCharge.findUnique({
+          where: { id: payment.targetId },
+        });
+        if (charge?.destinationType === "DIRECT_COLLECTION") {
+          await enqueueRoadLiabilityInvoiceOutbox(tx, charge.id, payment.contractId);
+        }
       } else if (payment.purpose === "RECONCILIATION") {
         const allocations = await tx.contractPaymentAllocation.findMany({
           where: { contractPaymentId: payment.id },
@@ -849,7 +886,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
     }
 
     if (updated.status === "CONFIRMED" && updated.savePaymentMethodForFutureUse) {
-      await reconcileSavedPaymentMethodAfterPayment(updated, audit);
+      await reconcileAuthorizationAfterConfirmedPayment(updated, audit);
     }
     return updated;
   }
@@ -933,6 +970,15 @@ export function createContractPaymentService(prisma: PrismaClient) {
 
     const consentLocale = normalizePublicLocale(input.locale);
     const saveForFutureUse = Boolean(input.savePaymentMethodForFutureUse);
+    if (input.purpose === "RENTAL") {
+      const rentalContract = await prisma.contract.findUnique({
+        where: { id: input.targetId },
+        select: { collectionMode: true },
+      });
+      if (rentalContract?.collectionMode === "ELECTRONIC") {
+        if (!saveForFutureUse) throw contractError.paymentConsentRequired();
+      }
+    }
     if (saveForFutureUse) {
       const version = input.consentVersion ?? PAYMENT_METHOD_AUTHORIZATION_VERSION;
       if (!getPaymentConsent(version, consentLocale)) {
@@ -1284,7 +1330,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
           });
         });
         if (updated.status === "CONFIRMED" && updated.savePaymentMethodForFutureUse) {
-          await reconcileSavedPaymentMethodAfterPayment(updated);
+          await reconcileAuthorizationAfterConfirmedPayment(updated);
         }
         return;
       } catch (error) {
@@ -1403,6 +1449,17 @@ export function createContractPaymentService(prisma: PrismaClient) {
                   where: { sourcePaymentId: payment.id },
                 })
               : null;
+          const authorizationState: RentalPaymentAuthorizationState | undefined =
+            contract && payment.purpose === "RENTAL"
+              ? rentalPaymentAuthorizationState(
+                  {
+                    savePaymentMethodForFutureUse: payment.savePaymentMethodForFutureUse,
+                    status: payment.status,
+                    contract: { collectionMode: contract.collectionMode ?? "ELECTRONIC" },
+                  },
+                  Boolean(authorization),
+                )
+              : undefined;
           return {
             status: payment.status,
             contractStatus: contract?.status ?? null,
@@ -1425,6 +1482,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
                   cardLast4: contract.cardPaymentMethod?.cardLast4 ?? null,
                   cardBrand: contract.cardPaymentMethod?.cardBrand ?? null,
                   paymentMethodSavedForFutureUse: Boolean(authorization),
+                  rentalPaymentAuthorizationState: authorizationState,
                 }
               : undefined,
           };

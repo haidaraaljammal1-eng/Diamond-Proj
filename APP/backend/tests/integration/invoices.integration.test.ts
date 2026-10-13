@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { PERMISSIONS } from "src/constants/permissions";
-import { APPROVED_INVOICE_SEQUENCE_START } from "src/modules/invoices/invoices.constants";
+import {
+  APPROVED_INVOICE_SEQUENCE_START,
+  consolidatedContractInvoiceOriginKey,
+} from "src/modules/invoices/invoices.constants";
 import { setWhatsAppProviderForTests } from "src/modules/whatsapp/whatsapp.provider";
 import { createFakeWhatsAppProvider } from "tests/helpers/fake-whatsapp-provider";
 import {
@@ -12,6 +15,7 @@ import {
   confirmSignedElectronicRentalPayment,
   signContractViaPublicRental,
 } from "tests/helpers/invoice-integration";
+import { createFakePaymentProvider } from "tests/helpers/fake-payment-provider";
 import { companyId } from "tests/helpers/operating-company";
 import { seedReviewContract } from "tests/helpers/payment-integration-helpers";
 
@@ -25,6 +29,10 @@ if (!RUN) {
   );
 } else {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL!;
+  process.env.LEGACY_CARD_LINK_ENABLED = "true";
+  process.env.SCHEDULER_ENABLED = "false";
+  process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? "sk_test_integration_fake";
+  process.env.PAYMENT_PROVIDER = "stripe";
 
   describe("invoices integration", { concurrency: false }, () => {
     let app: FastifyInstance;
@@ -35,6 +43,7 @@ if (!RUN) {
     let adminUserId = 0;
     let eliteContractId = "";
     let eliteRentalInvoiceId = "";
+    let fakePayments = createFakePaymentProvider(run);
 
     const INVOICE_PERMS = [
       PERMISSIONS.INVOICES_READ,
@@ -90,6 +99,11 @@ if (!RUN) {
       if (!/haidara_test(?:\?|$)/.test(process.env.DATABASE_URL ?? "")) {
         throw new Error("invoice integration requires haidara_test DATABASE_URL");
       }
+      const { setPaymentProviderForTests } = await import(
+        "src/modules/contracts/payment/payment-provider.factory"
+      );
+      fakePayments = createFakePaymentProvider(run);
+      setPaymentProviderForTests(fakePayments.provider);
       const { buildApp } = await import("src/app");
       app = await buildApp();
       prisma = app.prisma;
@@ -101,6 +115,10 @@ if (!RUN) {
     });
 
     after(async () => {
+      const { setPaymentProviderForTests } = await import(
+        "src/modules/contracts/payment/payment-provider.factory"
+      );
+      setPaymentProviderForTests(undefined);
       setWhatsAppProviderForTests(undefined);
       await app.close();
     });
@@ -121,11 +139,15 @@ if (!RUN) {
 
       await drainInvoiceOutbox(app);
       assert.equal(await prisma.invoice.count({ where: { contractId } }), 0);
+      const eliteSeqBefore = await prisma.invoiceNumberSequence.findUniqueOrThrow({
+        where: { companyId: eliteId },
+      });
+      const expectedEliteInvoiceNumber = eliteSeqBefore.nextNumber;
 
       await confirmSignedElectronicRentalPayment(app, {
-        run: `${run}-ELITE-pay`,
         contractId,
         rentalToken,
+        payments: fakePayments,
       });
       contract = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
       assert.equal(contract.status, "PAID");
@@ -136,15 +158,21 @@ if (!RUN) {
       assert.equal(invoices.length, 1);
       assert.equal(invoices[0]!.invoiceType, "RENTAL");
       assert.equal(invoices[0]!.companyId, eliteId);
-      assert.equal(invoices[0]!.invoiceNumber, APPROVED_INVOICE_SEQUENCE_START);
+      assert.equal(invoices[0]!.invoiceNumber, expectedEliteInvoiceNumber);
       assert.equal(invoices[0]!.totalAmount, 1800);
       assert.equal(invoices[0]!.balanceDueSnapshot, 0);
       assert.equal(invoices[0]!.termsSnapshot, "Paid in full");
+      assert.equal(invoices[0]!.isCurrent, true);
+      assert.equal(invoices[0]!.revisionNumber, 1);
+      assert.equal(
+        invoices[0]!.originEventKey,
+        consolidatedContractInvoiceOriginKey(contractId, 1),
+      );
 
       const seq = await prisma.invoiceNumberSequence.findUniqueOrThrow({
         where: { companyId: eliteId },
       });
-      assert.equal(seq.nextNumber, APPROVED_INVOICE_SEQUENCE_START + 1);
+      assert.equal(seq.nextNumber, invoices[0]!.invoiceNumber + 1);
 
       await drainInvoiceOutbox(app);
       const again = await prisma.invoice.count({ where: { contractId, invoiceType: "RENTAL" } });
@@ -169,18 +197,22 @@ if (!RUN) {
       });
       await drainInvoiceOutbox(app);
       assert.equal(await prisma.invoice.count({ where: { contractId } }), 0);
+      const uniqueId = await companyId(prisma, "UNIQUE");
+      const uniqueSeqBefore = await prisma.invoiceNumberSequence.findUniqueOrThrow({
+        where: { companyId: uniqueId },
+      });
+      const expectedUniqueInvoiceNumber = uniqueSeqBefore.nextNumber;
       await confirmSignedElectronicRentalPayment(app, {
-        run: `${run}-UNQ-pay`,
         contractId,
         rentalToken,
+        payments: fakePayments,
       });
       await drainInvoiceOutbox(app);
-      const uniqueId = await companyId(prisma, "UNIQUE");
       const inv = await prisma.invoice.findFirstOrThrow({
         where: { contractId, invoiceType: "RENTAL" },
       });
       assert.equal(inv.companyId, uniqueId);
-      assert.equal(inv.invoiceNumber, APPROVED_INVOICE_SEQUENCE_START);
+      assert.equal(inv.invoiceNumber, expectedUniqueInvoiceNumber);
     });
 
     test("C: list company filter and search", async () => {
@@ -216,9 +248,8 @@ if (!RUN) {
     });
 
     test("D: detail, PDF, deliveries, no manual POST /invoices", async () => {
-      const inv = await prisma.invoice.findFirstOrThrow({
-        where: { invoiceNumber: APPROVED_INVOICE_SEQUENCE_START },
-      });
+      assert.ok(eliteRentalInvoiceId);
+      const inv = await prisma.invoice.findUniqueOrThrow({ where: { id: eliteRentalInvoiceId } });
       const detail = await app.inject({ method: "GET", url: `/invoices/${inv.id}`, headers: auth() });
       assert.equal(detail.statusCode, 200);
       assert.equal(detail.json().data.customerName, inv.customerNameSnapshot);
@@ -274,12 +305,13 @@ if (!RUN) {
         data: {
           roadLiabilityId: liability.id,
           contractId: review.id,
-          destinationType: "POST_CLOSE_RECEIVABLE",
+          destinationType: "DIRECT_COLLECTION",
           officialAmountSnapshot: 600,
           customerChargeAmount: 600,
           adjustmentAmount: 0,
           confirmedAt: new Date(),
           confirmedByUserId: adminUserId,
+          operationalState: "COLLECTIBLE",
         },
       });
       await prisma.domainOutboxEvent.create({
@@ -300,15 +332,25 @@ if (!RUN) {
         "src/modules/invoices/invoice-issuance.service"
       );
       const issuance = createInvoiceIssuanceService(app);
-      let rlInv = await prisma.invoice.findFirst({
-        where: { originEventKey: `ROAD_LIABILITY:${charge.id}` },
+      let current = await prisma.invoice.findFirst({
+        where: { contractId: review.id, isCurrent: true },
+        include: { lines: true },
       });
-      if (!rlInv) {
-        rlInv = await issuance.ensureRoadLiabilityInvoiceForCustomerCharge(charge.id);
+      if (!current) {
+        const issued = await issuance.ensureRoadLiabilityInvoiceForCustomerCharge(charge.id);
+        current = await prisma.invoice.findFirstOrThrow({
+          where: { id: issued.id },
+          include: { lines: true },
+        });
       }
-      assert.ok(rlInv);
-      assert.equal(rlInv.invoiceType, "ROAD_LIABILITY");
-      assert.equal(rlInv.totalAmount, 600);
+      assert.ok(current);
+      assert.equal(current!.isCurrent, true);
+      assert.ok(current!.revisionNumber >= 2);
+      const fineLine = current!.lines.find((line) => line.sourceId === charge.id);
+      assert.ok(fineLine);
+      assert.equal(fineLine!.amount, 600);
+      assert.equal(current!.totalAmount, 1800 + 600);
+      assert.equal(current!.balanceDueSnapshot, 600);
       const closed = await prisma.contract.findUniqueOrThrow({ where: { id: review.id } });
       assert.equal(closed.status, "CLOSED");
     });
@@ -420,25 +462,22 @@ if (!RUN) {
       });
       await drainInvoiceOutbox(app);
 
-      const roadInvoices = await prisma.invoice.count({
-        where: {
-          contractId: contract.id,
-          OR: [
-            { originEventKey: `ROAD_LIABILITY:${charge.id}` },
-            { originEventKey: `RECONCILIATION_LINE:${roadLine.id}` },
-          ],
-        },
+      const current = await prisma.invoice.findFirst({
+        where: { contractId: contract.id, isCurrent: true },
+        include: { lines: true },
       });
-      assert.equal(roadInvoices, 1);
-
-      const damageInv = await prisma.invoice.findFirst({
-        where: { originEventKey: `RECONCILIATION_LINE:${damageLine.id}` },
-      });
-      assert.ok(damageInv);
-      assert.equal(damageInv!.totalAmount, 250);
+      assert.ok(current);
+      assert.equal(
+        current!.lines.filter((line) => line.sourceType === "ROAD_LIABILITY_CUSTOMER_CHARGE").length,
+        0,
+      );
+      const damageInvLine = current!.lines.find((line) => line.sourceId === damageLine.id);
+      assert.ok(damageInvLine);
+      assert.equal(damageInvLine!.amount, 250);
+      assert.equal(current!.totalAmount, 250);
     });
 
-    test("H: multiple invoices per contract (rental unchanged)", async () => {
+    test("H: revision history preserves rental snapshot; only one current", async () => {
       assert.ok(eliteContractId);
       const contract = await prisma.contract.findUniqueOrThrow({ where: { id: eliteContractId } });
       const rental = await prisma.invoice.findUniqueOrThrow({ where: { id: eliteRentalInvoiceId } });
@@ -446,10 +485,21 @@ if (!RUN) {
       assert.ok(all.length >= 2);
       const rentalAfter = await prisma.invoice.findUniqueOrThrow({ where: { id: rental.id } });
       assert.equal(rentalAfter.totalAmount, rental.totalAmount);
+      assert.equal(rentalAfter.isCurrent, false);
+      const current = await prisma.invoice.findFirstOrThrow({
+        where: { contractId: contract.id, isCurrent: true },
+      });
+      assert.notEqual(current.id, rental.id);
+      assert.equal(
+        await prisma.invoice.count({ where: { contractId: contract.id, isCurrent: true } }),
+        1,
+      );
     });
 
     test("O/P: WhatsApp unconfigured fails closed; idempotency key returns same delivery row", async () => {
-      const inv = await prisma.invoice.findFirstOrThrow({ where: { invoiceType: "RENTAL" } });
+      const inv = await prisma.invoice.findFirstOrThrow({
+        where: { invoiceType: "RENTAL", isCurrent: true },
+      });
       const beforeTotal = inv.totalAmount;
 
       const unconfigured = createFakeWhatsAppProvider();

@@ -160,6 +160,14 @@ export function VehicleDetailDialog({
         closeLabel={t("detail.close")}
         presentation="flush"
       >
+        <div
+          className={[
+            styles.shell,
+            isReady && detail ? styles.shellReady : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
         {isLoading ? (
           <div className={styles.loading} role="status">{t("detail.loading")}</div>
         ) : null}
@@ -210,6 +218,7 @@ export function VehicleDetailDialog({
             }}
           />
         ) : null}
+        </div>
       </Dialog>
 
       <Dialog

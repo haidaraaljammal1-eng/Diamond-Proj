@@ -73,6 +73,7 @@ export async function loadPaymentContext(prisma: PrismaClient, paymentId: string
       contract: {
         include: {
           customer: { select: { name: true } },
+          company: { select: { code: true } },
           vehicle: { include: { model: { select: { name: true } } } },
         },
       },
@@ -84,6 +85,7 @@ export async function loadPaymentContext(prisma: PrismaClient, paymentId: string
     contractNumber: payment.contract.contractNumber,
     customerName: payment.contract.customer?.name ?? "Unknown customer",
     vehicleName: notificationVehicleDisplayName(payment.contract.vehicle),
+    operatingCompanyCode: payment.contract.company?.code ?? "UNKNOWN",
     paymentSource: payment.provider === "stripe" ? "Stripe" : payment.method,
   };
 }

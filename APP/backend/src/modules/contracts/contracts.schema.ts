@@ -640,6 +640,9 @@ export const ContractDetailSchema = z.object({
       method: ContractPaymentMethodSchema,
       status: ContractPaymentStatusSchema,
       confirmedAt: z.date().nullable(),
+      savedCardAuthorizationState: z
+        .enum(["not_required", "pending", "complete", "incomplete"])
+        .optional(),
     })
     .nullable(),
   carOutHandover: CarOutHandoverSchema,
@@ -1030,6 +1033,9 @@ export const PublicPaymentStatusSchema = z.object({
       cardLast4: z.string().regex(/^\d{4}$/).nullable(),
       cardBrand: z.string().nullable(),
       paymentMethodSavedForFutureUse: z.boolean().optional(),
+      rentalPaymentAuthorizationState: z
+        .enum(["not_required", "pending", "complete", "incomplete"])
+        .optional(),
     })
     .optional(),
 });

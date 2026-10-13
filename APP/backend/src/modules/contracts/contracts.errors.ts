@@ -219,6 +219,18 @@ export const contractError = {
       "Payment consent version is invalid or inactive",
       "PAYMENT_CONSENT_INVALID",
     ),
+  paymentConsentRequired: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "Electronic rental payment requires active payment-method consent",
+      "PAYMENT_CONSENT_REQUIRED",
+    ),
+  paymentAuthorizationIncomplete: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Rental payment is confirmed but saved-card authorization is incomplete. Resolve before vehicle handover.",
+      "PAYMENT_AUTHORIZATION_INCOMPLETE",
+    ),
   paymentIdempotencyRequired: () =>
     err(ErrorCode.VALIDATION_ERROR, "Idempotency-Key is required", "PAYMENT_IDEMPOTENCY_REQUIRED"),
   paymentAlreadyProcessing: () =>

@@ -254,10 +254,15 @@ if (!RUN) {
       "src/modules/contracts/payment/contract-payment.service"
     );
     const paymentService = createContractPaymentService(prisma);
+    const { PAYMENT_METHOD_AUTHORIZATION_VERSION_V2 } = await import(
+      "src/modules/contracts/payment/payment-consent.catalog"
+    );
     const started = await paymentService.startPayment({
       purpose: "RENTAL",
       targetId: signed.id,
       createdByUserId: adminUserId,
+      savePaymentMethodForFutureUse: true,
+      consentVersion: PAYMENT_METHOD_AUTHORIZATION_VERSION_V2,
     });
     const paymentId = started.payment.id;
     payments.confirm();

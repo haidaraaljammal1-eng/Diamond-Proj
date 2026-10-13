@@ -117,6 +117,12 @@ export interface ContractCustomerRefDto {
   email: string | null;
 }
 
+export type SavedCardAuthorizationState =
+  | "not_required"
+  | "pending"
+  | "complete"
+  | "incomplete";
+
 export interface ContractPaymentDto {
   id: string;
   amount: number;
@@ -124,6 +130,7 @@ export interface ContractPaymentDto {
   method: ContractPaymentMethod;
   status: ContractPaymentStatus;
   confirmedAt: string | null;
+  savedCardAuthorizationState?: SavedCardAuthorizationState;
 }
 
 export interface ContractInspectionPhotoDto {

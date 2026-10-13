@@ -653,17 +653,12 @@ if (!RUN) {
 
     const payments = createFakePaymentProvider(run);
     setPaymentProviderForTests(payments.provider);
-    await prisma.contractCardPaymentMethod.create({
-      data: {
-        contractId, provider: "stripe", stripeCustomerId: `cus_test_${run}`,
-        stripePaymentMethodId: `pm_test_${run}`, cardBrand: "visa", cardLast4: "4242",
-      },
-    });
     const paid = await confirmRentalPaymentViaStatusToken(
       app,
       payments,
       rentalToken,
       `pay-${contractId}`,
+      contractId,
     );
     assert.equal(paid.contractStatus, "PAID");
 

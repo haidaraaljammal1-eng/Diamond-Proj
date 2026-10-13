@@ -5,6 +5,7 @@ export const BUSINESS_NOTIFICATION_OUTBOX_TYPES = [
   "contract.signed",
   "payment.confirmed",
   "payment.failed",
+  "payment.authorization_incomplete",
   "contract.activated",
   "contract.renewed",
   "contract.return_submitted",

@@ -174,9 +174,24 @@
 }
 
 .primaryAvailable {
-  background: linear-gradient(165deg, #3d3224, #2a2218);
-  color: #f5e6c8;
-  border-color: rgba(201, 161, 92, 0.45);
+  background: var(--diamond-gold-gradient);
+  background-size: 230% 100%;
+  color: #231a08;
+  border-color: rgba(133, 100, 45, 0.22);
+  filter: drop-shadow(0 4px 12px rgb(201 161 92 / 22%));
+}
+
+.primaryAvailable:hover:not(:disabled) {
+  filter: brightness(1.08) drop-shadow(0 4px 14px rgb(201 161 92 / 28%));
+}
+
+.primaryAvailable:focus-visible {
+  outline: 2px solid var(--diamond-gold-lo);
+  outline-offset: 2px;
+}
+
+.primaryAvailable:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .primaryDeliver {

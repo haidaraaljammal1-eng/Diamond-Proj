@@ -72,18 +72,23 @@ export function PaymentStep({
     },
     (key, values) => td(key, values),
   );
-  const canPay = canStartCardPayment({
-    providerAvailable: context.payment.providerAvailable,
-    paymentStatus: status,
-    payPending,
-    contractStatus: context.contract.status,
-    checkoutRecoverable: context.payment.checkoutRecoverable,
-  });
   const futureUseConsentAvailable = context.payment.futureUseConsentAvailable;
   const futureUseConsent = context.payment.futureUseConsent;
+  const stripeCheckoutAvailable = context.payment.providerAvailable;
+  const consentRequired =
+    Boolean(futureUseConsentAvailable && futureUseConsent) && stripeCheckoutAvailable;
+  const consentAccepted = !consentRequired || saveForFutureUse;
+  const canPay =
+    consentAccepted &&
+    canStartCardPayment({
+      providerAvailable: context.payment.providerAvailable,
+      paymentStatus: status,
+      payPending,
+      contractStatus: context.contract.status,
+      checkoutRecoverable: context.payment.checkoutRecoverable,
+    });
   const isDev = process.env.NODE_ENV === "development";
   const inFlight = panel === "processing" || panel === "pending" || payPending;
-  const stripeCheckoutAvailable = context.payment.providerAvailable;
   const vehicleLine = [
     context.vehicle.displayName,
     context.vehicle.plateNumber,
@@ -198,7 +203,7 @@ export function PaymentStep({
                 aria-label={t("futureUseConsentTitle")}
               />
               <span>
-                <b>{t("futureUseConsentOptional")}</b>
+                <b>{t("futureUseConsentRequired")}</b>
                 <span className={styles.consentHint}>{futureUseConsent.text}</span>
                 <span className={styles.consentLegal}>{t("futureUseConsentLegal")}</span>
               </span>
@@ -231,7 +236,7 @@ export function PaymentStep({
           disabled={!canPay || linkExpiredDuringPayment}
           loading={payPending}
           data-testid="payment-pay-stripe"
-          onClick={() => onPay(futureUseConsentAvailable && saveForFutureUse)}
+          onClick={() => onPay(consentRequired ? saveForFutureUse : false)}
         >
           {payPending
             ? t("openingCheckout")

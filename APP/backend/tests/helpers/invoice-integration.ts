@@ -14,8 +14,13 @@ export async function configureTestInvoiceSequences(
 ): Promise<void> {
   for (const code of ["ELITE", "UNIQUE"] as const) {
     const id = await companyId(prisma, code);
+    const maxIssued = await prisma.invoice.aggregate({
+      where: { companyId: id },
+      _max: { invoiceNumber: true },
+    });
+    const nextNumber = Math.max(start, (maxIssued._max.invoiceNumber ?? 0) + 1);
     await withTransaction(prisma, async (tx) => {
-      await configureInvoiceNumberSequence(tx, id, start);
+      await configureInvoiceNumberSequence(tx, id, nextNumber);
     });
   }
 }
@@ -111,26 +116,19 @@ export async function signContractViaPublicRental(
 export async function confirmSignedElectronicRentalPayment(
   app: FastifyInstance,
   input: {
-    run: string;
     contractId: string;
     rentalToken: string;
+    payments: ReturnType<
+      Awaited<ReturnType<typeof import("tests/helpers/fake-payment-provider")>>["createFakePaymentProvider"]
+    >;
   },
 ): Promise<void> {
-  const { setPaymentProviderForTests } = await import(
-    "src/modules/contracts/payment/payment-provider.factory"
-  );
-  const {
-    confirmRentalPaymentViaStatusToken,
-    createFakePaymentProvider,
-    linkCardViaFakeProvider,
-  } = await import("tests/helpers/fake-payment-provider");
-  const payments = createFakePaymentProvider(input.run);
-  setPaymentProviderForTests(payments.provider);
-  await linkCardViaFakeProvider(app, payments, input.rentalToken, input.contractId);
+  const { confirmRentalPaymentViaStatusToken } = await import("tests/helpers/fake-payment-provider");
   await confirmRentalPaymentViaStatusToken(
     app,
-    payments,
+    input.payments,
     input.rentalToken,
     `inv-confirm-${input.contractId}`,
+    input.contractId,
   );
 }

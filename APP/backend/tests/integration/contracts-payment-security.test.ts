@@ -20,6 +20,7 @@ import {
   confirmPaymentViaWebhook,
   confirmRentalPaymentViaStatusToken,
   createFakePaymentProvider,
+  ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD,
   sendTestStripeWebhook,
 } from "../helpers/fake-payment-provider";
 import { resetPaymentProviderReconcileCooldown } from "src/modules/contracts/payment/payment-reconcile-policy";
@@ -157,7 +158,7 @@ if (!RUN) {
           "content-type": "application/json",
           "idempotency-key": `renewal-setup-${run}-${seq}`,
         },
-        payload: { savePaymentMethodForFutureUse: false },
+        payload: ELECTRONIC_RENTAL_PAYMENT_START_PAYLOAD,
       });
       assert.equal(payStart.statusCode, 200, payStart.body);
       const rentalStatusToken = payStart.json().data.statusToken as string;
