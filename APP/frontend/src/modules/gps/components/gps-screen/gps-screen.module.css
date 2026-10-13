@@ -1,14 +1,56 @@
 .screen {
+  --gps-workspace-gap: 14px;
+  --gps-map-min-h: clamp(520px, 65vh, 760px);
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 118px);
-  max-height: calc(100dvh - 118px);
-  overflow: hidden;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  position: relative;
+}
+
+/* Soften shell geometric pattern on GPS only — does not touch global layout. */
+.screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.42;
+  background: rgba(255, 252, 246, 0.35);
+}
+
+.screen > * {
+  position: relative;
+  z-index: 1;
 }
 
 .screen :global(header) {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   flex: none;
+  align-items: center;
+}
+
+.screen :global(header) :global(.crumbs),
+.screen :global(header) :global([class*="crumbs"]) {
+  display: none;
+}
+
+.screen :global(header) :global(h1),
+.screen :global(header) :global([class*="title"]) {
+  font-size: 17px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.screen :global(header) :global(p:not([class*="crumbs"])),
+.screen :global(header) :global([class*="subtitle"]) {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.screen :global(header) :global([class*="thread"]) {
+  display: none;
 }
 
 .headerActions {
@@ -18,21 +60,50 @@
   flex-wrap: wrap;
 }
 
-.screen > *:not(.ops) {
+.screen > *:not(.workspace) {
   flex-shrink: 0;
+}
+
+.kpiStrip {
+  margin-bottom: 12px;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
 }
 
 .ops {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 32%);
-  gap: 14px;
+  grid-template-columns: minmax(300px, 0.32fr) minmax(0, 0.68fr);
+  gap: var(--gps-workspace-gap);
   flex: 1;
+  min-height: var(--gps-map-min-h);
+  align-items: stretch;
+}
+
+.fleetCol {
+  min-width: 0;
   min-height: 0;
+  height: auto;
+  order: 1;
 }
 
 .mapCol {
   min-width: 0;
-  min-height: 0;
+  min-height: var(--gps-map-min-h);
+  height: var(--gps-map-min-h);
+  order: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.mapCol > * {
+  flex: 1;
+  min-height: 100%;
   height: 100%;
 }
 
@@ -53,30 +124,67 @@
   color: var(--diamond-champagne);
 }
 
-@media (max-width: 1080px) {
-  .screen {
-    height: auto;
-    max-height: none;
-    overflow: visible;
+@media (min-width: 1081px) {
+  .ops {
+    height: var(--gps-map-min-h);
+    min-height: var(--gps-map-min-h);
+    max-height: var(--gps-map-min-h);
   }
 
+  .fleetCol {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .fleetCol > * {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+}
+
+@media (max-width: 1280px) {
+  .ops {
+    grid-template-columns: minmax(280px, 0.34fr) minmax(0, 0.66fr);
+  }
+}
+
+@media (max-width: 1080px) {
   .ops {
     grid-template-columns: 1fr;
     height: auto;
+    min-height: 0;
   }
 
   .mapCol {
-    height: 48vh;
-    min-height: 280px;
+    order: 1;
+    min-height: clamp(420px, 52vh, 560px);
+    height: clamp(420px, 52vh, 560px);
+  }
+
+  .mapCol > * {
+    min-height: inherit;
   }
 
   .mobileSelected {
     display: block;
+    order: 2;
+  }
+
+  .fleetCol {
+    order: 3;
+    height: min(58vh, 640px);
+    min-height: 360px;
   }
 }
 
 @media (max-width: 430px) {
   .mapCol {
-    height: 42vh;
+    min-height: clamp(400px, 48vh, 520px);
+    height: clamp(400px, 48vh, 520px);
   }
 }

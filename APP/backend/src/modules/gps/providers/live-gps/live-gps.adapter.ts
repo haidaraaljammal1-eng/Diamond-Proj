@@ -29,6 +29,7 @@ import {
   formatLiveGpsLocalDateTime,
   resolveLiveGpsTimezoneOffset,
 } from "src/modules/gps/providers/live-gps/live-gps.time";
+import type { LiveGpsSessionManager } from "src/modules/gps/providers/live-gps/live-gps.session";
 
 const LIVE_GPS_CAPABILITIES: GpsProviderCapabilities = {
   liveLocation: true,
@@ -63,6 +64,10 @@ export class LiveGpsAdapter implements GpsProviderAdapter {
     this.clientOptions = clientOptions;
   }
 
+  private getSessionManager(runtime: GpsProviderRuntime): LiveGpsSessionManager {
+    return runtime.getSessionManager<LiveGpsSessionManager>(this.providerKey);
+  }
+
   createClient() {
     return createLiveGpsClient(this.clientOptions);
   }
@@ -76,7 +81,7 @@ export class LiveGpsAdapter implements GpsProviderAdapter {
     if (!username || !password) throw gpsProviderNotConfiguredError();
     const client = createLiveGpsClient({
       ...this.clientOptions,
-      sessionManager: runtime.liveGpsSessionManager,
+      sessionManager: this.getSessionManager(runtime),
     });
     const liveCtx: LiveGpsClientContext = {
       providerAccountId: ctx.providerAccountId,
@@ -109,7 +114,7 @@ export class LiveGpsAdapter implements GpsProviderAdapter {
 
     const client = createLiveGpsClient({
       ...this.clientOptions,
-      sessionManager: runtime.liveGpsSessionManager,
+      sessionManager: this.getSessionManager(runtime),
     });
     return client.fetchHistory({
       ctx: {
@@ -130,7 +135,7 @@ export class LiveGpsAdapter implements GpsProviderAdapter {
   ): Promise<ProviderMileageSummary> {
     const client = createLiveGpsClient({
       ...this.clientOptions,
-      sessionManager: runtime.liveGpsSessionManager,
+      sessionManager: this.getSessionManager(runtime),
     });
     return client.fetchMileageSummary({
       ctx: {
@@ -148,7 +153,7 @@ export class LiveGpsAdapter implements GpsProviderAdapter {
   ): Promise<ProviderOverspeedFetchResult> {
     const client = createLiveGpsClient({
       ...this.clientOptions,
-      sessionManager: runtime.liveGpsSessionManager,
+      sessionManager: this.getSessionManager(runtime),
     });
     return client.fetchOverspeed({
       ctx: {
@@ -172,7 +177,7 @@ export class LiveGpsAdapter implements GpsProviderAdapter {
     if (!username || !password) throw gpsProviderNotConfiguredError();
     const client = createLiveGpsClient({
       ...this.clientOptions,
-      sessionManager: runtime.liveGpsSessionManager,
+      sessionManager: this.getSessionManager(runtime),
     });
     return client.fetchDeviceMetadata({
       ctx: {

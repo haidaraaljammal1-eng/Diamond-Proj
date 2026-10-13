@@ -155,7 +155,11 @@ const EnvSchema = z
     // adapter exists. Do not add vendor URL/key env vars here.
     GPS_ENABLED: envBool(false),
     GPS_OFFLINE_AFTER_MINUTES: z.coerce.number().int().positive().default(10),
+    /** Display motion (moving/idle/parked) freshness — independent of connectivity offline. */
+    GPS_MOTION_STALE_AFTER_MINUTES: z.coerce.number().int().positive().default(2),
     GPS_MOVING_SPEED_THRESHOLD_KPH: z.coerce.number().min(0).default(3),
+    /** Dedicated LIVE_GPS fleet sync interval (independent of SCHEDULER_POLL_MS). */
+    LIVE_GPS_SYNC_CADENCE_MS: z.coerce.number().int().positive().default(5_000),
 
     // WhatsApp Cloud API / Embedded Signup. Optional: empty values keep the
     // rest of Diamond usable and WhatsApp mutating endpoints fail closed with

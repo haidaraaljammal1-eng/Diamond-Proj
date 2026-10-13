@@ -7,11 +7,15 @@ export type GpsTrackingStatus =
   | "unassigned"
   | "no_data"
   | "moving"
+  | "idle"
   | "parked"
   | "online"
   | "offline";
 
 export type GpsMotionState = "unknown" | "moving" | "parked";
+
+/** Row/summary display buckets — distinct from connectivity `trackingStatus`. */
+export type GpsDisplayMotionStatus = "moving" | "idle" | "parked";
 
 export type GpsOperationalFilter = "all" | "available" | "rented" | "service";
 
@@ -25,6 +29,7 @@ export interface GpsLocationDto {
   longitude: number | null;
   speedKph: number | null;
   headingDegrees: number | null;
+  ignitionOn: boolean | null;
   accuracyMeters: number | null;
   capturedAt: string | null;
   receivedAt: string | null;
@@ -63,8 +68,10 @@ export interface GpsVehicleListItemDto {
   currentRental: GpsCurrentRentalDto | null;
 }
 
+export type GpsProviderKeyDto = "LIVE_GPS" | "SEVEN_STARS";
+
 export type GpsBindingDto =
-  | { assigned: true }
+  | { assigned: true; providerKey: GpsProviderKeyDto }
   | { assigned: false };
 
 export interface GpsVehicleDetailDto extends GpsVehicleListItemDto {
@@ -108,8 +115,9 @@ export interface GpsSummaryDto {
   totalVehicles: number;
   trackedVehicles: number;
   moving: number;
+  idle: number;
   parked: number;
-  /** Fresh-location total (moving + parked + row-level online). */
+  /** Fresh-location total (legacy KPI). */
   online: number;
   offline: number;
   noData: number;
@@ -123,9 +131,12 @@ export interface GpsListQuery {
   trackingStatus: GpsTrackingFilter;
   /** Owning-company filter (Vehicle.companyId); null means All Companies. */
   companyId: number | null;
+  providerKey?: "all" | "LIVE_GPS" | "SEVEN_STARS";
   page: number;
   pageSize: number;
 }
+
+export type GpsProviderFilter = NonNullable<GpsListQuery["providerKey"]>;
 
 export interface GpsPageMeta {
   page: number;
@@ -193,9 +204,19 @@ export type GpsPlaybackSpeed = "1" | "2" | "4" | "8";
 
 export const GPS_PAGE_SIZE = 8;
 
+/** Staff GPS page tracking select (display motion only). */
+export const GPS_TRACKING_FILTER_OPTIONS: GpsTrackingFilter[] = [
+  "all",
+  "moving",
+  "idle",
+  "parked",
+];
+
+/** Legacy / API-complete list — not used for the GPS page select. */
 export const GPS_TRACKING_FILTERS: GpsTrackingFilter[] = [
   "all",
   "moving",
+  "idle",
   "parked",
   "online",
   "offline",

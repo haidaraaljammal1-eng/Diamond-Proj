@@ -1,12 +1,12 @@
 .frame {
   position: relative;
   height: 100%;
-  min-height: 280px;
+  min-height: inherit;
   overflow: hidden;
-  border: 1px solid var(--diamond-hair);
-  border-radius: 16px;
+  border: 1px solid rgba(201, 161, 92, 0.22);
+  border-radius: 14px;
   background: #efe8d8;
-  box-shadow: var(--diamond-shadow-near);
+  box-shadow: 0 10px 28px rgba(70, 52, 20, 0.08);
 }
 
 .canvas {
@@ -99,20 +99,50 @@
   transform-origin: bottom center;
 }
 
+.showAll {
+  position: absolute;
+  top: 10px;
+  /* Physical top-right of the map — zoom stack stays top-left (dir=ltr controls). */
+  right: 10px;
+  left: auto;
+  inset-inline-end: auto;
+  z-index: 501;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: min(220px, calc(100% - 120px));
+  padding: 5px 8px;
+  border: 1px solid rgba(201, 161, 92, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 252, 246, 0.94);
+  color: var(--diamond-ink);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: var(--diamond-shadow-near);
+}
+
+.showAll span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .controls {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 10px;
+  inset-inline-start: 10px;
   z-index: 500;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .control,
 .controlWide {
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 32px;
+  min-height: 32px;
   border: 1px solid rgba(201, 161, 92, 0.35);
   border-radius: 10px;
   background: rgba(255, 252, 246, 0.92);
@@ -124,8 +154,34 @@
 }
 
 .controlWide {
-  padding: 0 10px;
-  font-size: 11px;
+  padding: 0 8px;
+  font-size: 10px;
+  min-height: 32px;
+}
+
+.controlBasemap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 32px;
+  max-width: 108px;
+  padding-inline: 6px;
+  font-weight: 600;
+}
+
+.controlBasemap span {
+  font-size: 9px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.controlBasemapActive {
+  border-color: rgba(201, 161, 92, 0.55);
+  background: rgba(247, 239, 216, 0.92);
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 161, 92, 0.22),
+    var(--diamond-shadow-near);
 }
 
 .control:disabled,

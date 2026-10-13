@@ -6,6 +6,8 @@ import {
   deriveTrackingStatus,
   shouldApplyIncomingPosition,
   tallyGpsSummaryStatuses,
+  toGpsBindingProjection,
+  trackingStatusWhere,
   validateNormalizedPosition,
 } from "src/modules/gps/gps.mapper";
 import { GpsErrorReason } from "src/modules/gps/gps.errors";
@@ -334,5 +336,106 @@ describe("shouldApplyIncomingPosition", () => {
       }),
       "duplicate_event",
     );
+  });
+});
+
+describe("toGpsBindingProjection", () => {
+  it("returns vehicle providerKey for active bindings", () => {
+    assert.deepEqual(
+      toGpsBindingProjection({
+        isActive: true,
+        providerKey: "LIVE_GPS",
+      } as Parameters<typeof toGpsBindingProjection>[0]),
+      { assigned: true, providerKey: "LIVE_GPS" },
+    );
+    assert.deepEqual(
+      toGpsBindingProjection({
+        isActive: true,
+        providerKey: "SEVEN_STARS",
+      } as Parameters<typeof toGpsBindingProjection>[0]),
+      { assigned: true, providerKey: "SEVEN_STARS" },
+    );
+  });
+
+  it("returns unassigned when binding is inactive or missing", () => {
+    assert.deepEqual(toGpsBindingProjection(null), { assigned: false });
+    assert.deepEqual(
+      toGpsBindingProjection({
+        isActive: false,
+        providerKey: "LIVE_GPS",
+      } as Parameters<typeof toGpsBindingProjection>[0]),
+      { assigned: false },
+    );
+  });
+});
+
+describe("trackingStatusWhere + provider binding composition", () => {
+  const connectivityCutoff = new Date("2026-09-10T11:45:00.000Z");
+  const motionCutoff = new Date("2026-09-10T11:50:00.000Z");
+  const movingThresholdKph = 3;
+
+  function listBindingWhere(providerKey?: "SEVEN_STARS" | "LIVE_GPS") {
+    return {
+      isActive: true,
+      ...(providerKey ? { providerAccount: { providerKey } } : {}),
+    };
+  }
+
+  function composeListWhere(providerKey?: "SEVEN_STARS" | "LIVE_GPS", trackingStatus?: string) {
+    const gpsBinding = listBindingWhere(providerKey);
+    return {
+      isActive: true,
+      gpsBinding,
+      ...(trackingStatus
+        ? trackingStatusWhere(
+            trackingStatus as "moving",
+            true,
+            connectivityCutoff,
+            motionCutoff,
+            movingThresholdKph,
+          )
+        : {}),
+    };
+  }
+
+  for (const status of [
+    "moving",
+    "idle",
+    "parked",
+    "offline",
+    "no_data",
+    "online",
+  ] as const) {
+    it(`does not let ${status} tracking clause replace provider-scoped gpsBinding`, () => {
+      const trackingClause = trackingStatusWhere(
+        status,
+        true,
+        connectivityCutoff,
+        motionCutoff,
+        movingThresholdKph,
+      );
+      assert.equal("gpsBinding" in trackingClause, false);
+
+      const where = composeListWhere("LIVE_GPS", status);
+      const binding = where.gpsBinding;
+      assert.ok(binding && typeof binding === "object" && !Array.isArray(binding));
+      assert.equal(binding.providerAccount?.providerKey, "LIVE_GPS");
+      assert.ok(
+        where.gpsLatestState !== undefined ||
+          where.NOT !== undefined ||
+          status === "no_data",
+      );
+    });
+  }
+
+  it("keeps unassigned semantics on the tracking clause", () => {
+    const trackingClause = trackingStatusWhere(
+      "unassigned",
+      true,
+      connectivityCutoff,
+      motionCutoff,
+      movingThresholdKph,
+    );
+    assert.ok(trackingClause.OR);
   });
 });

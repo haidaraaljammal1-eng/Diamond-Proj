@@ -27,41 +27,44 @@ export function GpsSummaryStrip({ summary, loading, error, onRetry }: GpsSummary
     );
   }
 
-  const tracked = summary?.trackedVehicles ?? 0;
-  const online = summary?.online ?? 0;
+  const total = summary?.totalVehicles ?? 0;
   const moving = summary?.moving ?? 0;
-  const offline = summary?.offline ?? 0;
+  const idle = summary?.idle ?? 0;
   const parked = summary?.parked ?? 0;
 
   return (
     <div className={styles.kpis} data-testid="gps-summary">
       <StatCard
         compact
-        icon={<Icon name="mdi:car-connected" size={15} />}
-        label={t("kpi.tracked")}
-        value={loading && !summary ? "—" : tracked}
-        note={t("kpi.trackedNote")}
+        className={styles.kpiTotal}
+        icon={<Icon name="mdi:car-multiple" size={14} />}
+        label={t("kpi.total")}
+        value={loading && !summary ? "—" : total}
+        note={t("kpi.totalNote")}
       />
       <StatCard
         compact
-        icon={<Icon name="mdi:access-point" size={15} />}
-        label={t("kpi.online")}
-        value={loading && !summary ? "—" : online}
-        note={t("kpi.onlineNote")}
-      />
-      <StatCard
-        compact
-        icon={<Icon name="mdi:navigation-variant" size={15} />}
+        className={styles.kpiMoving}
+        icon={<Icon name="mdi:navigation-variant" size={14} />}
         label={t("kpi.moving")}
         value={loading && !summary ? "—" : moving}
-        note={t("kpi.parkedCount", { count: parked })}
+        note={t("kpi.movingNote")}
       />
       <StatCard
         compact
-        icon={<Icon name="mdi:signal-off" size={15} />}
-        label={t("kpi.offline")}
-        value={loading && !summary ? "—" : offline}
-        note={t("kpi.offlineNote")}
+        className={styles.kpiIdle}
+        icon={<Icon name="mdi:engine" size={14} />}
+        label={t("kpi.idle")}
+        value={loading && !summary ? "—" : idle}
+        note={t("kpi.idleNote")}
+      />
+      <StatCard
+        compact
+        className={styles.kpiParked}
+        icon={<Icon name="mdi:parking" size={14} />}
+        label={t("kpi.parked")}
+        value={loading && !summary ? "—" : parked}
+        note={t("kpi.parkedNote")}
       />
     </div>
   );

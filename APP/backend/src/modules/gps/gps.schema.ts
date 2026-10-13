@@ -17,6 +17,7 @@ export const GpsLocationProjectionSchema = z.object({
   longitude: z.number().nullable(),
   speedKph: z.number().nullable(),
   headingDegrees: z.number().nullable(),
+  ignitionOn: z.boolean().nullable(),
   accuracyMeters: z.number().nullable(),
   capturedAt: z.date().nullable(),
   receivedAt: z.date().nullable(),
@@ -68,9 +69,13 @@ export const GpsVehicleListItemSchema = z.object({
 });
 export type GpsVehicleListItem = z.infer<typeof GpsVehicleListItemSchema>;
 
+export const GpsProviderKeyDtoSchema = z.enum(["LIVE_GPS", "SEVEN_STARS"]);
+export type GpsProviderKeyDto = z.infer<typeof GpsProviderKeyDtoSchema>;
+
 export const GpsBindingProjectionSchema = z.discriminatedUnion("assigned", [
   z.object({
     assigned: z.literal(true),
+    providerKey: GpsProviderKeyDtoSchema,
   }),
   z.object({ assigned: z.literal(false) }),
 ]);
@@ -100,9 +105,13 @@ export const GpsSummarySchema = z.object({
   providerConfigured: z.boolean(),
   totalVehicles: z.number().int(),
   trackedVehicles: z.number().int(),
+  /** Display motion KPI — fresh speed/motion above threshold. */
   moving: z.number().int(),
+  /** Display motion KPI — fresh, not moving, ignition on. */
+  idle: z.number().int(),
+  /** Display motion KPI — everything else (incl. offline / no_data for summary). */
   parked: z.number().int(),
-  /** Fresh-location total (moving + parked + row-level online). Not the same as trackingStatus "online". */
+  /** Fresh-location total (moving + parked + row-level online). Legacy KPI; not top cards. */
   online: z.number().int(),
   offline: z.number().int(),
   noData: z.number().int(),
@@ -117,9 +126,17 @@ export const ListGpsVehiclesQuerySchema = PaginationQuerySchema.extend({
   trackingStatus: GpsTrackingStatusDtoSchema.optional(),
   /** Owning-company filter. Applied to Vehicle.companyId inside Diamond only. */
   companyId: z.coerce.number().int().positive().optional(),
+  providerKey: z.enum(["LIVE_GPS", "SEVEN_STARS"]).optional(),
   sort: z.string().optional(),
 });
 export type ListGpsVehiclesQuery = z.infer<typeof ListGpsVehiclesQuerySchema>;
+export const MapPointsQuerySchema = z.object({
+  companyId: z.coerce.number().int().positive().optional(),
+  providerKey: z.enum(["LIVE_GPS", "SEVEN_STARS"]).optional(),
+  /** Display motion filter — same semantics as vehicle list (`moving` / `idle` / `parked`). */
+  trackingStatus: z.enum(["moving", "idle", "parked"]).optional(),
+});
+export type MapPointsQuery = z.infer<typeof MapPointsQuerySchema>;
 
 export const GpsVehicleIdParam = z.object({
   vehicleId: z.coerce.number().int().positive(),

@@ -219,12 +219,14 @@ export function applyGpsOverlayToSummary(
 ): GpsSummaryDto | null {
   if (!summary || !overlay) return summary;
   const moving = overlay.fixes.filter((fix) => fix.trackingStatus === "moving").length;
-  const parked = overlay.fixes.filter((fix) => fix.trackingStatus === "parked").length;
+  const idle = 0;
+  const parked = Math.max(0, summary.totalVehicles - moving - idle);
   const offline = overlay.fixes.filter((fix) => fix.trackingStatus === "offline").length;
   return {
     ...summary,
     trackedVehicles: overlay.fixes.length,
     moving,
+    idle,
     parked,
     online: overlay.fixes.filter((fix) =>
       countsInSummaryOnlineTotal(fix.trackingStatus),

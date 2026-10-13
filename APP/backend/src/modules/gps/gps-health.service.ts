@@ -7,7 +7,7 @@ import {
 import { deriveGpsHealth } from "src/modules/gps/gps-health";
 import type { GpsProviderAdapter } from "src/modules/gps/gps-provider.adapter";
 import type { GpsProviderRuntime } from "src/modules/gps/gps-provider.types";
-import { getSharedLiveGpsSessionManager } from "src/modules/gps/gps-live-gps-sessions";
+import { getSharedGpsProviderRuntime } from "src/modules/gps/gps-live-gps-sessions";
 import { getGpsProviderAdapter } from "src/modules/gps/gps-provider.registry";
 import type { GpsVehicleHealth } from "src/modules/gps/gps.schema";
 
@@ -26,7 +26,7 @@ export function createGpsHealthService(
     options.resolveAdapter ?? ((providerKey: string) => getGpsProviderAdapter(providerKey));
   const runtime =
     options.runtime ??
-    ({ liveGpsSessionManager: getSharedLiveGpsSessionManager() } satisfies GpsProviderRuntime);
+    getSharedGpsProviderRuntime();
   const now = options.now ?? (() => new Date());
 
   async function getVehicleHealth(vehicleId: number): Promise<GpsVehicleHealth> {

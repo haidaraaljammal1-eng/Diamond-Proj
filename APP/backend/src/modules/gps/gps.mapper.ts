@@ -7,7 +7,10 @@ import {
   vehicleDisplayName,
 } from "src/modules/vehicles/vehicles.mapper";
 import type { CurrentRentalDto } from "src/modules/contracts/current-rental";
-import type { GpsTrackingStatusDto } from "src/modules/gps/gps.constants";
+import {
+  GPS_SUMMARY_PROVIDER_KEYS,
+  type GpsTrackingStatusDto,
+} from "src/modules/gps/gps.constants";
 import type {
   GpsBindingSnapshot,
   GpsLatestSnapshot,
@@ -27,6 +30,17 @@ import {
   gpsInvalidHeadingError,
   gpsInvalidSpeedError,
 } from "src/modules/gps/gps.errors";
+
+export function gpsSummaryFleetWhere(companyId?: number): Prisma.VehicleWhereInput {
+  return {
+    isActive: true,
+    ...(companyId != null ? { companyId } : {}),
+    gpsBinding: {
+      isActive: true,
+      providerKey: { in: [...GPS_SUMMARY_PROVIDER_KEYS] },
+    },
+  };
+}
 
 export const GPS_VEHICLE_INCLUDE = {
   company: { select: COMPANY_REF_SELECT },
@@ -80,6 +94,155 @@ export function offlineCutoff(now: Date, offlineAfterMinutes: number): Date {
  * OFFLINE is never persisted — it is derived from capturedAt vs the threshold.
  * Returning `"online"` means fresh location + motion UNKNOWN — not the summary Online KPI.
  */
+export type GpsDisplayMotionStatus = "moving" | "idle" | "parked";
+
+/**
+ * Display-only motion bucket for GPS summary KPI cards (MOVING / IDLE / PARKED).
+ * Does not replace row-level `deriveTrackingStatus` or connectivity semantics.
+ */
+export function deriveDisplayMotionStatus(input: {
+  providerConfigured: boolean;
+  binding: GpsBindingSnapshot | null;
+  latest: Pick<
+    GpsLatestSnapshot,
+    "capturedAt" | "motionState" | "speedKph" | "ignitionOn"
+  > | null;
+  now: Date;
+  motionStaleAfterMinutes: number;
+  movingThresholdKph: number;
+}): GpsDisplayMotionStatus {
+  if (!input.providerConfigured) return "parked";
+  if (!input.binding?.isActive) return "parked";
+  if (!input.latest) return "parked";
+
+  const cutoff = offlineCutoff(input.now, input.motionStaleAfterMinutes);
+  const isFresh = input.latest.capturedAt.getTime() >= cutoff.getTime();
+  if (!isFresh) return "parked";
+
+  const speed = input.latest.speedKph;
+  const isMoving =
+    input.latest.motionState === "MOVING" ||
+    (speed != null && speed > input.movingThresholdKph);
+  if (isMoving) return "moving";
+
+  if (input.latest.ignitionOn === true) return "idle";
+
+  return "parked";
+}
+
+/** Prisma `gpsLatestState` filter aligned with `deriveDisplayMotionStatus` → moving. */
+export function displayMotionMovingLatestWhere(
+  cutoff: Date,
+  movingThresholdKph: number,
+): Prisma.VehicleGpsLatestStateWhereInput {
+  return {
+    capturedAt: { gte: cutoff },
+    OR: [{ motionState: "MOVING" }, { speedKph: { gt: movingThresholdKph } }],
+  };
+}
+
+/** Prisma `gpsLatestState` filter aligned with `deriveDisplayMotionStatus` → idle. */
+export function displayMotionIdleLatestWhere(
+  cutoff: Date,
+  movingThresholdKph: number,
+): Prisma.VehicleGpsLatestStateWhereInput {
+  return {
+    AND: [
+      { capturedAt: { gte: cutoff } },
+      { ignitionOn: true },
+      {
+        NOT: {
+          OR: [{ motionState: "MOVING" }, { speedKph: { gt: movingThresholdKph } }],
+        },
+      },
+    ],
+  };
+}
+
+/** Vehicle-level filter for display PARKED (not moving and not idle). */
+export function displayMotionParkedVehicleWhere(
+  cutoff: Date,
+  movingThresholdKph: number,
+): Prisma.VehicleWhereInput {
+  return {
+    NOT: {
+      OR: [
+        { gpsLatestState: displayMotionMovingLatestWhere(cutoff, movingThresholdKph) },
+        { gpsLatestState: displayMotionIdleLatestWhere(cutoff, movingThresholdKph) },
+      ],
+    },
+  };
+}
+
+/** Map points require a latest-state row with valid coordinates — merge motion filter without dropping `isNot`. */
+export function mapPointsVehicleWhere(input: {
+  companyId?: number;
+  providerKey?: "LIVE_GPS" | "SEVEN_STARS";
+  trackingStatus?: "moving" | "idle" | "parked";
+  cutoff: Date;
+  movingThresholdKph: number;
+}): Prisma.VehicleWhereInput {
+  const binding = {
+    isActive: true,
+    ...(input.providerKey
+      ? { providerAccount: { providerKey: input.providerKey } }
+      : {}),
+  };
+
+  if (input.trackingStatus === "moving") {
+    return {
+      isActive: true,
+      ...(input.companyId != null ? { companyId: input.companyId } : {}),
+      gpsBinding: binding,
+      gpsLatestState: {
+        is: displayMotionMovingLatestWhere(input.cutoff, input.movingThresholdKph),
+      },
+    };
+  }
+
+  if (input.trackingStatus === "idle") {
+    return {
+      isActive: true,
+      ...(input.companyId != null ? { companyId: input.companyId } : {}),
+      gpsBinding: binding,
+      gpsLatestState: {
+        is: displayMotionIdleLatestWhere(input.cutoff, input.movingThresholdKph),
+      },
+    };
+  }
+
+  if (input.trackingStatus === "parked") {
+    return {
+      isActive: true,
+      ...(input.companyId != null ? { companyId: input.companyId } : {}),
+      gpsBinding: binding,
+      gpsLatestState: { isNot: null },
+      ...displayMotionParkedVehicleWhere(input.cutoff, input.movingThresholdKph),
+    };
+  }
+
+  return {
+    isActive: true,
+    ...(input.companyId != null ? { companyId: input.companyId } : {}),
+    gpsBinding: binding,
+    gpsLatestState: { isNot: null },
+  };
+}
+
+export function tallyDisplayMotionStatuses(
+  statuses: readonly GpsDisplayMotionStatus[],
+): { moving: number; idle: number; parked: number } {
+  let moving = 0;
+  let idle = 0;
+  let parked = 0;
+  for (const status of statuses) {
+    if (status === "moving") moving += 1;
+    else if (status === "idle") idle += 1;
+    else parked += 1;
+  }
+  return { moving, idle, parked };
+}
+
 export function deriveTrackingStatus(input: {
   providerConfigured: boolean;
   binding: GpsBindingSnapshot | null;
@@ -238,6 +401,7 @@ function snapshotFromRow(
     longitude: decimalToNumber(row.longitude) ?? 0,
     speedKph: decimalToNumber(row.speedKph),
     headingDegrees: decimalToNumber(row.headingDegrees),
+    ignitionOn: row.ignitionOn,
     accuracyMeters: decimalToNumber(row.accuracyMeters),
     motionState: row.motionState,
     capturedAt: row.capturedAt,
@@ -295,6 +459,7 @@ function toGpsProjection(input: {
       longitude: null,
       speedKph: null,
       headingDegrees: null,
+      ignitionOn: null,
       accuracyMeters: null,
       capturedAt: null,
       receivedAt: null,
@@ -308,6 +473,7 @@ function toGpsProjection(input: {
     longitude: latest.longitude,
     speedKph: latest.speedKph,
     headingDegrees: latest.headingDegrees,
+    ignitionOn: latest.ignitionOn,
     accuracyMeters: latest.accuracyMeters,
     capturedAt: latest.capturedAt,
     receivedAt: latest.receivedAt,
@@ -343,6 +509,17 @@ export function toGpsListItem(input: {
   };
 }
 
+export function toGpsBindingProjection(
+  binding: GpsVehicleRow["gpsBinding"],
+): GpsVehicleDetail["binding"] {
+  if (!binding?.isActive) return { assigned: false };
+  const providerKey = binding.providerKey;
+  if (providerKey === "LIVE_GPS" || providerKey === "SEVEN_STARS") {
+    return { assigned: true, providerKey };
+  }
+  return { assigned: false };
+}
+
 export function toGpsDetail(input: {
   row: GpsVehicleRow;
   rental: CurrentRentalDto | null;
@@ -351,15 +528,9 @@ export function toGpsDetail(input: {
   offlineAfterMinutes: number;
 }): GpsVehicleDetail {
   const item = toGpsListItem(input);
-  const binding = input.row.gpsBinding;
   return {
     ...item,
-    binding:
-      binding && binding.isActive
-        ? {
-            assigned: true,
-          }
-        : { assigned: false },
+    binding: toGpsBindingProjection(input.row.gpsBinding),
   };
 }
 
@@ -400,7 +571,9 @@ export function toGpsMapPoint(input: {
 export function trackingStatusWhere(
   trackingStatus: GpsTrackingStatusDto,
   providerConfigured: boolean,
-  cutoff: Date,
+  connectivityCutoff: Date,
+  motionCutoff: Date,
+  movingThresholdKph: number,
 ): Prisma.VehicleWhereInput {
   if (!providerConfigured) {
     return trackingStatus === "not_configured" ? {} : { id: -1 };
@@ -413,36 +586,28 @@ export function trackingStatusWhere(
         OR: [{ gpsBinding: null }, { gpsBinding: { isActive: false } }],
       };
     case "no_data":
+      // Active binding is enforced by gps.list(); only latest-state absence matters here.
       return {
-        gpsBinding: { isActive: true },
         gpsLatestState: null,
       };
     case "offline":
       return {
-        gpsBinding: { isActive: true },
-        gpsLatestState: { capturedAt: { lt: cutoff } },
+        gpsLatestState: { capturedAt: { lt: connectivityCutoff } },
       };
     case "moving":
       return {
-        gpsBinding: { isActive: true },
-        gpsLatestState: {
-          capturedAt: { gte: cutoff },
-          motionState: "MOVING",
-        },
+        gpsLatestState: displayMotionMovingLatestWhere(motionCutoff, movingThresholdKph),
+      };
+    case "idle":
+      return {
+        gpsLatestState: displayMotionIdleLatestWhere(motionCutoff, movingThresholdKph),
       };
     case "parked":
-      return {
-        gpsBinding: { isActive: true },
-        gpsLatestState: {
-          capturedAt: { gte: cutoff },
-          motionState: "PARKED",
-        },
-      };
+      return displayMotionParkedVehicleWhere(motionCutoff, movingThresholdKph);
     case "online":
       return {
-        gpsBinding: { isActive: true },
         gpsLatestState: {
-          capturedAt: { gte: cutoff },
+          capturedAt: { gte: connectivityCutoff },
           motionState: "UNKNOWN",
         },
       };

@@ -10,7 +10,7 @@ import {
   gpsVehicleNotFoundError,
 } from "src/modules/gps/gps.errors";
 import type { GpsProviderAdapter } from "src/modules/gps/gps-provider.adapter";
-import { getSharedLiveGpsSessionManager } from "src/modules/gps/gps-live-gps-sessions";
+import { getSharedGpsProviderRuntime } from "src/modules/gps/gps-live-gps-sessions";
 import { getGpsProviderAdapter } from "src/modules/gps/gps-provider.registry";
 import type { GpsProviderRuntime } from "src/modules/gps/gps-provider.types";
 import type { GpsOverspeedQuery } from "src/modules/gps/gps.schema";
@@ -29,7 +29,7 @@ export function createGpsReportService(
     options.resolveAdapter ?? ((providerKey: string) => getGpsProviderAdapter(providerKey));
   const runtime =
     options.runtime ??
-    ({ liveGpsSessionManager: getSharedLiveGpsSessionManager() } satisfies GpsProviderRuntime);
+    getSharedGpsProviderRuntime();
 
   async function resolveReadContext(vehicleId: number) {
     const vehicle = await prisma.vehicle.findFirst({

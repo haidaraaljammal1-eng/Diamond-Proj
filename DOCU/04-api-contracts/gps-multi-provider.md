@@ -20,6 +20,115 @@ Provider account scope (`companyScopeId`) is optional. When set, only vehicles w
 
 Adapters register by `providerKey` (e.g. `LIVE_GPS`). `LiveGpsAdapter` implements **transport + mapping only** under `providers/live-gps/` (client, session, mappers). It does **not** ingest, schedule sync, or set staff `providerConfigured`.
 
+Provider adapters receive a provider-neutral runtime. The runtime resolves a
+session manager by provider key; provider-specific clients keep ownership of
+authentication, cookie/session payloads, and account-keyed single-flight
+behavior. Generic GPS services do not depend on a vendor session type.
+
+Phase 2 adds a memory-only `SevenStarsSessionManager` under
+`providers/seven-stars/`. It is registered in the runtime under `SEVEN_STARS`
+and keys both cached sessions and login flights by `providerAccountId`.
+Authentication is limited to the confirmed `POST /api/session` login flow;
+device, position, report, command, and WebSocket integrations are deferred.
+
+Phase 3 adds read-only Seven Stars fleet snapshots through `GET /api/devices`
+and `GET /api/positions`. Devices map to `externalDeviceId` from `device.id`;
+positions are correlated by `deviceId`, with `fixTime` then `deviceTime` used
+for `capturedAt` and `serverTime` used for `receivedAt`. Traccar speed is
+treated as knots and converted once to `speedKph` using `1.852`. Invalid
+positions produce metadata-only snapshots and do not refresh location state.
+No Seven Stars accounts, bindings, database migrations, frontend behavior,
+history, trips, commands, or WebSocket integration are included.
+
+Seven Stars device connectivity is kept separate from GPS fix validity:
+`device.status` is stored in the device-level `providerDeviceExtras` allowlist,
+while invalid or missing positions still produce `telemetry = null`. This does
+not create synthetic location data and does not alter LIVE_GPS telemetry
+semantics.
+
+## Seven Stars Phase 4A smoke test
+
+The explicit local command `npm run gps:seven-stars:smoke` reads the five
+`SEVEN_STARS_*` values from `APP/backend/.env` and uses only the existing
+Seven Stars client, session manager, and in-memory mapper. It is intentionally
+not part of server startup, scheduler execution, ingest, or database setup.
+The allowlisted provider requests are `POST /api/session`, `GET /api/devices`,
+and `GET /api/positions`. The command runs ELITE first, then UNIQUE only after
+ELITE succeeds, recreates each in-memory session locally, and reports counts
+and normalization checks without printing credentials, cookies, coordinates,
+raw payloads, or device identifiers.
+
+The first controlled real-network run stopped during the ELITE request with a
+provider timeout before device/position shape verification. UNIQUE was not
+attempted. No database client or write path is imported by the command, so no
+accounts, bindings, vehicles, or latest states are created by Phase 4A.
+The configured base URL is plaintext HTTP; production use requires a future
+TLS, VPN, or private-network decision.
+
+## Seven Stars Phase 4B account provisioning
+
+The explicit command `npm run gps:seven-stars:provision:phase4b` provisions the
+two disabled (`enabled = false`) `SEVEN_STARS` accounts only. It resolves the
+`ELITE` and `UNIQUE` `OperatingCompany` rows, stores `{ username, password }`
+through the existing AES-GCM `secretEncrypted` contract, and uses a single
+transaction for the two account rows. It never creates bindings, vehicles, or
+latest states and does not enable scheduler sync.
+
+The Phase 4B provisioning transaction completed for both accounts with scopes
+`ELITE` and `UNIQUE`. After the local PostgreSQL process was restored, a
+read-only validation loaded and decrypted the stored secrets from the two
+database accounts, authenticated both provider namespaces, read devices and
+positions, normalized the responses in memory, and recreated each local
+session. Both accounts remain disabled; no retry, overwrite, binding, or
+latest-state ingest is performed by this validation.
+
+The later controlled activation command
+`npm run gps:seven-stars:activate:final` created new Seven Stars vehicles with
+the provider name as the exact `vehicleName` and a deterministic
+company-scoped `externalId`; it does not infer plates, years, or catalog model
+IDs. It created one binding per real device and validated company scope before
+enabling. A continuation then ran targeted ELITE and UNIQUE reads only, without
+provisioning or a general sync cycle. Both accounts are now enabled after
+successful targeted sync. The database contains 20 Seven Stars vehicles, 20
+active bindings, six latest states, and the existing seven LIVE_GPS bindings
+are unchanged.
+
+The GPS vehicle list accepts an optional `providerKey` query value
+(`LIVE_GPS` or `SEVEN_STARS`). Missing `providerKey` means all providers. The
+list is limited to active bound vehicles, so a bound vehicle without a valid
+latest location remains visible as metadata-only; map points still require
+valid latest coordinates. The frontend exposes independent provider and company
+filters.
+
+## Seven Stars live tracking
+
+Seven Stars live tracking uses the provider's passive WebSocket endpoint
+`/api/socket` with the in-memory `JSESSIONID` created by the existing REST
+session manager. The current single-service deployment starts one
+`SevenStarsLiveConnectionManager` connection per enabled `providerAccountId`;
+duplicate starts are ignored, reconnects use bounded backoff, and shutdown
+closes all connections. The manager sends no application messages to the
+provider. REST sync remains enabled as reconciliation and fallback.
+
+Incoming `positions` frames reuse the existing Seven Stars mapper and GPS
+ingest path. Binding lookup remains `(providerAccountId, externalDeviceId)`;
+invalid, stale, duplicate, and unbound data do not overwrite latest state.
+Normalized accepted positions are published through the authenticated
+`GET /gps/realtime` SSE stream. The frontend consumes only sanitized
+vehicle-position fields and keeps the existing 15-second REST polling fallback.
+Leaflet marker motion is frontend-only visual interpolation between accepted real
+points. Its duration is adaptive (`capturedAt` delta × 0.8, bounded to
+500–3800 ms); it never writes interpolated coordinates to the database or
+publishes synthetic realtime events. Initial, stale, invalid, long-gap, and
+large-jump updates snap according to the frontend map rules.
+
+The current deployment assumption is one backend runtime instance. If the API
+is deployed with multiple live-socket instances, a dedicated distributed
+ownership/lease strategy must be added before enabling this manager on every
+replica. Seven Stars transport remains plaintext HTTP/WebSocket
+(`http://`/`ws://`); this is an explicit transport security risk and is not
+silently treated as secure.
+
 ## Account semantics (Phase 1.1)
 
 | Concept | Meaning |
@@ -143,7 +252,7 @@ Optional DB override: `GPS_POC_DATABASE_URL` (defaults to `DATABASE_URL`).
 | --- | --- |
 | Driver | `runGpsProviderSyncCycle()` in `background-runner` (scheduler tick; isolated try/catch). |
 | Account selection | `enabled = true` **and** locally configured (`supported providerKey` + `secretEncrypted`). Disabled → **zero** provider HTTP. |
-| Cadence | **60s** minimum between real attempts per account (`lastAttemptAt`). Skipped lease/not-due cycles do not advance `lastAttemptAt`. |
+| Cadence | **60s** minimum between real attempts per non–`LIVE_GPS` account (`lastAttemptAt`). **`LIVE_GPS`** uses a dedicated in-process fast timer (`LIVE_GPS_SYNC_CADENCE_MS`, default **5s**) plus the same `syncOneAccount` / lease / in-flight guards. General scheduler tick stays **30s** and excludes `LIVE_GPS` from `runGpsProviderSyncCycle`. Skipped lease/not-due cycles do not advance `lastAttemptAt`. |
 | Multi-replica lock | `syncLeaseOwner` + `syncLeaseExpiresAt` on `GpsProviderAccount`; acquire only when lease null or expired; **no** same-owner re-acquire while active; TTL **120s**; release in `finally` when owner matches. |
 | In-process guard | Per `providerAccountId` in-flight set (defense in depth). |
 | Fleet read | **One** `fetchFleetSnapshot` per account per cycle via registry adapter — never per-vehicle HTTP, never history/control in sync. |

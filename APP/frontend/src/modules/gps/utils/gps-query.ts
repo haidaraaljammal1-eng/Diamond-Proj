@@ -19,17 +19,40 @@ export function buildGpsListQuery(params: GpsListQuery): string {
   if (params.companyId != null) {
     search.set("companyId", String(params.companyId));
   }
+  if (params.providerKey && params.providerKey !== "all") {
+    search.set("providerKey", params.providerKey);
+  }
 
   return search.toString();
 }
 
+export function buildGpsMapQuery(
+  params: Pick<GpsListQuery, "companyId" | "providerKey" | "trackingStatus">,
+): string {
+  const search = new URLSearchParams();
+  if (params.companyId != null) {
+    search.set("companyId", String(params.companyId));
+  }
+  if (params.providerKey && params.providerKey !== "all") {
+    search.set("providerKey", params.providerKey);
+  }
+  if (params.trackingStatus && params.trackingStatus !== "all") {
+    const motion = params.trackingStatus;
+    if (motion === "moving" || motion === "idle" || motion === "parked") {
+      search.set("trackingStatus", motion);
+    }
+  }
+  return search.toString();
+}
+
 export function countGpsActiveFilters(
-  query: Pick<GpsListQuery, "search" | "status" | "trackingStatus" | "companyId">,
+  query: Pick<GpsListQuery, "search" | "status" | "trackingStatus" | "companyId" | "providerKey">,
 ): number {
   let count = 0;
   if (query.search.trim()) count += 1;
   if (query.status !== "all") count += 1;
   if (query.trackingStatus !== "all") count += 1;
   if (query.companyId != null) count += 1;
+  if (query.providerKey && query.providerKey !== "all") count += 1;
   return count;
 }

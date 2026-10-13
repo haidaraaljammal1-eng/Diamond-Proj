@@ -15,7 +15,9 @@ export interface GpsProvider {
 export interface GpsConfig {
   enabled: boolean;
   offlineAfterMinutes: number;
+  motionStaleAfterMinutes: number;
   movingSpeedThresholdKph: number;
+  liveGpsSyncCadenceMs: number;
 }
 
 export interface NormalizedGpsPositionInput {
@@ -59,6 +61,7 @@ export interface GpsLatestSnapshot {
   longitude: number;
   speedKph: number | null;
   headingDegrees: number | null;
+  ignitionOn: boolean | null;
   accuracyMeters: number | null;
   motionState: "UNKNOWN" | "MOVING" | "PARKED";
   capturedAt: Date;
