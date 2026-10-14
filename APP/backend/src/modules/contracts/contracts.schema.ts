@@ -429,16 +429,41 @@ export const ReconciliationRoadLiabilitiesSchema = z.object({
   attached: z.array(ReconciliationRoadLiabilityAttachedSchema),
 });
 
-export const RenewSchema = z.object({
-  additionalDays: Days,
-  additionalAmount: MoneyAed,
-});
+const RenewalDurationUnitSchema = z.enum(["HOUR", "DAY"]);
+
+export const RenewSchema = z
+  .object({
+    additionalDays: Days.optional(),
+    additionalDurationValue: z.number().int().positive().max(8760).optional(),
+    additionalDurationUnit: RenewalDurationUnitSchema.optional(),
+    additionalAmount: MoneyAed,
+  })
+  .superRefine((data, ctx) => {
+    const hasLegacy = data.additionalDays != null;
+    const hasStructured = data.additionalDurationValue != null;
+    if (!hasLegacy && !hasStructured) {
+      ctx.addIssue({
+        code: "custom",
+        message: "renewal_duration_required",
+        path: ["additionalDurationValue"],
+      });
+    }
+    if (hasStructured && data.additionalDurationUnit == null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "renewal_duration_unit_required",
+        path: ["additionalDurationUnit"],
+      });
+    }
+  });
 
 /** Public confirm applies the stored offer. Extra body fields are ignored. */
 export const ConfirmPublicRenewalSchema = z.object({}).passthrough();
 
 export const PublicRenewalOfferSchema = z.object({
   additionalDays: z.number().int(),
+  additionalDurationValue: z.number().int().optional(),
+  additionalDurationUnit: RenewalDurationUnitSchema.optional(),
   additionalAmount: z.number().int(),
   previousEndAt: z.date(),
   newEndAt: z.date(),
@@ -701,6 +726,8 @@ export const ContractDetailSchema = z.object({
     z.object({
       id: z.string(),
       additionalDays: z.number().int(),
+      additionalDurationValue: z.number().int().optional(),
+      additionalDurationUnit: RenewalDurationUnitSchema.optional(),
       additionalAmount: z.number().int(),
       previousEndAt: z.date(),
       newEndAt: z.date(),

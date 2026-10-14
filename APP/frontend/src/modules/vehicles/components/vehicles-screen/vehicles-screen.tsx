@@ -54,6 +54,8 @@ export function VehiclesScreen() {
     error,
     refreshVehicles,
     canManage,
+    canAddDelete,
+    canEditPrices,
     canCreate,
     setStatusFilter,
     applySearch,
@@ -86,6 +88,7 @@ export function VehiclesScreen() {
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeId, setCloseId] = useState<string | null>(null);
   const [renewId, setRenewId] = useState<string | null>(null);
+  const [vehicleDetailReload, setVehicleDetailReload] = useState(0);
   const [followUpVehicle, setFollowUpVehicle] = useState<VehicleCardDto | null>(null);
 
   useEffect(() => {
@@ -308,7 +311,7 @@ export function VehiclesScreen() {
         <>
           <VehiclesGrid
             vehicles={vehicles}
-            canManage={canManage}
+            fleetPermissions={{ canAddDelete, canEditPrices }}
             onOpen={setDetailVehicle}
             onPrimaryAction={handlePrimaryAction}
             onEditRates={setEditRatesVehicle}
@@ -368,6 +371,8 @@ export function VehiclesScreen() {
           router.push(`/${locale}/maintenance?${params.toString()}`);
         }}
         onPhotoNotice={showNotice}
+        fleetReloadToken={vehicleDetailReload}
+        onRenewRental={(contractId) => setRenewId(contractId)}
       />
 
       <FleetFollowUpDialog
@@ -398,7 +403,14 @@ export function VehiclesScreen() {
 
       <CarOutDialog contractId={carOutId} onClose={() => setCarOutId(null)} />
       <CarInDialog contractId={carInId} onClose={() => setCarInId(null)} />
-      <RenewDialog contractId={renewId} onClose={() => setRenewId(null)} />
+      <RenewDialog
+        contractId={renewId}
+        onClose={() => setRenewId(null)}
+        onCompleted={() => {
+          void refreshVehicles();
+          setVehicleDetailReload((n) => n + 1);
+        }}
+      />
       <ContractLinkResultDialog />
       <ContractDetailDrawer
         contractId={contractDrawerId}

@@ -27,6 +27,7 @@ export const FINANCE_MOVEMENT_BREAKDOWN_KEYS = [
   "RENEWAL_PAYMENT",
   "RECONCILIATION_PAYMENT",
   "POST_CLOSE_RECEIVABLE_PAYMENT",
+  "ROAD_LIABILITY_PAYMENT",
   "MAINTENANCE_EXPENSE",
   "MANUAL_EXPENSE",
 ] as const;
@@ -44,6 +45,7 @@ const COLLECTION_BREAKDOWN_KEYS: FinanceMovementBreakdownKey[] = [
   "RENEWAL_PAYMENT",
   "RECONCILIATION_PAYMENT",
   "POST_CLOSE_RECEIVABLE_PAYMENT",
+  "ROAD_LIABILITY_PAYMENT",
 ];
 
 /** Net Manual Expense for a window: current amount minus any void reversal. */

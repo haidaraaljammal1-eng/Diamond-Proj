@@ -100,7 +100,7 @@ async function createIssuedInvoice(
         contractNumberSnapshot: input.contractNumber,
         vehicleNameSnapshot: input.vehicleName,
         plateNumberSnapshot: input.plateNumber,
-        companyDisplayNameSnapshot: branding.displayName,
+        companyDisplayNameSnapshot: branding.legalHeaderEn,
         companyAddressSnapshot: branding.addressLine,
         companyEmailSnapshot: branding.email,
         companyBrandKeySnapshot: branding.brandKey,

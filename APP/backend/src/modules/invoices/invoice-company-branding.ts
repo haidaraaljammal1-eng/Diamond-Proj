@@ -1,4 +1,5 @@
 import type { OperatingCompany } from "@prisma/client";
+import { OPERATING_COMPANY_LEGAL_NAME_EN } from "src/modules/operating-companies/operating-company-legal-names";
 
 export type InvoiceBrandKey = "ELITE" | "UNIQUE";
 
@@ -15,7 +16,7 @@ export interface InvoiceCompanyBranding {
 const BRANDING: Record<InvoiceBrandKey, Omit<InvoiceCompanyBranding, "brandKey">> = {
   ELITE: {
     displayName: "DIAMOND ELITE RENT CAR",
-    legalHeaderEn: "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C",
+    legalHeaderEn: OPERATING_COMPANY_LEGAL_NAME_EN.ELITE,
     serviceLabelRental: "Rental Income",
     addressLine: "Dubai, United Arab Emirates",
     email: "info@diamondelite.ae",
@@ -23,7 +24,7 @@ const BRANDING: Record<InvoiceBrandKey, Omit<InvoiceCompanyBranding, "brandKey">
   },
   UNIQUE: {
     displayName: "DIAMOND UNIQUE RENT CAR",
-    legalHeaderEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+    legalHeaderEn: OPERATING_COMPANY_LEGAL_NAME_EN.UNIQUE,
     serviceLabelRental: "Car Rental Income",
     addressLine: "Dubai, United Arab Emirates",
     email: "info@diamondunique.ae",

@@ -1,36 +1,34 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import {
+  ALL_FUNCTIONAL_CAPABILITY_KEYS,
+  isFunctionalRbacV2UiEnabled,
+  useDiamondPageAccess,
+} from "@/modules/functional-rbac";
 import { useRolesPermissionsStore } from "../stores/roles-permissions.store";
 import { buildPermissionMatrix } from "../utils/permission-matrix";
 import type { PermissionMatrix } from "../utils/permission-matrix";
-import { ROLES_PAGE_PERMISSIONS } from "../roles.permissions";
+import { buildFunctionalPermissionMatrix } from "../utils/build-functional-matrix";
+import type { FunctionalPermissionMatrix } from "../utils/build-functional-matrix";
+import { filterPermissionsForMatrixDisplay } from "../utils/roles-display-permissions";
 
 export interface UseRolesPermissionsResult {
-  /** Derived render model: role columns × permission rows. */
   matrix: PermissionMatrix;
-  /** True while the user holds every Backend permission the page reads. */
+  functionalMatrix: FunctionalPermissionMatrix;
+  useFunctionalMatrix: boolean;
   isAllowed: boolean;
   isLoading: boolean;
-  /** Data has landed at least once. */
   isReady: boolean;
   error: ApiRequestError | null;
-  /** `true` when the role grants the permission. */
   hasPermission: (roleId: number, permissionKey: string) => boolean;
   refresh: () => Promise<void>;
 }
 
-/**
- * The UI facade for the Roles page. Components never touch the store or the
- * API layer; they only see this interface.
- *
- * Nothing is requested when the session lacks the Backend permissions the page
- * reads — the Backend would reject it anyway, and a 403 is not a UX.
- */
 export function useRolesPermissions(): UseRolesPermissionsResult {
-  const { hasPermission: sessionHasPermission } = usePermissions();
+  const useFunctionalMatrix = isFunctionalRbacV2UiEnabled();
+  const isAllowed = useDiamondPageAccess("roles");
   const roles = useRolesPermissionsStore((state) => state.roles);
   const permissions = useRolesPermissionsStore((state) => state.permissions);
   const status = useRolesPermissionsStore((state) => state.status);
@@ -38,26 +36,45 @@ export function useRolesPermissions(): UseRolesPermissionsResult {
   const load = useRolesPermissionsStore((state) => state.load);
   const refresh = useRolesPermissionsStore((state) => state.refresh);
 
-  const isAllowed = ROLES_PAGE_PERMISSIONS.every((permission) =>
-    sessionHasPermission(permission),
-  );
-
   useEffect(() => {
     if (isAllowed) void load();
   }, [isAllowed, load]);
 
-  const matrix = useMemo(
-    () => buildPermissionMatrix(roles, permissions),
-    [roles, permissions],
+  const matrixPermissions = useMemo(
+    () => filterPermissionsForMatrixDisplay(permissions),
+    [permissions],
   );
 
+  const matrix = useMemo(
+    () => buildPermissionMatrix(roles, matrixPermissions),
+    [roles, matrixPermissions],
+  );
+
+  const functionalMatrix = useMemo(
+    () => buildFunctionalPermissionMatrix(roles),
+    [roles],
+  );
+
+  const displayMatrix = useFunctionalMatrix
+    ? buildPermissionMatrix(roles, [])
+    : matrix;
+
   return {
-    matrix,
+    matrix: displayMatrix,
+    functionalMatrix,
+    useFunctionalMatrix,
     isAllowed,
     isLoading: status === "loading" || (isAllowed && status === "idle"),
     isReady: status === "ready",
     error: status === "error" ? error : null,
-    hasPermission: matrix.hasPermission,
+    hasPermission: useFunctionalMatrix
+      ? functionalMatrix.hasGrant
+      : matrix.hasPermission,
     refresh,
   };
 }
+
+export const FUNCTIONAL_MATRIX_INVARIANTS = {
+  pageGroups: 12,
+  capabilities: ALL_FUNCTIONAL_CAPABILITY_KEYS.length,
+};

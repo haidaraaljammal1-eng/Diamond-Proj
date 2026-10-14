@@ -32,6 +32,8 @@ import {
   CONTRACT_SIGNATURES,
   CONTRACT_TERMS,
   CONTRACT_TITLE,
+  contractCardAuthorizationEn,
+  contractTitleEnSecondLine,
 } from "../../utils/official-contract-template";
 import { CardNumberBoxes, DamageOverlay, DamageToolbar, FuelBar } from "./contract-paper-widgets";
 import { SignaturePad } from "./signature-pad";
@@ -214,7 +216,7 @@ export function OfficialContractA4({
         <div className={styles.ctEn}>
           {CONTRACT_TITLE.en[0]}
           <br />
-          {CONTRACT_TITLE.en[1]}
+          {contractTitleEnSecondLine(companyNames.en)}
         </div>
         <div className={styles.ctAr} dir="rtl" lang="ar">
           {CONTRACT_TITLE.ar[0]}
@@ -261,7 +263,7 @@ export function OfficialContractA4({
             <span className={styles.en}>{CONTRACT_CARD_AUTHORIZATION.headingEn}</span>
             <span className={styles.ar} dir="rtl">{CONTRACT_CARD_AUTHORIZATION.headingAr}</span>
           </div>
-          <p className={styles.ccEn}>{CONTRACT_CARD_AUTHORIZATION.en}</p>
+          <p className={styles.ccEn}>{contractCardAuthorizationEn(companyNames.en)}</p>
           <p className={styles.ccAr} dir="rtl" lang="ar">
             {CONTRACT_CARD_AUTHORIZATION.ar.map((line) => (
               <span key={line} className={styles.line}>{line}</span>

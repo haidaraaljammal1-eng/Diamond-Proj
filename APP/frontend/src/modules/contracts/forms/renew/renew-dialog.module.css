@@ -14,6 +14,28 @@
   gap: 14px;
 }
 
+.fieldBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--diamond-ink, #2c2416);
+  letter-spacing: 0.01em;
+}
+
+.fieldHint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--diamond-muted);
+}
+
 @container (min-width: 380px) {
   .fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -30,6 +52,56 @@
 
 .actions > button:first-child {
   flex: 1;
+}
+
+.modeRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.modeRow > button {
+  flex: 1;
+}
+
+.quickRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.quickChip {
+  min-width: 2.75rem;
+  padding-inline: 10px !important;
+}
+
+.preview {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--diamond-hair);
+  background: linear-gradient(180deg, #fffdf8 0%, #fbf6eb 100%);
+  font-size: 12px;
+}
+
+.preview div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.preview dt {
+  margin: 0;
+  color: var(--diamond-muted);
+}
+
+.preview dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: end;
 }
 
 .linkRow {

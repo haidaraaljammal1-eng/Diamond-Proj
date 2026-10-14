@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FunctionalRouteGuard } from "@/modules/functional-rbac";
 import styles from "./app-content.module.css";
 
 /**
@@ -11,7 +12,9 @@ import styles from "./app-content.module.css";
 export function AppContent({ children }: { children: ReactNode }) {
   return (
     <main className={styles.main} id="app-main">
-      <div className={styles.wrap}>{children}</div>
+      <div className={styles.wrap}>
+        <FunctionalRouteGuard>{children}</FunctionalRouteGuard>
+      </div>
     </main>
   );
 }

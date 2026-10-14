@@ -44,6 +44,7 @@ const WeeklyFinanceSliceSchema = z.object({
     "RENEWAL_PAYMENT",
     "RECONCILIATION_PAYMENT",
     "POST_CLOSE_RECEIVABLE_PAYMENT",
+    "ROAD_LIABILITY_PAYMENT",
     "MAINTENANCE_EXPENSE",
     "MANUAL_EXPENSE",
   ]),

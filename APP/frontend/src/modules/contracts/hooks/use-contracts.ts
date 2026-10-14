@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import { useDiamondPageAccess, useLegacyOrFunctionalCapability } from "@/modules/functional-rbac";
+import { FN } from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useContractsStore } from "../stores/contracts.store";
 import type { PageMeta } from "../api/contracts.api.types";
@@ -13,10 +14,7 @@ import type {
 } from "../types/contract.types";
 import { countActiveContractFilters } from "../utils/contract-filters";
 import { startContractsRevalidation } from "../utils/contracts-revalidation";
-import {
-  CONTRACTS_MANAGE_PERMISSION,
-  CONTRACTS_PAGE_PERMISSIONS,
-} from "../contracts.permissions";
+import { CONTRACTS_MANAGE_PERMISSION } from "../contracts.permissions";
 
 export interface UseContractsResult {
   contracts: ContractListItemDto[];
@@ -41,7 +39,11 @@ export interface UseContractsResult {
 }
 
 export function useContracts(): UseContractsResult {
-  const { hasPermission } = usePermissions();
+  const isAllowed = useDiamondPageAccess("contracts");
+  const canManage = useLegacyOrFunctionalCapability(
+    CONTRACTS_MANAGE_PERMISSION,
+    FN.contracts.rentalLink,
+  );
   const contracts = useContractsStore((state) => state.contracts);
   const meta = useContractsStore((state) => state.meta);
   const query = useContractsStore((state) => state.query);
@@ -51,11 +53,6 @@ export function useContracts(): UseContractsResult {
   const refresh = useContractsStore((state) => state.refresh);
   const setQuery = useContractsStore((state) => state.setQuery);
   const resetFilters = useContractsStore((state) => state.resetFilters);
-
-  const isAllowed = CONTRACTS_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
-  const canManage = hasPermission(CONTRACTS_MANAGE_PERMISSION);
 
   useEffect(() => {
     if (isAllowed) void load();

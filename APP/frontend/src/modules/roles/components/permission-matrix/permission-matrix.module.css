@@ -4,25 +4,22 @@
 .card {
   width: 100%;
   background: linear-gradient(180deg, var(--diamond-onyx2), var(--diamond-onyx));
-  border: 1px solid var(--diamond-hair);
-  border-radius: 16px;
-  box-shadow: var(--diamond-shadow-near);
+  border: 1px solid color-mix(in srgb, var(--diamond-gold-hi) 22%, var(--diamond-hair));
+  border-radius: 18px;
+  box-shadow:
+    var(--diamond-shadow-near),
+    0 12px 40px rgba(0, 0, 0, 0.22);
   overflow: hidden;
 }
 
-/* Scrolling is owned by this container so a wide matrix never makes the page
-   itself scroll horizontally. */
+/* Horizontal scroll for role columns; vertical navigation uses #app-main. */
 .scroll {
-  /* Positioned so the visually-hidden absolute labels inside the cells are
-     contained and clipped here. Without it they escape the scroller and
-     stretch the page to the full table height. */
   position: relative;
-  /* Fits the shell viewport so the page itself does not gain a scrollbar that
-     reveals nothing: the matrix scrolls inside its own card. */
-  max-height: min(68vh, calc(100vh - 364px));
-  overflow: auto;
-  overscroll-behavior: contain;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
   scrollbar-color: rgba(201, 161, 92, 0.4) transparent;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Full width, with fixed column widths: leftover space is taken by empty
@@ -58,7 +55,7 @@
   position: sticky;
   inset-inline-start: 0;
   z-index: 1;
-  padding: 9px 16px;
+  padding: 11px 18px;
   text-align: start;
   font-size: 11px;
   font-weight: 700;
@@ -75,13 +72,17 @@
   color: var(--diamond-muted);
 }
 
+.childRow {
+  padding-inline-start: 1.25rem;
+}
+
 .rowHead {
   position: sticky;
   inset-inline-start: 0;
   z-index: 1;
   width: 340px;
   min-width: 340px;
-  padding: 9px 16px;
+  padding: 11px 18px;
   text-align: start;
   font-weight: 500;
   background: var(--diamond-onyx);
@@ -114,10 +115,6 @@
 }
 
 @media (max-width: 900px) {
-  .scroll {
-    max-height: none;
-  }
-
   .corner,
   .rowHead {
     width: 200px;

@@ -1,11 +1,12 @@
 import { useTranslations } from "next-intl";
 import type { VehicleCardDto } from "../../types/vehicle.types";
+import type { VehicleFleetPermissions } from "../../utils/vehicle-card-actions";
 import { VehicleCard } from "../vehicle-card/vehicle-card";
 import styles from "./vehicles-grid.module.css";
 
 export interface VehiclesGridProps {
   vehicles: VehicleCardDto[];
-  canManage: boolean;
+  fleetPermissions: VehicleFleetPermissions;
   onOpen: (vehicle: VehicleCardDto) => void;
   onPrimaryAction: (vehicle: VehicleCardDto) => void;
   onEditRates: (vehicle: VehicleCardDto) => void;
@@ -26,7 +27,7 @@ function splitFleetSections(vehicles: VehicleCardDto[]) {
 
 export function VehiclesGrid({
   vehicles,
-  canManage,
+  fleetPermissions,
   onOpen,
   onPrimaryAction,
   onEditRates,
@@ -41,7 +42,7 @@ export function VehiclesGrid({
       <VehicleCard
         key={vehicle.id}
         vehicle={vehicle}
-        canManage={canManage}
+        fleetPermissions={fleetPermissions}
         onOpen={onOpen}
         onPrimaryAction={onPrimaryAction}
         onEditRates={onEditRates}

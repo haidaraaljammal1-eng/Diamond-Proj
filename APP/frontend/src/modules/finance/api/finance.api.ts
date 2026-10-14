@@ -1,4 +1,19 @@
 import { apiRequest } from "@/infrastructure/api/client";
+import { ApiRequestError } from "@/infrastructure/api/errors";
+import type { ApiErrorResponse } from "@/infrastructure/api/types";
+import { env } from "@/config/env";
+
+async function getAccessToken(): Promise<string | undefined> {
+  if (typeof window === "undefined") return undefined;
+  const { getSession } = await import("next-auth/react");
+  return (await getSession())?.accessToken;
+}
+
+function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
+  if (typeof value !== "object" || value === null || !("error" in value)) return false;
+  const error = (value as ApiErrorResponse).error;
+  return typeof error === "object" && error !== null && "code" in error && "message" in error;
+}
 import {
   ALL_FINANCE_SCOPE,
   type CorrectManualExpensePayload,
@@ -11,6 +26,8 @@ import {
   type ManualExpenseDetailDto,
   type OpenReceivableDto,
   type OpenReceivablesQuery,
+  type FinanceStatementExportParams,
+  type StatementCompanyCode,
   type VoidManualExpensePayload,
 } from "../types/finance.types";
 import { appendFinanceCompanyScope } from "../utils/finance-company-scope";
@@ -134,4 +151,78 @@ export async function correctManualExpense(
     { method: "POST", body: payload },
   );
   return response.data;
+}
+
+function parseContentDispositionFilename(header: string | null): string | null {
+  if (!header) return null;
+  const utf = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf?.[1]) return decodeURIComponent(utf[1]);
+  const ascii = header.match(/filename="([^"]+)"/i);
+  return ascii?.[1] ?? null;
+}
+
+function buildStatementQuery(params: FinanceStatementExportParams): string {
+  const q = new URLSearchParams();
+  q.set("periodType", params.periodType);
+  if (params.date) q.set("date", params.date);
+  if (params.weekStart) q.set("weekStart", params.weekStart);
+  if (params.year != null) q.set("year", String(params.year));
+  if (params.month != null) q.set("month", String(params.month));
+  if (params.from) q.set("from", params.from);
+  if (params.to) q.set("to", params.to);
+  if (params.locale) q.set("locale", params.locale);
+  return q.toString();
+}
+
+export interface FinanceStatementBusinessTodayDto {
+  businessDate: string;
+  displayAr: string;
+  displayEn: string;
+}
+
+/** `GET /finance/statements/business-today` (Backend permission: `finance.read`). */
+export async function fetchFinanceStatementBusinessToday(): Promise<FinanceStatementBusinessTodayDto> {
+  const response = await apiRequest<FinanceStatementBusinessTodayDto>(
+    `${FINANCE_PATH}/statements/business-today`,
+  );
+  return response.data;
+}
+
+/** `GET /finance/statements/:companyCode/pdf` (Backend permission: `finance.read`). */
+export async function downloadFinanceStatementPdf(
+  companyCode: StatementCompanyCode,
+  params: FinanceStatementExportParams,
+): Promise<{ blob: Blob; filename: string }> {
+  const accessToken = await getAccessToken();
+  const response = await fetch(
+    `${env.apiUrl}${FINANCE_PATH}/statements/${companyCode}/pdf?${buildStatementQuery(params)}`,
+    {
+      method: "GET",
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      credentials: "include",
+    },
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    let payload: unknown;
+    try {
+      payload = text ? JSON.parse(text) : undefined;
+    } catch {
+      payload = undefined;
+    }
+    if (isApiErrorResponse(payload)) {
+      throw new ApiRequestError(payload.error, response.status);
+    }
+    throw new ApiRequestError(
+      { code: `HTTP_${response.status}`, message: response.statusText || "Statement export failed" },
+      response.status,
+    );
+  }
+  const blob = await response.blob();
+  const filename =
+    parseContentDispositionFilename(response.headers.get("content-disposition")) ??
+    `Diamond-${companyCode}-Statement.pdf`;
+  return { blob, filename };
 }

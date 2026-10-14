@@ -25,9 +25,14 @@ export const CONTRACT_HEADER = {
 export const CONTRACT_AGREEMENT_LABEL = "Agreement No:";
 
 export const CONTRACT_TITLE = {
-  en: ["Contract Agreement Between", "Diamond unique Car Rentals CO. LLC S.O.C With Hirer & Sponsor"],
+  en: ["Contract Agreement Between"],
   ar: ["عقد اتفاقية تأجير بين", "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و والمستأجر والكفيل"],
 } as const;
+
+/** English title second line — legal entity from the official contract view. */
+export function contractTitleEnSecondLine(legalNameEn: string): string {
+  return `${legalNameEn} With Hirer & Sponsor`;
+}
 
 /** Mileage terms sentence. `{km}` and `{rate}` are the only data slots. */
 export const CONTRACT_MILEAGE_TERMS = {
@@ -55,13 +60,16 @@ export const CONTRACT_CUSTODY = {
 export const CONTRACT_CARD_AUTHORIZATION = {
   headingEn: "Credit Card Deducting",
   headingAr: "اتفاقية سحب من بطاقة الائتمان",
-  en: "I'm authorizing Diamond unique Car Rentals L.L.C to charge any monetary dues on my credit card such as rental payments, traffic violation tickets and/or any additional charges that had resulted damages to the rented vehicle.",
   ar: [
     "أنا أفوض مكتب شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و بالسحب من بطاقة الائتمان الخاصة بي",
     "جميع مبالغ الإيجار بالإضافة إلى المبالغ المترتبة على أي حادث أو مخالفة مرورية، بلدية … إلخ",
     "أو مبالغ التعويض عن أي أضرار تحدث للسيارة",
   ],
 } as const;
+
+export function contractCardAuthorizationEn(legalNameEn: string): string {
+  return `I'm authorizing ${legalNameEn} to charge any monetary dues on my credit card such as rental payments, traffic violation tickets and/or any additional charges that had resulted damages to the rented vehicle.`;
+}
 
 /**
  * Terms lines (EN left, AR right). `blank: true` marks the demo's empty

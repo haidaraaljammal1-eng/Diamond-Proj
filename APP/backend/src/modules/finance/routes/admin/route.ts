@@ -19,6 +19,16 @@ import {
   OpenReceivablesQuerySchema,
   VoidManualExpenseSchema,
 } from "src/modules/finance/finance.schema";
+import {
+  FinanceStatementExportQuerySchema,
+  resolveFinanceStatementBusinessToday,
+} from "src/modules/finance/finance-statement-period";
+import { createFinanceStatementService } from "src/modules/finance/finance-statement.service";
+import {
+  renderFinanceStatementPdf,
+  statementPdfFilename,
+} from "src/modules/finance/finance-statement-pdf.service";
+import { z } from "zod";
 
 const T = ["Finance"];
 
@@ -26,6 +36,7 @@ export default async function financeRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const finance = createFinanceService(fastify);
   const manualExpenses = createManualExpenseService(fastify);
+  const statements = createFinanceStatementService(fastify.prisma);
 
   app.get(
     "/summary",
@@ -79,6 +90,60 @@ export default async function financeRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => finance.ledger(request.query),
+  );
+
+  app.get(
+    "/statements/business-today",
+    {
+      schema: {
+        summary: "Current business calendar day for statement export UI",
+        operationId: "getFinanceStatementBusinessToday",
+        tags: T,
+        permissions: [PERMISSIONS.FINANCE_READ],
+        response: {
+          200: dataResponse(
+            z.object({
+              businessDate: z.string(),
+              displayAr: z.string(),
+              displayEn: z.string(),
+            }),
+          ),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async () => ({ data: resolveFinanceStatementBusinessToday() }),
+  );
+
+  app.get(
+    "/statements/:companyCode/pdf",
+    {
+      schema: {
+        summary: "Download company financial statement PDF",
+        operationId: "downloadFinanceStatementPdf",
+        tags: T,
+        permissions: [PERMISSIONS.FINANCE_READ],
+        params: z.object({
+          companyCode: z.enum(["ELITE", "UNIQUE"]),
+        }),
+        querystring: FinanceStatementExportQuerySchema,
+      },
+    },
+    async (request, reply) => {
+      const snapshot = await statements.loadSnapshot(
+        request.params.companyCode,
+        request.query,
+      );
+      const buffer = await renderFinanceStatementPdf(snapshot);
+      const names = statementPdfFilename(snapshot);
+      return reply
+        .header("Content-Type", "application/pdf")
+        .header(
+          "Content-Disposition",
+          `attachment; filename="${names.asciiFilename}"; filename*=UTF-8''${encodeURIComponent(names.filename)}`,
+        )
+        .send(buffer);
+    },
   );
 
   app.get(

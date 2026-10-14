@@ -247,6 +247,7 @@ model Contract {
   postCloseReceivables ContractPostCloseReceivable[]
   paymentAuthorization ContractPaymentAuthorization?
   invoices             Invoice[]
+  archiveRows          ArchiveRow[]
 
   @@index([vehicleId, status])
   @@index([companyId])
@@ -839,6 +840,8 @@ model ContractRenewal {
   contractId       String
   contract         Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
   additionalDays   Int
+  additionalDurationValue Int
+  additionalDurationUnit  ContractDurationUnit @default(DAY)
   additionalAmount Int
   previousEndAt    DateTime
   newEndAt         DateTime

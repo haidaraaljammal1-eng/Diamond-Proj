@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
 import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
-import { GPS_PAGE_PERMISSIONS } from "../gps.permissions";
+import { useDiamondPageAccess } from "@/modules/functional-rbac";
 import { useGpsStore } from "../stores/gps.store";
 import type {
   GpsListQuery,
@@ -76,10 +75,7 @@ export interface UseGpsResult {
 }
 
 export function useGps(): UseGpsResult {
-  const { hasPermission } = usePermissions();
-  const isAllowed = GPS_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
+  const isAllowed = useDiamondPageAccess("gps");
 
   const summary = useGpsStore((state) => state.summary);
   const summaryStatus = useGpsStore((state) => state.summaryStatus);

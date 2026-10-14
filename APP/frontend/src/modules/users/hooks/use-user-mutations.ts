@@ -1,6 +1,9 @@
 "use client";
 
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useUsersStore } from "../stores/users.store";
 import type { CreateUserPayload, UpdateUserPayload } from "../types/user.types";
@@ -14,6 +17,8 @@ export interface UseUserMutationsResult {
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;
+  canAssignRoles: boolean;
+  canEnableDisable: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
@@ -35,7 +40,27 @@ export interface UseUserMutationsResult {
 }
 
 export function useUserMutations(): UseUserMutationsResult {
-  const { hasPermission } = usePermissions();
+  const canCreate = useLegacyOrFunctionalCapability(
+    USERS_CREATE_PERMISSION,
+    FN.users.create,
+  );
+  const canUpdate = useLegacyOrFunctionalCapability(
+    USERS_UPDATE_PERMISSION,
+    FN.users.edit,
+  );
+  const canDelete = useLegacyOrFunctionalCapability(
+    USERS_DELETE_PERMISSION,
+    FN.users.delete,
+  );
+  const canAssignRoles = useLegacyOrFunctionalCapability(
+    USERS_UPDATE_PERMISSION,
+    FN.users.assignRoles,
+  );
+  const canEnableDisable = useLegacyOrFunctionalCapability(
+    USERS_UPDATE_PERMISSION,
+    FN.users.enableDisable,
+  );
+
   const isCreating = useUsersStore((state) => state.isCreating);
   const isUpdating = useUsersStore((state) => state.isUpdating);
   const isDeleting = useUsersStore((state) => state.isDeleting);
@@ -53,9 +78,11 @@ export function useUserMutations(): UseUserMutationsResult {
   const statusUpdatingIds = useUsersStore((state) => state.statusUpdatingIds);
 
   return {
-    canCreate: hasPermission(USERS_CREATE_PERMISSION),
-    canUpdate: hasPermission(USERS_UPDATE_PERMISSION),
-    canDelete: hasPermission(USERS_DELETE_PERMISSION),
+    canCreate,
+    canUpdate,
+    canDelete,
+    canAssignRoles,
+    canEnableDisable,
     isCreating,
     isUpdating,
     isDeleting,

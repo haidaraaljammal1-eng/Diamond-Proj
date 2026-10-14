@@ -49,7 +49,7 @@ export function getContractActions(
   return {
     showGenerateRentalLink:
       actions.canGenerateRentalLink && permissions.canManage,
-    showConfirmPayment: actions.canConfirmPayment && permissions.canManage,
+    showConfirmPayment: actions.canConfirmPayment && permissions.canClose,
     showCarOut:
       actions.canCarOut && permissions.canCarOut && permissions.canActivate,
     showGenerateReturnLink:

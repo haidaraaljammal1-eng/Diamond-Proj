@@ -34,10 +34,10 @@ describe("isNavigationItemVisible", () => {
     );
   });
 
-  it("does not treat system_admin as a Contracts bypass", () => {
+  it("shows Contracts for system_admin (full rail access)", () => {
     assert.equal(
       isNavigationItemVisible(contracts, main, () => false, true),
-      false,
+      true,
     );
   });
 });
@@ -71,10 +71,10 @@ describe("maintenance navigation visibility", () => {
     );
   });
 
-  it("does not treat system_admin as a Maintenance bypass", () => {
+  it("shows Maintenance for system_admin (full rail access)", () => {
     assert.equal(
       isNavigationItemVisible(maintenance, main, () => false, true),
-      false,
+      true,
     );
   });
 });
@@ -108,10 +108,10 @@ describe("gps navigation visibility", () => {
     );
   });
 
-  it("does not treat system_admin as a GPS bypass", () => {
+  it("shows GPS for system_admin (full rail access)", () => {
     assert.equal(
       isNavigationItemVisible(gps, main, () => false, true),
-      false,
+      true,
     );
   });
 });
@@ -145,10 +145,10 @@ describe("violations navigation visibility", () => {
     );
   });
 
-  it("does not treat system_admin as a Violations bypass", () => {
+  it("shows Violations for system_admin (full rail access)", () => {
     assert.equal(
       isNavigationItemVisible(violations, main, () => false, true),
-      false,
+      true,
     );
   });
 });
@@ -179,7 +179,7 @@ describe("whatsapp navigation visibility", () => {
     assert.equal(isNavigationItemVisible(chats, main, () => false, false), false);
   });
 
-  it("does not treat system_admin as a WhatsApp bypass", () => {
-    assert.equal(isNavigationItemVisible(chats, main, () => false, true), false);
+  it("shows WhatsApp for system_admin (full rail access)", () => {
+    assert.equal(isNavigationItemVisible(chats, main, () => false, true), true);
   });
 });

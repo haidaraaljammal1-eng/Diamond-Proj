@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { startDashboardRevalidation } from "../utils/dashboard-revalidation";
 import { useAuth, usePermissions } from "@/modules/auth";
-import { CONTRACTS_MANAGE_PERMISSION, CONTRACTS_READ_PERMISSION } from "@/modules/contracts/contracts.permissions";
-import { VEHICLES_READ_PERMISSION } from "@/modules/vehicles/vehicles.permissions";
-import { GPS_READ_PERMISSION } from "@/modules/gps/gps.permissions";
-import { MAINTENANCE_READ_PERMISSION } from "@/modules/maintenance/maintenance.permissions";
-import { FINANCE_READ_PERMISSION } from "@/modules/finance/finance.permissions";
-import { DASHBOARD_PAGE_PERMISSIONS } from "../dashboard.permissions";
+import {
+  FN,
+  isFunctionalRbacV2UiEnabled,
+  useDiamondPageAccess,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
+import { CONTRACTS_MANAGE_PERMISSION } from "@/modules/contracts/contracts.permissions";
 import { DASHBOARD_QUICK_ACCESS } from "../utils/dashboard.routes";
 import { useDashboardStore } from "../stores/dashboard.store";
 
@@ -23,21 +24,38 @@ export function useDashboardOverview() {
   const load = useDashboardStore((s) => s.load);
   const refresh = useDashboardStore((s) => s.refresh);
 
-  const isAllowed = DASHBOARD_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
-  const canReadContracts = hasPermission(CONTRACTS_READ_PERMISSION);
-  const canReadVehicles = hasPermission(VEHICLES_READ_PERMISSION);
-  const canReadFinance = hasPermission(FINANCE_READ_PERMISSION);
-  const canReadGps = hasPermission(GPS_READ_PERMISSION);
-  const canReadMaintenance = hasPermission(MAINTENANCE_READ_PERMISSION);
+  const isAllowed = useDiamondPageAccess("dashboard");
+  const canReadContracts = useDiamondPageAccess("contracts");
+  const canReadVehicles = useDiamondPageAccess("vehicles");
+  const canReadFinance = useDiamondPageAccess("finance");
+  const canReadGps = useDiamondPageAccess("gps");
+  const canReadMaintenance = useDiamondPageAccess("maintenance");
   const canGenerateLink =
-    hasPermission(VEHICLES_READ_PERMISSION) &&
-    hasPermission(CONTRACTS_MANAGE_PERMISSION);
+    useDiamondPageAccess("vehicles") &&
+    useLegacyOrFunctionalCapability(
+      CONTRACTS_MANAGE_PERMISSION,
+      FN.contracts.rentalLink,
+    );
 
-  const quickAccess = DASHBOARD_QUICK_ACCESS.filter((item) =>
-    hasPermission(item.permission),
-  );
+  const quickAccess = useMemo(() => {
+    if (!isFunctionalRbacV2UiEnabled()) {
+      return DASHBOARD_QUICK_ACCESS.filter((item) =>
+        hasPermission(item.permission),
+      );
+    }
+    const visible = new Set<string>();
+    if (canReadVehicles) visible.add("/vehicles");
+    if (canReadContracts) visible.add("/contracts");
+    if (canReadGps) visible.add("/gps");
+    if (canReadMaintenance) visible.add("/maintenance");
+    return DASHBOARD_QUICK_ACCESS.filter((item) => visible.has(item.href));
+  }, [
+    canReadVehicles,
+    canReadContracts,
+    canReadGps,
+    canReadMaintenance,
+    hasPermission,
+  ]);
 
   useEffect(() => {
     if (isAllowed) void load();

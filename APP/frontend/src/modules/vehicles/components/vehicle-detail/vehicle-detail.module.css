@@ -1,12 +1,21 @@
-/* Fleet vehicle detail — flex shell: header + scroll body + sticky footer */
+/* Fleet vehicle detail — scrollable main + fixed action footer inside dialog */
 .root {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--diamond-onyx2, #fffdf8);
+}
+
+.mainScroll {
   flex: 1 1 auto;
   min-height: 0;
-  max-height: 100%;
-  min-width: 0;
-  background: var(--diamond-onyx2, #fffdf8);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
 }
 
 .identityHeader {
@@ -14,8 +23,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px 12px;
+  gap: 10px;
+  padding: 10px 16px;
   padding-inline-end: 44px;
   border-bottom: 1px solid var(--diamond-hair);
   background: linear-gradient(180deg, #ffffff 0%, #fbf6eb 100%);
@@ -119,13 +128,8 @@
 }
 
 .scrollBody {
-  flex: 1 1 0%;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 14px 18px 12px;
-  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+  padding: 12px 16px 14px;
 }
 
 .section {
@@ -138,7 +142,7 @@
 }
 
 .sectionSpaced {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .specs {
@@ -267,10 +271,13 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  padding: 10px 14px max(18px, env(safe-area-inset-bottom, 0px));
+  padding: 10px 14px max(14px, env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--diamond-hair);
   background: linear-gradient(180deg, #fbf6eb 0%, #ffffff 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 -4px 16px rgba(80, 60, 30, 0.06);
+  z-index: 1;
 }
 
 .actionFooter :global(button) {
@@ -286,6 +293,14 @@
 
 .actionPrimary {
   grid-column: 1 / -1;
+}
+
+.renewRental {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
 }
 
 .actionDanger {
@@ -307,21 +322,8 @@
 
 @media (max-height: 760px) {
   .identityHeader {
-    padding-top: 12px;
-    padding-bottom: 8px;
-  }
-
-  .media {
     padding-top: 8px;
-  }
-
-  .mediaFrame {
-    min-height: 96px;
-    max-height: 112px;
-  }
-
-  .mediaImage {
-    max-height: 112px;
+    padding-bottom: 6px;
   }
 
   .actionFooter {

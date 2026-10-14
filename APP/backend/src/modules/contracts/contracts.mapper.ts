@@ -421,6 +421,11 @@ export function toDetail(
       return {
         id: r.id,
         additionalDays: r.additionalDays,
+        additionalDurationValue: r.additionalDurationValue,
+        additionalDurationUnit:
+          r.additionalDurationUnit === "HOUR" || r.additionalDurationUnit === "DAY"
+            ? r.additionalDurationUnit
+            : "DAY",
         additionalAmount: r.additionalAmount,
         previousEndAt: r.previousEndAt,
         newEndAt: r.newEndAt,

@@ -26,6 +26,8 @@ import { FinanceLedger } from "../finance-ledger/finance-ledger";
 import { FinanceOpenReceivables } from "../finance-open-receivables/finance-open-receivables";
 import { FinancePeriodControl } from "../finance-period-control/finance-period-control";
 import { FinanceScopeControl } from "../finance-scope-control/finance-scope-control";
+import { FinanceStatementsSection } from "../finance-statements/finance-statements-section";
+import { buildStatementPrefillFromFinancePeriod } from "../../utils/finance-statement-period";
 import styles from "./finance-screen.module.css";
 
 export function FinanceScreen() {
@@ -171,6 +173,14 @@ export function FinanceScreen() {
         onCustomRangeApply={overview.setCustomPeriod}
       />
 
+      <FinanceStatementsSection
+        periodPrefill={buildStatementPrefillFromFinancePeriod(
+          overview.overviewQuery.preset,
+          overview.overviewQuery.customFrom,
+          overview.overviewQuery.customTo,
+        )}
+      />
+
       {summaryError ? (
         <div className={styles.summaryError} role="alert">
           <p>{summaryError}</p>
@@ -236,7 +246,8 @@ export function FinanceScreen() {
         detail={expense.detail}
         loading={expense.isDetailLoading}
         error={expense.detailError}
-        canManage={overview.canManageExpenses}
+        canCorrect={overview.canManageExpenses}
+        canVoid={overview.canManageExpenses}
         demoOnly={Boolean(expense.detailId && isSimulatedFinanceId(expense.detailId))}
         onClose={() => {
           setExpenseDrawerOpen(false);

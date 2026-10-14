@@ -45,10 +45,10 @@ export function LoginScreen() {
     return errorMessages[error] || t("error.generic");
   };
 
-  if (status === "loading" || status === "authenticated") return null;
+  if (status === "authenticated") return null;
 
   return (
-    <div id="login" className={isLoggedIn ? styles.off : ""}>
+    <div id="login" className={isLoggedIn ? styles.off : ""} data-testid="login-shell">
       <div className={styles.loginbox}>
         <div className={styles.logoContainer}>
           <Image

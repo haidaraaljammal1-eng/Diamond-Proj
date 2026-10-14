@@ -628,7 +628,11 @@
       "editRates": "تعديل التعرفة الافتراضية",
       "editRatesTitle": "تعديل السعر اليومي والشهري الافتراضي للسيارة",
       "delete": "إزالة من الأسطول",
-      "deleteTitle": "إزالة هذه السيارة من الأسطول النشط"
+      "deleteTitle": "إزالة هذه السيارة من الأسطول النشط",
+      "renewRental": "تجديد الإيجار",
+      "renewRentalTitle": "تمديد عقد الإيجار النشط",
+      "renewRentalBlockedLifecycle": "التجديد غير متاح لحالة هذا العقد",
+      "renewRentalBlockedPermission": "لا تملك صلاحية تجديد هذا العقد"
     },
     "boundary": {
       "noContract": "لا يوجد عقد مرتبط بهذه السيارة",
@@ -700,6 +704,15 @@
       "photoReplaceSuccess": "تم استبدال صورة السيارة.",
       "photoReplaceDeleteFailed": "تم رفع الصورة الجديدة، لكن تعذر حذف الصورة السابقة. حدّث الصفحة لمعرفة الحالة الحالية.",
       "galleryItem": "صورة {name}",
+      "galleryTitle": "صور السيارة",
+      "galleryAddPhoto": "إضافة صورة",
+      "galleryReplacePhoto": "استبدال",
+      "galleryRemovePhoto": "إزالة",
+      "galleryPreviewTitle": "صورة السيارة",
+      "galleryPhotoLimit": "حتى {max} صور لكل سيارة.",
+      "photoDeleteSuccess": "تمت إزالة صورة السيارة.",
+      "shareWhatsApp": "مشاركة عبر واتساب",
+      "shareWhatsAppSoon": "قريباً — ستتوفر مشاركة الصور عبر واتساب المكتب في تحديث لاحق.",
       "defaultRates": "التعرفة الافتراضية",
       "hourly": "بالساعة",
       "daily": "يومي · درهم",
@@ -720,9 +733,9 @@
         "description": "سيكمل العميل الدفع بأمان عبر Stripe بعد توقيع العقد."
       },
       "cash": {
-        "title": "الدفع كاش",
+        "title": "كاش / ماكينة",
         "description": "لن تظهر للعميل مرحلة دفع إلكتروني، وسيُسجّل المبلغ كتحصيل نقدي بعد اكتمال توقيع العقد.",
-        "badge": "الدفع: كاش",
+        "badge": "الدفع: كاش / ماكينة",
         "pricingHint": "لن تظهر مرحلة الدفع الإلكتروني في رابط العميل."
       }
     },
@@ -954,7 +967,7 @@
       "renewalCollect": "تحصيل",
       "renewalCollectTitle": "تحصيل التجديد (كاش)",
       "renewalCollectBody": "أكّد استلام مبلغ التجديد نقداً.",
-      "renewalCollectMethod": "طريقة الدفع: كاش",
+      "renewalCollectMethod": "طريقة الدفع: كاش / ماكينة",
       "renewalCollectConfirm": "تأكيد التحصيل",
       "renewalCollectionState": {
         "PENDING": "قيد الانتظار",
@@ -1057,7 +1070,7 @@
         "MANUAL": "يدوي",
         "BANK_TRANSFER": "تحويل بنكي",
         "CARD": "بطاقة",
-        "CASH": "كاش"
+        "CASH": "كاش / ماكينة"
       }
     },
     "carOut": {
@@ -1264,15 +1277,35 @@
       "title": "تجديد العقد",
       "description": "مدّد هذا العقد النشط. الإجمالي يُحسب في الخادم.",
       "days": "أيام إضافية",
+      "daysField": "المدة (أيام)",
+      "hoursField": "المدة (ساعات)",
       "amount": "مبلغ إضافي (درهم)",
       "submit": "تجديد",
       "link": "إنشاء رابط التجديد",
-      "applyOffice": "تسجيل في المكتب للتحصيل كاش",
+      "applyOffice": "تسجيل التجديد للتحصيل عند المطابقة",
+      "durationLabelDays": "مدة التجديد (أيام)",
+      "durationLabelHours": "مدة التجديد (ساعات)",
+      "priceLabel": "سعر التجديد (AED)",
+      "durationHint": "اختر مدة سريعة أو أدخل العدد يدويًا",
+      "priceHint": "أدخل مبلغ التجديد المتفق عليه",
       "officeConfirmTitle": "تسجيل التجديد للتحصيل كاش",
       "officeConfirmLead": "سيُمدّد العقد الآن. يبقى المبلغ غير محصل حتى يتم التحصيل نقداً.",
       "officeConfirmBody": "راجع التمديد قبل تسجيل هذا التجديد كمستحق كاش في المكتب.",
       "officeConfirmSubmit": "تسجيل التجديد",
-      "officeCurrentEnd": "نهاية العقد الحالية"
+      "officeCurrentEnd": "نهاية العقد الحالية",
+      "modeLabel": "وحدة مدة التجديد",
+      "modeHours": "ساعات",
+      "modeDays": "أيام",
+      "previewCurrentEnd": "نهاية العقد الحالية",
+      "previewAdded": "المدة المضافة",
+      "previewNewEnd": "نهاية العقد الجديدة",
+      "previewAmount": "مبلغ التجديد",
+      "duration": {
+        "hours": "{count, plural, one {ساعة واحدة} two {ساعتان} few {# ساعات} many {# ساعة} other {# ساعة}}",
+        "days": "{count, plural, one {يوم واحد} two {يومان} few {# أيام} many {# يوم} other {# يوم}}",
+        "weeks": "{count, plural, one {أسبوع واحد} two {أسبوعان} few {# أسابيع} many {# أسبوع} other {# أسبوع}}",
+        "months": "{count, plural, one {شهر واحد} two {شهران} few {# أشهر} many {# شهر} other {# شهر}}"
+      }
     },
     "reconcile": {
       "title": "المطابقة",
@@ -1382,7 +1415,7 @@
       "electronicPayment": "الدفع الإلكتروني",
       "confirmCollection": "تأكيد التحصيل",
       "cashConfirmTitle": "تفاصيل المطابقة النهائية",
-      "paymentMethodCash": "طريقة الدفع: نقدًا",
+      "paymentMethodCash": "طريقة الدفع: كاش / ماكينة",
       "finalize": "إتمام المطابقة",
       "completeWithoutCharges": "إنهاء بدون رسوم",
       "completeWithoutChargesConfirmTitle": "إنهاء بدون رسوم؟",
@@ -2601,7 +2634,7 @@
       "cashDialogTitle": "تأكيد التحصيل كاش",
       "cashDialogSubtitle": "تسجيل مبلغ العميل كتحصيل نقدي موثوق.",
       "cashPaymentMethod": "طريقة الدفع",
-      "cashPaymentMethodValue": "كاش",
+      "cashPaymentMethodValue": "كاش / ماكينة",
       "cashFinanceNote": "سيتم تسجيل المبلغ كتحصيل مالي فعلي في صفحة المالية.",
       "cashConfirm": "تأكيد استلام المبلغ كاش",
       "dialogTitle": "تحصيل من البطاقة المحفوظة",
@@ -2672,6 +2705,32 @@
       "month": "الشهر",
       "custom": "فترة مخصصة"
     },
+    "statements": {
+      "sectionTitle": "كشوف الحساب",
+      "sectionHint": "تنزيل كشف PDF تفصيلي لكل شركة تشغيلية. التصدير مستقل عن فلتر الشركة في الصفحة.",
+      "downloadElite": "تحميل كشف ELITE",
+      "downloadUnique": "تحميل كشف UNIQUE",
+      "companyElite": "ELITE",
+      "companyUnique": "UNIQUE",
+      "dialogTitle": "كشف مالي — {company}",
+      "dialogDescription": "اختر فترة التقرير. المبالغ من سجل الحركة المالية المعتمد.",
+      "formatPdf": "PDF · A4 عرضي",
+      "periodTypeLabel": "فترة الكشف",
+      "periodType": {
+        "TODAY": "اليوم",
+        "DAILY": "يومي",
+        "WEEKLY": "أسبوعي",
+        "MONTHLY": "شهري",
+        "CUSTOM": "مخصص"
+      },
+      "todayPreview": "كشف حركات اليوم — {date}",
+      "dateLabel": "التاريخ",
+      "weekStartLabel": "بداية الأسبوع",
+      "yearLabel": "السنة",
+      "monthLabel": "الشهر",
+      "downloadPdf": "تنزيل PDF",
+      "cancel": "إلغاء"
+    },
     "scope": {
       "label": "نطاق الشركة",
       "all": "الكل",
@@ -2679,7 +2738,7 @@
     },
     "paymentMethod": {
       "CARD": "بطاقة",
-      "CASH": "كاش"
+      "CASH": "كاش / ماكينة"
     },
     "kpi": {
       "collected": "تم التحصيل",

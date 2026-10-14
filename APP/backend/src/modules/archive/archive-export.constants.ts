@@ -16,7 +16,7 @@ export const ARCHIVE_EXPORT_HEADERS = [
   "سالك",
   "parking",
   "بترول",
-  "نقاط سوداء",
+  "أضرار",
   "مخالفات",
   "المجموع",
   "دولار",
@@ -89,7 +89,7 @@ export const ARCHIVE_EXPORT_COLUMNS: readonly ArchiveExportColumnDefinition[] = 
   { field: "salik", header: "سالك", kind: "money", width: 10, alignment: "right" },
   { field: "parking", header: "parking", kind: "money", width: 10, alignment: "right" },
   { field: "fuel", header: "بترول", kind: "money", width: 10, alignment: "right" },
-  { field: "blackPoints", header: "نقاط سوداء", kind: "integer", width: 11, alignment: "right" },
+  { field: "blackPoints", header: "أضرار", kind: "money", width: 11, alignment: "right" },
   { field: "fines", header: "مخالفات", kind: "money", width: 11, alignment: "right" },
   { field: "total", header: "المجموع", kind: "money", width: 12, alignment: "right" },
   { field: "dollar", header: "دولار", kind: "money", width: 10, alignment: "right" },
@@ -100,6 +100,13 @@ export const ARCHIVE_EXPORT_COLUMNS: readonly ArchiveExportColumnDefinition[] = 
 ];
 
 export const ARCHIVE_EXPORT_LAST_COLUMN_LETTER = "X";
+
+/** Legacy Excel headers still accepted on import for the same field. */
+export const ARCHIVE_IMPORT_HEADER_ALIASES: Partial<
+  Record<ArchiveExportField, readonly string[]>
+> = {
+  blackPoints: ["نقاط سوداء", "Damage"],
+};
 
 export const ARCHIVE_EXPORT_DATE_FORMAT = "dd/mm/yyyy";
 

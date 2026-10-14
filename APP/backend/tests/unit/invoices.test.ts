@@ -20,9 +20,47 @@ import {
 import { safeInvoiceSequenceNextNumber } from "src/modules/invoices/invoice-number-sequence.bootstrap";
 import { allocateInvoiceNumber } from "src/modules/invoices/invoice-number-sequence.service";
 import { invoiceLogoAssetPath } from "src/modules/invoices/invoice-logo";
-import fs from "node:fs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import fs, { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import type { Invoice, InvoiceLine } from "@prisma/client";
 import type { Tx } from "src/lib/db/transaction";
+
+const execFileAsync = promisify(execFile);
+
+async function tryExtractPdfText(buf: Buffer): Promise<string | null> {
+  const tmp = join(tmpdir(), `invoice-pdf-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
+  const out = `${tmp}.txt`;
+  writeFileSync(tmp, buf);
+  try {
+    await execFileAsync(
+      "python",
+      [
+        "-c",
+        "import fitz,sys; d=fitz.open(sys.argv[1]); open(sys.argv[2],'w',encoding='utf-8').write(''.join(d[i].get_text() for i in range(d.page_count)))",
+        tmp,
+        out,
+      ],
+      { env: { ...process.env, PYTHONIOENCODING: "utf-8" } },
+    );
+    return readFileSync(out, "utf8");
+  } catch {
+    return null;
+  } finally {
+    try {
+      unlinkSync(tmp);
+    } catch {
+      /* */
+    }
+    try {
+      unlinkSync(out);
+    } catch {
+      /* */
+    }
+  }
+}
 
 test("invoice outbox listens for contract.paid (not contract.signed) for rental issuance", () => {
   const types = INVOICE_OUTBOX_EVENT_TYPES as readonly string[];
@@ -90,7 +128,7 @@ test("ELITE and UNIQUE branding keys resolve from company code", () => {
     code: "ELITE",
     displayName: "ELITE",
     legalNameAr: "x",
-    legalNameEn: "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C",
+    legalNameEn: "Diamond Elite Car Rental LLC",
     accentColor: "#000",
     isActive: true,
     createdAt: new Date(),
@@ -98,6 +136,7 @@ test("ELITE and UNIQUE branding keys resolve from company code", () => {
   });
   assert.equal(elite.brandKey, "ELITE");
   assert.match(elite.displayName, /ELITE/);
+  assert.equal(elite.legalHeaderEn, "Diamond Elite Car Rental LLC");
 });
 
 test("WhatsApp message includes invoice and contract context", () => {
@@ -144,7 +183,7 @@ test("PDF generator returns valid PDF bytes with invoice metadata", async () => 
     contractNumberSnapshot: "DRC-2401",
     vehicleNameSnapshot: "Nissan Patrol",
     plateNumberSnapshot: "A 12345",
-    companyDisplayNameSnapshot: "DIAMOND ELITE RENT CAR",
+    companyDisplayNameSnapshot: "Diamond Elite Car Rental LLC",
     companyAddressSnapshot: "Dubai",
     companyEmailSnapshot: "info@test.ae",
     companyBrandKeySnapshot: "ELITE",
@@ -185,6 +224,10 @@ test("PDF generator returns valid PDF bytes with invoice metadata", async () => 
   assert.match(latin, /1035/);
   assert.match(latin, /Invoice 1035/);
   assert.match(latin, /\/Image/);
+  const text = await tryExtractPdfText(buffer);
+  if (text) {
+    assert.ok(text.includes("Diamond Elite Car Rental LLC"));
+  }
 });
 
 test("PDF for fully paid rental shows zero balance and received-in-full wording", async () => {
@@ -206,7 +249,7 @@ test("PDF for fully paid rental shows zero balance and received-in-full wording"
     contractNumberSnapshot: "DRC-PAID",
     vehicleNameSnapshot: "Toyota Camry",
     plateNumberSnapshot: "B 99999",
-    companyDisplayNameSnapshot: "DIAMOND ELITE RENT CAR",
+    companyDisplayNameSnapshot: "Diamond Elite Car Rental LLC",
     companyAddressSnapshot: "Dubai",
     companyEmailSnapshot: "info@test.ae",
     companyBrandKeySnapshot: "ELITE",
@@ -316,7 +359,7 @@ test("UNIQUE PDF embeds raster logo (Image XObject)", async () => {
     contractNumberSnapshot: "DRC-UNQ",
     vehicleNameSnapshot: "SUV",
     plateNumberSnapshot: "U 999",
-    companyDisplayNameSnapshot: "DIAMOND UNIQUE RENT CAR",
+    companyDisplayNameSnapshot: "Diamond Unique Car Rental CO.L.L.C.S.O.C",
     companyAddressSnapshot: "Dubai",
     companyEmailSnapshot: "info@unique.ae",
     companyBrandKeySnapshot: "UNIQUE",
@@ -351,7 +394,12 @@ test("UNIQUE PDF embeds raster logo (Image XObject)", async () => {
     ],
   };
   const buffer = await renderInvoicePdfBuffer(invoice);
-  assert.match(buffer.toString("latin1"), /\/Image/);
+  const latin = buffer.toString("latin1");
+  assert.match(latin, /\/Image/);
+  const text = await tryExtractPdfText(buffer);
+  if (text) {
+    assert.ok(text.includes("Diamond Unique Car Rental CO.L.L.C.S.O.C"));
+  }
 });
 
 test("WhatsApp message body does not accept phone override (builder is server-side only)", () => {

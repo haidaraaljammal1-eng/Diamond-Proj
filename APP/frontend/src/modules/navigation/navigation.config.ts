@@ -35,6 +35,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/dashboard",
         icon: "dashboard",
         permission: "dashboard.read",
+        functionalPageId: "dashboard",
       },
       {
         key: "cars",
@@ -43,6 +44,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/vehicles",
         icon: "cars",
         permissions: [...VEHICLES_PAGE_PERMISSIONS],
+        functionalPageId: "vehicles",
       },
       {
         key: "gps",
@@ -51,6 +53,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/gps",
         icon: "gps",
         permission: "gps.read",
+        functionalPageId: "gps",
       },
       {
         key: "maintenance",
@@ -59,6 +62,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/maintenance",
         icon: "maintenance",
         permissions: [...MAINTENANCE_PAGE_PERMISSIONS],
+        functionalPageId: "maintenance",
       },
       {
         key: "archive",
@@ -67,6 +71,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/archive",
         icon: "archive",
         permissions: [...ARCHIVE_PAGE_PERMISSIONS],
+        functionalPageId: "archive",
       },
       {
         key: "violations",
@@ -75,6 +80,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/violations",
         icon: "violations",
         permission: "violations.read",
+        functionalPageId: "violations",
       },
       {
         key: "finance",
@@ -83,6 +89,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/finance",
         icon: "finance",
         permissions: [...FINANCE_PAGE_PERMISSIONS],
+        functionalPageId: "finance",
       },
       {
         key: "invoices",
@@ -91,6 +98,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/invoices",
         icon: "invoices",
         permissions: [...INVOICES_PAGE_PERMISSIONS],
+        functionalPageId: "invoices",
       },
       {
         key: "contracts",
@@ -99,6 +107,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/contracts",
         icon: "contracts",
         permissions: [...CONTRACTS_PAGE_PERMISSIONS],
+        functionalPageId: "contracts",
       },
       {
         key: "chats",
@@ -107,6 +116,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/whatsapp",
         icon: "chats",
         permission: "whatsapp.read",
+        functionalPageId: "whatsapp",
       },
     ],
   },
@@ -123,6 +133,7 @@ export const navigationConfig: NavigationConfig = [
         icon: "team",
         adminOnly: true,
         permissions: [...USERS_PAGE_PERMISSIONS],
+        functionalPageId: "users",
       },
       {
         // Permission-driven: the page reads `GET /roles` and `GET /permissions`,
@@ -133,6 +144,7 @@ export const navigationConfig: NavigationConfig = [
         href: "/roles",
         icon: "roles",
         permissions: [...ROLES_PAGE_PERMISSIONS],
+        functionalPageId: "roles",
       },
     ],
   },

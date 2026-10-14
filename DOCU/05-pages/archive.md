@@ -26,4 +26,6 @@ Vehicle row loads use a request-id guard so a stale vehicle response cannot over
 
 6. **Download Excel** (`GET /archive/export`) — exports all current fleet vehicles in one workbook (not only the selected vehicle). Requires `archive.read`. Before download, any dirty editable cell is committed; failed unsaved edits block export.
 
+7. **Import Excel** — upload the same Diamond export workbook (`.xlsx`, all sheets). `POST /archive/import/preview` parses and validates without writing; `POST /archive/import/confirm` replaces archive rows per matched vehicle (plate from row 1 header). Requires `archive.manage` (RBAC V2: `diamond.fn.archive.full`). Unmatched sheets are skipped; vehicles absent from the file are untouched.
+
 No operational auto-population.

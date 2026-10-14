@@ -1,5 +1,8 @@
 import type { ManualExpense, ManualExpenseCategory, FinancialLedgerKind, Prisma } from "@prisma/client";
-import type { OpenReceivableSourceType } from "src/modules/finance/finance.constants";
+import {
+  COLLECTION_LEDGER_KINDS,
+  type OpenReceivableSourceType,
+} from "src/modules/finance/finance.constants";
 import type { CompanyRef } from "src/modules/operating-companies/company-ref";
 
 /**
@@ -72,12 +75,7 @@ export function toVehicleSummary(
 }
 
 export function ledgerDirection(kind: FinancialLedgerKind): "COLLECTION" | "EXPENSE" | "EXPENSE_REVERSAL" {
-  if (
-    kind === "RENTAL_PAYMENT" ||
-    kind === "RENEWAL_PAYMENT" ||
-    kind === "RECONCILIATION_PAYMENT" ||
-    kind === "POST_CLOSE_RECEIVABLE_PAYMENT"
-  ) {
+  if ((COLLECTION_LEDGER_KINDS as readonly FinancialLedgerKind[]).includes(kind)) {
     return "COLLECTION";
   }
   if (kind === "MANUAL_EXPENSE_REVERSAL") return "EXPENSE_REVERSAL";

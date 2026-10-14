@@ -14,6 +14,7 @@ import styles from "./user-card.module.css";
 export interface UserCardProps {
   user: UserDto;
   canUpdate: boolean;
+  canEnableDisable: boolean;
   canDelete: boolean;
   isStatusUpdating: boolean;
   isDeleting: boolean;
@@ -25,6 +26,7 @@ export interface UserCardProps {
 export function UserCard({
   user,
   canUpdate,
+  canEnableDisable,
   canDelete,
   isStatusUpdating,
   isDeleting,
@@ -36,7 +38,7 @@ export function UserCard({
   const format = useFormatter();
   const displayName = getDisplayName(user.name, user.email);
   const toggleable = isUserStatusToggleable(user.status);
-  const showSwitch = canUpdate && toggleable && onToggleStatus;
+  const showSwitch = canEnableDisable && toggleable && onToggleStatus;
   const showActions = (canUpdate && onEdit) || (canDelete && onDelete);
 
   const lastActivity =

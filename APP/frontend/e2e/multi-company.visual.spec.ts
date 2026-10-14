@@ -133,7 +133,7 @@ test.describe("Operating Company frontend", () => {
       if (rendered) break;
     }
     expect(rendered, "no signed contract rendered an official A4").toBe(true);
-    await expect(a4.getByText("DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C", { exact: true })).toBeVisible();
+    await expect(a4.getByText("Diamond Unique Car Rental CO.L.L.C.S.O.C")).toBeVisible();
     await a4.screenshot({ path: testInfo.outputPath("official-contract-unique.png") });
   });
 

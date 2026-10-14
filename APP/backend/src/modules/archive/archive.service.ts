@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma } from "@prisma/client";
+import type { ArchiveRow, Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
 import { withTransaction } from "src/lib/db/transaction";
@@ -8,6 +8,19 @@ import {
   archiveRowNotFoundError,
   vehicleNotFoundError,
 } from "src/modules/archive/archive.errors";
+import { buildFlexibleArchivePatch } from "src/modules/archive/archive-manual-cell-values";
+import {
+  ARCHIVE_SYNC_AUTO_FIELDS,
+  type ArchiveSyncAutoField,
+  parseManualOverrides,
+  serializeManualOverrides,
+  isManualOverride,
+  paymentLedgerAfterPatch,
+  setManualOverride,
+  shouldRecalculatePaymentLedgerAfterPatch,
+  shouldRecalculateTotalAfterPatch,
+  totalAfterPatch,
+} from "src/modules/archive/archive-manual-overrides";
 import { toArchiveRow, toArchiveVehicle } from "src/modules/archive/archive.mapper";
 import type {
   ArchiveRowDto,
@@ -129,9 +142,49 @@ export function createArchiveService(fastify: FastifyInstance) {
     const existing = await prisma.archiveRow.findUnique({ where: { id: rowId } });
     if (!existing) throw archiveRowNotFoundError();
 
+    const flexible = buildFlexibleArchivePatch(existing, body);
+    const data = flexible.data;
+    let overrides = parseManualOverrides(existing.manualOverrides);
+    const syncAutoTouched = flexible.patchedFields.some((field) =>
+      (ARCHIVE_SYNC_AUTO_FIELDS as readonly string[]).includes(field),
+    );
+    if (syncAutoTouched) {
+      for (const field of flexible.patchedFields) {
+        if ((ARCHIVE_SYNC_AUTO_FIELDS as readonly string[]).includes(field)) {
+          overrides = setManualOverride(overrides, field as ArchiveSyncAutoField, true);
+        }
+      }
+      data.manualOverrides = serializeManualOverrides(overrides);
+    }
+    const patchBody = body as Partial<ArchiveRow>;
+    if (shouldRecalculateTotalAfterPatch(overrides, patchBody, flexible.chargeComponentTouched)) {
+      data.total = totalAfterPatch(
+        existing,
+        data as unknown as Prisma.ArchiveRowUncheckedUpdateInput,
+      );
+    }
+    if (
+      existing.contractId &&
+      shouldRecalculatePaymentLedgerAfterPatch(overrides, patchBody, {
+        chargeComponentTouched: flexible.chargeComponentTouched,
+        rentalOrTotalTouched: flexible.rentalOrTotalTouched,
+      })
+    ) {
+      const payments = await prisma.contractPayment.findMany({
+        where: { contractId: existing.contractId },
+      });
+      const ledger = paymentLedgerAfterPatch(
+        existing,
+        data as unknown as Prisma.ArchiveRowUncheckedUpdateInput,
+        payments,
+      );
+      if (!isManualOverride(overrides, "cash")) data.cash = ledger.cash;
+      if (!isManualOverride(overrides, "visa")) data.visa = ledger.visa;
+    }
+
     const row = await prisma.archiveRow.update({
       where: { id: rowId },
-      data: pickArchiveManualFields(body),
+      data: data as Prisma.ArchiveRowUncheckedUpdateInput,
     });
     return toArchiveRow(row);
   }

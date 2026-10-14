@@ -44,8 +44,10 @@ export default async function gpsRealtimeRoutes(fastify: FastifyInstance) {
         "X-Accel-Buffering": "no",
       });
       reply.raw.flushHeaders?.();
-      request.raw.setTimeout(0);
-      reply.raw.setTimeout(0);
+      const socket = reply.raw.socket;
+      if (socket && typeof socket.setTimeout === "function") {
+        socket.setTimeout(0);
+      }
 
       const write = (value: string) => {
         if (!reply.raw.writableEnded) reply.raw.write(value);

@@ -2,6 +2,12 @@ import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import { addArchiveVehicleWorksheet } from "src/modules/archive/archive-excel";
+import {
+  appendArchiveExcelMetaSheet,
+  type ArchiveExcelMetaRow,
+} from "src/modules/archive/archive-excel-meta";
+import { parseManualCellValues } from "src/modules/archive/archive-manual-cell-values";
+import { parseManualOverrides } from "src/modules/archive/archive-manual-overrides";
 import { buildArchiveSheetNames } from "src/modules/archive/archive-sheet-names";
 
 const ARCHIVE_VEHICLE_SELECT = {
@@ -52,13 +58,31 @@ export function createArchiveExportService(fastify: FastifyInstance) {
     const ExcelJS = (await import("exceljs")).default;
     const workbook = new ExcelJS.Workbook();
 
+    const metaRows: ArchiveExcelMetaRow[] = [];
+
     for (const vehicle of sheetVehicles) {
+      const vehicleRows = rowsByVehicle.get(vehicle.id) ?? [];
       addArchiveVehicleWorksheet(
         workbook,
         sheetNames.get(vehicle.id) ?? `Vehicle ${vehicle.id}`,
         vehicle,
-        rowsByVehicle.get(vehicle.id) ?? [],
+        vehicleRows,
       );
+      for (const row of vehicleRows) {
+        if (row.contractId) {
+          metaRows.push({
+            vehicleId: row.vehicleId,
+            rowOrder: row.rowOrder,
+            contractId: row.contractId,
+            manualOverrides: parseManualOverrides(row.manualOverrides),
+            manualCellValues: parseManualCellValues(row.manualCellValues),
+          });
+        }
+      }
+    }
+
+    if (metaRows.length > 0) {
+      appendArchiveExcelMetaSheet(workbook, metaRows);
     }
 
     return Buffer.from(await workbook.xlsx.writeBuffer());

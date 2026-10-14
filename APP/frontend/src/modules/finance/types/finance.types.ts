@@ -44,6 +44,20 @@ export type LedgerDisplaySource =
 
 export type FinancePeriodPreset = "today" | "week" | "month" | "custom";
 
+export type StatementCompanyCode = "ELITE" | "UNIQUE";
+export type StatementPeriodType = "TODAY" | "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
+
+export interface FinanceStatementExportParams {
+  periodType: StatementPeriodType;
+  date?: string;
+  weekStart?: string;
+  year?: number;
+  month?: number;
+  from?: string;
+  to?: string;
+  locale?: "ar" | "en";
+}
+
 /** Real operating company. GENERAL is `null`, never a synthetic company object. */
 export interface FinanceCompanyRef {
   id: number;

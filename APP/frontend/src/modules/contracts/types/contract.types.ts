@@ -268,6 +268,8 @@ export interface ContractReconciliationDto {
 export interface ContractRenewalDto {
   id: string;
   additionalDays: number;
+  additionalDurationValue?: number;
+  additionalDurationUnit?: "HOUR" | "DAY";
   additionalAmount: number;
   previousEndAt: string;
   newEndAt: string;
@@ -417,7 +419,9 @@ export interface ReconcilePayload {
 }
 
 export interface RenewPayload {
-  additionalDays: number;
+  additionalDays?: number;
+  additionalDurationValue?: number;
+  additionalDurationUnit?: "HOUR" | "DAY";
   additionalAmount: number;
 }
 

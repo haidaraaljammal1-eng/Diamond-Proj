@@ -3,10 +3,23 @@
 // Values are staff-entered only; no operational auto-population in this phase.
 // ---------------------------------------------------------------------------
 
+model ArchiveSyncState {
+  id                     String    @id @default("global")
+  lastSuccessfulSyncAt   DateTime?
+  runningStartedAt       DateTime?
+  runningByUserId        Int?
+  updatedAt              DateTime  @updatedAt
+
+  @@map("archive_sync_state")
+}
+
 model ArchiveRow {
   id            Int       @id @default(autoincrement())
   vehicleId     Int
   vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  /// Linked rental contract for pull-sync rows. Null for legacy/manual rows.
+  contractId    String?   @unique
+  contract      Contract? @relation(fields: [contractId], references: [id], onDelete: Restrict)
   /// Stable per-vehicle spreadsheet order (1-based). Assigned on create only.
   rowOrder      Int
   kmIn          Int?
@@ -35,6 +48,10 @@ model ArchiveRow {
   visa          Int?
   transfer      Int?
   remaining     Int?
+  /// Per-field manual override flags for charge columns (`fuel`, `salik`, `parking`, `blackPoints`, `fines`).
+  manualOverrides Json    @default("{}") @map("manual_overrides")
+  /// Raw manual cell text when a value cannot be stored in the typed column (display + export).
+  manualCellValues Json   @default("{}") @map("manual_cell_values")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

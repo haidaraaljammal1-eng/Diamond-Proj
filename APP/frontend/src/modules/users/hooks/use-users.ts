@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import { useDiamondPageAccess } from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useUsersStore } from "../stores/users.store";
 import type { PageMeta } from "../api/users.api.types";
 import type { UserDto, UserStatus } from "../types/user.types";
-import { USERS_PAGE_PERMISSIONS } from "../users.permissions";
-
 export interface UseUsersResult {
   users: UserDto[];
   meta: PageMeta | null;
@@ -25,7 +23,6 @@ export interface UseUsersResult {
 }
 
 export function useUsers(): UseUsersResult {
-  const { hasPermission } = usePermissions();
   const users = useUsersStore((state) => state.users);
   const meta = useUsersStore((state) => state.meta);
   const query = useUsersStore((state) => state.query);
@@ -35,9 +32,7 @@ export function useUsers(): UseUsersResult {
   const refresh = useUsersStore((state) => state.refresh);
   const setQuery = useUsersStore((state) => state.setQuery);
 
-  const isAllowed = USERS_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
+  const isAllowed = useDiamondPageAccess("users");
 
   useEffect(() => {
     if (isAllowed) void load();

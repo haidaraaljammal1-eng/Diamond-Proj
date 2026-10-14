@@ -43,6 +43,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
   const {
     addUser,
     editUser,
+    canAssignRoles,
     isCreating,
     isUpdating,
     createError,
@@ -50,7 +51,8 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     clearCreateError,
     clearUpdateError,
   } = useUserMutations();
-  const { roles, isAllowed: canPickRoles } = useRoleLookup(target !== null);
+  const { roles } = useRoleLookup(target !== null && canAssignRoles);
+  const canPickRoles = canAssignRoles;
 
   useEffect(() => {
     if (target) {
@@ -86,7 +88,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     const succeeded = await addUser({
       email: values.email,
       name: toNameValue(values.name) || undefined,
-      roleIds: toRoleIds(values.roleId),
+      ...(canPickRoles ? { roleIds: toRoleIds(values.roleId) } : {}),
       password: values.password,
       confirmPassword: values.confirmPassword,
     });

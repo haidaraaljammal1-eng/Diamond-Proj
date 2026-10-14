@@ -82,6 +82,8 @@ if (!RUN) {
         data: {
           contractId: contract.id,
           additionalDays: 2,
+          additionalDurationValue: 2,
+          additionalDurationUnit: "DAY",
           additionalAmount,
           previousEndAt: new Date("2026-06-05T10:00:00.000Z"),
           newEndAt: new Date("2026-06-07T10:00:00.000Z"),

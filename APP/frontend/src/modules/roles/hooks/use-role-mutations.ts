@@ -1,6 +1,11 @@
 "use client";
 
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  isFunctionalRbacV2ModeMismatch,
+  isFunctionalRbacV2UiEnabled,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
   cellKey,
@@ -13,31 +18,44 @@ import type {
 import { ROLES_MANAGE_PERMISSION } from "../roles.permissions";
 
 export interface UseRoleMutationsResult {
-  /** The session holds the Backend permission for role writes. */
   canManage: boolean;
+  canEditRoleMetadata: boolean;
+  canEditMatrix: boolean;
+  matrixEditingDisabled: boolean;
   isSubmitting: boolean;
   error: ApiRequestError | null;
   clearError: () => void;
-  /** Both resolve to `true` only when the Backend accepted the write. */
   createRole: (payload: CreateRolePayload) => Promise<boolean>;
   updateRole: (id: number, payload: UpdateRolePayload) => Promise<boolean>;
-  /** Grants or revokes one permission and saves it immediately. */
   togglePermission: (
     roleId: number,
     permissionKey: string,
     next: boolean,
   ) => Promise<boolean>;
-  /** That cell's write is still in flight. */
+  toggleFunctionalGrant: (
+    roleId: number,
+    capabilityKey: string,
+    next: boolean,
+  ) => Promise<boolean>;
   isCellPending: (roleId: number, permissionKey: string) => boolean;
 }
 
-/**
- * Role writes, kept separate from the read hook because the Backend gates them
- * behind their own permission (`roles.manage`). The dialogs use this facade;
- * they never touch the store or the API layer.
- */
 export function useRoleMutations(): UseRoleMutationsResult {
-  const { hasPermission } = usePermissions();
+  const v2 = isFunctionalRbacV2UiEnabled();
+  const mismatch = isFunctionalRbacV2ModeMismatch();
+  const canManageLegacy = useLegacyOrFunctionalCapability(
+    ROLES_MANAGE_PERMISSION,
+    FN.roles.managePermissions,
+  );
+  const canEditRoleMetadata = useLegacyOrFunctionalCapability(
+    ROLES_MANAGE_PERMISSION,
+    FN.roles.createEdit,
+  );
+  const canManageMatrix = useLegacyOrFunctionalCapability(
+    ROLES_MANAGE_PERMISSION,
+    FN.roles.managePermissions,
+  );
+
   const isSubmitting = useRolesPermissionsStore((state) => state.isSubmitting);
   const error = useRolesPermissionsStore((state) => state.submitError);
   const clearError = useRolesPermissionsStore((state) => state.clearSubmitError);
@@ -46,16 +64,25 @@ export function useRoleMutations(): UseRoleMutationsResult {
   const togglePermission = useRolesPermissionsStore(
     (state) => state.toggleRolePermission,
   );
+  const toggleFunctionalGrant = useRolesPermissionsStore(
+    (state) => state.toggleFunctionalGrant,
+  );
   const pendingCells = useRolesPermissionsStore((state) => state.pendingCells);
 
+  const matrixEditingDisabled = v2 && mismatch;
+
   return {
-    canManage: hasPermission(ROLES_MANAGE_PERMISSION),
+    canManage: v2 ? canEditRoleMetadata : canManageLegacy,
+    canEditRoleMetadata: v2 ? canEditRoleMetadata : canManageLegacy,
+    canEditMatrix: v2 ? canManageMatrix : canManageLegacy,
+    matrixEditingDisabled,
     isSubmitting,
     error,
     clearError,
     createRole,
     updateRole,
     togglePermission,
+    toggleFunctionalGrant,
     isCellPending: (roleId, permissionKey) =>
       pendingCells[cellKey(roleId, permissionKey)] === true,
   };

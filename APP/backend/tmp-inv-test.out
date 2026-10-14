@@ -1,0 +1,1711 @@
+﻿≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+[2026-10-13 07:19:37.615 +0300] [33mWARN[39m: [36mDevelopment database is not bootstrapped. Run: npm run dev:bootstrap[39m
+    [35mfound[39m: 0
+    [35mexpected[39m: 20
+[2026-10-13 07:19:43.059 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "3003fd30-e78a-41e4-90bd-567f67a51933"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/auth/login"
+    }
+[2026-10-13 07:19:43.329 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "3003fd30-e78a-41e4-90bd-567f67a51933"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 127.09259999999995
+[2026-10-13 07:19:43.504 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "00d5c8b9-2b9d-4eaf-8a64-2ff50758c5ee"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+(node:21044) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[2026-10-13 07:19:43.708 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "905e9a3a-6357-4717-a461-0ac747c0aecd"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/offers"
+    }
+[2026-10-13 07:19:43.709 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "00d5c8b9-2b9d-4eaf-8a64-2ff50758c5ee"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 200.76959999999963
+[2026-10-13 07:19:43.905 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "965ffe8b-c436-4117-a629-b02ac2549b79"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/bfb10bc3-ea0b-4000-b10b-9744c6daeb6d/rental-link"
+    }
+[2026-10-13 07:19:43.908 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "905e9a3a-6357-4717-a461-0ac747c0aecd"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 194.82120000000214
+[2026-10-13 07:19:43.970 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "a7b1ffbf-274d-48e3-8f42-4c9009c7f061"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/EUl0KUEeYqMLQgYjcxju08J5I3z2_6MOFGd9P_A0FwY/driving-license"
+    }
+[2026-10-13 07:19:43.977 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "965ffe8b-c436-4117-a629-b02ac2549b79"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 62.6913999999997
+[2026-10-13 07:19:44.169 +0300] [32mINFO[39m: [36mdriving_license_upload_meta[39m
+    [35mcontractId[39m: "bfb10bc3-ea0b-4000-b10b-9744c6daeb6d"
+    [35mlicenseUpload[39m: {
+      "mimeType": "image/png",
+      "byteSize": 12,
+      "width": null,
+      "height": null,
+      "aspect": null,
+      "frameAspectValid": null
+    }
+[2026-10-13 07:19:44.426 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "66cd7e84-cfbb-4e32-8454-65d3c035b9bf"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/EUl0KUEeYqMLQgYjcxju08J5I3z2_6MOFGd9P_A0FwY/passport"
+    }
+[2026-10-13 07:19:44.429 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "a7b1ffbf-274d-48e3-8f42-4c9009c7f061"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 450.1196999999993
+[2026-10-13 07:19:44.692 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "f610eeb2-2549-4c98-918b-63fa1711d511"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/EUl0KUEeYqMLQgYjcxju08J5I3z2_6MOFGd9P_A0FwY/form"
+    }
+[2026-10-13 07:19:44.693 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "66cd7e84-cfbb-4e32-8454-65d3c035b9bf"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 262.7492999999995
+[2026-10-13 07:19:44.885 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "49ec4211-1a91-4d81-a72d-276ca359b8d4"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/EUl0KUEeYqMLQgYjcxju08J5I3z2_6MOFGd9P_A0FwY/accept"
+    }
+[2026-10-13 07:19:44.886 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "f610eeb2-2549-4c98-918b-63fa1711d511"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 190.77540000000226
+[2026-10-13 07:19:45.005 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "49ec4211-1a91-4d81-a72d-276ca359b8d4"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 114.4974000000002
+[2026-10-13 07:19:47.727 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "598e674a-f312-4fb8-bbcd-d46361dd1401"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/EUl0KUEeYqMLQgYjcxju08J5I3z2_6MOFGd9P_A0FwY/payment"
+    }
+[2026-10-13 07:19:48.143 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "598e674a-f312-4fb8-bbcd-d46361dd1401"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 412.1245000000017
+[2026-10-13 07:19:48.396 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "fab3847a-ca1a-4401-ae70-41f9e6940dd6"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/payments/status/pl4oyFKrg3hhgXxWsvHStOeF4dx9Ezhrq4CGFo8rqJ8"
+    }
+[2026-10-13 07:19:48.413 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "fab3847a-ca1a-4401-ae70-41f9e6940dd6"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16.44289999999819
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:19:48.667 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1735
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:155:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Promise.all (index 0)
+              at async Suite.run (node:internal/test_runner/test:1794:7)
+              at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:19:48.801 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1736
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:155:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Promise.all (index 0)
+              at async Suite.run (node:internal/test_runner/test:1794:7)
+              at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `prisma.invoice.findMany()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:157:45
+
+  154 
+  155 await drainInvoiceOutbox(app);
+  156 
+ΓåÆ 157 const invoices = await prisma.invoice.findMany(
+The column `invoices.revisionNumber` does not exist in the current database.
+Γû╢ invoices integration
+  Γ£û A: ELITE rental invoice on contract PAID via outbox (number 1100, idempotent) (5321.6378ms)
+[2026-10-13 07:19:48.831 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "64fe6a64-c44f-42fa-8bc2-d3a1815c2b47"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+[2026-10-13 07:19:48.934 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "09d7a956-c6b9-40db-be4a-1ced04cbbe37"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/offers"
+    }
+[2026-10-13 07:19:48.935 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "64fe6a64-c44f-42fa-8bc2-d3a1815c2b47"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 102.40030000000115
+[2026-10-13 07:19:49.075 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "1ef2c4a2-1210-4681-a050-806a1b6c80ff"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/1758a4b6-1b94-44e0-902d-079bdbb7dfcd/rental-link"
+    }
+[2026-10-13 07:19:49.077 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "09d7a956-c6b9-40db-be4a-1ced04cbbe37"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 139.46219999999812
+[2026-10-13 07:19:49.209 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "7be78a7e-7a12-4f2e-9b0e-5a8f04b47043"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/QWFFzDwsSlGQJ00x9ITQxdz-V-cFzfX-d0GTTbHoTUI/driving-license"
+    }
+[2026-10-13 07:19:49.212 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "1ef2c4a2-1210-4681-a050-806a1b6c80ff"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 132.0077999999994
+[2026-10-13 07:19:49.228 +0300] [32mINFO[39m: [36mdriving_license_upload_meta[39m
+    [35mcontractId[39m: "1758a4b6-1b94-44e0-902d-079bdbb7dfcd"
+    [35mlicenseUpload[39m: {
+      "mimeType": "image/png",
+      "byteSize": 12,
+      "width": null,
+      "height": null,
+      "aspect": null,
+      "frameAspectValid": null
+    }
+[2026-10-13 07:19:49.359 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "00bfb49c-4b1f-4c3a-be00-5692c1f35273"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/QWFFzDwsSlGQJ00x9ITQxdz-V-cFzfX-d0GTTbHoTUI/passport"
+    }
+[2026-10-13 07:19:49.361 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "7be78a7e-7a12-4f2e-9b0e-5a8f04b47043"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 148.32270000000062
+[2026-10-13 07:19:49.538 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "46377409-2cd1-42b5-baf9-eeaf94f25eeb"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/QWFFzDwsSlGQJ00x9ITQxdz-V-cFzfX-d0GTTbHoTUI/form"
+    }
+[2026-10-13 07:19:49.539 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "00bfb49c-4b1f-4c3a-be00-5692c1f35273"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 177.100400000003
+[2026-10-13 07:19:49.601 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "fd7c7385-4f4e-498b-afa9-9717843bf014"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/QWFFzDwsSlGQJ00x9ITQxdz-V-cFzfX-d0GTTbHoTUI/accept"
+    }
+[2026-10-13 07:19:49.602 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "46377409-2cd1-42b5-baf9-eeaf94f25eeb"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 61.467899999999645
+[2026-10-13 07:19:49.744 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "fd7c7385-4f4e-498b-afa9-9717843bf014"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 140.71990000000005
+[2026-10-13 07:19:50.394 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "0cfa605f-9410-4f19-b6e2-719dd134d2f6"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/QWFFzDwsSlGQJ00x9ITQxdz-V-cFzfX-d0GTTbHoTUI/payment"
+    }
+[2026-10-13 07:19:50.694 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "0cfa605f-9410-4f19-b6e2-719dd134d2f6"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 297.474000000002
+[2026-10-13 07:19:50.858 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "250ebc25-25b4-4e0c-9096-020f42bdd4c1"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/payments/status/4PecDPQqH793Vnj_xzGwmbgPq_IDoqFtJJMVHg_1RLA"
+    }
+[2026-10-13 07:19:50.867 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "250ebc25-25b4-4e0c-9096-020f42bdd4c1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8.420000000001892
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:19:51.033 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1746
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:210:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:19:51.227 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1747
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:210:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `prisma.invoice.findFirstOrThrow()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:211:40
+
+  208   payments: fakePayments,
+  209 });
+  210 await drainInvoiceOutbox(app);
+ΓåÆ 211 const inv = await prisma.invoice.findFirstOrThrow(
+The column `invoices.revisionNumber` does not exist in the current database.
+  Γ£û B: UNIQUE rental uses independent sequence (also starts at 1100) (2419.1371ms)
+[2026-10-13 07:19:51.237 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "f26c1345-c5ff-455e-ade7-fbf2daa0120a"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/invoices?companyCode=ELITE&page=1&pageSize=50"
+    }
+prisma:error 
+Invalid `prisma.invoice.findMany()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice.service.ts:76:45
+
+  73 pageSize: query.pageSize,
+  74 count: () => prisma.invoice.count({ where }),
+  75 findMany: async (skip, take) => {
+ΓåÆ 76   const rows = await prisma.invoice.findMany(
+The column `invoices.revisionNumber` does not exist in the current database.
+  Γ£û C: list company filter and search (27.7622ms)
+  Γ£û D: detail, PDF, deliveries, no manual POST /invoices (4.9873ms)
+  Γ£û E: road liability invoice + closed contract late fine (0.7525ms)
+  Γ£û F: reconciliation damage invoice; G: skip road-liability recon line (no double bill) (0.7313ms)
+  Γ£û H: revision history preserves rental snapshot; only one current (1.3216ms)
+[2026-10-13 07:19:51.257 +0300] [31mERROR[39m: [36munhandled error[39m
+    [35mreqId[39m: "f26c1345-c5ff-455e-ade7-fbf2daa0120a"
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `prisma.invoice.findMany()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\invoice.service.ts:76:45\n\n  73 pageSize: query.pageSize,\n  74 count: () => prisma.invoice.count({ where }),\n  75 findMany: async (skip, take) => {\nΓåÆ 76   const rows = await prisma.invoice.findMany(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `prisma.invoice.findMany()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice.service.ts:76:45
+          
+            73 pageSize: query.pageSize,
+            74 count: () => prisma.invoice.count({ where }),
+            75 findMany: async (skip, take) => {
+          ΓåÆ 76   const rows = await prisma.invoice.findMany(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async Object.findMany (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice.service.ts:76:24)
+              at async Promise.all (index 1)
+              at async paginate (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\lib\http\pagination.ts:49:25)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+[2026-10-13 07:19:51.261 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "f26c1345-c5ff-455e-ade7-fbf2daa0120a"
+    [35mres[39m: {
+      "statusCode": 500
+    }
+    [35mresponseTime[39m: 24.240399999998772
+prisma:error 
+Invalid `prisma.invoice.count()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice.service.ts:74:37
+
+  71 return paginate({
+  72   page: query.page,
+  73   pageSize: query.pageSize,
+ΓåÆ 74   count: () => prisma.invoice.count(
+The column `invoices.isCurrent` does not exist in the current database.
+prisma:error 
+Invalid `prisma.invoice.findFirstOrThrow()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:500:40
+
+  497 });
+  498 
+  499 test("O/P: WhatsApp unconfigured fails closed; idempotency key returns same delivery row", async () => {
+ΓåÆ 500   const inv = await prisma.invoice.findFirstOrThrow(
+The column `invoices.revisionNumber` does not exist in the current database.
+  Γ£û O/P: WhatsApp unconfigured fails closed; idempotency key returns same delivery row (211.6926ms)
+Γ£û invoices integration (17291.5974ms)
+[2026-10-13 07:19:51.485 +0300] [32mINFO[39m: [36mbackground scheduler: stopped[39m
+≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+[2026-10-13 07:19:55.320 +0300] [33mWARN[39m: [36mDevelopment database is not bootstrapped. Run: npm run dev:bootstrap[39m
+    [35mfound[39m: 0
+    [35mexpected[39m: 20
+[2026-10-13 07:20:01.180 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "80db6d8d-4074-43fe-80f3-252a0f09f745"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/auth/login"
+    }
+[2026-10-13 07:20:01.363 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "58ce20dc-7153-41be-8ec7-cc66d5ae199b"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/auth/login"
+    }
+[2026-10-13 07:20:01.366 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "80db6d8d-4074-43fe-80f3-252a0f09f745"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 177.27679999999964
+[2026-10-13 07:20:01.543 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "58ce20dc-7153-41be-8ec7-cc66d5ae199b"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 175.63800000000083
+[2026-10-13 07:20:01.589 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "3999327b-1573-4916-abb4-7e3278b8576e"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+(node:6416) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[2026-10-13 07:20:01.662 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "3999327b-1573-4916-abb4-7e3278b8576e"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 68.48860000000059
+[2026-10-13 07:20:01.672 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "a634af38-6ad9-4611-ab27-3eb0ff6f7542"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+[2026-10-13 07:20:02.056 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "a634af38-6ad9-4611-ab27-3eb0ff6f7542"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 378.207699999999
+[2026-10-13 07:20:02.651 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "2ba089b9-c0b4-4c9e-933a-17ce2c3f8e68"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/0ff7ef72-f08a-4eba-b1b8-3222980ebf24/manual-charge"
+    }
+[2026-10-13 07:20:03.521 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "2ba089b9-c0b4-4c9e-933a-17ce2c3f8e68"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 863.3618000000006
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:03.793 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1748
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async assertSuccessfulChargePipeline (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:276:23)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:401:27)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Promise.all (index 0)
+              at async Suite.run (node:internal/test_runner/test:1794:7)
+              at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:03.822 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1749
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async assertSuccessfulChargePipeline (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:276:23)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:401:27)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Promise.all (index 0)
+              at async Suite.run (node:internal/test_runner/test:1794:7)
+              at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `prisma.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:277:42
+
+  274 assert.equal(outboxPending, 1);
+  275 
+  276 const drained = await drainInvoiceOutbox(app);
+ΓåÆ 277 let invoice = await prisma.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+Γû╢ staff manual charge ΓÇö financial integration (haidara_test only)
+  Γ£û TRAFFIC_VIOLATION 350 AED ΓÇö ELITE payment, ledger, invoice, API list (1682.271ms)
+[2026-10-13 07:20:03.997 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "b79dab63-42f3-4c68-af1f-377c14f21452"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/2fd5b8da-b57c-48da-8c0f-431039ebf8dd/manual-charge"
+    }
+[2026-10-13 07:20:04.712 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "b79dab63-42f3-4c68-af1f-377c14f21452"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 710.3876
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:05.044 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1750
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async assertSuccessfulChargePipeline (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:276:23)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:434:27)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:05.136 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1751
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async assertSuccessfulChargePipeline (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:276:23)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:434:27)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `prisma.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:277:42
+
+  274 assert.equal(outboxPending, 1);
+  275 
+  276 const drained = await drainInvoiceOutbox(app);
+ΓåÆ 277 let invoice = await prisma.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+  Γ£û SALIK 350 AED ΓÇö UNIQUE separate invoice numbering (1311.3093ms)
+[2026-10-13 07:20:05.246 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "7b85bd72-2239-46e2-a7e8-ffd30ac4c617"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/e55c3a80-4dda-4c52-a86e-a25846c67cc5/manual-charge"
+    }
+[2026-10-13 07:20:05.246 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "17b2f4f7-74cb-49ff-a38a-48b8554481a3"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/e55c3a80-4dda-4c52-a86e-a25846c67cc5/manual-charge"
+    }
+prisma:error 
+Invalid `prisma.idempotencyKey.create()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\lib\db\idempotency.ts:52:33
+
+  49 ): Promise<IdempotencyResult<T>> {
+  50   const resultRef = params.fingerprint ?? params.resultRef;
+  51   try {
+ΓåÆ 52     await prisma.idempotencyKey.create(
+Unique constraint failed on the fields: (`scope`, `key`)
+[2026-10-13 07:20:05.503 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "7b85bd72-2239-46e2-a7e8-ffd30ac4c617"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 165.51370000000134
+[2026-10-13 07:20:05.747 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "82c77af2-5f0a-4a55-8751-1f03596e06e8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/e55c3a80-4dda-4c52-a86e-a25846c67cc5/manual-charge"
+    }
+[2026-10-13 07:20:05.749 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "17b2f4f7-74cb-49ff-a38a-48b8554481a3"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 499.83389999999963
+prisma:error 
+Invalid `prisma.idempotencyKey.create()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\lib\db\idempotency.ts:52:33
+
+  49 ): Promise<IdempotencyResult<T>> {
+  50   const resultRef = params.fingerprint ?? params.resultRef;
+  51   try {
+ΓåÆ 52     await prisma.idempotencyKey.create(
+Unique constraint failed on the fields: (`scope`, `key`)
+  Γ£ö idempotency-key replay and concurrent duplicate do not double charge (665.6927ms)
+[2026-10-13 07:20:05.883 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "82c77af2-5f0a-4a55-8751-1f03596e06e8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 52.50630000000092
+[2026-10-13 07:20:05.906 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "f892b81b-2b2a-41c7-afff-f0ba7af48923"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/c52959d1-92ca-42ce-9442-e7f5d5ecd65d/manual-charge"
+    }
+[2026-10-13 07:20:05.923 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "f892b81b-2b2a-41c7-afff-f0ba7af48923"
+    [35mcode[39m: "FORBIDDEN"
+    [35mstatusCode[39m: 403
+[2026-10-13 07:20:05.927 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "f892b81b-2b2a-41c7-afff-f0ba7af48923"
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 20.01000000000022
+[2026-10-13 07:20:06.024 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "ef56e2f3-f2f9-4087-bd91-dff043c14a35"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/c731e399-0258-42e1-8fbe-04ebe2db9567/manual-charge"
+    }
+[2026-10-13 07:20:06.157 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "ef56e2f3-f2f9-4087-bd91-dff043c14a35"
+    [35mcode[39m: "VALIDATION_ERROR"
+    [35mstatusCode[39m: 422
+[2026-10-13 07:20:06.158 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "ef56e2f3-f2f9-4087-bd91-dff043c14a35"
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 133.83059999999932
+[2026-10-13 07:20:06.270 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "66bb3f94-7d8f-4e14-95f1-877b4d4f7990"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/38ff95a3-a0e2-459e-b7b7-9b0c594a3e6c/manual-charge"
+    }
+[2026-10-13 07:20:06.281 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "66bb3f94-7d8f-4e14-95f1-877b4d4f7990"
+    [35mcode[39m: "VALIDATION_ERROR"
+    [35mstatusCode[39m: 422
+[2026-10-13 07:20:06.282 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "66bb3f94-7d8f-4e14-95f1-877b4d4f7990"
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 11.289299999998548
+[2026-10-13 07:20:06.413 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "5a30b9e7-e94b-404e-a64d-7b7267e0c03a"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/e2e762fb-c6e5-425a-bf4d-45a0a546ab4a/manual-charge"
+    }
+  Γ£ö guards: read-only, cash, stale window, v1 consent (630.4554ms)
+[2026-10-13 07:20:06.439 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "5a30b9e7-e94b-404e-a64d-7b7267e0c03a"
+    [35mcode[39m: "VALIDATION_ERROR"
+    [35mstatusCode[39m: 422
+[2026-10-13 07:20:06.440 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "5a30b9e7-e94b-404e-a64d-7b7267e0c03a"
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 26.77179999999862
+[2026-10-13 07:20:06.676 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "827a4e97-f9fa-4452-b1c3-bf7962580f03"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/87a31c3d-5a1e-4152-9fae-a08273c4fc16/manual-charge"
+    }
+[2026-10-13 07:20:06.699 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "827a4e97-f9fa-4452-b1c3-bf7962580f03"
+    [35mcode[39m: "VALIDATION_ERROR"
+    [35mstatusCode[39m: 422
+[2026-10-13 07:20:06.699 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "827a4e97-f9fa-4452-b1c3-bf7962580f03"
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 23.14350000000013
+  Γ£ö critical A: contract B without its own authorization never hits Stripe (261.6501ms)
+[2026-10-13 07:20:06.828 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "f401ff84-dc68-4140-b056-05e937a01819"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/39d58722-9084-42b4-ab5c-01a39b3e1b65/collection/off-session"
+    }
+[2026-10-13 07:20:06.886 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "f401ff84-dc68-4140-b056-05e937a01819"
+    [35mcode[39m: "CONFLICT"
+    [35mstatusCode[39m: 409
+[2026-10-13 07:20:06.887 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "f401ff84-dc68-4140-b056-05e937a01819"
+    [35mres[39m: {
+      "statusCode": 409
+    }
+    [35mresponseTime[39m: 58.85439999999835
+[2026-10-13 07:20:06.887 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "46619a79-3edf-4759-8952-522c900f3949"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/813a5483-cb2d-485a-9d5a-29f421b4800f/manual-charge"
+    }
+[2026-10-13 07:20:07.331 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "6104e6a9-658d-4656-aee0-38ab07e2162c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/813a5483-cb2d-485a-9d5a-29f421b4800f/manual-charge"
+    }
+[2026-10-13 07:20:07.333 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "46619a79-3edf-4759-8952-522c900f3949"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 443.52250000000095
+[2026-10-13 07:20:07.598 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "6104e6a9-658d-4656-aee0-38ab07e2162c"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 265.03749999999854
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:07.731 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1752
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:662:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:07.854 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1753
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:662:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:07.976 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1754
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:662:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:08.098 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1755
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:662:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:08.221 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1756
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:662:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `tx.invoice.findFirst()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+
+  384 const balanceDue = Math.max(0, totalAmount - collected);
+  385 const fingerprint = fingerprintLines(lines, balanceDue);
+  386 
+ΓåÆ 387 const current = await tx.invoice.findFirst(
+The column `invoices.revisionNumber` does not exist in the current database.
+[2026-10-13 07:20:08.344 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1757
+    err: {
+      "type": "PrismaClientKnownRequestError",
+      "message": "\nInvalid `tx.invoice.findFirst()` invocation in\nD:\\projects\\DiamondElite\\fullproject\\Diamond-Proj\\APP\\backend\\src\\modules\\invoices\\contract-invoice-consolidation.service.ts:387:42\n\n  384 const balanceDue = Math.max(0, totalAmount - collected);\n  385 const fingerprint = fingerprintLines(lines, balanceDue);\n  386 \nΓåÆ 387 const current = await tx.invoice.findFirst(\nThe column `invoices.revisionNumber` does not exist in the current database.",
+      "stack":
+          PrismaClientKnownRequestError: 
+          Invalid `tx.invoice.findFirst()` invocation in
+          D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:42
+          
+            384 const balanceDue = Math.max(0, totalAmount - collected);
+            385 const fingerprint = fingerprintLines(lines, balanceDue);
+            386 
+          ΓåÆ 387 const current = await tx.invoice.findFirst(
+          The column `invoices.revisionNumber` does not exist in the current database.
+              at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+              at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+              at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+              at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:387:25)
+              at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+              at async handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:56:5)
+              at async Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:25)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:662:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+      "code": "P2022",
+      "meta": {
+        "modelName": "Invoice",
+        "driverAdapterError": {
+          "name": "DriverAdapterError",
+          "cause": {
+            "originalCode": "42703",
+            "originalMessage": "column invoices.revisionNumber does not exist",
+            "kind": "ColumnNotFound",
+            "column": "invoices.revisionNumber"
+          }
+        }
+      },
+      "clientVersion": "7.8.0",
+      "name": "PrismaClientKnownRequestError"
+    }
+prisma:error 
+Invalid `prisma.invoice.count()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:663:41
+
+  660   2,
+  661 );
+  662 await drainInvoiceOutbox(app);
+ΓåÆ 663 assert.equal(await prisma.invoice.count(
+The column `invoices.isCurrent` does not exist in the current database.
+  Γ£û critical C: reconciliation-linked liability blocks direct off-session; independent staff charges allowed (1648.6704ms)
+[2026-10-13 07:20:08.489 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "1e302ed0-ccb8-4751-9f0f-42e88e2e9c74"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/c7b23799-e1ed-45b2-905a-20441729304a/manual-charge"
+    }
+[2026-10-13 07:20:08.770 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "e6bf14b9-e022-4fef-81e4-d22068c195c8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/c7b23799-e1ed-45b2-905a-20441729304a/manual-charge"
+    }
+[2026-10-13 07:20:08.771 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "18ca849e-b722-45d0-91a5-1b06a8565edb"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/c7b23799-e1ed-45b2-905a-20441729304a/manual-charge"
+    }
+[2026-10-13 07:20:08.774 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "1e302ed0-ccb8-4751-9f0f-42e88e2e9c74"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 279.8735000000015
+prisma:error 
+Invalid `prisma.idempotencyKey.create()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\lib\db\idempotency.ts:52:33
+
+  49 ): Promise<IdempotencyResult<T>> {
+  50   const resultRef = params.fingerprint ?? params.resultRef;
+  51   try {
+ΓåÆ 52     await prisma.idempotencyKey.create(
+Unique constraint failed on the fields: (`scope`, `key`)
+prisma:error 
+Invalid `prisma.idempotencyKey.create()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\lib\db\idempotency.ts:52:33
+
+  49 ): Promise<IdempotencyResult<T>> {
+  50   const resultRef = params.fingerprint ?? params.resultRef;
+  51   try {
+ΓåÆ 52     await prisma.idempotencyKey.create(
+Unique constraint failed on the fields: (`scope`, `key`)
+  Γ£ö critical D: concurrent idempotency and processing state do not double-charge (576.202ms)
+[2026-10-13 07:20:08.970 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "e6bf14b9-e022-4fef-81e4-d22068c195c8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 148.40980000000127
+[2026-10-13 07:20:08.971 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "18ca849e-b722-45d0-91a5-1b06a8565edb"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 149.3897999999972
+Γ£û staff manual charge ΓÇö financial integration (haidara_test only) (16705.1037ms)
+[2026-10-13 07:20:09.511 +0300] [32mINFO[39m: [36mbackground scheduler: stopped[39m
+Γ£ö invoice outbox listens for contract.paid (not contract.signed) for rental issuance (1.595ms)
+Γ£ö rental origin key is idempotent per contract (0.254ms)
+Γ£ö road liability origin key uses customer charge id (0.1843ms)
+Γ£ö Net 30 due date uses calendar days in UTC (0.3126ms)
+Γ£ö AED formatting matches invoice style (0.4569ms)
+Γ£ö derive rental qty/rate uses integer division when exact (1.1803ms)
+Γ£ö custom pricing falls back to qty 1 (0.2013ms)
+Γ£ö non-divisible agreed amount falls back to qty 1 (0.1917ms)
+Γ£ö ELITE and UNIQUE branding keys resolve from company code (0.495ms)
+Γ£ö WhatsApp message includes invoice and contract context (0.4823ms)
+Γ£ö PDF filename follows company brand (0.2236ms)
+Γ£ö PDF generator returns valid PDF bytes with invoice metadata (204.5673ms)
+Γ£ö PDF for fully paid rental shows zero balance and received-in-full wording (133.5884ms)
+Γ£ö approved sequence start constant is 1100 (0.6747ms)
+Γ£ö safeInvoiceSequenceNextNumber uses 1100 when no invoices exist (0.5861ms)
+Γ£ö safeInvoiceSequenceNextNumber uses 1100 when max issued is below baseline (0.3084ms)
+Γ£ö safeInvoiceSequenceNextNumber advances when max issued is at or above baseline (0.4175ms)
+Γ£ö safeInvoiceSequenceNextNumber is independent per company inputs (0.2404ms)
+Γ£ö allocateInvoiceNumber assigns 1100 then advances to 1101 (0.6194ms)
+Γ£ö reconciliation line origin keys are unique per line (0.2054ms)
+Γ£ö official ELITE and UNIQUE logo asset files exist locally (0.5124ms)
+Γ£ö UNIQUE PDF embeds raster logo (Image XObject) (143.3695ms)
+Γ£ö WhatsApp message body does not accept phone override (builder is server-side only) (0.2935ms)
+Γä╣ tests 38
+Γä╣ suites 2
+Γä╣ pass 27
+Γä╣ fail 11
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 44962.3763
+
+Γ£û failing tests:
+
+test at tests\integration\invoices.integration.test.ts:2:5371
+Γ£û A: ELITE rental invoice on contract PAID via outbox (number 1100, idempotent) (5321.6378ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.invoice.findMany()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:157:45
+  
+    154 
+    155 await drainInvoiceOutbox(app);
+    156 
+  ΓåÆ 157 const invoices = await prisma.invoice.findMany(
+  The column `invoices.revisionNumber` does not exist in the current database.
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:157:24)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1794:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+
+test at tests\integration\invoices.integration.test.ts:2:7888
+Γ£û B: UNIQUE rental uses independent sequence (also starts at 1100) (2419.1371ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.invoice.findFirstOrThrow()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:211:40
+  
+    208   payments: fakePayments,
+    209 });
+    210 await drainInvoiceOutbox(app);
+  ΓåÆ 211 const inv = await prisma.invoice.findFirstOrThrow(
+  The column `invoices.revisionNumber` does not exist in the current database.
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:211:19)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests\integration\invoices.integration.test.ts:2:9013
+Γ£û C: list company filter and search (27.7622ms)
+  AssertionError [ERR_ASSERTION]: {"error":{"code":"INTERNAL_ERROR","message":"An unexpected error occurred","requestId":"f26c1345-c5ff-455e-ade7-fbf2daa0120a"}}
+  
+  500 !== 200
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:224:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 500,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\invoices.integration.test.ts:2:9938
+Γ£û D: detail, PDF, deliveries, no manual POST /invoices (4.9873ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(eliteRentalInvoiceId)
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:251:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\integration\invoices.integration.test.ts:2:11228
+Γ£û E: road liability invoice + closed contract late fine (0.7525ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(eliteContractId)
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:282:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\integration\invoices.integration.test.ts:2:13706
+Γ£û F: reconciliation damage invoice; G: skip road-liability recon line (no double bill) (0.7313ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(eliteContractId)
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:359:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\integration\invoices.integration.test.ts:2:16942
+Γ£û H: revision history preserves rental snapshot; only one current (1.3216ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(eliteContractId)
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:481:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\integration\invoices.integration.test.ts:2:17845
+Γ£û O/P: WhatsApp unconfigured fails closed; idempotency key returns same delivery row (211.6926ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.invoice.findFirstOrThrow()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:500:40
+  
+    497 });
+    498 
+    499 test("O/P: WhatsApp unconfigured fails closed; idempotency key returns same delivery row", async () => {
+  ΓåÆ 500   const inv = await prisma.invoice.findFirstOrThrow(
+  The column `invoices.revisionNumber` does not exist in the current database.
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\invoices.integration.test.ts:500:19)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests\integration\staff-manual-charge-financial.integration.test.ts:2:12878
+Γ£û TRAFFIC_VIOLATION 350 AED ΓÇö ELITE payment, ledger, invoice, API list (1682.271ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.invoice.findFirst()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:277:42
+  
+    274 assert.equal(outboxPending, 1);
+    275 
+    276 const drained = await drainInvoiceOutbox(app);
+  ΓåÆ 277 let invoice = await prisma.invoice.findFirst(
+  The column `invoices.revisionNumber` does not exist in the current database.
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async assertSuccessfulChargePipeline (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:277:21)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:401:27)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1794:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+
+test at tests\integration\staff-manual-charge-financial.integration.test.ts:2:14042
+Γ£û SALIK 350 AED ΓÇö UNIQUE separate invoice numbering (1311.3093ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.invoice.findFirst()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:277:42
+  
+    274 assert.equal(outboxPending, 1);
+    275 
+    276 const drained = await drainInvoiceOutbox(app);
+  ΓåÆ 277 let invoice = await prisma.invoice.findFirst(
+  The column `invoices.revisionNumber` does not exist in the current database.
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async assertSuccessfulChargePipeline (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:277:21)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:434:27)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests\integration\staff-manual-charge-financial.integration.test.ts:2:18987
+Γ£û critical C: reconciliation-linked liability blocks direct off-session; independent staff charges allowed (1648.6704ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.invoice.count()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:663:41
+  
+    660   2,
+    661 );
+    662 await drainInvoiceOutbox(app);
+  ΓåÆ 663 assert.equal(await prisma.invoice.count(
+  The column `invoices.isCurrent` does not exist in the current database.
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\staff-manual-charge-financial.integration.test.ts:663:20)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)

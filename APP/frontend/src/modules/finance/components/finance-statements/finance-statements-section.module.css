@@ -1,0 +1,113 @@
+.wrap {
+  margin: 18px 0 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e8dcc8;
+  background: linear-gradient(180deg, #fffdf8 0%, #fbf6eb 100%);
+}
+
+.head {
+  margin-bottom: 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c2416;
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: #6b6356;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.error {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: var(--diamond-warn, #a63);
+}
+
+.dialogBody {
+  display: grid;
+  gap: 12px;
+}
+
+.dialogMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: #6b6356;
+}
+
+.periodTypeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.periodChip {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #e0d4bc;
+  background: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.periodChipActive {
+  border-color: #9a7b3c;
+  background: #f3ead8;
+  color: #5a4a2d;
+  font-weight: 600;
+}
+
+.todayPreview {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0d4bc;
+  background: #fffdf8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4a4034;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #4a4034;
+}
+
+.field input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e0d4bc;
+  background: #fff;
+}
+
+.monthRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.dialogActions > button:first-child {
+  flex: 1;
+}

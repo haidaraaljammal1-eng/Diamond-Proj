@@ -28,7 +28,7 @@ export const ARCHIVE_COLUMNS: readonly ArchiveColumnDefinition[] = [
   { field: "salik", labelKey: "salik", kind: "money", widthClass: "medium" },
   { field: "parking", labelKey: "parking", kind: "money", widthClass: "medium" },
   { field: "fuel", labelKey: "fuel", kind: "money", widthClass: "medium" },
-  { field: "blackPoints", labelKey: "blackPoints", kind: "integer", widthClass: "narrow" },
+  { field: "blackPoints", labelKey: "blackPoints", kind: "money", widthClass: "narrow" },
   { field: "fines", labelKey: "fines", kind: "money", widthClass: "medium" },
   { field: "total", labelKey: "total", kind: "money", widthClass: "medium" },
   { field: "dollar", labelKey: "dollar", kind: "money", widthClass: "medium" },
@@ -39,3 +39,32 @@ export const ARCHIVE_COLUMNS: readonly ArchiveColumnDefinition[] = [
 ] as const;
 
 export const ARCHIVE_EDITABLE_FIELDS = ARCHIVE_COLUMNS.map((column) => column.field);
+
+/** Mirrors backend `ARCHIVE_SYNC_AUTO_FIELDS` — Pull Sync may write these on linked rows. */
+export const ARCHIVE_SYNC_AUTO_FIELDS = [
+  "kmOut",
+  "kmIn",
+  "km",
+  "deliveryDate",
+  "deliveryTime",
+  "returnDate",
+  "returnTime",
+  "customerName",
+  "customerPhone",
+  "days",
+  "dailyRate",
+  "rentalTotal",
+  "fuel",
+  "salik",
+  "blackPoints",
+  "fines",
+  "total",
+  "cash",
+  "visa",
+] as const;
+
+export type ArchiveSyncAutoField = (typeof ARCHIVE_SYNC_AUTO_FIELDS)[number];
+
+export function isArchiveFieldUserEditable(_field: ArchiveEditableField): boolean {
+  return true;
+}

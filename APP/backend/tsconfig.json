@@ -21,5 +21,13 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts", "prisma/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "dist", "src/schemas/zod"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/schemas/zod",
+    "scripts/_tmp-*.ts",
+    "scripts/rebuild-dev-fleet-gps-safe.ts",
+    "scripts/update-elite-legal-names-once.ts",
+    "scripts/run-rbac-v2-e2e.ts"
+  ]
 }

@@ -78,10 +78,14 @@ test("toArchiveRow maps Prisma row without transformation", () => {
     visa: null,
     transfer: null,
     remaining: null,
+    contractId: null,
+    manualOverrides: { fuel: true },
+    manualCellValues: {},
     createdAt: now,
     updatedAt: now,
   });
   assert.equal(dto.km, 12000);
+  assert.deepEqual(dto.manualOverrides, { fuel: true });
   assert.equal(dto.customerPhone, "+971501234567");
   assert.equal(dto.salik, 150);
   assert.equal(dto.kmIn, null);

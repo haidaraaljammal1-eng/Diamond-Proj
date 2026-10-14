@@ -1,0 +1,845 @@
+﻿≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+[2026-10-13 07:33:17.752 +0300] [33mWARN[39m: [36mDevelopment database is not bootstrapped. Run: npm run dev:bootstrap[39m
+    [35mfound[39m: 0
+    [35mexpected[39m: 20
+[2026-10-13 07:33:24.250 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "048b9104-0e0d-4e39-a661-603a1bdc8b3c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/auth/login"
+    }
+[2026-10-13 07:33:24.526 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "048b9104-0e0d-4e39-a661-603a1bdc8b3c"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 131.4911000000011
+[2026-10-13 07:33:24.686 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "a21d5319-8f5f-45e0-aeea-97d7d1369337"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+(node:10164) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[2026-10-13 07:33:24.865 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "a21d5319-8f5f-45e0-aeea-97d7d1369337"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 175.08770000000004
+[2026-10-13 07:33:24.879 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "c2665562-60b3-4ba9-bbd7-5d9aec83cb5c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+[2026-10-13 07:33:25.024 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "145c195f-6281-4d87-ae38-ddaef2131003"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/offers"
+    }
+[2026-10-13 07:33:25.029 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "c2665562-60b3-4ba9-bbd7-5d9aec83cb5c"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 143.9445999999989
+[2026-10-13 07:33:25.195 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "1cbbf87a-7f12-44aa-95a5-975d39aea526"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/rental-link"
+    }
+[2026-10-13 07:33:25.197 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "145c195f-6281-4d87-ae38-ddaef2131003"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 169.90250000000015
+[2026-10-13 07:33:25.344 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "3d0675f1-abcf-48ac-b28b-9cfe7335af72"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/r6c94LP2KZzvcnIULlbDH60cZuRslGEXmGba7siBZTs/driving-license"
+    }
+[2026-10-13 07:33:25.348 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "1cbbf87a-7f12-44aa-95a5-975d39aea526"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 146.76310000000012
+[2026-10-13 07:33:25.491 +0300] [32mINFO[39m: [36mdriving_license_upload_meta[39m
+    [35mcontractId[39m: "cd0ffaba-f213-4849-8090-5c1779355f1c"
+    [35mlicenseUpload[39m: {
+      "mimeType": "image/png",
+      "byteSize": 12,
+      "width": null,
+      "height": null,
+      "aspect": null,
+      "frameAspectValid": null
+    }
+[2026-10-13 07:33:25.647 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "8951f659-93fa-41e7-95c6-7d62515e6730"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/r6c94LP2KZzvcnIULlbDH60cZuRslGEXmGba7siBZTs/passport"
+    }
+[2026-10-13 07:33:25.649 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "3d0675f1-abcf-48ac-b28b-9cfe7335af72"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 300.27610000000095
+[2026-10-13 07:33:26.018 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "86d4bf9f-a9aa-40ca-9540-7544fce01c34"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/r6c94LP2KZzvcnIULlbDH60cZuRslGEXmGba7siBZTs/form"
+    }
+[2026-10-13 07:33:26.018 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "8951f659-93fa-41e7-95c6-7d62515e6730"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 369.03759999999966
+[2026-10-13 07:33:26.213 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "20690e39-1e20-46a4-b32c-8876cdabf3b8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/r6c94LP2KZzvcnIULlbDH60cZuRslGEXmGba7siBZTs/accept"
+    }
+[2026-10-13 07:33:26.215 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "86d4bf9f-a9aa-40ca-9540-7544fce01c34"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 194.08120000000054
+[2026-10-13 07:33:26.429 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "20690e39-1e20-46a4-b32c-8876cdabf3b8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 212.67360000000008
+[2026-10-13 07:33:26.815 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "fd238e0a-86b3-4acb-8ab8-12196c8d52b0"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/r6c94LP2KZzvcnIULlbDH60cZuRslGEXmGba7siBZTs/payment"
+    }
+[2026-10-13 07:33:27.189 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "fd238e0a-86b3-4acb-8ab8-12196c8d52b0"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 371.27130000000034
+[2026-10-13 07:33:27.481 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "e48e0860-4bf4-4d27-8734-3829023cd4a4"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/payments/status/cEgKPF5rVNwVCdaTb_1gYGm2Sal4O3Es52SIdorM-f0"
+    }
+[2026-10-13 07:33:27.492 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "e48e0860-4bf4-4d27-8734-3829023cd4a4"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11.666900000000169
+[2026-10-13 07:33:27.625 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "2cbab8bb-b9af-4df0-9db0-9850842b7548"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-out"
+    }
+[2026-10-13 07:33:27.769 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "b6f3ee37-5482-4fb1-9f08-67205b5f23a1"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c"
+    }
+[2026-10-13 07:33:27.771 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "2cbab8bb-b9af-4df0-9db0-9850842b7548"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 143.1786000000011
+[2026-10-13 07:33:27.911 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "b6f3ee37-5482-4fb1-9f08-67205b5f23a1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 141.8693999999996
+[2026-10-13 07:33:28.206 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "67aeb29b-978d-4075-abc6-0bb0df440c77"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/renewal-link"
+    }
+[2026-10-13 07:33:28.243 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "98ea5221-77c8-4f5d-aebc-5c24203c6a1b"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/renew/7-VGYeslR3MC4bXe5je9p6YjNmfCzvvgJRyk7VAt0sk/confirm"
+    }
+[2026-10-13 07:33:28.258 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "67aeb29b-978d-4075-abc6-0bb0df440c77"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 35.737199999999575
+[2026-10-13 07:33:28.387 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "768450b6-fa99-4eff-b080-394907295d21"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/renew/7-VGYeslR3MC4bXe5je9p6YjNmfCzvvgJRyk7VAt0sk/payment"
+    }
+[2026-10-13 07:33:28.389 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "98ea5221-77c8-4f5d-aebc-5c24203c6a1b"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 142.86369999999988
+[2026-10-13 07:33:28.546 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "768450b6-fa99-4eff-b080-394907295d21"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 156.91949999999997
+[2026-10-13 07:33:29.001 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "a12bdfca-f645-45c1-813b-8a5cabaac17d"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/return-link"
+    }
+[2026-10-13 07:33:29.018 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d211baf5-bea0-423c-ad2d-203a9865e492"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/return/39a54A2HfCFxJ3Sdc3vFj8HVWb1bqniQfv18dYqI3hY/confirm"
+    }
+[2026-10-13 07:33:29.019 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "a12bdfca-f645-45c1-813b-8a5cabaac17d"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15.815899999999601
+[2026-10-13 07:33:29.165 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "52c9cbb2-f49b-4e21-8335-4ccaf9a7c15f"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in"
+    }
+[2026-10-13 07:33:29.168 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d211baf5-bea0-423c-ad2d-203a9865e492"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 145.3267999999989
+[2026-10-13 07:33:29.355 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "ef9ccd51-639f-40d6-9566-f955eef943b0"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=FRONT"
+    }
+[2026-10-13 07:33:29.469 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "52c9cbb2-f49b-4e21-8335-4ccaf9a7c15f"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 189.3243999999995
+[2026-10-13 07:33:29.640 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "268f9eaf-32db-4db0-be38-a3a4d5f35cef"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=REAR"
+    }
+[2026-10-13 07:33:29.641 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "ef9ccd51-639f-40d6-9566-f955eef943b0"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 284.1769000000004
+[2026-10-13 07:33:29.836 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "fb59d5b0-b5ef-4839-a7db-449aac742e02"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=FRONT_RIGHT"
+    }
+[2026-10-13 07:33:29.950 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "268f9eaf-32db-4db0-be38-a3a4d5f35cef"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 194.46069999999963
+[2026-10-13 07:33:29.981 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "da28efb9-30b9-4427-8819-156f2297c148"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=REAR_RIGHT"
+    }
+[2026-10-13 07:33:30.103 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "fb59d5b0-b5ef-4839-a7db-449aac742e02"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 144.34549999999945
+[2026-10-13 07:33:30.268 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "a4c81a10-0939-4397-8c05-9476599d75a4"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=FRONT_LEFT"
+    }
+[2026-10-13 07:33:30.401 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "da28efb9-30b9-4427-8819-156f2297c148"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 285.13790000000154
+[2026-10-13 07:33:30.429 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d498bf0d-d3a8-49fd-ba03-262d7a69d9a2"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=REAR_LEFT"
+    }
+[2026-10-13 07:33:30.431 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "a4c81a10-0939-4397-8c05-9476599d75a4"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 159.52909999999974
+[2026-10-13 07:33:30.599 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "5371471d-e741-4a56-9ebb-8d90357d07c8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=ODOMETER"
+    }
+[2026-10-13 07:33:30.725 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d498bf0d-d3a8-49fd-ba03-262d7a69d9a2"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 169.6766000000025
+[2026-10-13 07:33:30.765 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "c04692ec-44b5-4367-91a8-117365e39b33"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/photos?angle=DASHBOARD_FUEL"
+    }
+[2026-10-13 07:33:30.768 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "5371471d-e741-4a56-9ebb-8d90357d07c8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 164.53280000000086
+[2026-10-13 07:33:30.819 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "714ff99d-a7f6-4a68-9e44-d4e7d170feb1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/signature"
+    }
+[2026-10-13 07:33:30.935 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "c04692ec-44b5-4367-91a8-117365e39b33"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 52.09230000000025
+[2026-10-13 07:33:30.958 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "9fa80015-ce36-45e2-a504-fa4b1b4fa6fd"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/car-in/complete"
+    }
+[2026-10-13 07:33:31.084 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "714ff99d-a7f6-4a68-9e44-d4e7d170feb1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 138.13390000000072
+[2026-10-13 07:33:31.124 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "9fa80015-ce36-45e2-a504-fa4b1b4fa6fd"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 160.92540000000008
+[2026-10-13 07:33:31.139 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "1902adf8-3517-478d-8c75-c7e0292a647d"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/manual-charge"
+    }
+[2026-10-13 07:33:31.812 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "0b0a9ad2-9349-485c-b573-1d37d36602f6"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/returned-contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/manual-charge"
+    }
+[2026-10-13 07:33:31.814 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "1902adf8-3517-478d-8c75-c7e0292a647d"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 671.9807000000001
+[2026-10-13 07:33:32.139 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "0b0a9ad2-9349-485c-b573-1d37d36602f6"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 325.1900999999998
+[2026-10-13 07:33:32.916 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "8f5a9934-3de4-4f87-b303-71cbd1dfd0b0"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/reconcile"
+    }
+[2026-10-13 07:33:33.074 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "200198cc-0c68-4294-8df7-be0daf4aed29"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/reconciliation/finalize"
+    }
+[2026-10-13 07:33:33.077 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "8f5a9934-3de4-4f87-b303-71cbd1dfd0b0"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 156.34640000000218
+[2026-10-13 07:33:33.267 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "200198cc-0c68-4294-8df7-be0daf4aed29"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 190.77889999999752
+[2026-10-13 07:33:33.439 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d62de8cb-2c85-4d51-ada5-7779241325bb"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/reconciliation/payment"
+    }
+[2026-10-13 07:33:33.631 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d62de8cb-2c85-4d51-ada5-7779241325bb"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 189.4483999999975
+[2026-10-13 07:33:34.036 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d6c192a8-8308-4c4a-9966-02b53e53df18"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/cd0ffaba-f213-4849-8090-5c1779355f1c/close"
+    }
+[2026-10-13 07:33:34.238 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d6c192a8-8308-4c4a-9966-02b53e53df18"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 28.608200000002398
+[2026-10-13 07:33:34.239 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "4bc2530e-4c90-4312-a17f-949a007eb5c0"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/road-liabilities/06edee2a-ac46-48b7-b22a-8f16ca09fccc/customer-charge/confirm"
+    }
+Γû╢ unified invoice ΓÇö final closure (haidara_test)
+  Γ£û A: full consolidated invoice ΓÇö rental, renewal, violation, Salik, reconciliation, post-close (9393.7588ms)
+[2026-10-13 07:33:34.255 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "4bc2530e-4c90-4312-a17f-949a007eb5c0"
+    [35mcode[39m: "CONFLICT"
+    [35mstatusCode[39m: 409
+[2026-10-13 07:33:34.258 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "4bc2530e-4c90-4312-a17f-949a007eb5c0"
+    [35mres[39m: {
+      "statusCode": 409
+    }
+    [35mresponseTime[39m: 19.255799999999
+  Γ£ö B: partial reconciliation payments revise balance 1000 ΓåÆ 600 ΓåÆ 300 ΓåÆ 0 (1152.9028ms)
+[2026-10-13 07:33:35.423 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "91ae65c5-2d4e-4550-a19b-fe0642d14c8a"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+[2026-10-13 07:33:35.559 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "cbd48188-4984-452f-8635-6ca86b63304d"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/offers"
+    }
+[2026-10-13 07:33:35.561 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "91ae65c5-2d4e-4550-a19b-fe0642d14c8a"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 134.7563999999984
+[2026-10-13 07:33:35.702 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "ffc8696f-c416-4438-af17-127e1f63c3de"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/869e7d98-d670-438b-9241-2d3f407b49e3/rental-link"
+    }
+[2026-10-13 07:33:35.703 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "cbd48188-4984-452f-8635-6ca86b63304d"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 141.91479999999865
+[2026-10-13 07:33:35.843 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "b6f4cbb9-06f0-48bc-b04f-4d43698a1e07"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/vI8n1yDLIgqitS3va7i6nhSYjrEK-xmiJek4frepms8/driving-license"
+    }
+[2026-10-13 07:33:35.844 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "ffc8696f-c416-4438-af17-127e1f63c3de"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 139.4206000000013
+[2026-10-13 07:33:35.854 +0300] [32mINFO[39m: [36mdriving_license_upload_meta[39m
+    [35mcontractId[39m: "869e7d98-d670-438b-9241-2d3f407b49e3"
+    [35mlicenseUpload[39m: {
+      "mimeType": "image/png",
+      "byteSize": 12,
+      "width": null,
+      "height": null,
+      "aspect": null,
+      "frameAspectValid": null
+    }
+[2026-10-13 07:33:36.016 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "1335da35-145f-441c-96a4-f214fc96e60f"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/vI8n1yDLIgqitS3va7i6nhSYjrEK-xmiJek4frepms8/passport"
+    }
+[2026-10-13 07:33:36.017 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "b6f4cbb9-06f0-48bc-b04f-4d43698a1e07"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 171.83030000000144
+[2026-10-13 07:33:36.307 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "57aeff86-a4cf-468b-b7b2-c25dfa78ea6e"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/vI8n1yDLIgqitS3va7i6nhSYjrEK-xmiJek4frepms8/form"
+    }
+[2026-10-13 07:33:36.310 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "1335da35-145f-441c-96a4-f214fc96e60f"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 290.23070000000007
+[2026-10-13 07:33:36.465 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "13007790-8cea-4a72-b022-91bc7cd8bb1a"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/vI8n1yDLIgqitS3va7i6nhSYjrEK-xmiJek4frepms8/accept"
+    }
+[2026-10-13 07:33:36.466 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "57aeff86-a4cf-468b-b7b2-c25dfa78ea6e"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 156.91909999999916
+[2026-10-13 07:33:36.611 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "13007790-8cea-4a72-b022-91bc7cd8bb1a"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 143.9912000000004
+[2026-10-13 07:33:37.033 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "746cf4ea-dfdb-4f69-abe3-e5414b649b82"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/vI8n1yDLIgqitS3va7i6nhSYjrEK-xmiJek4frepms8/payment"
+    }
+[2026-10-13 07:33:37.206 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "746cf4ea-dfdb-4f69-abe3-e5414b649b82"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 171.45349999999962
+[2026-10-13 07:33:37.492 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "196efa7a-c33b-4c74-89cd-1ea1a2166746"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/payments/status/ZQX7k7kLmlPWPmchElYU8ki8eosiyRDSNcuV4zAcSVY"
+    }
+[2026-10-13 07:33:37.503 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "196efa7a-c33b-4c74-89cd-1ea1a2166746"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10.400900000000547
+[2026-10-13 07:33:37.514 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d11dd8e8-2331-438f-99e5-30a562964d29"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/869e7d98-d670-438b-9241-2d3f407b49e3/car-out"
+    }
+[2026-10-13 07:33:37.708 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "f0344a01-00f3-43ea-8b25-ce8ff3161f8a"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/869e7d98-d670-438b-9241-2d3f407b49e3"
+    }
+[2026-10-13 07:33:37.710 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d11dd8e8-2331-438f-99e5-30a562964d29"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 192.84119999999893
+[2026-10-13 07:33:37.727 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "f0344a01-00f3-43ea-8b25-ce8ff3161f8a"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19.004899999999907
+[2026-10-13 07:33:38.152 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "6b2337aa-1b41-496e-b3bb-1c54989a5fce"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/869e7d98-d670-438b-9241-2d3f407b49e3/renewal-link"
+    }
+[2026-10-13 07:33:38.285 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "03020089-cb9c-4835-af8a-5976ee51f1f8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/renew/CXbNvC8cXW1IJoQSsRTIRY7lgEC3oaFTbmR-P8sfh_Q/confirm"
+    }
+[2026-10-13 07:33:38.286 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "6b2337aa-1b41-496e-b3bb-1c54989a5fce"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 132.20539999999892
+[2026-10-13 07:33:38.429 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "17e5cd7a-3ec0-42cf-ad70-4cbf9b3259eb"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/renew/CXbNvC8cXW1IJoQSsRTIRY7lgEC3oaFTbmR-P8sfh_Q/payment"
+    }
+[2026-10-13 07:33:38.431 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "03020089-cb9c-4835-af8a-5976ee51f1f8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 142.60480000000098
+[2026-10-13 07:33:38.587 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "17e5cd7a-3ec0-42cf-ad70-4cbf9b3259eb"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 156.76109999999971
+  Γ£û C: renewal line stays on same contract invoice (no separate renewal invoice) (3619.116ms)
+prisma:error 
+Invalid `prisma.invoice.create()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\unified-invoice-closure.ts:139:26
+
+  136 assert.equal(template.isCurrent, true);
+  137 let rejected = false;
+  138 try {
+ΓåÆ 139   await prisma.invoice.create({
+          data: {
+            invoiceNumber: 12167,
+            invoiceType: "RENTAL",
+            status: "ISSUED",
+            companyId: 1,
+            contractId: "71142691-86f7-4597-a786-604cc75b2793",
+            vehicleId: 246,
+            customerId: 81,
+            customerNameSnapshot: "UIC Customer UIC-MV66QYND",
+            vehicleNameSnapshot: "UIC UIC-MV66QYND",
+            plateNumberSnapshot: "UC-MV66QYND",
+            contractNumberSnapshot: "PAY-UIC-MV66QYND-8802",
+            issueDate: new Date("2026-10-13T00:00:00.000Z"),
+            dueDate: new Date("2026-10-13T00:00:00.000Z"),
+            currency: "AED",
+            totalAmount: 1500,
+            balanceDueSnapshot: 0,
+            termsSnapshot: "Paid in full",
+            templateVersion: "v1",
+            originEventKey: "CONTRACT_INVOICE:71142691-86f7-4597-a786-604cc75b2793:r1:dup-probe",
+            revisionNumber: 100,
+            isCurrent: true,
+            contentFingerprint: "probe-1791866019329",
+        +   companyDisplayNameSnapshot: String
+          }
+        })
+
+Argument `companyDisplayNameSnapshot` is missing.
+  Γ£û D: PostgreSQL partial unique index + fingerprint idempotency + concurrent consolidation (322.1686ms)
+[2026-10-13 07:33:39.616 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1540
+    err: {
+      "type": "Error",
+      "message": "INVOICE_ISSUANCE_INTEGRATION_SIMULATED_FAILURE",
+      "stack":
+          Error: INVOICE_ISSUANCE_INTEGRATION_SIMULATED_FAILURE
+              at handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:51:15)
+              at Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:31)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:608:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+    }
+  Γ£û E: invoice worker simulated failure then retry ΓÇö one CURRENT, no extra revision (274.8979ms)
+[2026-10-13 07:33:40.221 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "f54b96de-c35a-4aa1-ab54-78a567bc314a"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/invoices?contractId=3c17a351-887e-4861-b683-b5f49a6bb4f5"
+    }
+[2026-10-13 07:33:40.238 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "f54b96de-c35a-4aa1-ab54-78a567bc314a"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16.952299999997194
+[2026-10-13 07:33:40.238 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "28daa4cf-b143-435c-8017-37376593fbfa"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/invoices?contractId=3c17a351-887e-4861-b683-b5f49a6bb4f5&includeSuperseded=true"
+    }
+[2026-10-13 07:33:40.251 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "28daa4cf-b143-435c-8017-37376593fbfa"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13.204499999999825
+[2026-10-13 07:33:40.252 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "62d677e0-4249-46b0-a8c8-2773db2e01c0"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/invoices/ddbfdae2-06d3-4ae0-8c93-44a2817d8b35/deliveries/whatsapp"
+    }
+  Γ£ö F: legacy-style archived invoice + list current-only; superseded WhatsApp blocked (627.0926ms)
+[2026-10-13 07:33:40.258 +0300] [33mWARN[39m: [36mapplication error[39m
+    [35mreqId[39m: "62d677e0-4249-46b0-a8c8-2773db2e01c0"
+    [35mcode[39m: "CONFLICT"
+    [35mstatusCode[39m: 409
+[2026-10-13 07:33:40.357 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "62d677e0-4249-46b0-a8c8-2773db2e01c0"
+    [35mres[39m: {
+      "statusCode": 409
+    }
+    [35mresponseTime[39m: 6.941800000000512
+prisma:error 
+Invalid `prisma.contractPayment.deleteMany()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:220:38
+
+  217 await prisma.domainOutboxEvent.deleteMany({
+  218   where: { payload: { path: ["contractId"], equals: contractId } },
+  219 });
+ΓåÆ 220 await prisma.contractPayment.deleteMany(
+Foreign key constraint violated on the constraint: `financial_ledger_entries_contractPaymentId_fkey`
+Γ£û unified invoice ΓÇö final closure (haidara_test) (25465.5889ms)
+Γä╣ tests 6
+Γä╣ suites 1
+Γä╣ pass 2
+Γä╣ fail 4
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 36612.6893
+
+Γ£û failing tests:
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:8935
+Γ£û A: full consolidated invoice ΓÇö rental, renewal, violation, Salik, reconciliation, post-close (9393.7588ms)
+  AssertionError [ERR_ASSERTION]: {"error":{"code":"CONFLICT","message":"This road liability is not eligible for customer charge review","context":{"reason":"ROAD_LIABILITY_NOT_CHARGEABLE"},"requestId":"4bc2530e-4c90-4312-a17f-949a007eb5c0"}}
+  
+  409 !== 200
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:333:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1794:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 409,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:17680
+Γ£û C: renewal line stays on same contract invoice (no separate renewal invoice) (3619.116ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:499:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:19548
+Γ£û D: PostgreSQL partial unique index + fingerprint idempotency + concurrent consolidation (322.1686ms)
+  AssertionError [ERR_ASSERTION]: second isCurrent=true row must violate partial unique index
+  
+  false !== true
+  
+      at assertPartialUniqueCurrentInvoiceEnforced (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\unified-invoice-closure.ts:168:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:534:7)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:20933
+Γ£û E: invoice worker simulated failure then retry ΓÇö one CURRENT, no extra revision (274.8979ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:618:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:2470
+Γ£û unified invoice ΓÇö final closure (haidara_test) (25465.5889ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.contractPayment.deleteMany()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:220:38
+  
+    217 await prisma.domainOutboxEvent.deleteMany({
+    218   where: { payload: { path: ["contractId"], equals: contractId } },
+    219 });
+  ΓåÆ 220 await prisma.contractPayment.deleteMany(
+  Foreign key constraint violated on the constraint: `financial_ledger_entries_contractPaymentId_fkey`
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async SuiteContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:220:9)
+      at async TestHook.run (node:internal/test_runner/test:1332:7)
+      at async Suite.runHook (node:internal/test_runner/test:1212:9)
+      at async Suite.run (node:internal/test_runner/test:1795:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

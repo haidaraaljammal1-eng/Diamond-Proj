@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useAuth, usePermissions } from "@/modules/auth";
+import { useFunctionalAuthContext } from "@/modules/functional-rbac";
 import { navigationConfig } from "../navigation.config";
 import {
   SYSTEM_ADMIN_ROLE,
@@ -36,6 +37,7 @@ export function useNavigation(): UseNavigationResult {
   const t = useTranslations("navigation");
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
+  const functionalCtx = useFunctionalAuthContext();
 
   return useMemo(() => {
     const roles = user?.roles ?? [];
@@ -50,7 +52,14 @@ export function useNavigation(): UseNavigationResult {
     const isItemVisible = (
       item: NavigationItem,
       group: NavigationGroup,
-    ): boolean => isNavigationItemVisible(item, group, hasPermission, isAdmin);
+    ): boolean =>
+      isNavigationItemVisible(
+        item,
+        group,
+        hasPermission,
+        isAdmin,
+        functionalCtx,
+      );
 
     const groups: TranslatedNavigationGroup[] = navigationConfig
       .map((group) => {
@@ -78,5 +87,5 @@ export function useNavigation(): UseNavigationResult {
       href ? `/${locale}${href}` : "";
 
     return { groups, isActive, currentPath, hrefFor, locale, isAdmin };
-  }, [hasPermission, locale, pathname, t, user?.roles]);
+  }, [functionalCtx, hasPermission, locale, pathname, t, user?.roles]);
 }

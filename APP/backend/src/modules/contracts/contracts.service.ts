@@ -120,6 +120,7 @@ import type {
   ReconciliationLineInputSchema,
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
+import { buildRenewalPersistenceFields } from "src/modules/contracts/contracts-renewal-duration";
 import {
   isManualExternalReconLineType,
 } from "src/modules/contracts/contracts-road-liability-charge";
@@ -178,6 +179,8 @@ function assertCarOutAngles(photos: { angle: string }[]): void {
 
 type RenewalHistoryRow = {
   additionalDays: number;
+  additionalDurationValue: number;
+  additionalDurationUnit: import("@prisma/client").ContractDurationUnit;
   additionalAmount: number;
   previousEndAt: Date;
   newEndAt: Date;
@@ -185,9 +188,17 @@ type RenewalHistoryRow = {
   appliedAt: Date | null;
 };
 
+function publicRenewalDurationUnit(
+  unit: import("@prisma/client").ContractDurationUnit,
+): "HOUR" | "DAY" {
+  return unit === "HOUR" ? "HOUR" : "DAY";
+}
+
 function toPublicRenewal(row: RenewalHistoryRow) {
   return {
     additionalDays: row.additionalDays,
+    additionalDurationValue: row.additionalDurationValue,
+    additionalDurationUnit: publicRenewalDurationUnit(row.additionalDurationUnit),
     additionalAmount: row.additionalAmount,
     previousEndAt: row.previousEndAt,
     newEndAt: row.newEndAt,
@@ -556,15 +567,12 @@ export function createContractsService(fastify: FastifyInstance) {
         }
         if (!offer) throw contractError.renewalOfferRequired();
         const previousEndAt = contract.endAt ?? derivedEndAt(contract.startAt, contract.rentalDays);
-        const newEndAt = derivedEndAt(previousEndAt, offer.additionalDays, previousEndAt);
+        const renewalFields = buildRenewalPersistenceFields(offer, previousEndAt);
         await tx.contractRenewal.deleteMany({ where: { contractId, approvedAt: null } });
         await tx.contractRenewal.create({
           data: {
             contractId,
-            additionalDays: offer.additionalDays,
-            additionalAmount: offer.additionalAmount,
-            previousEndAt,
-            newEndAt,
+            ...renewalFields,
             createdByUserId: actorUserId,
           },
         });
@@ -1932,16 +1940,13 @@ export function createContractsService(fastify: FastifyInstance) {
         await assertVehicleFreeForRental(tx, contract.vehicleId, contract.id);
 
         const previousEndAt = contract.endAt ?? derivedEndAt(contract.startAt, contract.rentalDays);
-        const newEndAt = derivedEndAt(previousEndAt, input.additionalDays, previousEndAt);
+        const renewalFields = buildRenewalPersistenceFields(input, previousEndAt);
         await tx.contractRenewal.deleteMany({ where: { contractId, appliedAt: null } });
         await revokeUnusedRenewalLinks(tx, contractId);
         const renewal = await tx.contractRenewal.create({
           data: {
             contractId,
-            additionalDays: input.additionalDays,
-            additionalAmount: input.additionalAmount,
-            previousEndAt,
-            newEndAt,
+            ...renewalFields,
             approvedAt: new Date(),
             createdByUserId: actorUserId,
           },
@@ -1968,6 +1973,8 @@ export function createContractsService(fastify: FastifyInstance) {
         key: idempotencyKey,
         fingerprint: fingerprintIdempotentPayload({
           additionalDays: input.additionalDays,
+          additionalDurationValue: input.additionalDurationValue,
+          additionalDurationUnit: input.additionalDurationUnit,
           additionalAmount: input.additionalAmount,
         }),
       },

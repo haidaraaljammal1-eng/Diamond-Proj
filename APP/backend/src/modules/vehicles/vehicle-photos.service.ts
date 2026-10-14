@@ -12,6 +12,8 @@ import { verifyContentType } from "src/lib/files/magic-bytes";
 import { withTransaction } from "src/lib/db/transaction";
 import { toVehicleImage } from "src/modules/vehicles/vehicles.mapper";
 
+export const VEHICLE_GALLERY_MAX_PHOTOS = 4;
+
 export function createVehiclePhotosService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
   const storageDir = env.FILE_STORAGE_DIR;
@@ -80,6 +82,12 @@ export function createVehiclePhotosService(fastify: FastifyInstance) {
       });
 
       const existingCount = await tx.vehiclePhoto.count({ where: { vehicleId } });
+      if (existingCount >= VEHICLE_GALLERY_MAX_PHOTOS) {
+        throw new AppError({
+          code: ErrorCode.VALIDATION_ERROR,
+          message: `A vehicle may have at most ${VEHICLE_GALLERY_MAX_PHOTOS} photos`,
+        });
+      }
       const photo = await tx.vehiclePhoto.create({
         data: {
           vehicleId,

@@ -15,7 +15,7 @@ function signedView(): OfficialContractView {
         code: "UNIQUE",
         displayName: "UNIQUE",
         legalNameAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
-        legalNameEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+        legalNameEn: "Diamond Unique Car Rental CO.L.L.C.S.O.C",
         accentColor: "#C9A15C",
       },
     },

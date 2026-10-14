@@ -25,6 +25,7 @@ import {
 } from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { t } from "src/config/i18n";
+import { requireAuth } from "src/lib/context/auth-context";
 
 export default async function usersRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -94,7 +95,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const result = await users.create(request.body);
+      const result = await users.create(request.body, requireAuth(request));
       request.setAudit({
         action: "users.create",
         entityType: "user",
@@ -119,7 +120,11 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      const user = await users.update(request.params.id, request.body);
+      const user = await users.update(
+        request.params.id,
+        request.body,
+        requireAuth(request),
+      );
       request.setAudit({
         action: "users.update",
         entityType: "user",
@@ -171,7 +176,11 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      const user = await users.setStatus(request.params.id, request.body.status);
+      const user = await users.setStatus(
+        request.params.id,
+        request.body.status,
+        requireAuth(request),
+      );
       request.setAudit({
         action: "users.set_status",
         entityType: "user",
@@ -196,7 +205,11 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      const user = await users.setRoles(request.params.id, request.body);
+      const user = await users.setRoles(
+        request.params.id,
+        request.body,
+        requireAuth(request),
+      );
       request.setAudit({
         action: "users.set_roles",
         entityType: "user",

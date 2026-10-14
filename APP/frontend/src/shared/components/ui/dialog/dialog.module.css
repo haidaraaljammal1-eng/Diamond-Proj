@@ -151,6 +151,14 @@
   overflow: hidden;
 }
 
+/* Flush detail modals (e.g. vehicle detail): single inner scroll region + sticky footer */
+.flush.xl {
+  display: flex;
+  flex-direction: column;
+  max-height: min(calc(100dvh - 40px), 88vh);
+  overflow: hidden;
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;

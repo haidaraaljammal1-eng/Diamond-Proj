@@ -20,12 +20,12 @@ export interface ResolvedPeriod {
 }
 
 /** UTC instant for a local wall-clock midnight (business offset applied). */
-function utcFromLocalMidnight(y: number, mZeroBased: number, d: number, offsetMinutes: number): Date {
+export function utcFromLocalMidnight(y: number, mZeroBased: number, d: number, offsetMinutes: number): Date {
   return new Date(Date.UTC(y, mZeroBased, d) - offsetMinutes * 60_000);
 }
 
 /** Local (business-tz) Y/M/D of a UTC instant. */
-function localYmd(utc: Date, offsetMinutes: number): { y: number; m: number; d: number } {
+export function localYmd(utc: Date, offsetMinutes: number): { y: number; m: number; d: number } {
   const shifted = new Date(utc.getTime() + offsetMinutes * 60_000);
   return { y: shifted.getUTCFullYear(), m: shifted.getUTCMonth(), d: shifted.getUTCDate() };
 }

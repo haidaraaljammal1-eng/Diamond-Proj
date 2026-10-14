@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { usePermissions } from "@/modules/auth";
+import { useDiamondPageAccess } from "@/modules/functional-rbac";
 import { isDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import { useWhatsAppSimulationStore } from "../simulation/whatsapp-simulation.store";
 import { useWhatsAppStore } from "../stores/whatsapp.store";
@@ -15,10 +15,7 @@ import { acquireWhatsAppRealtime } from "../realtime/whatsapp.realtime-client";
  */
 export function useWhatsAppRealtimeSubscription(): void {
   const { status: sessionStatus } = useSession();
-  const { hasPermission } = usePermissions();
-  const isAllowed = WHATSAPP_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
+  const isAllowed = useDiamondPageAccess("whatsapp");
   const simulationEnabled = isDemoSimulationEnabled();
   const simulationActive =
     simulationEnabled && useWhatsAppSimulationStore((state) => state.active);

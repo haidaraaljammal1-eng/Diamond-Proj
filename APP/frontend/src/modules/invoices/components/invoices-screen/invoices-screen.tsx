@@ -47,6 +47,7 @@ export function InvoicesScreen() {
   }, [page.pagination?.total, page.items.length, t]);
 
   const handleViewPdf = async (id: string) => {
+    if (!page.canDownloadPdf) return;
     setPdfBusy(true);
     try {
       await openInvoicePdfInNewTab(id);
@@ -58,6 +59,7 @@ export function InvoicesScreen() {
   };
 
   const handleDownloadPdf = async (id: string) => {
+    if (!page.canDownloadPdf) return;
     setPdfBusy(true);
     try {
       await triggerInvoicePdfDownload(id);
@@ -138,6 +140,7 @@ export function InvoicesScreen() {
         loading={page.isListLoading}
         error={listErrorMessage}
         canSendWhatsApp={page.canSendWhatsApp}
+        canDownloadPdf={page.canDownloadPdf}
         onSelect={page.selectInvoice}
         onViewPdf={(id) => void handleViewPdf(id)}
         onDownloadPdf={(id) => void handleDownloadPdf(id)}
@@ -156,6 +159,7 @@ export function InvoicesScreen() {
         error={detailErrorMessage}
         deliveriesError={deliveriesErrorMessage}
         canSendWhatsApp={page.canSendWhatsApp}
+        canDownloadPdf={page.canDownloadPdf}
         onClose={page.closeDetail}
         onRetry={() => {
           if (page.selectedInvoiceId) page.selectInvoice(page.selectedInvoiceId);

@@ -8,7 +8,10 @@ import { Icon } from "@/shared/components/ui/icon";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import type { VehicleCardDto } from "../../types/vehicle.types";
 import { shouldShowCurrentRental } from "../../utils/rental-timer";
-import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
+import {
+  getVehicleCardActions,
+  type VehicleFleetPermissions,
+} from "../../utils/vehicle-card-actions";
 import { getFleetPrimaryPresentation } from "../../utils/fleet-primary-presentation";
 import {
   resolveVehicleColorCss,
@@ -19,7 +22,7 @@ import styles from "./vehicle-card.module.css";
 
 export interface VehicleCardProps {
   vehicle: VehicleCardDto;
-  canManage: boolean;
+  fleetPermissions: VehicleFleetPermissions;
   onOpen: (vehicle: VehicleCardDto) => void;
   onPrimaryAction: (vehicle: VehicleCardDto) => void;
   onEditRates: (vehicle: VehicleCardDto) => void;
@@ -31,9 +34,13 @@ function stopOpen(event: MouseEvent | KeyboardEvent) {
   event.stopPropagation();
 }
 
+function hasFleetManagementUi(permissions: VehicleFleetPermissions): boolean {
+  return permissions.canAddDelete || permissions.canEditPrices;
+}
+
 export function VehicleCard({
   vehicle,
-  canManage,
+  fleetPermissions,
   onOpen,
   onPrimaryAction,
   onEditRates,
@@ -42,8 +49,9 @@ export function VehicleCard({
 }: VehicleCardProps) {
   const t = useTranslations("Vehicles");
   const format = useFormatter();
-  const actions = getVehicleCardActions(vehicle, canManage);
+  const actions = getVehicleCardActions(vehicle, fleetPermissions);
   const primary = getFleetPrimaryPresentation(vehicle);
+  const canManageFleet = hasFleetManagementUi(fleetPermissions);
   const showRenter = shouldShowCurrentRental(
     vehicle.operationalStatus,
     vehicle.currentRental,
@@ -143,7 +151,7 @@ export function VehicleCard({
         </span>
       </div>
 
-      {canManage && (primary.labelKey !== "maintenance" || showSecondary) ? (
+      {canManageFleet && (primary.labelKey !== "maintenance" || showSecondary) ? (
         <div className={styles.actions}>
           {primary.labelKey !== "maintenance" ? (
             <button

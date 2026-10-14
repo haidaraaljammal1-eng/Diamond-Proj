@@ -15,7 +15,7 @@ export async function ensureOperatingCompanies(prisma: PrismaClient): Promise<vo
   for (const company of OPERATING_COMPANIES) {
     await prisma.operatingCompany.upsert({
       where: { code: company.code },
-      update: {},
+      update: { legalNameEn: company.legalNameEn },
       create: company,
     });
   }

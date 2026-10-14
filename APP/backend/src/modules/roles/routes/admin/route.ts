@@ -5,6 +5,7 @@ import {
   CreateRoleSchema,
   ListRolesQuerySchema,
   RolePublicSchema,
+  SetFunctionalGrantsSchema,
   SetRolePermissionsSchema,
   UpdateRoleSchema,
 } from "src/modules/roles/roles.schema";
@@ -17,6 +18,7 @@ import {
 } from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { t } from "src/config/i18n";
+import { requireAuth } from "src/lib/context/auth-context";
 
 export default async function rolesRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -65,7 +67,7 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const role = await roles.create(request.body);
+      const role = await roles.create(request.body, requireAuth(request));
       request.setAudit({
         action: "roles.create",
         entityType: "role",
@@ -90,9 +92,37 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      const role = await roles.update(request.params.id, request.body);
+      const role = await roles.update(request.params.id, request.body, requireAuth(request));
       request.setAudit({
         action: "roles.update",
+        entityType: "role",
+        entityId: String(request.params.id),
+      });
+      return { data: role };
+    },
+  );
+
+  app.put(
+    "/:id/functional-grants",
+    {
+      schema: {
+        summary: "Replace functional RBAC V2 grants on a role (preserves legacy keys)",
+        operationId: "setRoleFunctionalGrants",
+        tags: ["Roles"],
+        permissions: [PERMISSIONS.ROLES_MANAGE],
+        params: NumericIdParam,
+        body: SetFunctionalGrantsSchema,
+        response: { 200: dataResponse(RolePublicSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const role = await roles.setFunctionalGrants(
+        request.params.id,
+        request.body,
+        requireAuth(request),
+      );
+      request.setAudit({
+        action: "roles.set_functional_grants",
         entityType: "role",
         entityId: String(request.params.id),
       });
@@ -114,7 +144,11 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      const role = await roles.setPermissions(request.params.id, request.body);
+      const role = await roles.setPermissions(
+        request.params.id,
+        request.body,
+        requireAuth(request),
+      );
       request.setAudit({
         action: "roles.set_permissions",
         entityType: "role",
@@ -137,7 +171,7 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      await roles.remove(request.params.id);
+      await roles.remove(request.params.id, requireAuth(request));
       request.setAudit({
         action: "roles.delete",
         entityType: "role",

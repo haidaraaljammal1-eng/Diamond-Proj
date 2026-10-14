@@ -410,6 +410,62 @@ if (!RUN) {
     assert.equal(after.json().data.gallery.length, 0);
   });
 
+  test("vehicle photo upload rejects more than four photos", async () => {
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    const boundary = "----vehMaxBoundary";
+    const multipartBody = () =>
+      [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="car.png"',
+        "Content-Type: image/png",
+        "",
+        png.toString("binary"),
+        `--${boundary}--`,
+        "",
+      ].join("\r\n");
+
+    for (let i = 0; i < 4; i++) {
+      const upload = await app.inject({
+        method: "POST",
+        url: `/vehicles/${availableId}/photos`,
+        headers: {
+          ...auth(adminToken),
+          "content-type": `multipart/form-data; boundary=${boundary}`,
+        },
+        payload: Buffer.from(multipartBody(), "binary"),
+      });
+      assert.equal(upload.statusCode, 201, upload.body);
+    }
+
+    const fifth = await app.inject({
+      method: "POST",
+      url: `/vehicles/${availableId}/photos`,
+      headers: {
+        ...auth(adminToken),
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: Buffer.from(multipartBody(), "binary"),
+    });
+    assert.equal(fifth.statusCode, 422, fifth.body);
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/vehicles/${availableId}`,
+      headers: auth(adminToken),
+    });
+    assert.equal(detail.json().data.gallery.length, 4);
+    for (const photo of detail.json().data.gallery) {
+      await app.inject({
+        method: "DELETE",
+        url: `/vehicles/${availableId}/photos/${photo.id}`,
+        headers: auth(adminToken),
+      });
+    }
+  });
+
   test("pricing fields validate as non-negative integers", async () => {
     const bad = await app.inject({
       method: "POST",

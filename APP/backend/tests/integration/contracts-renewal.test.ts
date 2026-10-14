@@ -597,5 +597,31 @@ if (!RUN) {
       assert.equal(detail.json().data.rentalDays, 7);
       assert.equal(detail.json().data.agreedAmount, 2200);
     });
+
+    test("hourly staff renewal extends endAt by exact hours", async () => {
+      const { contractId } = await createActiveContract();
+      const before = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      const previousEndAt = before.endAt!;
+      const staffRenew = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renew`,
+        headers: auth(),
+        payload: {
+          additionalDurationValue: 6,
+          additionalDurationUnit: "HOUR",
+          additionalAmount: 0,
+        },
+      });
+      assert.equal(staffRenew.statusCode, 200, staffRenew.body);
+      const after = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      assert.equal(
+        after.endAt!.getTime() - previousEndAt.getTime(),
+        6 * 3_600_000,
+      );
+      const renewal = await prisma.contractRenewal.findFirstOrThrow({ where: { contractId } });
+      assert.equal(renewal.additionalDurationValue, 6);
+      assert.equal(renewal.additionalDurationUnit, "HOUR");
+      assert.equal(renewal.additionalDays, 1);
+    });
   });
 }

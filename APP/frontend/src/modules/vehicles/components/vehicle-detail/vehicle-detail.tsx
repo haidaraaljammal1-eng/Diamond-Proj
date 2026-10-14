@@ -1,15 +1,16 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
+import { Icon } from "@/shared/components/ui/icon";
 import { CompanyIdentity } from "@/shared/components/company-identity";
-import { VehiclePhotoButton } from "../../forms/add-vehicle/vehicle-photo-button";
 import type { VehicleDetailDto } from "../../types/vehicle.types";
+import { VehicleDetailGallery } from "./vehicle-detail-gallery";
 import { getVehicleStatusPresentation } from "../../utils/vehicle-status";
 import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
 import { getFleetPrimaryPresentation } from "../../utils/fleet-primary-presentation";
 import { useRentalReturnDue } from "../../hooks/use-rental-return-due";
-import { VehicleImage } from "../vehicle-image/vehicle-image";
 import { VehicleStatus } from "../vehicle-status/vehicle-status";
 import styles from "./vehicle-detail.module.css";
 
@@ -24,7 +25,8 @@ export interface VehicleDetailProps {
   photoActionErrorMessage: string | null;
   fleetOpsErrorMessage: string | null;
   onUploadPhoto: (file: File) => void;
-  onReplacePhoto: (file: File) => void;
+  onReplacePhoto: (photoId: string, file: File) => void;
+  onDeletePhoto: (photoId: string) => void;
   onSetPrice: () => void;
   onPrimaryAction: () => void;
   onSendToMaintenance: () => void;
@@ -32,6 +34,12 @@ export interface VehicleDetailProps {
   onCancelRentalRequest: () => void;
   onReturnNow: () => void;
   onContinueCarIn: () => void;
+  renewRentalFooter:
+    | { status: "idle" }
+    | { status: "loading"; contractId: string }
+    | { status: "ready"; contractId: string }
+    | { status: "blocked"; contractId: string; backendCanRenew: boolean };
+  onRenewRental: () => void;
 }
 
 function formatRate(
@@ -55,6 +63,7 @@ export function VehicleDetail({
   fleetOpsErrorMessage,
   onUploadPhoto,
   onReplacePhoto,
+  onDeletePhoto,
   onSetPrice,
   onPrimaryAction,
   onSendToMaintenance,
@@ -62,6 +71,8 @@ export function VehicleDetail({
   onCancelRentalRequest,
   onReturnNow,
   onContinueCarIn,
+  renewRentalFooter,
+  onRenewRental,
 }: VehicleDetailProps) {
   const t = useTranslations("Vehicles");
   const format = useFormatter();
@@ -77,11 +88,15 @@ export function VehicleDetail({
     (rental.status === "paid" ||
       rental.status === "active" ||
       rental.status === "retout");
-  const primaryImage = vehicle.primaryImage;
   const returnDue = useRentalReturnDue(
     rental?.status === "active" ? rental.endAt : null,
   );
   const notSet = t("rateNotSet");
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    mainScrollRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [vehicle.id]);
 
   const showReturnNow =
     canReturn &&
@@ -101,6 +116,20 @@ export function VehicleDetail({
 
   const showRatesSection = vehicle.operationalStatus === "available";
 
+  const showRenewRentalButton =
+    renewRentalFooter.status === "loading" ||
+    renewRentalFooter.status === "ready" ||
+    renewRentalFooter.status === "blocked";
+  const renewRentalDisabled =
+    renewRentalFooter.status === "loading" ||
+    renewRentalFooter.status === "blocked";
+  const renewRentalTitle =
+    renewRentalFooter.status === "blocked"
+      ? renewRentalFooter.backendCanRenew
+        ? t("actions.renewRentalBlockedPermission")
+        : t("actions.renewRentalBlockedLifecycle")
+      : t("actions.renewRentalTitle");
+
   const primaryFleetAction =
     actions.showSetRentalPrice && primary.labelKey === "available"
       ? { label: t("fleetPrimary.available"), onClick: onPrimaryAction, variant: "primary" as const }
@@ -114,7 +143,22 @@ export function VehicleDetail({
 
   return (
     <div className={styles.root} data-testid="vehicle-detail">
-      <header className={styles.identityHeader}>
+      <div
+        ref={mainScrollRef}
+        className={styles.mainScroll}
+        data-testid="vehicle-detail-main-scroll"
+      >
+        <VehicleDetailGallery
+          vehicleName={vehicle.displayName}
+          gallery={vehicle.gallery}
+          canManage={canManage}
+          isPhotoActionPending={isPhotoActionPending}
+          onUploadPhoto={onUploadPhoto}
+          onReplacePhoto={onReplacePhoto}
+          onDeletePhoto={onDeletePhoto}
+        />
+
+        <header className={styles.identityHeader}>
         <div className={styles.identityMain}>
           <div className={styles.identityTitleRow}>
             <h2 className={styles.identityTitle}>{vehicle.displayName}</h2>
@@ -143,49 +187,6 @@ export function VehicleDetail({
           <CompanyIdentity company={vehicle.company} compact className={styles.identityCompany} />
         </div>
       </header>
-
-      <div className={styles.media}>
-        <div className={styles.mediaFrame}>
-          {primaryImage ? (
-            <VehicleImage
-              path={primaryImage.url}
-              alt={vehicle.displayName}
-              className={styles.mediaImage}
-            />
-          ) : (
-            <div className={styles.mediaPlaceholder}>
-              <span className={styles.mediaPlaceholderIcon} aria-hidden="true">◇</span>
-              <span>{t("detail.noPhoto")}</span>
-              {canManage ? (
-                <VehiclePhotoButton
-                  label={t("form.uploadPhoto")}
-                  ariaLabel={t("form.uploadPhoto")}
-                  variant="secondaryStrong"
-                  size="sm"
-                  disabled={isPhotoActionPending}
-                  loading={isPhotoActionPending}
-                  iconName="mdi:image-plus"
-                  onFileSelected={onUploadPhoto}
-                />
-              ) : null}
-            </div>
-          )}
-        </div>
-        {canManage && primaryImage ? (
-          <div className={styles.mediaPhotoAction}>
-            <VehiclePhotoButton
-              label={t("detail.replacePhoto")}
-              ariaLabel={t("detail.replacePhoto")}
-              variant="secondaryStrong"
-              size="sm"
-              disabled={isPhotoActionPending}
-              loading={isPhotoActionPending}
-              iconName="mdi:image-edit-outline"
-              onFileSelected={onReplacePhoto}
-            />
-          </div>
-        ) : null}
-      </div>
 
       <div className={styles.scrollBody}>
         {photoActionErrorMessage ? (
@@ -295,8 +296,9 @@ export function VehicleDetail({
           </>
         ) : null}
       </div>
+      </div>
 
-      <footer className={styles.actionFooter}>
+      <footer className={styles.actionFooter} data-testid="vehicle-detail-action-footer">
         {primaryFleetAction && !primary.disabled ? (
           <Button
             type="button"
@@ -318,6 +320,22 @@ export function VehicleDetail({
             onClick={onSetPrice}
           >
             {t("actions.setPriceDetail")}
+          </Button>
+        ) : null}
+        {showRenewRentalButton ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            className={`${styles.actionPrimary} ${styles.renewRental}`}
+            disabled={isFleetOpsPending || renewRentalDisabled}
+            title={renewRentalTitle}
+            aria-label={t("actions.renewRental")}
+            onClick={onRenewRental}
+            data-testid="vehicle-detail-renew-rental"
+          >
+            <Icon name="mdi:calendar-sync" size={18} aria-hidden />
+            {t("actions.renewRental")}
           </Button>
         ) : null}
         {showReturnNow ? (

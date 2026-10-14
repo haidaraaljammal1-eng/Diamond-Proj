@@ -18,14 +18,14 @@ const UNIQUE = {
   code: "UNIQUE",
   displayName: "UNIQUE",
   legalNameAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
-  legalNameEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+  legalNameEn: "Diamond Unique Car Rental CO.L.L.C.S.O.C",
   accentColor: "#C9A15C",
 };
 const ELITE = {
   code: "ELITE",
   displayName: "ELITE",
   legalNameAr: "شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و",
-  legalNameEn: "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C",
+  legalNameEn: "Diamond Elite Car Rental LLC",
   accentColor: "#3E5C76",
 };
 

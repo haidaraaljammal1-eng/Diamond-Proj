@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const renewFormSchema = z.object({
-  additionalDays: z.coerce.number().int().positive().max(3650),
+  durationUnit: z.enum(["HOUR", "DAY"]),
+  durationValue: z.coerce.number().int().positive().max(8760),
   additionalAmount: z.coerce.number().int().nonnegative(),
 });
 

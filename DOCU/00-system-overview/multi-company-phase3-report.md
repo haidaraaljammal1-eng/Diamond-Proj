@@ -71,8 +71,8 @@ chip الحالة التشغيلية (AVAILABLE / RENTED / PAID…).
 
 | الشركة | عربي | إنجليزي |
 | ------ | ---- | ------- |
-| UNIQUE | شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و | DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C |
-| ELITE | شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و | DIAMOND ELITE CAR RENTALS CO. LLC S.O.C |
+| UNIQUE | شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و | Diamond Unique Car Rental CO.L.L.C.S.O.C |
+| ELITE | شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و | Diamond Elite Car Rental LLC |
 
 ### 2.6 العهدة والواجهة العامة
 

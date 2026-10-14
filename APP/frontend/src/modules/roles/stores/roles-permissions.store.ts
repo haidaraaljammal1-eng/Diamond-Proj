@@ -3,11 +3,18 @@
 import { create } from "zustand";
 import { normalizeApiError } from "@/infrastructure/api/errors";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { requestSessionPermissionSync } from "@/infrastructure/auth/request-session-permission-sync";
 import { refreshAfterPending } from "@/infrastructure/state/refresh-after-pending";
 import { useRoleLookupStore } from "@/modules/users/stores/role-lookup.store";
 import {
+  applyFunctionalGrantToggle,
+  extractFunctionalGrantsFromPermissions,
+  isFunctionalRbacV2UiEnabled,
+} from "@/modules/functional-rbac";
+import {
   createRole,
   listAllRoles,
+  setRoleFunctionalGrants,
   setRolePermissions,
   updateRole,
 } from "../api/roles.api";
@@ -18,8 +25,12 @@ import type {
 import { listPermissions } from "../api/permissions.api";
 import type { PermissionDto } from "../types/permission.types";
 import type { RoleDto } from "../types/role.types";
+import {
+  shouldRefetchInBackground,
+  type RolesLoadStatus,
+} from "./roles-permissions.refetch-policy";
 
-export type RolesLoadStatus = "idle" | "loading" | "ready" | "error";
+export type { RolesLoadStatus };
 
 interface RolesPermissionsState {
   /** Raw Backend entities only — no derived map, no translated text, no JSX. */
@@ -49,6 +60,11 @@ interface RolesPermissionsState {
     permissionKey: string,
     next: boolean,
   ) => Promise<boolean>;
+  toggleFunctionalGrant: (
+    roleId: number,
+    capabilityKey: string,
+    next: boolean,
+  ) => Promise<boolean>;
 }
 
 export function cellKey(roleId: number, permissionKey: string): string {
@@ -63,19 +79,31 @@ let inFlight: Promise<void> | null = null;
 
 export const useRolesPermissionsStore = create<RolesPermissionsState>(
   (set, get) => {
-    async function fetchAll(): Promise<void> {
-      set({ status: "loading", error: null });
+    async function fetchAll(background: boolean): Promise<void> {
+      if (!background) {
+        set({ status: "loading", error: null });
+      }
       try {
         // No dependency between the two calls — load them in parallel.
-        const [roles, permissions] = await Promise.all([
-          listAllRoles(),
-          listPermissions(),
-        ]);
-        set({ roles, permissions, status: "ready", error: null });
+        if (isFunctionalRbacV2UiEnabled()) {
+          const roles = await listAllRoles();
+          set({ roles, permissions: [], status: "ready", error: null });
+        } else {
+          const [roles, permissions] = await Promise.all([
+            listAllRoles(),
+            listPermissions(),
+          ]);
+          set({ roles, permissions, status: "ready", error: null });
+        }
       } catch (error) {
         // A partial result is never published: a failed catalog would render a
         // matrix that looks complete but is not.
-        set({ status: "error", error: normalizeApiError(error) });
+        const apiError = normalizeApiError(error);
+        if (background) {
+          set({ submitError: apiError });
+        } else {
+          set({ status: "error", error: apiError });
+        }
       }
     }
 
@@ -99,16 +127,18 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
       }
     }
 
-    function run(): Promise<void> {
+    function run(background = false): Promise<void> {
       if (inFlight) return inFlight;
-      inFlight = fetchAll().finally(() => {
+      const useBackground =
+        background || shouldRefetchInBackground(get().status);
+      inFlight = fetchAll(useBackground).finally(() => {
         inFlight = null;
       });
       return inFlight;
     }
 
     function refreshRoles(): Promise<void> {
-      return refreshAfterPending(() => inFlight, run);
+      return refreshAfterPending(() => inFlight, () => run(true));
     }
 
     return {
@@ -118,7 +148,14 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
       error: null,
       load() {
         const status = get().status;
-        if (status === "ready" || status === "loading") {
+        if (status === "ready") {
+          return inFlight ?? Promise.resolve();
+        }
+        if (status === "loading" && !inFlight) {
+          set({ status: "idle", error: null });
+          return run();
+        }
+        if (status === "loading") {
           return inFlight ?? Promise.resolve();
         }
         return run();
@@ -138,13 +175,64 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
         return submit(() => updateRole(id, payload));
       },
       pendingCells: {},
+      async toggleFunctionalGrant(roleId, capabilityKey, next) {
+        const previousRoles = get().roles;
+        const role = previousRoles.find((item) => item.id === roleId);
+        if (!role) return false;
+
+        const currentFunctional = extractFunctionalGrantsFromPermissions(
+          role.permissions,
+        );
+        const functionalGrants = applyFunctionalGrantToggle(
+          currentFunctional,
+          capabilityKey,
+          next,
+        );
+        const key = cellKey(roleId, capabilityKey);
+
+        set((state) => ({
+          pendingCells: { ...state.pendingCells, [key]: true },
+          submitError: null,
+        }));
+
+        try {
+          const updated = await setRoleFunctionalGrants(roleId, {
+            functionalGrants,
+            ifMatchUpdatedAt: role.updatedAt,
+          });
+          set((state) => ({
+            roles: state.roles.map((item) =>
+              item.id === roleId ? updated : item,
+            ),
+          }));
+          requestSessionPermissionSync();
+          return true;
+        } catch (error) {
+          const apiError = normalizeApiError(error);
+          if (apiError.code === "RESOURCE_MODIFIED") {
+            await refreshRoles();
+          }
+          set({ roles: previousRoles, submitError: apiError });
+          return false;
+        } finally {
+          set((state) => {
+            const rest = { ...state.pendingCells };
+            delete rest[key];
+            return { pendingCells: rest };
+          });
+        }
+      },
       async toggleRolePermission(roleId, permissionKey, next) {
         const previousRoles = get().roles;
         const role = previousRoles.find((item) => item.id === roleId);
         if (!role) return false;
 
+        // Always merge against the role's full Backend grant list so hidden
+        // matrix rows are never dropped by PUT /roles/:id/permissions.
         const permissions = next
-          ? [...role.permissions, permissionKey]
+          ? role.permissions.includes(permissionKey)
+            ? role.permissions
+            : [...role.permissions, permissionKey]
           : role.permissions.filter((key) => key !== permissionKey);
         const key = cellKey(roleId, permissionKey);
 
@@ -164,7 +252,6 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
               item.id === roleId ? updated : item,
             ),
           }));
-          await refreshRoles();
           return true;
         } catch (error) {
           // The Backend refused (a system role, a stale key, …): put the

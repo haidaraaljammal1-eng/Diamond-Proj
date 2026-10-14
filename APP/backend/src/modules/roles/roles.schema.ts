@@ -39,3 +39,10 @@ export const UpdateRoleSchema = z
 export const SetRolePermissionsSchema = z.object({
   permissionKeys: z.array(z.string()),
 });
+
+/** Phase 2 — functional grant mutation (preserves non-functional role permissions). */
+export const SetFunctionalGrantsSchema = z.object({
+  functionalGrants: z.array(z.string()),
+  /** ISO-8601; when set, rejects stale writes (409 RESOURCE_MODIFIED). */
+  ifMatchUpdatedAt: z.string().datetime().optional(),
+});

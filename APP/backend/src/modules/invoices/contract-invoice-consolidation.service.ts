@@ -318,7 +318,7 @@ async function createRevisionInvoice(
         contractNumberSnapshot: input.contract.contractNumber,
         vehicleNameSnapshot: vehicleName,
         plateNumberSnapshot: plateNumber,
-        companyDisplayNameSnapshot: branding.displayName,
+        companyDisplayNameSnapshot: branding.legalHeaderEn,
         companyAddressSnapshot: branding.addressLine,
         companyEmailSnapshot: branding.email,
         companyBrandKeySnapshot: branding.brandKey,

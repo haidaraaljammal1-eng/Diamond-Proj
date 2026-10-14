@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useDiamondPageAccess,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
-  INVOICES_PAGE_PERMISSIONS,
+  INVOICES_READ_PERMISSION,
   INVOICES_SEND_WHATSAPP_PERMISSION,
 } from "../invoices.permissions";
 import { useInvoicesStore } from "../stores/invoices.store";
@@ -29,6 +33,7 @@ export interface UseInvoicesResult {
   deliveries: InvoiceDeliveryDto[];
   detailOpen: boolean;
   isAllowed: boolean;
+  canDownloadPdf: boolean;
   canSendWhatsApp: boolean;
   isListLoading: boolean;
   isDetailLoading: boolean;
@@ -54,11 +59,15 @@ export interface UseInvoicesResult {
 }
 
 export function useInvoices(): UseInvoicesResult {
-  const { hasPermission } = usePermissions();
-  const isAllowed = INVOICES_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
+  const isAllowed = useDiamondPageAccess("invoices");
+  const canDownloadPdf = useLegacyOrFunctionalCapability(
+    INVOICES_READ_PERMISSION,
+    FN.invoices.downloadPdf,
   );
-  const canSendWhatsApp = hasPermission(INVOICES_SEND_WHATSAPP_PERMISSION);
+  const canSendWhatsApp = useLegacyOrFunctionalCapability(
+    INVOICES_SEND_WHATSAPP_PERMISSION,
+    FN.invoices.sendWhatsapp,
+  );
 
   const items = useInvoicesStore((s) => s.items);
   const pagination = useInvoicesStore((s) => s.pagination);
@@ -132,6 +141,7 @@ export function useInvoices(): UseInvoicesResult {
     deliveries,
     detailOpen,
     isAllowed,
+    canDownloadPdf,
     canSendWhatsApp,
     isListLoading,
     isDetailLoading: detailLoading,

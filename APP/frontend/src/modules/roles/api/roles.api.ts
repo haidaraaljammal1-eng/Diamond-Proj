@@ -79,3 +79,23 @@ export async function setRolePermissions(
   });
   return response.data;
 }
+
+export interface SetRoleFunctionalGrantsPayload {
+  functionalGrants: string[];
+  ifMatchUpdatedAt?: string;
+}
+
+/** `PUT /roles/:id/functional-grants` — replaces functional grants only. */
+export async function setRoleFunctionalGrants(
+  id: number,
+  payload: SetRoleFunctionalGrantsPayload,
+): Promise<RoleDto> {
+  const response = await apiRequest<RoleDto>(
+    `${ROLES_PATH}/${id}/functional-grants`,
+    {
+      method: "PUT",
+      body: payload,
+    },
+  );
+  return response.data;
+}

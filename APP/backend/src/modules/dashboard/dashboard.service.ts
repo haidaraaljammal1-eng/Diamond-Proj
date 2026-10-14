@@ -1,6 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { env } from "src/config/env";
 import { hasPermission, type AuthUser } from "src/lib/context/auth-context";
+import { FN } from "src/lib/rbac/functional-permissions/keys";
+import {
+  hasFunctionalCapability,
+  isFunctionalRbacV2Enabled,
+} from "src/lib/rbac/functional-permissions/enforcement";
 import { PERMISSIONS } from "src/constants/permissions";
 import { FINANCE_CURRENCY } from "src/modules/finance/finance.constants";
 import type { FinanceCompanyScope } from "src/modules/finance/finance-company-scope";
@@ -58,8 +63,15 @@ export function createDashboardService(fastify: FastifyInstance) {
     const contractWhere = companyId != null ? { companyId } : {};
     const financeScope: FinanceCompanyScope =
       companyId != null ? { kind: "COMPANY", companyId } : { kind: "ALL" };
+    const mayReadSection = (legacyPerm: string): boolean => {
+      if (isFunctionalRbacV2Enabled()) {
+        if (viewer.isSystemAdmin) return true;
+        return hasFunctionalCapability(viewer, FN.dashboard.full);
+      }
+      return hasPermission(viewer, legacyPerm);
+    };
     const runSection = async <T>(label: string, perm: string, fn: () => Promise<T>): Promise<T | null> => {
-      if (!hasPermission(viewer, perm)) return null;
+      if (!mayReadSection(perm)) return null;
       try {
         return await fn();
       } catch (err) {

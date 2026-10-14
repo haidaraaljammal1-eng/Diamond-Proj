@@ -67,12 +67,12 @@ describe("Vehicles button hierarchy", () => {
     const detail = readSource(
       "modules/vehicles/components/vehicle-detail/vehicle-detail.tsx",
     );
-    assert.equal(
-      (detail.match(/VehiclePhotoButton[\s\S]*?variant="secondaryStrong"/g) ?? []).length,
-      2,
+    const gallery = readSource(
+      "modules/vehicles/components/vehicle-detail/vehicle-detail-gallery.tsx",
     );
-    assert.equal((detail.match(/variant="secondaryStrong"/g) ?? []).length, 4);
-    assert.match(detail, /iconName="mdi:image-edit-outline"/);
+    assert.match(gallery, /VehiclePhotoButton[\s\S]*?variant="secondaryStrong"/);
+    assert.match(gallery, /iconName="mdi:image-edit-outline"/);
+    assert.equal((detail.match(/variant="secondaryStrong"/g) ?? []).length, 2);
     assert.doesNotMatch(detail, /variant="primary"[\s\S]*replacePhoto/);
   });
 });

@@ -36,6 +36,8 @@ import {
 } from "src/modules/vehicles/vehicle-fleet-sort";
 import { vehicleHasBlockingContract } from "src/modules/contracts/vehicle-rental-guard";
 import { assertVehicleOperationalStatusAllowedWithActiveMaintenance } from "src/modules/maintenance/maintenance-vehicle-guard";
+import type { AuthUser } from "src/lib/context/auth-context";
+import { assertVehicleUpdateAuthorized } from "src/lib/rbac/functional-permissions/vehicle-enforcement";
 import type {
   CreateVehicleSchema,
   FleetVehicleTypeOption,
@@ -447,7 +449,11 @@ export function createVehiclesService(fastify: FastifyInstance) {
   async function update(
     id: number,
     input: z.infer<typeof UpdateVehicleSchema>,
+    actor?: AuthUser,
   ): Promise<VehiclePublic> {
+    if (actor) {
+      assertVehicleUpdateAuthorized(actor, input);
+    }
     const existing = await loadOrThrow(id);
     await assertVehicleMutableForFleetOps(prisma, existing);
     // The operating company is WRITE-ONCE: it is chosen at Add Vehicle and there

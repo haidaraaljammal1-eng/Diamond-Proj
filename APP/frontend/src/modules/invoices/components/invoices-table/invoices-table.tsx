@@ -27,6 +27,7 @@ export interface InvoicesTableProps {
   loading: boolean;
   error: string | null;
   canSendWhatsApp: boolean;
+  canDownloadPdf: boolean;
   onSelect: (id: string) => void;
   onViewPdf: (id: string) => void;
   onDownloadPdf: (id: string) => void;
@@ -51,6 +52,7 @@ export function InvoicesTable({
   loading,
   error,
   canSendWhatsApp,
+  canDownloadPdf,
   onSelect,
   onViewPdf,
   onDownloadPdf,
@@ -168,26 +170,30 @@ export function InvoicesTable({
                         >
                           {t("actions.view")}
                         </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          aria-label={t("actions.viewPdf")}
-                          data-testid="invoices-action-view-pdf"
-                          onClick={() => onViewPdf(item.id)}
-                        >
-                          <Icon name="mdi:file-pdf-box" size={18} />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          aria-label={t("actions.download")}
-                          data-testid="invoices-action-download-pdf"
-                          onClick={() => onDownloadPdf(item.id)}
-                        >
-                          <Icon name="mdi:download" size={18} />
-                        </Button>
+                        {canDownloadPdf ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              aria-label={t("actions.viewPdf")}
+                              data-testid="invoices-action-view-pdf"
+                              onClick={() => onViewPdf(item.id)}
+                            >
+                              <Icon name="mdi:file-pdf-box" size={18} />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              aria-label={t("actions.download")}
+                              data-testid="invoices-action-download-pdf"
+                              onClick={() => onDownloadPdf(item.id)}
+                            >
+                              <Icon name="mdi:download" size={18} />
+                            </Button>
+                          </>
+                        ) : null}
                         {canSendWhatsApp && item.status === "ISSUED" ? (
                           <Button
                             type="button"

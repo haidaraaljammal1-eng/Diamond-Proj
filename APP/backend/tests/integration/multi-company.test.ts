@@ -159,8 +159,8 @@ if (!RUN) {
       const elite = rows.find((row) => row.code === "ELITE");
       assert.ok(unique, "UNIQUE missing");
       assert.ok(elite, "ELITE missing");
-      assert.equal(unique!.legalNameEn, "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C");
-      assert.equal(elite!.legalNameEn, "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C");
+      assert.equal(unique!.legalNameEn, "Diamond Unique Car Rental CO.L.L.C.S.O.C");
+      assert.equal(elite!.legalNameEn, "Diamond Elite Car Rental LLC");
       assert.match(String(unique!.legalNameAr), /دايموند يونيك/);
       assert.match(String(elite!.legalNameAr), /دايموند إيليت/);
       assert.ok(String(unique!.accentColor).startsWith("#"));
@@ -500,7 +500,7 @@ if (!RUN) {
         company: { code: string; legalNameEn: string; legalNameAr: string };
       };
       assert.equal(header.company.code, "ELITE");
-      assert.equal(header.company.legalNameEn, "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C");
+      assert.equal(header.company.legalNameEn, "Diamond Elite Car Rental LLC");
       assert.match(header.company.legalNameAr, /دايموند إيليت/);
 
       // The customer sees the renting company; they never choose it.

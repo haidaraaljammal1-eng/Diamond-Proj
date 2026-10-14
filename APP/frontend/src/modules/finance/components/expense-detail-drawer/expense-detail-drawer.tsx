@@ -18,7 +18,8 @@ export interface ExpenseDetailDrawerProps {
   detail: ManualExpenseDetailDto | null;
   loading: boolean;
   error: unknown;
-  canManage: boolean;
+  canCorrect: boolean;
+  canVoid: boolean;
   demoOnly?: boolean;
   onClose: () => void;
   onRetry: () => void;
@@ -85,7 +86,8 @@ export function ExpenseDetailDrawer({
   detail,
   loading,
   error,
-  canManage,
+  canCorrect,
+  canVoid,
   demoOnly = false,
   onClose,
   onRetry,
@@ -222,18 +224,20 @@ export function ExpenseDetailDrawer({
             </section>
           ) : null}
 
-          {canManage && detail.status === "ACTIVE" ? (
+          {detail.status === "ACTIVE" && (canCorrect || canVoid) ? (
             <div className={styles.actions}>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                data-testid="finance-correct-expense"
-                onClick={onCorrect}
-              >
-                {t("expense.correctAction")}
-              </Button>
-              {demoOnly ? null : (
+              {canCorrect ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  data-testid="finance-correct-expense"
+                  onClick={onCorrect}
+                >
+                  {t("expense.correctAction")}
+                </Button>
+              ) : null}
+              {canVoid && !demoOnly ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -243,7 +247,7 @@ export function ExpenseDetailDrawer({
                 >
                   {t("expense.voidAction")}
                 </Button>
-              )}
+              ) : null}
             </div>
           ) : null}
         </div>

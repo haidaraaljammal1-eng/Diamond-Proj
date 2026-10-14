@@ -1,0 +1,490 @@
+﻿≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+[2026-10-13 07:30:50.734 +0300] [33mWARN[39m: [36mDevelopment database is not bootstrapped. Run: npm run dev:bootstrap[39m
+    [35mfound[39m: 0
+    [35mexpected[39m: 20
+[2026-10-13 07:30:56.797 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d9c968ab-a507-4869-83bd-045dffa547e1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/auth/login"
+    }
+[2026-10-13 07:30:57.070 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d9c968ab-a507-4869-83bd-045dffa547e1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 150.30339999999887
+[2026-10-13 07:30:57.247 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "9584d7f0-9fa3-4f48-9734-70d4536339d1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+(node:3000) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[2026-10-13 07:30:57.449 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "9584d7f0-9fa3-4f48-9734-70d4536339d1"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 197.3177999999989
+[2026-10-13 07:30:57.461 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "c7a26030-b00a-4581-9d7e-7c4707403700"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+[2026-10-13 07:30:57.660 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "c9d639f6-47ad-4050-866f-d21546e6f97f"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/offers"
+    }
+[2026-10-13 07:30:57.663 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "c7a26030-b00a-4581-9d7e-7c4707403700"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 197.26140000000123
+[2026-10-13 07:30:58.016 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "a01ce31e-1e3a-4f25-904c-d7f424e9bcdc"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/467da913-1227-47c3-bb20-755e7611404f/rental-link"
+    }
+[2026-10-13 07:30:58.018 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "c9d639f6-47ad-4050-866f-d21546e6f97f"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 354.8740000000016
+[2026-10-13 07:30:58.055 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "8756ae14-c680-40c0-902b-0396132c5644"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/ACUHQ1La047ZClxOHFB38kFk0k-6E0ET_CC3wCea49s/driving-license"
+    }
+[2026-10-13 07:30:58.059 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "a01ce31e-1e3a-4f25-904c-d7f424e9bcdc"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 36.97789999999986
+[2026-10-13 07:30:58.076 +0300] [32mINFO[39m: [36mdriving_license_upload_meta[39m
+    [35mcontractId[39m: "467da913-1227-47c3-bb20-755e7611404f"
+    [35mlicenseUpload[39m: {
+      "mimeType": "image/png",
+      "byteSize": 12,
+      "width": null,
+      "height": null,
+      "aspect": null,
+      "frameAspectValid": null
+    }
+[2026-10-13 07:30:58.384 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "2cfcae3c-347e-44a6-8241-a209c1ddfe50"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/ACUHQ1La047ZClxOHFB38kFk0k-6E0ET_CC3wCea49s/passport"
+    }
+[2026-10-13 07:30:58.385 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "8756ae14-c680-40c0-902b-0396132c5644"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 327.09319999999934
+[2026-10-13 07:30:58.931 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "b2a9f84a-ea35-4baa-a6c2-6581a00cd342"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/ACUHQ1La047ZClxOHFB38kFk0k-6E0ET_CC3wCea49s/form"
+    }
+[2026-10-13 07:30:58.932 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "2cfcae3c-347e-44a6-8241-a209c1ddfe50"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 544.9521999999997
+[2026-10-13 07:30:59.088 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "552eb0f2-f5cf-41d6-a9c7-d020d063eae8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/ACUHQ1La047ZClxOHFB38kFk0k-6E0ET_CC3wCea49s/accept"
+    }
+[2026-10-13 07:30:59.088 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "b2a9f84a-ea35-4baa-a6c2-6581a00cd342"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 155.5482000000011
+[2026-10-13 07:30:59.250 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "e2107e60-149f-4053-a2cc-4bc7b2310006"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/ACUHQ1La047ZClxOHFB38kFk0k-6E0ET_CC3wCea49s/card-link"
+    }
+[2026-10-13 07:30:59.252 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "552eb0f2-f5cf-41d6-a9c7-d020d063eae8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 158.53570000000036
+[2026-10-13 07:30:59.268 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "ccc725a6-878f-4716-ae40-2e2b646b0ebc"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/rental/ACUHQ1La047ZClxOHFB38kFk0k-6E0ET_CC3wCea49s/card-link/return?setupSessionId=setu_test_UIC-MV66NSUF-rental-1_1"
+    }
+[2026-10-13 07:30:59.454 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "e2107e60-149f-4053-a2cc-4bc7b2310006"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16.401200000000244
+[2026-10-13 07:30:59.456 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "ccc725a6-878f-4716-ae40-2e2b646b0ebc"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 187.53269999999975
+[2026-10-13 07:30:59.457 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "e932872f-f665-4f5a-a015-3fbd105dde91"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/ACUHQ1La047ZClxOHFB38kFk0k-6E0ET_CC3wCea49s/payment"
+    }
+Γû╢ unified invoice ΓÇö final closure (haidara_test)
+  Γ£û A: full consolidated invoice ΓÇö rental, renewal, violation, Salik, reconciliation, post-close (3843.8835ms)
+[2026-10-13 07:31:01.285 +0300] [33mWARN[39m: [36mclient error[39m
+    [35mreqId[39m: "e932872f-f665-4f5a-a015-3fbd105dde91"
+    [35mstatusCode[39m: 401
+[2026-10-13 07:31:01.288 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "e932872f-f665-4f5a-a015-3fbd105dde91"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 1830.0812000000005
+prisma:error 
+Invalid `prisma.contractPayment.create()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\unified-invoice-closure.ts:60:33
+
+  57   },
+  58 ) {
+  59   const now = new Date();
+ΓåÆ 60   return prisma.contractPayment.create(
+Unique constraint failed on the fields: (`purpose`, `"targetId"`)
+  Γ£û B: partial reconciliation payments revise balance 1000 ΓåÆ 600 ΓåÆ 300 ΓåÆ 0 (1246.8585ms)
+[2026-10-13 07:31:02.552 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "94e263d7-2254-4914-91c5-fd096b3a08d8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/vehicles"
+    }
+[2026-10-13 07:31:02.683 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "97483d1a-caa6-47b6-b7b9-c305a0e20fe9"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/offers"
+    }
+[2026-10-13 07:31:02.684 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "94e263d7-2254-4914-91c5-fd096b3a08d8"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 129.6988999999994
+[2026-10-13 07:31:02.858 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "113fb9e6-997a-429d-8c57-0985ec9a3f9f"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/20068f9b-354e-4e14-9045-603020e47936/rental-link"
+    }
+[2026-10-13 07:31:02.860 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "97483d1a-caa6-47b6-b7b9-c305a0e20fe9"
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 172.27509999999893
+[2026-10-13 07:31:03.019 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d329f458-7015-4567-860f-f6d9d16f6d57"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/uFdO4_IyZfHmPgFvNAYbCOX_j8GJdPJU6bStzJi-7rw/driving-license"
+    }
+[2026-10-13 07:31:03.023 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "113fb9e6-997a-429d-8c57-0985ec9a3f9f"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 160.15139999999883
+[2026-10-13 07:31:03.033 +0300] [32mINFO[39m: [36mdriving_license_upload_meta[39m
+    [35mcontractId[39m: "20068f9b-354e-4e14-9045-603020e47936"
+    [35mlicenseUpload[39m: {
+      "mimeType": "image/png",
+      "byteSize": 12,
+      "width": null,
+      "height": null,
+      "aspect": null,
+      "frameAspectValid": null
+    }
+[2026-10-13 07:31:03.208 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "36b63d88-3daa-4fe1-956f-f9b093ba93b1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/uFdO4_IyZfHmPgFvNAYbCOX_j8GJdPJU6bStzJi-7rw/passport"
+    }
+[2026-10-13 07:31:03.210 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d329f458-7015-4567-860f-f6d9d16f6d57"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 187.74209999999948
+[2026-10-13 07:31:03.395 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "d31820db-e5e2-467e-9451-7de525d3849d"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/uFdO4_IyZfHmPgFvNAYbCOX_j8GJdPJU6bStzJi-7rw/form"
+    }
+[2026-10-13 07:31:03.396 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "36b63d88-3daa-4fe1-956f-f9b093ba93b1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 185.7474000000002
+[2026-10-13 07:31:03.556 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "cd0756d4-1f72-47f3-85f1-383c44713947"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/uFdO4_IyZfHmPgFvNAYbCOX_j8GJdPJU6bStzJi-7rw/accept"
+    }
+[2026-10-13 07:31:03.558 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "d31820db-e5e2-467e-9451-7de525d3849d"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 158.84019999999873
+[2026-10-13 07:31:03.732 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "166a63db-a39f-43f2-977f-c85f33ba1f52"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/uFdO4_IyZfHmPgFvNAYbCOX_j8GJdPJU6bStzJi-7rw/card-link"
+    }
+[2026-10-13 07:31:03.733 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "cd0756d4-1f72-47f3-85f1-383c44713947"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 173.9190000000017
+[2026-10-13 07:31:03.743 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "ab8d811d-2a46-48c0-b498-242aecbbb319"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/contracts/rental/uFdO4_IyZfHmPgFvNAYbCOX_j8GJdPJU6bStzJi-7rw/card-link/return?setupSessionId=setu_test_UIC-MV66NSUF-rental-77_1"
+    }
+[2026-10-13 07:31:03.745 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "166a63db-a39f-43f2-977f-c85f33ba1f52"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9.41899999999805
+[2026-10-13 07:31:03.753 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "ab8d811d-2a46-48c0-b498-242aecbbb319"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9.384699999998702
+[2026-10-13 07:31:03.753 +0300] [32mINFO[39m: [36mincoming request[39m
+    [35mreqId[39m: "6f61987a-c272-4c0e-8cca-4c216388657c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/contracts/rental/uFdO4_IyZfHmPgFvNAYbCOX_j8GJdPJU6bStzJi-7rw/payment"
+    }
+  Γ£û C: renewal line stays on same contract invoice (no separate renewal invoice) (1672.7673ms)
+[2026-10-13 07:31:04.213 +0300] [33mWARN[39m: [36mclient error[39m
+    [35mreqId[39m: "6f61987a-c272-4c0e-8cca-4c216388657c"
+    [35mstatusCode[39m: 401
+[2026-10-13 07:31:04.214 +0300] [32mINFO[39m: [36mrequest completed[39m
+    [35mreqId[39m: "6f61987a-c272-4c0e-8cca-4c216388657c"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 460.7698999999993
+  Γ£û D: PostgreSQL partial unique index + fingerprint idempotency + concurrent consolidation (617.2037ms)
+[2026-10-13 07:31:05.192 +0300] [31mERROR[39m: [36minvoice outbox event failed[39m
+    [35moutboxId[39m: 1437
+    err: {
+      "type": "Error",
+      "message": "INVOICE_ISSUANCE_INTEGRATION_SIMULATED_FAILURE",
+      "stack":
+          Error: INVOICE_ISSUANCE_INTEGRATION_SIMULATED_FAILURE
+              at handleEvent (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:51:15)
+              at Object.runInvoiceOutboxCycle (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoice-outbox-consumer.ts:87:31)
+              at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at async drainInvoiceOutbox (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\invoice-integration.ts:32:27)
+              at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:602:7)
+              at async Test.run (node:internal/test_runner/test:1332:7)
+              at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+    }
+  Γ£û E: invoice worker simulated failure then retry ΓÇö one CURRENT, no extra revision (384.3282ms)
+  Γ£û F: legacy-style archived invoice + list current-only; superseded WhatsApp blocked (182.2431ms)
+prisma:error 
+Invalid `prisma.contract.deleteMany()` invocation in
+D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:227:31
+
+  224   where: { reconciliation: { contractId } },
+  225 });
+  226 await prisma.contractReconciliation.deleteMany({ where: { contractId } });
+ΓåÆ 227 await prisma.contract.deleteMany(
+Foreign key constraint violated on the constraint: `road_liabilities_attributedContractId_fkey`
+Γ£û unified invoice ΓÇö final closure (haidara_test) (18353.9285ms)
+Γä╣ tests 6
+Γä╣ suites 1
+Γä╣ pass 0
+Γä╣ fail 6
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 29201.7403
+
+Γ£û failing tests:
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:8854
+Γ£û A: full consolidated invoice ΓÇö rental, renewal, violation, Salik, reconciliation, post-close (3843.8835ms)
+  AssertionError [ERR_ASSERTION]: {"error":{"code":"UNAUTHORIZED","message":"Authentication required","requestId":"e932872f-f665-4f5a-a015-3fbd105dde91"}}
+  
+  401 !== 200
+  
+      at confirmRentalPaymentViaStatusToken (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\fake-payment-provider.ts:513:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async createActiveRentalContract (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\renewal-integration-setup.ts:176:3)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:241:56)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1794:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 401,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:14556
+Γ£û B: partial reconciliation payments revise balance 1000 ΓåÆ 600 ΓåÆ 300 ΓåÆ 0 (1246.8585ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.contractPayment.create()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\unified-invoice-closure.ts:60:33
+  
+    57   },
+    58 ) {
+    59   const now = new Date();
+  ΓåÆ 60   return prisma.contractPayment.create(
+  Unique constraint failed on the fields: (`purpose`, `"targetId"`)
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:441:25)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:17485
+Γ£û C: renewal line stays on same contract invoice (no separate renewal invoice) (1672.7673ms)
+  AssertionError [ERR_ASSERTION]: {"error":{"code":"UNAUTHORIZED","message":"Authentication required","requestId":"6f61987a-c272-4c0e-8cca-4c216388657c"}}
+  
+  401 !== 200
+  
+      at confirmRentalPaymentViaStatusToken (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\fake-payment-provider.ts:513:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async createActiveRentalContract (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\helpers\renewal-integration-setup.ts:176:3)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:467:30)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 401,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:19340
+Γ£û D: PostgreSQL partial unique index + fingerprint idempotency + concurrent consolidation (617.2037ms)
+  Error [AppError]: No eligible invoice lines for contract
+      at invoiceSourceIncompleteError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoices.errors.ts:33:10)
+      at buildConsolidatedInvoiceLines (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:259:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:381:23)
+      at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+      at async Promise.all (index 0)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:525:22)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    isAppError: true,
+    code: 'VALIDATION_ERROR',
+    statusCode: 422,
+    details: undefined,
+    context: { reason: 'INVOICE_SOURCE_INCOMPLETE' },
+    conflicts: undefined,
+    suggestedActions: undefined
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:20708
+Γ£û E: invoice worker simulated failure then retry ΓÇö one CURRENT, no extra revision (384.3282ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:612:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:23184
+Γ£û F: legacy-style archived invoice + list current-only; superseded WhatsApp blocked (182.2431ms)
+  Error [AppError]: No eligible invoice lines for contract
+      at invoiceSourceIncompleteError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\invoices.errors.ts:33:10)
+      at buildConsolidatedInvoiceLines (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:259:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\src\modules\invoices\contract-invoice-consolidation.service.ts:381:23)
+      at async Proxy._transactionWithCallback (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:810:18)
+      at async TestContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:642:18)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    isAppError: true,
+    code: 'VALIDATION_ERROR',
+    statusCode: 422,
+    details: undefined,
+    context: { reason: 'INVOICE_SOURCE_INCOMPLETE' },
+    conflicts: undefined,
+    suggestedActions: undefined
+  }
+
+test at tests\integration\unified-invoice-closure.integration.test.ts:2:2470
+Γ£û unified invoice ΓÇö final closure (haidara_test) (18353.9285ms)
+  PrismaClientKnownRequestError: 
+  Invalid `prisma.contract.deleteMany()` invocation in
+  D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:227:31
+  
+    224   where: { reconciliation: { contractId } },
+    225 });
+    226 await prisma.contractReconciliation.deleteMany({ where: { contractId } });
+  ΓåÆ 227 await prisma.contract.deleteMany(
+  Foreign key constraint violated on the constraint: `road_liabilities_attributedContractId_fkey`
+      at zr.handleRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+      at zr.handleAndLogRequestError (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+      at zr.request (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:963:24)
+      at async SuiteContext.<anonymous> (D:\projects\DiamondElite\fullproject\Diamond-Proj\APP\backend\tests\integration\unified-invoice-closure.integration.test.ts:227:9)
+      at async TestHook.run (node:internal/test_runner/test:1332:7)
+      at async Suite.runHook (node:internal/test_runner/test:1212:9)
+      at async Suite.run (node:internal/test_runner/test:1795:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

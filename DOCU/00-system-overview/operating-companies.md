@@ -32,8 +32,12 @@ Seeded rows:
 
 | code | displayName | legalNameEn | accentColor |
 | ---- | ----------- | ----------- | ----------- |
-| UNIQUE | UNIQUE | DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C | `#C9A15C` |
-| ELITE | ELITE | DIAMOND ELITE CAR RENTALS CO. LLC S.O.C | `#3E5C76` |
+| UNIQUE | UNIQUE | Diamond Unique Car Rental CO.L.L.C.S.O.C | `#C9A15C` |
+| ELITE | ELITE | Diamond Elite Car Rental LLC | `#3E5C76` |
+
+Authoritative English `legalNameEn` strings for seed and invoice fallbacks live in
+`APP/backend/src/modules/operating-companies/operating-company-legal-names.ts`.
+Runtime documents read `OperatingCompany.legalNameEn` from the database.
 
 Both `accentColor` values are **placeholders**: no official brand colour exists in
 the repository or in DOCU. UNIQUE reuses the current Diamond gold and ELITE uses a
@@ -204,9 +208,9 @@ dimensions, contact block, typography hierarchy and legal body are unchanged.
 Only `header.company.legalNameAr` and `header.company.legalNameEn` vary:
 
 - UNIQUE: `شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و` /
-  `DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C`
+  `Diamond Unique Car Rental CO.L.L.C.S.O.C`
 - ELITE: `شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و` /
-  `DIAMOND ELITE CAR RENTALS CO. LLC S.O.C`
+  `Diamond Elite Car Rental LLC`
 
 No new ELITE logo was invented. The existing logo remains because the repository
 contains no authoritative company-specific replacement. Its existing alt text is

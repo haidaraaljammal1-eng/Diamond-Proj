@@ -24,6 +24,7 @@ export interface UseVehicleResult {
     oldPhotoId: string,
     file: File,
   ) => Promise<ReplaceVehiclePhotoResult>;
+  deleteVehiclePhoto: (vehicleId: number, photoId: string) => Promise<boolean>;
   clearPhotoActionError: () => void;
 }
 
@@ -40,6 +41,9 @@ export function useVehicle(): UseVehicleResult {
   );
   const replaceVehiclePhotoForVehicle = useVehiclesStore(
     (state) => state.replaceVehiclePhotoForVehicle,
+  );
+  const deleteVehiclePhotoForVehicle = useVehiclesStore(
+    (state) => state.deleteVehiclePhotoForVehicle,
   );
   const clearPhotoActionError = useVehiclesStore((state) => state.clearPhotoActionError);
 
@@ -59,6 +63,11 @@ export function useVehicle(): UseVehicleResult {
     [replaceVehiclePhotoForVehicle],
   );
 
+  const deleteVehiclePhoto = useCallback(
+    (vehicleId: number, photoId: string) => deleteVehiclePhotoForVehicle(vehicleId, photoId),
+    [deleteVehiclePhotoForVehicle],
+  );
+
   return useMemo(
     () => ({
       detail,
@@ -71,6 +80,7 @@ export function useVehicle(): UseVehicleResult {
       clearVehicle: clearDetail,
       uploadVehiclePhoto,
       replaceVehiclePhoto,
+      deleteVehiclePhoto,
       clearPhotoActionError,
     }),
     [
@@ -83,6 +93,7 @@ export function useVehicle(): UseVehicleResult {
       clearDetail,
       uploadVehiclePhoto,
       replaceVehiclePhoto,
+      deleteVehiclePhoto,
       clearPhotoActionError,
     ],
   );

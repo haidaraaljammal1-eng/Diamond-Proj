@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
@@ -11,6 +11,7 @@ import {
 } from "@/modules/contracts/api/contracts.api";
 import {
   CONTRACTS_MANAGE_PERMISSION,
+  CONTRACTS_RENEW_PERMISSION,
   CONTRACTS_RETURN_PERMISSION,
 } from "@/modules/contracts/contracts.permissions";
 import { MAINTENANCE_MANAGE_PERMISSION } from "@/modules/maintenance/maintenance.permissions";
@@ -30,6 +31,8 @@ export interface VehicleDetailDialogProps {
   onFleetChanged: () => void;
   onNavigateToMaintenance: (vehicleId: number, options?: { create?: boolean; orderId?: number }) => void;
   onPhotoNotice?: (message: string) => void;
+  onRenewRental: (contractId: string) => void;
+  fleetReloadToken?: number;
 }
 
 type ConfirmKind = "return-now" | "cancel-rental-request" | null;
@@ -44,6 +47,8 @@ export function VehicleDetailDialog({
   onFleetChanged,
   onNavigateToMaintenance,
   onPhotoNotice,
+  onRenewRental,
+  fleetReloadToken = 0,
 }: VehicleDetailDialogProps) {
   const t = useTranslations("Vehicles");
   const format = useFormatter();
@@ -51,6 +56,7 @@ export function VehicleDetailDialog({
   const canReturn = hasPermission(CONTRACTS_RETURN_PERMISSION);
   const canCancelRental = hasPermission(CONTRACTS_MANAGE_PERMISSION);
   const canManageMaintenance = hasPermission(MAINTENANCE_MANAGE_PERMISSION);
+  const canRenewContract = hasPermission(CONTRACTS_RENEW_PERMISSION);
 
   const {
     detail,
@@ -63,6 +69,7 @@ export function VehicleDetailDialog({
     clearVehicle,
     uploadVehiclePhoto,
     replaceVehiclePhoto,
+    deleteVehiclePhoto,
     clearPhotoActionError,
   } = useVehicle();
 
@@ -78,7 +85,51 @@ export function VehicleDetailDialog({
     clearPhotoActionError();
     setFleetOpsError(null);
     void loadVehicle(vehicle.id);
-  }, [vehicle, loadVehicle, clearVehicle, clearPhotoActionError]);
+  }, [vehicle, loadVehicle, clearVehicle, clearPhotoActionError, fleetReloadToken]);
+
+  /**
+   * Fleet `currentRental.status === "active"` is the backend projection of an ACTIVE
+   * blocking contract (see `current-rental.ts`). Same rule as `actions.canRenew`.
+   */
+  const renewRentalFooter = useMemo(() => {
+    if (!canRenewContract) return { status: "idle" as const };
+    const cardRental = vehicle?.currentRental ?? null;
+    const detailRental = detail?.currentRental ?? null;
+    const resolvedRental =
+      detailRental?.status === "active"
+        ? detailRental
+        : isReady &&
+            detail &&
+            detail.operationalStatus === "rented" &&
+            cardRental?.status === "active"
+          ? cardRental
+          : !isReady && cardRental?.status === "active"
+            ? cardRental
+            : detailRental ?? cardRental;
+
+    if (!isReady && resolvedRental?.status === "active") {
+      return { status: "loading" as const, contractId: resolvedRental.contractId };
+    }
+    if (resolvedRental?.status === "active") {
+      return { status: "ready" as const, contractId: resolvedRental.contractId };
+    }
+    if (resolvedRental?.status === "retout") {
+      return {
+        status: "blocked" as const,
+        contractId: resolvedRental.contractId,
+        backendCanRenew: false,
+      };
+    }
+    return { status: "idle" as const };
+  }, [
+    canRenewContract,
+    vehicle?.currentRental,
+    detail?.currentRental,
+    detail?.operationalStatus,
+    isReady,
+    detail,
+    fleetReloadToken,
+  ]);
 
   const photoActionErrorMessage = resolveVehiclesErrorMessage(t, photoActionError);
   const pendingFollowUp = detail?.prePaymentFollowUps?.[0] ?? null;
@@ -95,13 +146,9 @@ export function VehicleDetailDialog({
   );
 
   const handleReplacePhoto = useCallback(
-    async (file: File) => {
-      if (!detail?.primaryImage) return;
-      const result = await replaceVehiclePhoto(
-        detail.id,
-        detail.primaryImage.id,
-        file,
-      );
+    async (photoId: string, file: File) => {
+      if (!detail) return;
+      const result = await replaceVehiclePhoto(detail.id, photoId, file);
       if (!result.ok) return;
       if (result.deleteFailed) {
         onPhotoNotice?.(t("detail.photoReplaceDeleteFailed"));
@@ -110,6 +157,15 @@ export function VehicleDetailDialog({
       onPhotoNotice?.(t("detail.photoReplaceSuccess"));
     },
     [detail, replaceVehiclePhoto, onPhotoNotice, t],
+  );
+
+  const handleDeletePhoto = useCallback(
+    async (photoId: string) => {
+      if (!detail) return;
+      const ok = await deleteVehiclePhoto(detail.id, photoId);
+      if (ok) onPhotoNotice?.(t("detail.photoDeleteSuccess"));
+    },
+    [detail, deleteVehiclePhoto, onPhotoNotice, t],
   );
 
   const runReturnNow = useCallback(async () => {
@@ -159,6 +215,7 @@ export function VehicleDetailDialog({
         title={vehicle?.displayName ?? t("title")}
         closeLabel={t("detail.close")}
         presentation="flush"
+        size="xl"
       >
         <div
           className={[
@@ -189,7 +246,8 @@ export function VehicleDetailDialog({
             photoActionErrorMessage={photoActionErrorMessage}
             fleetOpsErrorMessage={fleetOpsError}
             onUploadPhoto={(file) => void handleUploadPhoto(file)}
-            onReplacePhoto={(file) => void handleReplacePhoto(file)}
+            onReplacePhoto={(photoId, file) => void handleReplacePhoto(photoId, file)}
+            onDeletePhoto={(photoId) => void handleDeletePhoto(photoId)}
             onSetPrice={() => {
               onClose();
               onSetPrice(detail);
@@ -214,6 +272,12 @@ export function VehicleDetailDialog({
               if (rental?.contractId) {
                 onClose();
                 onCarIn(rental.contractId);
+              }
+            }}
+            renewRentalFooter={renewRentalFooter}
+            onRenewRental={() => {
+              if (renewRentalFooter.status === "ready") {
+                onRenewRental(renewRentalFooter.contractId);
               }
             }}
           />

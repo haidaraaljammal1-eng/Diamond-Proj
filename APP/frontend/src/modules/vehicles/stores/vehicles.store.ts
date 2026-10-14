@@ -92,6 +92,7 @@ interface VehiclesState {
     oldPhotoId: string,
     file: File,
   ) => Promise<ReplaceVehiclePhotoResult>;
+  deleteVehiclePhotoForVehicle: (vehicleId: number, photoId: string) => Promise<boolean>;
   clearPhotoActionError: () => void;
 }
 
@@ -362,6 +363,22 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
       await refreshList();
       set({ isPhotoActionPending: false });
       return { ok: true };
+    },
+    async deleteVehiclePhotoForVehicle(vehicleId, photoId) {
+      set({ isPhotoActionPending: true, photoActionError: null });
+      try {
+        await deleteVehiclePhotoRequest(vehicleId, photoId);
+        await get().fetchVehicle(vehicleId);
+        await refreshList();
+        set({ isPhotoActionPending: false });
+        return true;
+      } catch (error) {
+        set({
+          isPhotoActionPending: false,
+          photoActionError: normalizeApiError(error),
+        });
+        return false;
+      }
     },
   };
 });

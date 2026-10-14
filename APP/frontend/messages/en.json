@@ -628,7 +628,11 @@
       "editRates": "Edit default rates",
       "editRatesTitle": "Edit vehicle default daily and monthly rates",
       "delete": "Remove from fleet",
-      "deleteTitle": "Remove this vehicle from the active fleet"
+      "deleteTitle": "Remove this vehicle from the active fleet",
+      "renewRental": "Renew Rental",
+      "renewRentalTitle": "Extend the active rental contract",
+      "renewRentalBlockedLifecycle": "Renewal is not available for this contract state",
+      "renewRentalBlockedPermission": "You do not have permission to renew this contract"
     },
     "boundary": {
       "noContract": "No contract is linked to this vehicle",
@@ -700,6 +704,15 @@
       "photoReplaceSuccess": "Vehicle photo replaced.",
       "photoReplaceDeleteFailed": "The new photo was uploaded, but the previous photo could not be removed. Refresh to see the current state.",
       "galleryItem": "Photo of {name}",
+      "galleryTitle": "Vehicle photos",
+      "galleryAddPhoto": "Add photo",
+      "galleryReplacePhoto": "Replace",
+      "galleryRemovePhoto": "Remove",
+      "galleryPreviewTitle": "Vehicle photo",
+      "galleryPhotoLimit": "Up to {max} photos per vehicle.",
+      "photoDeleteSuccess": "Vehicle photo removed.",
+      "shareWhatsApp": "Share via WhatsApp",
+      "shareWhatsAppSoon": "Coming soon — office WhatsApp sharing will be available in a future update.",
       "defaultRates": "Default rates",
       "hourly": "Hourly",
       "daily": "Daily · AED",
@@ -720,9 +733,9 @@
         "description": "The customer will pay securely via Stripe after signing the contract."
       },
       "cash": {
-        "title": "Cash payment",
+        "title": "Cash / Card Machine",
         "description": "No online payment step for the customer. The amount is recorded as cash collection after signing.",
-        "badge": "Payment: Cash",
+        "badge": "Payment: Cash / Card Machine",
         "pricingHint": "The customer will not see an online payment step in the rental link."
       }
     },
@@ -954,7 +967,7 @@
       "renewalCollect": "Collect",
       "renewalCollectTitle": "Collect renewal (cash)",
       "renewalCollectBody": "Confirm that cash was received for this renewal extension.",
-      "renewalCollectMethod": "Payment method: Cash",
+      "renewalCollectMethod": "Payment method: Cash / Card Machine",
       "renewalCollectConfirm": "Confirm collection",
       "renewalCollectionState": {
         "PENDING": "Pending",
@@ -1057,7 +1070,7 @@
         "MANUAL": "Manual",
         "BANK_TRANSFER": "Bank transfer",
         "CARD": "Card",
-        "CASH": "Cash"
+        "CASH": "Cash / Card Machine"
       }
     },
     "carOut": {
@@ -1264,15 +1277,35 @@
       "title": "Renew contract",
       "description": "Extend this active contract. Totals are computed by the backend.",
       "days": "Additional days",
+      "daysField": "Duration (days)",
+      "hoursField": "Duration (hours)",
       "amount": "Additional amount (AED)",
       "submit": "Renew",
-      "link": "Generate renewal link",
-      "applyOffice": "Register in office for cash collection",
+      "link": "Create renewal link",
+      "applyOffice": "Register renewal for collection at reconciliation",
+      "durationLabelDays": "Renewal Duration (Days)",
+      "durationLabelHours": "Renewal Duration (Hours)",
+      "priceLabel": "Renewal Price (AED)",
+      "durationHint": "Choose a quick duration or enter the count manually.",
+      "priceHint": "Enter the agreed renewal amount.",
       "officeConfirmTitle": "Register renewal for cash collection",
       "officeConfirmLead": "The contract will extend now. Payment stays unpaid until cash is collected.",
       "officeConfirmBody": "Review the extension before registering this renewal as an office cash receivable.",
       "officeConfirmSubmit": "Register renewal",
-      "officeCurrentEnd": "Current contract end"
+      "officeCurrentEnd": "Current contract end",
+      "modeLabel": "Renewal duration mode",
+      "modeHours": "Hours",
+      "modeDays": "Days",
+      "previewCurrentEnd": "Current end",
+      "previewAdded": "Added duration",
+      "previewNewEnd": "New end",
+      "previewAmount": "Renewal amount",
+      "duration": {
+        "hours": "{count, plural, one {# hour} other {# hours}}",
+        "days": "{count, plural, one {# day} other {# days}}",
+        "weeks": "{count, plural, one {# week} other {# weeks}}",
+        "months": "{count, plural, one {# month} other {# months}}"
+      }
     },
     "reconcile": {
       "title": "Reconciliation",
@@ -1382,7 +1415,7 @@
       "electronicPayment": "Electronic payment",
       "confirmCollection": "Confirm collection",
       "cashConfirmTitle": "Final reconciliation details",
-      "paymentMethodCash": "Payment method: Cash",
+      "paymentMethodCash": "Payment method: Cash / Card Machine",
       "finalize": "Finalize reconciliation",
       "completeWithoutCharges": "Complete without charges",
       "completeWithoutChargesConfirmTitle": "Complete without charges?",
@@ -2601,7 +2634,7 @@
       "cashDialogTitle": "Confirm cash collection",
       "cashDialogSubtitle": "Record the customer charge as a trusted cash collection.",
       "cashPaymentMethod": "Payment method",
-      "cashPaymentMethodValue": "Cash",
+      "cashPaymentMethodValue": "Cash / Card Machine",
       "cashFinanceNote": "This amount will be recorded as an actual collection in Finance.",
       "cashConfirm": "Confirm cash received",
       "dialogTitle": "Collect from saved card",
@@ -2672,6 +2705,32 @@
       "month": "Month",
       "custom": "Custom"
     },
+    "statements": {
+      "sectionTitle": "Financial Statements",
+      "sectionHint": "Download a detailed PDF movement statement per operating company. Exports ignore the page company filter.",
+      "downloadElite": "Download ELITE Statement",
+      "downloadUnique": "Download UNIQUE Statement",
+      "companyElite": "ELITE",
+      "companyUnique": "UNIQUE",
+      "dialogTitle": "{company} financial statement",
+      "dialogDescription": "Choose the reporting period. Amounts are authoritative from the financial ledger.",
+      "formatPdf": "PDF · A4 landscape",
+      "periodTypeLabel": "Statement period",
+      "periodType": {
+        "TODAY": "Today",
+        "DAILY": "Daily",
+        "WEEKLY": "Weekly",
+        "MONTHLY": "Monthly",
+        "CUSTOM": "Custom"
+      },
+      "todayPreview": "Today's movement statement — {date}",
+      "dateLabel": "Date",
+      "weekStartLabel": "Week starting",
+      "yearLabel": "Year",
+      "monthLabel": "Month",
+      "downloadPdf": "Download PDF",
+      "cancel": "Cancel"
+    },
     "scope": {
       "label": "Company scope",
       "all": "All",
@@ -2679,7 +2738,7 @@
     },
     "paymentMethod": {
       "CARD": "Card",
-      "CASH": "Cash"
+      "CASH": "Cash / Card Machine"
     },
     "kpi": {
       "collected": "Collected",

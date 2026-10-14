@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useDiamondPageAccess,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useVehiclesStore } from "../stores/vehicles.store";
 import type { CreateVehicleResult } from "../stores/vehicles.store";
@@ -15,10 +19,7 @@ import type {
   VehicleStatusFilter,
 } from "../types/vehicle.types";
 import { countActiveFilters } from "../utils/vehicle-filters";
-import {
-  VEHICLES_MANAGE_PERMISSION,
-  VEHICLES_PAGE_PERMISSIONS,
-} from "../vehicles.permissions";
+import { VEHICLES_MANAGE_PERMISSION } from "../vehicles.permissions";
 
 export interface UseVehiclesResult {
   vehicles: VehicleCardDto[];
@@ -31,6 +32,8 @@ export interface UseVehiclesResult {
   isReady: boolean;
   error: ApiRequestError | null;
   canManage: boolean;
+  canAddDelete: boolean;
+  canEditPrices: boolean;
   canCreate: boolean;
   isCreating: boolean;
   createError: ApiRequestError | null;
@@ -60,7 +63,16 @@ export interface UseVehiclesResult {
 }
 
 export function useVehicles(): UseVehiclesResult {
-  const { hasPermission } = usePermissions();
+  const isAllowed = useDiamondPageAccess("vehicles");
+  const canAddDelete = useLegacyOrFunctionalCapability(
+    VEHICLES_MANAGE_PERMISSION,
+    FN.vehicles.addDelete,
+  );
+  const canEditPrices = useLegacyOrFunctionalCapability(
+    VEHICLES_MANAGE_PERMISSION,
+    FN.vehicles.editPrices,
+  );
+  const canManage = canAddDelete || canEditPrices;
   const vehicles = useVehiclesStore((state) => state.vehicles);
   const meta = useVehiclesStore((state) => state.meta);
   const query = useVehiclesStore((state) => state.query);
@@ -83,11 +95,7 @@ export function useVehicles(): UseVehiclesResult {
   const deactivateVehicleAction = useVehiclesStore((state) => state.deactivateVehicle);
   const clearDeactivateError = useVehiclesStore((state) => state.clearDeactivateError);
 
-  const isAllowed = VEHICLES_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
-  const canManage = hasPermission(VEHICLES_MANAGE_PERMISSION);
-  const canCreate = canManage;
+  const canCreate = canAddDelete;
 
   useEffect(() => {
     if (isAllowed) void load();
@@ -115,6 +123,8 @@ export function useVehicles(): UseVehiclesResult {
       isReady: status === "ready",
       error: status === "error" ? error : null,
       canManage,
+      canAddDelete,
+      canEditPrices,
       canCreate,
       isCreating,
       createError,
@@ -161,6 +171,8 @@ export function useVehicles(): UseVehiclesResult {
       status,
       error,
       canManage,
+      canAddDelete,
+      canEditPrices,
       canCreate,
       isCreating,
       createError,

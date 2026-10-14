@@ -14,6 +14,7 @@ import {
 import { withNormalizedIdentity } from "./official-contract-identity.ts";
 import {
   CONTRACT_CARD_AUTHORIZATION,
+  contractCardAuthorizationEn,
   CONTRACT_FIELD_CATALOG,
   CONTRACT_SIGNATURES,
   CONTRACT_TERMS,
@@ -63,7 +64,7 @@ function view(overrides: Partial<OfficialContractView> = {}): OfficialContractVi
         code: "UNIQUE",
         displayName: "UNIQUE",
         legalNameAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
-        legalNameEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+        legalNameEn: "Diamond Unique Car Rental CO.L.L.C.S.O.C",
         accentColor: "#C9A15C",
       },
     },
@@ -226,7 +227,9 @@ describe("official contract — rental price policy", () => {
     for (const banned of ["Expire Date", "CVV", "cvv", "expiryDate=", "Name:"]) {
       assert.equal(template.includes(banned) || component.includes(banned), false, banned);
     }
-    assert.ok(CONTRACT_CARD_AUTHORIZATION.en.startsWith("I'm authorizing"));
+    assert.ok(
+      contractCardAuthorizationEn("Diamond Unique Car Rental CO.L.L.C.S.O.C").startsWith("I'm authorizing"),
+    );
   });
 });
 

@@ -5,8 +5,24 @@ import type { ApiErrorResponse, ApiResponse } from "./types";
 
 export async function getStaffAccessToken(): Promise<string | undefined> {
   if (typeof window === "undefined") return undefined;
-  const { getSession } = await import("next-auth/react");
-  return (await getSession())?.accessToken;
+  try {
+    const { getSession } = await import("next-auth/react");
+    const hydrated = await getSession();
+    if (hydrated?.accessToken) return hydrated.accessToken;
+  } catch {
+    /* fall through to /api/auth/session */
+  }
+  try {
+    const response = await fetch("/api/auth/session", {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!response.ok) return undefined;
+    const session = (await response.json()) as { accessToken?: string } | null;
+    return session?.accessToken;
+  } catch {
+    return undefined;
+  }
 }
 
 async function getAccessToken(): Promise<string | undefined> {
@@ -33,19 +49,34 @@ async function requestWithToken(
   // `publicRequest` is a client flag, not a fetch option.
   const init: ApiRequestOptions = { ...options };
   delete init.publicRequest;
-  return fetch(`${env.apiUrl}${path}`, {
-    ...init,
-    credentials: options.credentials ?? "include",
-    headers: {
-      Accept: "application/json",
-      ...(options.body === undefined
-        ? {}
-        : { "Content-Type": "application/json" }),
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...options.headers,
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  const url = `${env.apiUrl}${path}`;
+  if (!env.apiUrl) {
+    throw new ApiRequestError(
+      { code: "API_NOT_CONFIGURED", message: "NEXT_PUBLIC_API_URL is not configured" },
+      0,
+    );
+  }
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: init.signal ?? AbortSignal.timeout(45_000),
+      credentials: options.credentials ?? "include",
+      headers: {
+        Accept: "application/json",
+        ...(options.body === undefined
+          ? {}
+          : { "Content-Type": "application/json" }),
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...options.headers,
+      },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+  } catch {
+    throw new ApiRequestError(
+      { code: "NETWORK_ERROR", message: "Network request failed" },
+      0,
+    );
+  }
 }
 
 export interface ApiRequestOptions extends Omit<RequestInit, "body"> {

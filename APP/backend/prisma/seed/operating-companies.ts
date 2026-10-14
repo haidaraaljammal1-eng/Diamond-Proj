@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { OPERATING_COMPANY_LEGAL_NAME_EN } from "src/modules/operating-companies/operating-company-legal-names";
 
 /**
  * The two Diamond operating companies. They are business master data, not demo
@@ -36,14 +37,14 @@ export const OPERATING_COMPANIES: OperatingCompanySeedRow[] = [
     code: OPERATING_COMPANY_CODES.UNIQUE,
     displayName: "UNIQUE",
     legalNameAr: "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و",
-    legalNameEn: "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C",
+    legalNameEn: OPERATING_COMPANY_LEGAL_NAME_EN.UNIQUE,
     accentColor: "#C9A15C",
   },
   {
     code: OPERATING_COMPANY_CODES.ELITE,
     displayName: "ELITE",
     legalNameAr: "شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و",
-    legalNameEn: "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C",
+    legalNameEn: OPERATING_COMPANY_LEGAL_NAME_EN.ELITE,
     accentColor: "#3E5C76",
   },
 ];
