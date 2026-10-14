@@ -97,6 +97,22 @@ export function wrapText(doc: Doc, text: string, maxWidth: number): string[] {
   const lines: string[] = [];
   let cur = "";
   for (const w of tokens) {
+    const token = w.trimStart();
+    if (token && doc.widthOfString(token, { features: [] }) > maxWidth) {
+      if (cur.trim()) lines.push(cur.trim());
+      let piece = "";
+      for (const ch of token) {
+        const next = piece + ch;
+        if (piece && doc.widthOfString(next, { features: [] }) > maxWidth) {
+          lines.push(piece);
+          piece = ch;
+        } else {
+          piece = next;
+        }
+      }
+      cur = piece;
+      continue;
+    }
     const test = cur + w;
     if (cur && doc.widthOfString(test.trim(), { features: [] }) > maxWidth) {
       lines.push(cur.trim());

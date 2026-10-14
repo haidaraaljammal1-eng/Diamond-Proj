@@ -112,6 +112,9 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "deleteArchiveRow",
         "previewArchiveImport",
         "confirmArchiveImport",
+        "getArchiveSyncStatus",
+        "syncArchive",
+        "restoreArchiveChargeField",
       ],
     }),
     def({

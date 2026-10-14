@@ -71,6 +71,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   confirmArchiveImport: all(FN.archive.full),
   getArchiveSyncStatus: all(FN.archive.full),
   syncArchive: all(FN.archive.full),
+  restoreArchiveChargeField: all(FN.archive.full),
 
   // Violations / road liabilities
   getRoadLiabilitiesSummary: all(FN.violations.viewPage),
@@ -84,12 +85,16 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   startRoadLiabilityManualCollection: all(FN.violations.collectCharges),
   confirmRoadLiabilityCashCollection: all(FN.violations.collectCharges),
   confirmRoadLiabilityManualCollection: all(FN.violations.collectCharges),
+  listReturnedContractsForRoadCharges: all(FN.violations.viewPage),
+  staffManualChargeReturnedContract: all(FN.violations.collectCharges),
 
   // Finance
   getFinanceSummary: all(FN.finance.viewPage),
   getFinanceAnalytics: all(FN.finance.viewPage),
   listFinanceLedger: all(FN.finance.viewPage),
   listFinanceOpenReceivables: all(FN.finance.viewPage),
+  getFinanceStatementBusinessToday: all(FN.finance.viewPage),
+  downloadFinanceStatementPdf: all(FN.finance.viewPage),
   createManualExpense: all(FN.finance.addExpense),
   getManualExpense: all(FN.finance.viewPage),
   voidManualExpense: all(FN.finance.voidExpense),
@@ -119,6 +124,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   createContractOffer: all(FN.contracts.rentalLink),
   updateOfficialContractTerms: all(FN.contracts.rentalLink),
   generateContractRentalLink: all(FN.contracts.rentalLink),
+  deletePendingRentalRequest: all(FN.contracts.rentalLink),
 
   // Delivery / return / reconciliation
   contractCarOut: all(FN.contracts.deliveryReturnReconcile),
@@ -128,6 +134,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   uploadContractCarOutSignature: all(FN.contracts.deliveryReturnReconcile),
   completeContractCarOut: all(FN.contracts.deliveryReturnReconcile),
   generateContractReturnLink: all(FN.contracts.deliveryReturnReconcile),
+  startContractReturnStaff: all(FN.contracts.deliveryReturnReconcile),
   saveContractCarInDraft: all(FN.contracts.deliveryReturnReconcile),
   uploadContractCarInPhoto: all(FN.contracts.deliveryReturnReconcile),
   deleteContractCarInPhoto: all(FN.contracts.deliveryReturnReconcile),

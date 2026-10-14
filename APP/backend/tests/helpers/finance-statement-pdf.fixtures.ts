@@ -160,6 +160,7 @@ export const fixtureDense = (count: number): FinanceStatementSnapshot => {
     lines.push(
       line({
         id: `dense-${i}`,
+        description: `dense-${i}`,
         occurredAt: new Date(`2026-10-${day.slice(8, 10)}T${String(8 + (i % 10)).padStart(2, "0")}:00:00.000Z`),
         businessDay: day,
         referenceId: `${LONG_REF}-${i}`,

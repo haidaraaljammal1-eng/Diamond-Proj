@@ -177,6 +177,9 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "deleteArchiveRow",
         "previewArchiveImport",
         "confirmArchiveImport",
+        "getArchiveSyncStatus",
+        "syncArchive",
+        "restoreArchiveChargeField",
       ],
       technicalMapping: {
         existingKeys: [P.ARCHIVE_READ, P.ARCHIVE_MANAGE],
@@ -191,7 +194,12 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       pageModel: "parent_child",
       parentKey: null,
       labels: { ar: "عرض الصفحة", en: "View Page" },
-      operationalActions: ["listRoadLiabilities", "getRoadLiability", "roadLiabilitiesSummary"],
+      operationalActions: [
+        "listRoadLiabilities",
+        "getRoadLiability",
+        "roadLiabilitiesSummary",
+        "listReturnedContractsForRoadCharges",
+      ],
       technicalMapping: {
         existingKeys: [P.VIOLATIONS_READ],
         readiness: "ready",
@@ -224,6 +232,7 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "collectRoadLiabilityOffSession",
         "roadLiabilityCashConfirm",
         "roadLiabilityManualReceipt",
+        "staffManualChargeReturnedContract",
       ],
       technicalMapping: {
         existingKeys: [P.VIOLATIONS_CHARGE],
@@ -243,6 +252,8 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "financeAnalytics",
         "financeLedger",
         "financeOpenReceivables",
+        "getFinanceStatementBusinessToday",
+        "downloadFinanceStatementPdf",
       ],
       technicalMapping: {
         existingKeys: [P.FINANCE_READ],
@@ -362,6 +373,7 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "createContractOffer",
         "updateOfficialContractTerms",
         "generateContractRentalLink",
+        "deletePendingRentalRequest",
       ],
       technicalMapping: {
         existingKeys: [P.CONTRACTS_MANAGE],
@@ -393,6 +405,7 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       operationalActions: [
         "completeContractCarOut",
         "generateContractReturnLink",
+        "startContractReturnStaff",
         "completeContractCarIn",
         "reconcileContract",
         "finalizeContractReconciliation",
