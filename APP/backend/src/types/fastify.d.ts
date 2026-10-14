@@ -36,6 +36,15 @@ declare module "fastify" {
      * enforces these automatically — no manual verifyPermission() calls.
      */
     permissions?: string[];
+    /**
+     * Functional RBAC V2 capability keys (`diamond.fn.*`). When V2 is enabled,
+     * these replace legacy `permissions` for this route (no legacy bypass).
+     */
+    functionalPermissions?: string[];
+    /** When multiple functional keys are listed, require all (default true). */
+    functionalRequireAll?: boolean;
+    /** OpenAPI operation id — used for functional requirement registry when V2 is on. */
+    operationId?: string;
     /** Explicitly mark a route as public (no authentication). Must be intentional. */
     public?: boolean;
     /** External API-key scopes required to call this route (enforced by the `external` hook). */

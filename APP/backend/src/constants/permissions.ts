@@ -1,3 +1,6 @@
+import { buildFunctionalPermissionCatalogEntries } from "src/lib/rbac/functional-permissions/catalog-sync";
+import type { FunctionalCapabilityKey } from "src/lib/rbac/functional-permissions/keys";
+
 /**
  * Generic permission catalog. Convention: "resource.action".
  * These are the ONLY permissions the starter ships — add domain permissions in
@@ -189,7 +192,9 @@ export const PERMISSIONS = {
   AUDIT_LOG_EXPORT: "audit_log.export",
 } as const;
 
-export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+export type PermissionKey =
+  | (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
+  | FunctionalCapabilityKey;
 
 export interface PermissionDefinition {
   key: PermissionKey;
@@ -528,4 +533,5 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   { key: PERMISSIONS.SECURITY_POSTURE_READ, category: "security_posture", description: "View the security posture" },
   { key: PERMISSIONS.AUDIT_LOG_READ, category: "audit_log", description: "Read the audit log" },
   { key: PERMISSIONS.AUDIT_LOG_EXPORT, category: "audit_log", description: "Export the audit log" },
+  ...buildFunctionalPermissionCatalogEntries(),
 ];

@@ -90,6 +90,37 @@ render loop.
   `aria-hidden` and carry no data; the count is measured with a
   `ResizeObserver` against the column widths in the CSS module.
 
+### Matrix visibility (UI only)
+
+The page still loads the full Backend catalog (`GET /permissions`, 117 keys).
+Before `buildPermissionMatrix`, `filterPermissionsForMatrixDisplay` in
+`roles-display-permissions.ts` drops **55 legacy Haidara keys** from the table
+only. **62 rows** remain visible (Diamond product permissions plus
+settings/audit/master-data keys under review). Header stats use
+`matrix.permissionCount`, so the counter matches visible rows.
+
+Authorization, `GET /auth/me`, and `system_admin` effective permissions are
+unchanged — nothing is filtered server-side.
+
+### Writes and hidden grants
+
+`PUT /roles/:id/permissions` replaces the entire grant list. When a cell is
+toggled, `roles-permissions.store` merges against the role's **full**
+`permissions` array from the API before calling the endpoint, so hidden legacy
+keys are not stripped when editing a custom role.
+
+Only a `system_admin` actor may assign the `system_admin` role via user create
+or `PUT /users/:id/roles` (see `users.service`).
+
+### Development RBAC cleanup (local only)
+
+Owner-approved dev cleanup: preflight + JSON backup
+(`scripts/dev-rbac-preflight-backup.ts`), then
+`npm run db:cleanup:dev-users:only-admin` and
+`npm run db:cleanup:dev-roles:only-system-admin`. Keeper user is
+`DEV_ADMIN_EMAIL` with `system_admin`. Bootstrap/seed does not recreate removed
+test roles; `SEED_DEV_ADMIN` only upserts the configured dev admin when enabled.
+
 ## Grouping, search, filter
 
 - Groups come from the Backend `category`, falling back to the key namespace

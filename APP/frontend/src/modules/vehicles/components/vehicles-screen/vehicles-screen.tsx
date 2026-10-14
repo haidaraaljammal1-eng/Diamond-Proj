@@ -52,7 +52,8 @@ export function VehiclesScreen() {
     isReady,
     error,
     refreshVehicles,
-    canManage,
+    canAddDelete,
+    canEditPrices,
     canCreate,
     setStatusFilter,
     applySearch,
@@ -239,7 +240,7 @@ export function VehiclesScreen() {
 
   if (!isReady && vehicles.length === 0) {
     return (
-      <>
+      <div data-testid="vehicles-screen">
         {header}
         <div
           className={styles.skeletonGrid}
@@ -251,7 +252,7 @@ export function VehiclesScreen() {
             <span key={index} className={styles.skeletonCard} />
           ))}
         </div>
-      </>
+      </div>
     );
   }
 
@@ -259,7 +260,7 @@ export function VehiclesScreen() {
   const showPagination = meta != null && shouldShowFleetPagination(meta);
 
   return (
-    <>
+    <div data-testid="vehicles-screen">
       {header}
 
       {notice ? (
@@ -309,7 +310,7 @@ export function VehiclesScreen() {
         <>
           <VehiclesGrid
             vehicles={vehicles}
-            canManage={canManage}
+            fleetPermissions={{ canAddDelete, canEditPrices }}
             onOpen={setDetailVehicle}
             onPrimaryAction={handlePrimaryAction}
             onEditRates={setEditRatesVehicle}
@@ -356,7 +357,7 @@ export function VehiclesScreen() {
 
       <VehicleDetailDialog
         vehicle={detailVehicle}
-        canManage={canManage}
+        fleetPermissions={{ canAddDelete, canEditPrices }}
         onClose={() => setDetailVehicle(null)}
         onSetPrice={setModeDialogVehicle}
         onPrimaryAction={handlePrimaryAction}
@@ -429,6 +430,6 @@ export function VehiclesScreen() {
           );
         }}
       />
-    </>
+    </div>
   );
 }

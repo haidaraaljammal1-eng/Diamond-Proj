@@ -1,5 +1,6 @@
 import type { ArchiveRow } from "@prisma/client";
 import type ExcelJS from "exceljs";
+import { parseManualCellValues } from "src/modules/archive/archive-manual-cell-values";
 import {
   ARCHIVE_EXPORT_COLUMN_COUNT,
   ARCHIVE_EXPORT_COLUMNS,
@@ -9,6 +10,7 @@ import {
   formatArchiveVehicleHeader,
 } from "src/modules/archive/archive-export.constants";
 import type { ArchiveSheetVehicleInput } from "src/modules/archive/archive-sheet-names";
+import { archiveDateOnlyToExcelValue } from "src/modules/archive/archive-date-only";
 
 const HEADER_FILL = {
   type: "pattern" as const,
@@ -29,21 +31,9 @@ const THIN_BORDER: Partial<ExcelJS.Borders> = {
   right: { style: "thin", color: { argb: "FFB8AE9A" } },
 };
 
-const ISO_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/;
-
-function calendarDateFromDb(value: Date): Date {
-  const iso = value.toISOString();
-  const match = ISO_DATE_PREFIX.exec(iso);
-  if (match) {
-    const year = Number.parseInt(match[1]!, 10);
-    const month = Number.parseInt(match[2]!, 10);
-    const day = Number.parseInt(match[3]!, 10);
-    return new Date(year, month - 1, day);
-  }
-  return new Date(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
-}
-
 function readArchiveFieldValue(row: ArchiveRow, field: (typeof ARCHIVE_EXPORT_COLUMNS)[number]["field"]) {
+  const manual = parseManualCellValues(row.manualCellValues);
+  if (manual[field] !== undefined) return manual[field];
   return row[field];
 }
 
@@ -58,12 +48,20 @@ function writeArchiveCell(
   }
 
   if (kind === "integer" || kind === "money") {
+    if (typeof value === "string") {
+      cell.value = value;
+      return;
+    }
     cell.value = typeof value === "number" ? value : null;
     return;
   }
 
   if (kind === "date") {
-    cell.value = value instanceof Date ? calendarDateFromDb(value) : null;
+    if (typeof value === "string") {
+      cell.value = value;
+      return;
+    }
+    cell.value = value instanceof Date ? archiveDateOnlyToExcelValue(value) : null;
     cell.numFmt = ARCHIVE_EXPORT_DATE_FORMAT;
     return;
   }

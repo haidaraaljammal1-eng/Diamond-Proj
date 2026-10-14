@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { registerArchiveCellCommitter } from "../../utils/archive-edit-registry";
 import { Input } from "@/shared/components/ui/input";
-import type { ArchiveColumnDefinition } from "../../utils/archive-columns";
+import { type ArchiveColumnDefinition } from "../../utils/archive-columns";
 import {
   parseArchiveCellPatch,
   readArchiveCellDisplay,
@@ -37,7 +37,6 @@ export function ArchiveEditableCell({
   const field = column.field;
   const serverValue = readArchiveCellDisplay(row, field);
   const [editSession, setEditSession] = useState<{ draft: string } | null>(null);
-  const [localError, setLocalError] = useState<string | null>(null);
   const commitInFlightRef = useRef(false);
   const displayValue = editSession?.draft ?? serverValue;
 
@@ -50,17 +49,11 @@ export function ArchiveEditableCell({
     }
 
     const parsed = parseArchiveCellPatch(field, draft);
-    if (parsed === "invalid") {
-      setLocalError("invalid");
-      setEditSession({ draft });
-      return;
-    }
 
     onClearError(row.id, field);
     commitInFlightRef.current = true;
     try {
       await onSave(row.id, field, { [field]: parsed } as Partial<ArchiveRow>);
-      // On failure, keep edit session visible for retry; errorMessage indicates not persisted.
     } finally {
       commitInFlightRef.current = false;
     }
@@ -71,27 +64,7 @@ export function ArchiveEditableCell({
     return registerArchiveCellCommitter(commit);
   }, [canManage, commit]);
 
-  const inputType =
-    column.kind === "date"
-      ? "date"
-      : column.kind === "time"
-        ? "time"
-        : column.kind === "phone"
-          ? "tel"
-          : column.kind === "mileage" ||
-              column.kind === "integer" ||
-              column.kind === "money"
-            ? "text"
-            : "text";
-
-  const inputMode =
-    column.kind === "mileage" ||
-    column.kind === "integer" ||
-    column.kind === "money"
-      ? "numeric"
-      : column.kind === "phone"
-        ? "tel"
-        : undefined;
+  const inputType = column.kind === "phone" ? "tel" : "text";
 
   if (!canManage) {
     return (
@@ -106,17 +79,14 @@ export function ArchiveEditableCell({
       <Input
         className={`${styles.input} ${column.kind === "description" ? styles.description : ""}`}
         type={inputType}
-        inputMode={inputMode}
         value={displayValue}
         disabled={isSaving}
-        aria-invalid={Boolean(localError || errorMessage)}
+        aria-invalid={Boolean(errorMessage)}
         onFocus={() => {
           setEditSession((current) => current ?? { draft: serverValue });
-          setLocalError(null);
         }}
         onChange={(event) => {
           setEditSession({ draft: event.target.value });
-          if (localError) setLocalError(null);
         }}
         onBlur={() => {
           void commit();
@@ -129,8 +99,8 @@ export function ArchiveEditableCell({
         }}
       />
       {isSaving ? <span className={styles.saving} aria-hidden="true" /> : null}
-      {localError || errorMessage ? (
-        <span className={styles.errorMark} title={errorMessage ?? "invalid"} aria-label="error">
+      {errorMessage ? (
+        <span className={styles.errorMark} title={errorMessage} aria-label="error">
           !
         </span>
       ) : null}

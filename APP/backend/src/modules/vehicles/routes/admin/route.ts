@@ -117,7 +117,11 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
-      const vehicle = await vehicles.update(request.params.id, request.body);
+      const vehicle = await vehicles.update(
+        request.params.id,
+        request.body,
+        requireAuth(request),
+      );
       request.setAudit({
         action: "vehicles.update",
         entityType: "vehicle",

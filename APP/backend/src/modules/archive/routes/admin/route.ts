@@ -1,16 +1,31 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { PERMISSIONS } from "src/constants/permissions";
+import { AppError } from "src/lib/errors/app-error";
 import { commonErrorResponses, dataResponse } from "src/lib/http/response";
 import { archiveExportFilename } from "src/modules/archive/archive-export.constants";
 import { createArchiveExportService } from "src/modules/archive/archive-export.service";
+import { createArchiveImportService } from "src/modules/archive/archive-import.service";
+import {
+  ArchiveImportConfirmBodySchema,
+  ArchiveImportConfirmResultSchema,
+  ArchiveImportPreviewSchema,
+} from "src/modules/archive/archive-import.schema";
+import { createArchiveSyncService } from "src/modules/archive/archive-sync.service";
+import {
+  ArchiveSyncResultSchema,
+  ArchiveSyncStatusSchema,
+} from "src/modules/archive/archive-sync.schema";
+import { createArchiveRestoreAutoService } from "src/modules/archive/archive-restore-auto";
 import { createArchiveService } from "src/modules/archive/archive.service";
+import { requireAuth } from "src/lib/context/auth-context";
 import {
   ArchiveRowIdParam,
   ArchiveRowSchema,
   ArchiveVehicleIdParam,
   ArchiveVehicleSchema,
   CreateArchiveRowSchema,
+  RestoreArchiveChargeFieldSchema,
   UpdateArchiveRowSchema,
 } from "src/modules/archive/archive.schema";
 
@@ -19,7 +34,113 @@ const T = ["Archive"];
 export default async function archiveRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const archive = createArchiveService(fastify);
+  const archiveRestore = createArchiveRestoreAutoService(fastify);
   const archiveExport = createArchiveExportService(fastify);
+  const archiveImport = createArchiveImportService(fastify);
+  const archiveSync = createArchiveSyncService(fastify);
+
+  app.post(
+    "/import/preview",
+    {
+      schema: {
+        summary: "Parse and preview a Diamond Archive XLSX import",
+        operationId: "previewArchiveImport",
+        tags: T,
+        permissions: [PERMISSIONS.ARCHIVE_MANAGE],
+        consumes: ["multipart/form-data"],
+        response: {
+          200: dataResponse(ArchiveImportPreviewSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const file = await request.file();
+      if (!file) throw AppError.validation("Validation failed");
+      const auth = requireAuth(request);
+      const preview = await archiveImport.previewUpload(file, auth.id);
+      return { data: preview };
+    },
+  );
+
+  app.post(
+    "/import/confirm",
+    {
+      schema: {
+        summary: "Confirm a validated Diamond Archive import",
+        operationId: "confirmArchiveImport",
+        tags: T,
+        permissions: [PERMISSIONS.ARCHIVE_MANAGE],
+        body: ArchiveImportConfirmBodySchema,
+        response: {
+          200: dataResponse(ArchiveImportConfirmResultSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const auth = requireAuth(request);
+      const result = await archiveImport.confirmImport(request.body.importToken, auth.id);
+      request.setAudit({
+        action: "archive.import",
+        entityType: "archive",
+        metadata: {
+          filename: result.filename,
+          matchedVehicleCount: result.matchedVehicleCount,
+          importedRowCount: result.importedRowCount,
+        },
+      });
+      return { data: result };
+    },
+  );
+
+  app.get(
+    "/sync/status",
+    {
+      schema: {
+        summary: "Archive pull-sync status",
+        operationId: "getArchiveSyncStatus",
+        tags: T,
+        permissions: [PERMISSIONS.ARCHIVE_MANAGE],
+        response: {
+          200: dataResponse(ArchiveSyncStatusSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async () => ({ data: await archiveSync.getStatus() }),
+  );
+
+  app.post(
+    "/sync",
+    {
+      schema: {
+        summary: "Pull-sync archive rows from contracts and related sources",
+        operationId: "syncArchive",
+        tags: T,
+        permissions: [PERMISSIONS.ARCHIVE_MANAGE],
+        response: {
+          200: dataResponse(ArchiveSyncResultSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const auth = requireAuth(request);
+      const result = await archiveSync.runSync(auth.id);
+      request.setAudit({
+        action: "archive.sync",
+        entityType: "archive",
+        metadata: {
+          created: result.created,
+          updated: result.updated,
+          unchanged: result.unchanged,
+          failed: result.failed,
+        },
+      });
+      return { data: result };
+    },
+  );
 
   app.get(
     "/export",
@@ -136,6 +257,37 @@ export default async function archiveRoutes(fastify: FastifyInstance) {
         entityType: "archive_row",
         entityId: String(row.id),
         metadata: { vehicleId: row.vehicleId },
+      });
+      return { data: row };
+    },
+  );
+
+  app.post(
+    "/rows/:rowId/restore-auto",
+    {
+      schema: {
+        summary: "Restore one charge field to automatic (pull-sync) value",
+        operationId: "restoreArchiveChargeField",
+        tags: T,
+        permissions: [PERMISSIONS.ARCHIVE_MANAGE],
+        params: ArchiveRowIdParam,
+        body: RestoreArchiveChargeFieldSchema,
+        response: {
+          200: dataResponse(ArchiveRowSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const row = await archiveRestore.restoreChargeFieldToAuto(
+        request.params.rowId,
+        request.body.field,
+      );
+      request.setAudit({
+        action: "archive.row.restore_auto",
+        entityType: "archive_row",
+        entityId: String(row.id),
+        metadata: { field: request.body.field },
       });
       return { data: row };
     },

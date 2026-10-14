@@ -1,4 +1,5 @@
 import { PERMISSIONS, type PermissionKey } from "src/constants/permissions";
+import { ALL_FUNCTIONAL_CAPABILITY_KEYS } from "src/lib/rbac/functional-permissions/keys";
 
 /**
  * Stable role keys. Business logic must NEVER branch on these strings — check
@@ -27,4 +28,7 @@ export const SYSTEM_ROLE_CATALOG: SystemRoleDefinition[] = [
   },
 ];
 
-export const ALL_PERMISSION_KEYS: PermissionKey[] = Object.values(PERMISSIONS);
+export const ALL_PERMISSION_KEYS: PermissionKey[] = [
+  ...Object.values(PERMISSIONS),
+  ...ALL_FUNCTIONAL_CAPABILITY_KEYS,
+];

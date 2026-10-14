@@ -31,6 +31,8 @@ const baseRow: ArchiveRow = {
   visa: null,
   transfer: null,
   remaining: null,
+  manualOverrides: {},
+  manualCellValues: {},
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -48,8 +50,19 @@ describe("archive cell value", () => {
     assert.equal(parseArchiveCellPatch("salik", ""), null);
   });
 
-  it("rejects decimal money input", () => {
-    assert.equal(parseArchiveCellPatch("cash", "1250.50"), "invalid");
+  it("accepts non-numeric money text for flexible save", () => {
+    assert.equal(parseArchiveCellPatch("fuel", "شامل"), "شامل");
+  });
+
+  it("accepts decimal money as text", () => {
+    assert.equal(parseArchiveCellPatch("cash", "1250.50"), "1250.50");
+  });
+
+  it("prefers manualCellValues for display", () => {
+    assert.equal(
+      readArchiveCellDisplay({ ...baseRow, days: 30, manualCellValues: { days: "شهري" } }, "days"),
+      "شهري",
+    );
   });
 
   it("parses sparse patch for one field only", () => {

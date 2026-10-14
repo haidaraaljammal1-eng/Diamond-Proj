@@ -225,6 +225,12 @@ const EnvSchema = z
     SEED_DEV_ADMIN: envBool(false),
     DEV_ADMIN_EMAIL: z.string().default("admin@example.com"),
     DEV_ADMIN_PASSWORD: z.string().optional().default(""),
+
+    /**
+     * Functional RBAC V2 route enforcement. Default false — legacy `permissions`
+     * remain authoritative until Phase 3 enables this in deployment config.
+     */
+    FUNCTIONAL_RBAC_V2_ENABLED: envBool(false),
   })
   .superRefine((val, ctx) => {
     if (val.EMAIL_ENABLED && !val.SMTP_HOST) {

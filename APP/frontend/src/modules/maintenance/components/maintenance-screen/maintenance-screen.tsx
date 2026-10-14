@@ -39,6 +39,7 @@ export function MaintenanceScreen() {
     summary,
     isAllowed,
     canManage,
+    canCreate,
     isLoading,
     isReady,
     isHistoryLoading,
@@ -144,7 +145,7 @@ export function MaintenanceScreen() {
             >
               {t("refresh")}
             </Button>
-            {canManage ? (
+            {canCreate ? (
               <Button
                 type="button"
                 variant="primary"

@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo } from "react";
 import { useLocale } from "next-intl";
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useDiamondPageAccess,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
-import {
-  FINANCE_MANAGE_EXPENSES_PERMISSION,
-  FINANCE_PAGE_PERMISSIONS,
-} from "../finance.permissions";
+import { FINANCE_MANAGE_EXPENSES_PERMISSION } from "../finance.permissions";
 import type { PageMeta } from "../api/finance.api.types";
 import {
   loadFinancePageData,
@@ -40,11 +41,19 @@ import {
 } from "../utils/finance-simulation";
 
 export function useFinanceOverview() {
-  const { hasPermission } = usePermissions();
-  const isAllowed = FINANCE_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
+  const isAllowed = useDiamondPageAccess("finance");
+  const canManageExpenses = useLegacyOrFunctionalCapability(
+    FINANCE_MANAGE_EXPENSES_PERMISSION,
+    FN.finance.addExpense,
   );
-  const canManageExpenses = hasPermission(FINANCE_MANAGE_EXPENSES_PERMISSION);
+  const canCorrectExpense = useLegacyOrFunctionalCapability(
+    FINANCE_MANAGE_EXPENSES_PERMISSION,
+    FN.finance.correctExpense,
+  );
+  const canVoidExpense = useLegacyOrFunctionalCapability(
+    FINANCE_MANAGE_EXPENSES_PERMISSION,
+    FN.finance.voidExpense,
+  );
 
   const summary = useFinanceStore((s) => s.summary);
   const analytics = useFinanceStore((s) => s.analytics);
@@ -82,6 +91,8 @@ export function useFinanceOverview() {
     () => ({
       isAllowed,
       canManageExpenses,
+      canCorrectExpense,
+      canVoidExpense,
       simulationActive,
       summary: displaySummary,
       analytics: displayAnalytics,
@@ -110,6 +121,8 @@ export function useFinanceOverview() {
     [
       isAllowed,
       canManageExpenses,
+      canCorrectExpense,
+      canVoidExpense,
       simulationActive,
       displaySummary,
       displayAnalytics,

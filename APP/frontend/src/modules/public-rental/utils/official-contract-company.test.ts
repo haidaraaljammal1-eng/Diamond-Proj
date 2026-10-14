@@ -6,8 +6,10 @@ import { officialContractCompanyNames } from "./official-contract-company.ts";
 function contractWithCompany(code: "UNIQUE" | "ELITE"): OfficialContractView {
   const legalNameAr = code === "UNIQUE"
     ? "شركة دايموند يونيك لتأجير السيارات ذ.م.م ش.ش.و"
-    : "شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و";
-  const legalNameEn = `DIAMOND ${code} CAR RENTALS CO. LLC S.O.C`;
+    : "دايموند إليت لتأجير السيارات ش.ذ.م.م";
+  const legalNameEn = code === "UNIQUE"
+    ? "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C"
+    : "DIAMOND ELITE CAR RENTAL L.L.C";
   return {
     header: {
       officeDisplayName: "Diamond Rent Car",
@@ -26,8 +28,8 @@ describe("official contract company identity", () => {
 
   it("renders the ELITE legal names from the official view", () => {
     assert.deepEqual(officialContractCompanyNames(contractWithCompany("ELITE")), {
-      ar: "شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و",
-      en: "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C",
+      ar: "دايموند إليت لتأجير السيارات ش.ذ.م.م",
+      en: "DIAMOND ELITE CAR RENTAL L.L.C",
     });
   });
 });

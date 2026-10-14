@@ -27,5 +27,6 @@ export default auth((request) => {
 });
 
 export const config = {
-  matcher: ["/((?!api|_next|.*\\..*).*)"],
+  // Exclude staff API proxy (`/backend-api/*`) used only in isolated RBAC E2E.
+  matcher: ["/((?!api|backend-api|_next|.*\\..*).*)"],
 };

@@ -247,6 +247,7 @@ model Contract {
   postCloseReceivables ContractPostCloseReceivable[]
   paymentAuthorization ContractPaymentAuthorization?
   invoices             Invoice[]
+  archiveRows          ArchiveRow[]
 
   @@index([vehicleId, status])
   @@index([companyId])

@@ -10,9 +10,21 @@ import type { z } from "zod";
 import type {
   CreateRoleSchema,
   ListRolesQuerySchema,
+  SetFunctionalGrantsSchema,
   SetRolePermissionsSchema,
   UpdateRoleSchema,
 } from "src/modules/roles/roles.schema";
+import type { AuthUser } from "src/lib/context/auth-context";
+import { isFunctionalCapabilityKey } from "src/lib/rbac/functional-permissions/keys";
+import { normalizeFunctionalGrants } from "src/lib/rbac/functional-permissions/policy-engine";
+import {
+  assertActorMayDelegatePermissionKeys,
+  assertActorMayDeleteRole,
+  assertActorMayMutateSystemRole,
+  assertKnownPermissionKeys,
+  assertNoFunctionalKeysInLegacyPermissionPayload,
+} from "src/lib/rbac/functional-permissions/delegation-guard";
+import { isFunctionalRbacV2Enabled } from "src/lib/rbac/functional-permissions/enforcement";
 
 const roleInclude = {
   permissions: { include: { permission: true } },
@@ -36,12 +48,19 @@ function toRolePublic(role: RoleWithPermissions): RolePublic {
   };
 }
 
+function preservedFunctionalKeys(role: RoleWithPermissions): string[] {
+  return role.permissions
+    .map((rp) => rp.permission.key)
+    .filter((key) => isFunctionalCapabilityKey(key));
+}
+
 export function createRolesService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
   async function resolvePermissionIds(keys: string[]): Promise<number[]> {
     const unique = [...new Set(keys)];
     if (unique.length === 0) return [];
+    assertKnownPermissionKeys(unique);
     const perms = await prisma.permission.findMany({
       where: { key: { in: unique } },
       select: { id: true },
@@ -89,7 +108,14 @@ export function createRolesService(fastify: FastifyInstance) {
     return toRolePublic(await loadOrThrow(id));
   }
 
-  async function create(input: z.infer<typeof CreateRoleSchema>) {
+  async function create(
+    input: z.infer<typeof CreateRoleSchema>,
+    actor: AuthUser,
+  ) {
+    assertActorMayDelegatePermissionKeys(actor, input.permissionKeys);
+    if (isFunctionalRbacV2Enabled()) {
+      assertNoFunctionalKeysInLegacyPermissionPayload(input.permissionKeys);
+    }
     const permissionIds = await resolvePermissionIds(input.permissionKeys);
     try {
       const role = await prisma.role.create({
@@ -112,43 +138,148 @@ export function createRolesService(fastify: FastifyInstance) {
     }
   }
 
-  async function update(id: number, input: z.infer<typeof UpdateRoleSchema>) {
-    await loadOrThrow(id);
-    const data: Prisma.RoleUpdateInput = {};
-    if (input.name !== undefined) data.name = input.name;
-    if (input.description !== undefined) data.description = input.description;
-    const role = await prisma.role.update({ where: { id }, data, include: roleInclude });
-    return toRolePublic(role);
-  }
-
-  async function setPermissions(
+  async function update(
     id: number,
-    input: z.infer<typeof SetRolePermissionsSchema>,
+    input: z.infer<typeof UpdateRoleSchema>,
+    actor: AuthUser,
   ) {
     const role = await loadOrThrow(id);
+    assertActorMayMutateSystemRole(actor, role);
     if (role.isSystem) {
       throw new AppError({
         code: ErrorCode.CONFLICT,
         message: "System roles cannot be modified",
       });
     }
-    const permissionIds = await resolvePermissionIds(input.permissionKeys);
+    const data: Prisma.RoleUpdateInput = {};
+    if (input.name !== undefined) data.name = input.name;
+    if (input.description !== undefined) data.description = input.description;
+    const updated = await prisma.role.update({ where: { id }, data, include: roleInclude });
+    return toRolePublic(updated);
+  }
+
+  async function setPermissions(
+    id: number,
+    input: z.infer<typeof SetRolePermissionsSchema>,
+    actor: AuthUser,
+  ) {
+    const role = await loadOrThrow(id);
+    assertActorMayMutateSystemRole(actor, role);
+    if (role.isSystem) {
+      throw new AppError({
+        code: ErrorCode.CONFLICT,
+        message: "System roles cannot be modified",
+      });
+    }
+
+    assertNoFunctionalKeysInLegacyPermissionPayload(input.permissionKeys);
+    assertActorMayDelegatePermissionKeys(actor, input.permissionKeys);
+
     const updated = await withTransaction(prisma, async (tx) => {
+      const fresh = await tx.role.findUniqueOrThrow({ where: { id }, include: roleInclude });
+      const mergedKeys = isFunctionalRbacV2Enabled()
+        ? [
+            ...new Set([
+              ...preservedFunctionalKeys(fresh),
+              ...input.permissionKeys,
+            ]),
+          ]
+        : [...new Set(input.permissionKeys)];
+
+      assertActorMayDelegatePermissionKeys(actor, mergedKeys);
+      const permissionIds = await resolvePermissionIds(mergedKeys);
+
       await tx.rolePermission.deleteMany({ where: { roleId: id } });
-      await tx.rolePermission.createMany({
-        data: permissionIds.map((permissionId) => ({ roleId: id, permissionId })),
-        skipDuplicates: true,
+      if (permissionIds.length > 0) {
+        await tx.rolePermission.createMany({
+          data: permissionIds.map((permissionId) => ({ roleId: id, permissionId })),
+          skipDuplicates: true,
+        });
+      }
+      return tx.role.findUniqueOrThrow({ where: { id }, include: roleInclude });
+    });
+    return toRolePublic(updated);
+  }
+
+  async function remove(id: number, actor: AuthUser) {
+    assertActorMayDeleteRole(actor);
+    const role = await loadOrThrow(id);
+    assertActorMayMutateSystemRole(actor, role);
+    if (role.isSystem) throw AppError.conflict("System roles cannot be deleted");
+    await prisma.role.delete({ where: { id } });
+  }
+
+  /**
+   * Replace only `diamond.fn.*` grants on a role. Legacy/hidden technical keys are
+   * preserved — intended for Phase 3 matrix; does not auto-expand to broad legacy keys.
+   */
+  async function setFunctionalGrants(
+    id: number,
+    input: z.infer<typeof SetFunctionalGrantsSchema>,
+    actor: AuthUser,
+  ) {
+    const role = await loadOrThrow(id);
+    assertActorMayMutateSystemRole(actor, role);
+    if (role.isSystem) {
+      throw new AppError({
+        code: ErrorCode.CONFLICT,
+        message: "System roles cannot be modified",
+      });
+    }
+    const normalized = normalizeFunctionalGrants(input.functionalGrants);
+    if (!normalized.ok) {
+      throw AppError.validation(
+        normalized.issues.map((i) => i.message).join("; ") || "Invalid functional grants",
+      );
+    }
+    assertActorMayDelegatePermissionKeys(actor, normalized.normalized);
+
+    if (input.ifMatchUpdatedAt) {
+      const expectedMs = Date.parse(input.ifMatchUpdatedAt);
+      const actualMs = role.updatedAt.getTime();
+      if (Number.isNaN(expectedMs) || expectedMs !== actualMs) {
+        throw AppError.modified({
+          roleId: id,
+          expectedUpdatedAt: input.ifMatchUpdatedAt,
+          actualUpdatedAt: role.updatedAt.toISOString(),
+        });
+      }
+    }
+
+    const updated = await withTransaction(prisma, async (tx) => {
+      const fresh = await tx.role.findUniqueOrThrow({ where: { id }, include: roleInclude });
+      if (input.ifMatchUpdatedAt) {
+        const expectedMs = Date.parse(input.ifMatchUpdatedAt);
+        if (fresh.updatedAt.getTime() !== expectedMs) {
+          throw AppError.modified({
+            roleId: id,
+            expectedUpdatedAt: input.ifMatchUpdatedAt,
+            actualUpdatedAt: fresh.updatedAt.toISOString(),
+          });
+        }
+      }
+      const preserved = fresh.permissions
+        .map((rp) => rp.permission.key)
+        .filter((key) => !isFunctionalCapabilityKey(key));
+      const merged = [...new Set([...preserved, ...normalized.normalized])];
+      assertActorMayDelegatePermissionKeys(actor, merged);
+      const permissionIds = await resolvePermissionIds(merged);
+
+      await tx.rolePermission.deleteMany({ where: { roleId: id } });
+      if (permissionIds.length > 0) {
+        await tx.rolePermission.createMany({
+          data: permissionIds.map((permissionId) => ({ roleId: id, permissionId })),
+          skipDuplicates: true,
+        });
+      }
+      await tx.role.update({
+        where: { id },
+        data: { name: fresh.name },
       });
       return tx.role.findUniqueOrThrow({ where: { id }, include: roleInclude });
     });
     return toRolePublic(updated);
   }
 
-  async function remove(id: number) {
-    const role = await loadOrThrow(id);
-    if (role.isSystem) throw AppError.conflict("System roles cannot be deleted");
-    await prisma.role.delete({ where: { id } });
-  }
-
-  return { list, get, create, update, setPermissions, remove };
+  return { list, get, create, update, setPermissions, setFunctionalGrants, remove };
 }

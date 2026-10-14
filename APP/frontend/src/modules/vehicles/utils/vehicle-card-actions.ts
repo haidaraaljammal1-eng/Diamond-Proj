@@ -36,10 +36,19 @@ function isPaidReservation(vehicle: VehicleActionSource): boolean {
  * Central fleet card action policy. Operational status, currentRental.status
  * (Backend authority), and permissions are the only inputs.
  */
+export interface VehicleFleetPermissions {
+  canAddDelete: boolean;
+  canEditPrices: boolean;
+}
+
 export function getVehicleCardActions(
   vehicle: VehicleActionSource,
-  canManage: boolean,
+  permissions: VehicleFleetPermissions | boolean,
 ): VehicleCardActions {
+  const canAddDelete =
+    typeof permissions === "boolean" ? permissions : permissions.canAddDelete;
+  const canEditPrices =
+    typeof permissions === "boolean" ? permissions : permissions.canEditPrices;
   const isFleetActive = vehicle.isActive !== false;
   if (!isFleetActive) return NO_ACTIONS;
 
@@ -62,8 +71,8 @@ export function getVehicleCardActions(
         showCarOut: false,
         showReturnLink: false,
         showGps: false,
-        showEditRates: canManage,
-        showDelete: canManage,
+        showEditRates: canEditPrices,
+        showDelete: canAddDelete,
         showMaintenance: false,
       };
     case "rented":

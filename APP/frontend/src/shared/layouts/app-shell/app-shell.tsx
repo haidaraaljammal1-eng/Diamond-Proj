@@ -4,6 +4,7 @@ import { Sidebar } from "./sidebar/sidebar";
 import { AppContent } from "./content/app-content";
 import { DrawerScrim } from "./drawer-scrim";
 import { SessionGuard } from "./session-guard";
+import { SessionPermissionSync } from "./session-permission-sync";
 import { ShellFrame } from "./shell-frame";
 
 /**
@@ -22,6 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <ShellFrame>
       <SessionGuard />
+      <SessionPermissionSync />
       <AppHeader />
       <Sidebar />
       <DrawerScrim />

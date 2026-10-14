@@ -213,6 +213,65 @@ if (!RUN) {
     assert.ok(rows.every((r) => r.vehicleId === vehicleBId));
   });
 
+  test("PATCH description or cash does not recompute total", async () => {
+    const create = await app.inject({
+      method: "POST",
+      url: `/archive/vehicles/${vehicleAId}/rows`,
+      headers: auth(adminToken),
+      payload: { rentalTotal: 500, total: 500 },
+    });
+    const rowId = create.json().data.id;
+
+    const patchDesc = await app.inject({
+      method: "PATCH",
+      url: `/archive/rows/${rowId}`,
+      headers: auth(adminToken),
+      payload: { description: "note" },
+    });
+    assert.equal(patchDesc.json().data.total, 500);
+
+    const patchCash = await app.inject({
+      method: "PATCH",
+      url: `/archive/rows/${rowId}`,
+      headers: auth(adminToken),
+      payload: { cash: 9999 },
+    });
+    assert.equal(patchCash.json().data.total, 500);
+    assert.equal(patchCash.json().data.cash, 9999);
+  });
+
+  test("PATCH parking recomputes total immediately without sync", async () => {
+    const create = await app.inject({
+      method: "POST",
+      url: `/archive/vehicles/${vehicleAId}/rows`,
+      headers: auth(adminToken),
+      payload: { rentalTotal: 1000 },
+    });
+    assert.equal(create.statusCode, 201);
+    const rowId = create.json().data.id;
+    assert.equal(create.json().data.total, null);
+
+    const patch = await app.inject({
+      method: "PATCH",
+      url: `/archive/rows/${rowId}`,
+      headers: auth(adminToken),
+      payload: { parking: 100 },
+    });
+    assert.equal(patch.statusCode, 200, patch.body);
+    const updated = patch.json().data;
+    assert.equal(updated.parking, 100);
+    assert.equal(updated.total, 1100);
+    assert.equal(updated.rentalTotal, 1000);
+
+    const patch2 = await app.inject({
+      method: "PATCH",
+      url: `/archive/rows/${rowId}`,
+      headers: auth(adminToken),
+      payload: { parking: 250 },
+    });
+    assert.equal(patch2.json().data.total, 1250);
+  });
+
   test("PATCH updates one field without overwriting others", async () => {
     const create = await app.inject({
       method: "POST",
@@ -447,5 +506,121 @@ if (!RUN) {
     });
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.json().data, []);
+  });
+
+  function multipartXlsx(filename: string, content: Buffer) {
+    const boundary = `----archiveimport${run}`;
+    const head =
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+      `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n`;
+    const tail = `\r\n--${boundary}--\r\n`;
+    return {
+      headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
+      payload: Buffer.concat([Buffer.from(head), content, Buffer.from(tail)]),
+    };
+  }
+
+  async function exportWorkbookBuffer(): Promise<Buffer> {
+    const res = await app.inject({
+      method: "GET",
+      url: "/archive/export",
+      headers: auth(adminToken),
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    return res.rawPayload as Buffer;
+  }
+
+  test("POST /archive/import/preview accepts exported workbook", async () => {
+    const buffer = await exportWorkbookBuffer();
+    const { headers, payload } = multipartXlsx("Diamond_Archive.xlsx", buffer);
+    const res = await app.inject({
+      method: "POST",
+      url: "/archive/import/preview",
+      headers: { ...auth(adminToken), ...headers },
+      payload,
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    const preview = res.json().data;
+    assert.equal(preview.canConfirm, true);
+    assert.ok(preview.importToken);
+    assert.ok(preview.summary.matchedVehicleCount >= 2);
+  });
+
+  test("reader cannot preview archive import", async () => {
+    const buffer = await exportWorkbookBuffer();
+    const { headers, payload } = multipartXlsx("Diamond_Archive.xlsx", buffer);
+    const res = await app.inject({
+      method: "POST",
+      url: "/archive/import/preview",
+      headers: { ...auth(readerToken), ...headers },
+      payload,
+    });
+    assert.equal(res.statusCode, 403);
+  });
+
+  test("import confirm replaces archive rows from modified export", async () => {
+    const ExcelJS = (await import("exceljs")).default;
+    const buffer = await exportWorkbookBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer as unknown as Parameters<typeof wb.xlsx.load>[0]);
+    const targetSheet = wb.worksheets.find((ws) =>
+      String(ws.getCell("A1").value ?? "").includes(`AR ${run} A`),
+    );
+    assert.ok(targetSheet);
+    const dataRow = targetSheet!.getRow(3);
+    dataRow.getCell(8).value = `IMPORT-${run}`;
+    const modified = Buffer.from(await wb.xlsx.writeBuffer());
+
+    const { headers, payload } = multipartXlsx("Diamond_Archive.xlsx", modified);
+    const previewRes = await app.inject({
+      method: "POST",
+      url: "/archive/import/preview",
+      headers: { ...auth(adminToken), ...headers },
+      payload,
+    });
+    assert.equal(previewRes.statusCode, 200, previewRes.body);
+    const token = previewRes.json().data.importToken as string;
+
+    const confirmRes = await app.inject({
+      method: "POST",
+      url: "/archive/import/confirm",
+      headers: auth(adminToken),
+      payload: { importToken: token },
+    });
+    assert.equal(confirmRes.statusCode, 200, confirmRes.body);
+
+    const rowsRes = await app.inject({
+      method: "GET",
+      url: `/archive/vehicles/${vehicleAId}/rows`,
+      headers: auth(adminToken),
+    });
+    const rows = rowsRes.json().data as Array<{ customerName: string | null }>;
+    assert.ok(rows.some((row) => row.customerName === `IMPORT-${run}`));
+  });
+
+  test("import preview reports invalid cell values with sheet row column", async () => {
+    const ExcelJS = (await import("exceljs")).default;
+    const buffer = await exportWorkbookBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer as unknown as Parameters<typeof wb.xlsx.load>[0]);
+    const targetSheet = wb.worksheets.find((ws) =>
+      String(ws.getCell("A1").value ?? "").includes(`AR ${run} A`),
+    );
+    assert.ok(targetSheet);
+    targetSheet!.getRow(3).getCell(4).value = "not-a-date";
+    const modified = Buffer.from(await wb.xlsx.writeBuffer());
+    const { headers, payload } = multipartXlsx("Diamond_Archive.xlsx", modified);
+    const res = await app.inject({
+      method: "POST",
+      url: "/archive/import/preview",
+      headers: { ...auth(adminToken), ...headers },
+      payload,
+    });
+    assert.equal(res.statusCode, 200);
+    const preview = res.json().data;
+    assert.equal(preview.canConfirm, false);
+    assert.ok(preview.errors.length > 0);
+    assert.equal(preview.errors[0].column, "deliveryDate");
   });
 }

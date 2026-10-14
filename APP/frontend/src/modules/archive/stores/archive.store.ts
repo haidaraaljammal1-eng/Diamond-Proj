@@ -5,11 +5,19 @@ import { ApiRequestError, normalizeApiError } from "@/infrastructure/api/errors"
 import {
   createArchiveRow,
   deleteArchiveRow,
+  confirmArchiveImport,
   downloadArchiveExport,
   listArchiveRows,
   listArchiveVehicles,
+  previewArchiveImport,
+  syncArchive,
+  getArchiveSyncStatus,
+  restoreArchiveChargeField,
   updateArchiveRow,
 } from "../api/archive.api";
+import type { ArchiveSyncAutoField } from "../utils/archive-columns";
+import type { ArchiveSyncResult, ArchiveSyncStatus } from "../types/archive-sync.types";
+import type { ArchiveImportPreview } from "../types/archive-import.types";
 import { commitAllArchiveCellDrafts } from "../utils/archive-edit-registry";
 import type {
   ArchiveEditableField,
@@ -40,6 +48,17 @@ interface ArchiveState {
   cellErrors: Record<string, ApiRequestError | null>;
   isExporting: boolean;
   exportError: ApiRequestError | null;
+  importPreview: ArchiveImportPreview | null;
+  importPreviewOpen: boolean;
+  isImportPreviewLoading: boolean;
+  importPreviewError: ApiRequestError | null;
+  isImportConfirming: boolean;
+  importConfirmError: ApiRequestError | null;
+  importSuccess: boolean;
+  syncStatus: ArchiveSyncStatus | null;
+  isSyncing: boolean;
+  syncError: ApiRequestError | null;
+  syncResult: ArchiveSyncResult | null;
   loadVehicles: () => Promise<void>;
   selectVehicle: (vehicleId: number | null) => Promise<void>;
   refreshRows: () => Promise<void>;
@@ -49,15 +68,23 @@ interface ArchiveState {
     field: ArchiveEditableField,
     patch: ArchiveRowPatch,
   ) => Promise<boolean>;
+  restoreChargeField: (rowId: number, field: ArchiveSyncAutoField) => Promise<boolean>;
   deleteRow: (rowId: number) => Promise<boolean>;
   clearCellError: (rowId: number, field: ArchiveEditableField) => void;
   exportExcel: () => Promise<boolean>;
   clearExportError: () => void;
+  previewImportFile: (file: File) => Promise<void>;
+  confirmImport: () => Promise<boolean>;
+  closeImportPreview: () => void;
+  loadSyncStatus: () => Promise<void>;
+  runArchiveSync: () => Promise<boolean>;
+  dismissSyncResult: () => void;
 }
 
 let vehiclesInFlight: Promise<void> | null = null;
 let rowsRequestId = 0;
 let exportInFlight: Promise<boolean> | null = null;
+let syncInFlight: Promise<boolean> | null = null;
 
 function hasFailedCellEdits(cellErrors: Record<string, ApiRequestError | null>): boolean {
   return Object.values(cellErrors).some((error) => error !== null);
@@ -104,6 +131,17 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   cellErrors: {},
   isExporting: false,
   exportError: null,
+  importPreview: null,
+  importPreviewOpen: false,
+  isImportPreviewLoading: false,
+  importPreviewError: null,
+  isImportConfirming: false,
+  importConfirmError: null,
+  importSuccess: false,
+  syncStatus: null,
+  isSyncing: false,
+  syncError: null,
+  syncResult: null,
 
   async loadVehicles() {
     if (vehiclesInFlight) return vehiclesInFlight;
@@ -228,6 +266,45 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
     }
   },
 
+  async restoreChargeField(rowId, field) {
+    const vehicleId = get().selectedVehicleId;
+    const existing = get().rows.find((row) => row.id === rowId);
+    if (!vehicleId || !existing || existing.vehicleId !== vehicleId) return false;
+
+    const key = cellKey(rowId, field);
+    set((state) => ({
+      savingCells: { ...state.savingCells, [key]: true },
+      cellErrors: { ...state.cellErrors, [key]: null },
+    }));
+    try {
+      const updated = await restoreArchiveChargeField(rowId, field);
+      if (get().selectedVehicleId !== vehicleId) {
+        set((state) => ({
+          savingCells: { ...state.savingCells, [key]: false },
+        }));
+        return false;
+      }
+      set((state) => ({
+        rows: state.rows.map((row) => (row.id === rowId ? updated : row)),
+        savingCells: { ...state.savingCells, [key]: false },
+      }));
+      return true;
+    } catch (error) {
+      if (get().selectedVehicleId !== vehicleId) {
+        set((state) => ({
+          savingCells: { ...state.savingCells, [key]: false },
+        }));
+        return false;
+      }
+      const apiError = normalizeApiError(error);
+      set((state) => ({
+        savingCells: { ...state.savingCells, [key]: false },
+        cellErrors: { ...state.cellErrors, [key]: apiError },
+      }));
+      return false;
+    }
+  },
+
   async deleteRow(rowId) {
     const vehicleId = get().selectedVehicleId;
     const existing = get().rows.find((row) => row.id === rowId);
@@ -316,5 +393,146 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
     })();
 
     return exportInFlight;
+  },
+
+  async previewImportFile(file) {
+    set({
+      isImportPreviewLoading: true,
+      importPreviewError: null,
+      importConfirmError: null,
+      importSuccess: false,
+      importPreviewOpen: true,
+      importPreview: null,
+    });
+    try {
+      const preview = await previewArchiveImport(file);
+      set({
+        importPreview: preview,
+        isImportPreviewLoading: false,
+        importPreviewOpen: true,
+      });
+    } catch (error) {
+      set({
+        isImportPreviewLoading: false,
+        importPreviewError: normalizeApiError(error),
+        importPreviewOpen: true,
+      });
+    }
+  },
+
+  async confirmImport() {
+    const preview = get().importPreview;
+    if (!preview?.importToken || !preview.canConfirm) return false;
+
+    set({ isImportConfirming: true, importConfirmError: null });
+    try {
+      await commitAllArchiveCellDrafts();
+      const savesCompleted = await waitForArchiveSaves(() => get().savingCells);
+      if (!savesCompleted || hasFailedCellEdits(get().cellErrors)) {
+        set({
+          isImportConfirming: false,
+          importConfirmError: new ApiRequestError(
+            {
+              code: "ARCHIVE_UNSAVED_CELL_ERROR",
+              message: "Resolve unsaved archive edits before import",
+            },
+            400,
+          ),
+        });
+        return false;
+      }
+
+      await confirmArchiveImport(preview.importToken);
+      const selectedId = get().selectedVehicleId;
+      const touchedSelected = preview.matchedVehicles.some((v) => v.vehicleId === selectedId);
+      if (touchedSelected && selectedId) {
+        await get().refreshRows();
+      }
+      set({
+        isImportConfirming: false,
+        importSuccess: true,
+        importConfirmError: null,
+      });
+      return true;
+    } catch (error) {
+      set({
+        isImportConfirming: false,
+        importConfirmError: normalizeApiError(error),
+      });
+      return false;
+    }
+  },
+
+  closeImportPreview() {
+    set({
+      importPreviewOpen: false,
+      importPreview: null,
+      isImportPreviewLoading: false,
+      importPreviewError: null,
+      isImportConfirming: false,
+      importConfirmError: null,
+      importSuccess: false,
+    });
+  },
+
+  async loadSyncStatus() {
+    try {
+      const status = await getArchiveSyncStatus();
+      set({ syncStatus: status });
+    } catch {
+      // UX-only; ignore status load errors
+    }
+  },
+
+  dismissSyncResult() {
+    set({ syncResult: null, syncError: null });
+  },
+
+  async runArchiveSync() {
+    if (syncInFlight) return syncInFlight;
+
+    syncInFlight = (async () => {
+      set({ isSyncing: true, syncError: null, syncResult: null });
+      try {
+        await commitAllArchiveCellDrafts();
+        const savesCompleted = await waitForArchiveSaves(() => get().savingCells);
+        if (!savesCompleted || hasFailedCellEdits(get().cellErrors)) {
+          set({
+            isSyncing: false,
+            syncError: new ApiRequestError(
+              {
+                code: "ARCHIVE_UNSAVED_CELL_ERROR",
+                message: "Resolve unsaved archive edits before sync",
+              },
+              400,
+            ),
+          });
+          return false;
+        }
+
+        const result = await syncArchive();
+        const selectedId = get().selectedVehicleId;
+        if (selectedId) {
+          await get().refreshRows();
+        }
+        set({
+          isSyncing: false,
+          syncResult: result,
+          syncStatus: {
+            lastSuccessfulSyncAt: result.lastSuccessfulSyncAt,
+            running: false,
+            runningStartedAt: null,
+          },
+        });
+        return true;
+      } catch (error) {
+        set({ isSyncing: false, syncError: normalizeApiError(error) });
+        return false;
+      } finally {
+        syncInFlight = null;
+      }
+    })();
+
+    return syncInFlight;
   },
 }));

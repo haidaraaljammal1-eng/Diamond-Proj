@@ -36,8 +36,15 @@ export function UsersScreen() {
     setStatusFilter,
     setPage,
   } = useUsers();
-  const { canCreate, canUpdate, canDelete, setUserStatus, isStatusUpdating, isDeletingUser } =
-    useUserMutations();
+  const {
+    canCreate,
+    canUpdate,
+    canDelete,
+    canEnableDisable,
+    setUserStatus,
+    isStatusUpdating,
+    isDeletingUser,
+  } = useUserMutations();
 
   const [formTarget, setFormTarget] = useState<UserFormTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserDto | null>(null);
@@ -203,10 +210,11 @@ export function UsersScreen() {
           <UsersGrid
             users={users}
             canUpdate={canUpdate}
+            canEnableDisable={canEnableDisable}
             canDelete={canDelete}
             isStatusUpdating={isStatusUpdating}
             isDeletingUser={isDeletingUser}
-            onToggleStatus={canUpdate ? handleToggleStatus : undefined}
+            onToggleStatus={canEnableDisable ? handleToggleStatus : undefined}
             onEdit={canUpdate ? (user) => setFormTarget({ mode: "edit", user }) : undefined}
             onDelete={canDelete ? setDeleteTarget : undefined}
           />

@@ -1,3 +1,6 @@
+import { isFunctionalRbacV2UiEnabled } from "../../functional-rbac/feature-flag.ts";
+import { canViewFunctionalPage } from "../../functional-rbac/policy-engine.ts";
+import type { FunctionalAuthContext } from "../../functional-rbac/types.ts";
 import type { NavigationGroup, NavigationItem } from "../navigation.types";
 
 /**
@@ -12,7 +15,18 @@ export function isNavigationItemVisible(
   group: NavigationGroup,
   hasPermission: (permission: string) => boolean,
   isAdmin: boolean,
+  functionalCtx?: FunctionalAuthContext,
 ): boolean {
+  if (isAdmin) return true;
+
+  if (
+    isFunctionalRbacV2UiEnabled() &&
+    item.functionalPageId &&
+    functionalCtx
+  ) {
+    return canViewFunctionalPage(functionalCtx, item.functionalPageId);
+  }
+
   const required = [
     ...(item.permission ? [item.permission] : []),
     ...(item.permissions ?? []),

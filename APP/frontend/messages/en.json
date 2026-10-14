@@ -8,6 +8,36 @@
     "checking": "Checking...",
     "backend": "Backend: {status}"
   },
+  "FunctionalRbac": {
+    "rolesSubtitle": "Business capabilities grouped by page — roles are columns, functional permissions are rows.",
+    "modeBanner": {
+      "uiOnly": "Functional RBAC V2 UI is enabled in this build. Backend enforcement follows its own flag.",
+      "mismatch": "RBAC V2 UI and declared backend mode do not match. Functional grant editing is disabled until configuration is aligned."
+    },
+    "routeGuard": {
+      "loading": "Checking page access…",
+      "deniedTitle": "You do not have access to this page",
+      "deniedDescription": "Your role does not include the required functional page permission. Contact an administrator if you need access."
+    },
+    "matrix": {
+      "fullAccessBadge": "Full access",
+      "fullAccessCount": "Full access to all functional capabilities"
+    },
+    "pages": {
+      "dashboard": "Dashboard",
+      "vehicles": "Vehicles",
+      "gps": "GPS Tracking",
+      "maintenance": "Maintenance",
+      "archive": "Archive",
+      "violations": "Violations & Salik",
+      "finance": "Finance",
+      "invoices": "Invoices",
+      "contracts": "Contracts",
+      "whatsapp": "WhatsApp",
+      "users": "Users",
+      "roles": "Roles & Permissions"
+    }
+  },
   "Login": {
     "title": "Welcome to Diamond Rent Car",
     "email": "Email",
@@ -299,6 +329,7 @@
       "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
       "TOKEN_INVALID": "Your session is no longer valid. Please sign in again.",
       "CONFLICT": "A role with this key already exists.",
+      "RESOURCE_MODIFIED": "Another administrator updated this role. The matrix was refreshed — review and try again.",
       "VALIDATION_ERROR": "Some values are not valid. Check the fields and try again."
     },
     "emptyRoles": {
@@ -3198,8 +3229,28 @@
       "addingRow": "Adding…",
       "downloadExcel": "Download Excel",
       "downloadingExcel": "Downloading…",
+      "importExcel": "Import Excel",
+      "importingExcel": "Analyzing…",
+      "syncArchive": "Sync Archive",
+      "syncingArchive": "Syncing…",
       "close": "Close",
       "cancel": "Cancel"
+    },
+    "manualOverride": {
+      "tooltip": "Manually overridden",
+      "restoreAuto": "Restore automatic value"
+    },
+    "sync": {
+      "successTitle": "Archive synced",
+      "created": "New contracts",
+      "updated": "Updated rows",
+      "unchanged": "Unchanged",
+      "violations": "Violations counted",
+      "errors": "Errors",
+      "partialFailure": "Could not update {count} row(s)",
+      "lastSuccessful": "Last successful sync",
+      "alreadyRunning": "An archive sync is already in progress.",
+      "dismiss": "Dismiss"
     },
     "table": {
       "actions": "Actions"
@@ -3218,7 +3269,38 @@
       "notFound": "The archive row or vehicle was not found.",
       "ARCHIVE_ROW_NOT_FOUND": "Archive row not found.",
       "VEHICLE_NOT_FOUND": "Vehicle not found.",
-      "ARCHIVE_UNSAVED_CELL_ERROR": "Resolve unsaved archive edits before downloading Excel."
+      "ARCHIVE_UNSAVED_CELL_ERROR": "Resolve unsaved archive edits before downloading Excel.",
+      "ARCHIVE_IMPORT_INVALID_FILE_TYPE": "Only Diamond Archive .xlsx files are supported.",
+      "ARCHIVE_IMPORT_INVALID_WORKBOOK": "The file is not a valid Diamond Archive workbook.",
+      "ARCHIVE_IMPORT_TOKEN_INVALID": "Import session expired. Upload the file again.",
+      "ARCHIVE_IMPORT_TOKEN_EXPIRED": "Import session expired. Upload the file again.",
+      "SYNC_ALREADY_RUNNING": "An archive sync is already in progress."
+    },
+    "import": {
+      "previewTitle": "Import Excel preview",
+      "previewDescription": "File: {filename}",
+      "previewDescriptionGeneric": "Review the import summary before confirming.",
+      "analyzing": "Analyzing workbook…",
+      "confirm": "Confirm import",
+      "confirming": "Importing…",
+      "success": "Excel file imported successfully.",
+      "summary": {
+        "totalSheets": "Sheets",
+        "matched": "Matched vehicles",
+        "unmatched": "Unmatched sheets",
+        "validRows": "Valid rows",
+        "matchedRows": "Matched rows",
+        "errors": "Errors"
+      },
+      "existingRows": "Current rows",
+      "importRows": "To import",
+      "sheetLabel": "Sheet: {sheet}",
+      "matchedVehiclesTitle": "Matched vehicles",
+      "unmatchedTitle": "Unmatched sheets",
+      "errorsTitle": "Validation errors",
+      "rowCounts": "{existing} existing → {importing} to import",
+      "errorLine": "Sheet {sheet}, row {row}, {column}: “{value}” — {reason}",
+      "moreErrors": "+{count} more errors"
     },
     "columns": {
       "kmIn": "KM IN",
@@ -3237,7 +3319,7 @@
       "salik": "Salik",
       "parking": "Parking",
       "fuel": "Fuel",
-      "blackPoints": "Black points",
+      "blackPoints": "Damage",
       "fines": "Fines",
       "total": "Total",
       "dollar": "Dollar",

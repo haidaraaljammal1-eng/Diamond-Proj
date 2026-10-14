@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import { useDiamondPageAccess } from "@/modules/functional-rbac";
 import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { ROAD_LIABILITIES_PAGE_PERMISSIONS } from "../road-liabilities.permissions";
@@ -68,10 +68,7 @@ export interface UseRoadLiabilitiesResult {
 }
 
 export function useRoadLiabilities(): UseRoadLiabilitiesResult {
-  const { hasPermission } = usePermissions();
-  const isAllowed = ROAD_LIABILITIES_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
+  const isAllowed = useDiamondPageAccess("violations");
 
   const summary = useRoadLiabilitiesStore((state) => state.summary);
   const items = useRoadLiabilitiesStore((state) => state.items);

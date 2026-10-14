@@ -4,6 +4,12 @@ import { env } from "src/config/env";
 import { AppError } from "src/lib/errors/app-error";
 import { ErrorCode } from "src/constants/error-codes";
 import { SYSTEM_ROLES } from "src/constants/roles";
+import {
+  assertFunctionalUserCapability,
+  assertFunctionalUserCreate,
+} from "src/lib/rbac/functional-permissions/users-functional";
+import { assertActorMayAssignRoles } from "src/lib/rbac/functional-permissions/delegation-guard";
+import { FN } from "src/lib/rbac/functional-permissions/keys";
 import { normalizeEmail } from "src/lib/security/normalize";
 import { hashPassword, validatePasswordStrength } from "src/lib/security/password";
 import { expiryFromNow, generateOpaqueToken, hashToken } from "src/lib/security/tokens";
@@ -22,6 +28,7 @@ import type {
   UpdateUserSchema,
 } from "src/modules/users/users.schema";
 import type { z } from "zod";
+import type { AuthUser } from "src/lib/context/auth-context";
 
 const SORTABLE = ["email", "name", "createdAt", "status"] as const;
 
@@ -50,6 +57,21 @@ export function createUsersService(fastify: FastifyInstance) {
         code: ErrorCode.CONFLICT,
         message: "Cannot remove the last administrator",
       });
+    }
+  }
+
+  /** Only a system administrator may assign the protected `system_admin` role. */
+  async function assertActorMayGrantSystemAdmin(
+    actor: AuthUser,
+    roleIds: number[],
+  ): Promise<void> {
+    if (actor.isSystemAdmin) return;
+    const adminRole = await prisma.role.findUnique({
+      where: { key: SYSTEM_ROLES.SYSTEM_ADMIN },
+      select: { id: true },
+    });
+    if (adminRole && roleIds.includes(adminRole.id)) {
+      throw AppError.forbidden();
     }
   }
 
@@ -150,13 +172,19 @@ export function createUsersService(fastify: FastifyInstance) {
     return toUserPublic(user);
   }
 
-  async function create(input: z.infer<typeof CreateUserSchema>) {
+  async function create(
+    input: z.infer<typeof CreateUserSchema>,
+    actor: AuthUser,
+  ) {
     const email = normalizeEmail(input.email);
     const roleIds = [...new Set(input.roleIds)];
     if (roleIds.length > 0) {
       const found = await prisma.role.count({ where: { id: { in: roleIds } } });
       if (found !== roleIds.length) throw AppError.validation("Role not found");
     }
+    await assertActorMayGrantSystemAdmin(actor, roleIds);
+    await assertActorMayAssignRoles(prisma, actor, roleIds);
+    assertFunctionalUserCreate(actor, roleIds);
     // Departments are the organizational source of truth: when provided, the branch
     // scope is DERIVED from them and any client-sent branchIds are ignored (§10).
     // The legacy explicit-branch path is kept only for callers that send no
@@ -258,7 +286,14 @@ export function createUsersService(fastify: FastifyInstance) {
     };
   }
 
-  async function update(id: number, input: z.infer<typeof UpdateUserSchema>) {
+  async function update(
+    id: number,
+    input: z.infer<typeof UpdateUserSchema>,
+    actor?: AuthUser,
+  ) {
+    if (actor) {
+      assertFunctionalUserCapability(actor, FN.users.edit);
+    }
     const data: Prisma.UserUpdateInput = {};
     if (input.name !== undefined) data.name = input.name;
     if (input.email !== undefined) data.email = normalizeEmail(input.email);
@@ -328,7 +363,14 @@ export function createUsersService(fastify: FastifyInstance) {
     return toUserPublic(user);
   }
 
-  async function setStatus(id: number, status: "ACTIVE" | "SUSPENDED") {
+  async function setStatus(
+    id: number,
+    status: "ACTIVE" | "SUSPENDED",
+    actor?: AuthUser,
+  ) {
+    if (actor) {
+      assertFunctionalUserCapability(actor, FN.users.enableDisable);
+    }
     if (status === "SUSPENDED") {
       await assertNotRemovingLastAdmin(prisma, id, false);
     }
@@ -350,12 +392,19 @@ export function createUsersService(fastify: FastifyInstance) {
     return toUserPublic(user);
   }
 
-  async function setRoles(id: number, input: z.infer<typeof AssignRolesSchema>) {
+  async function setRoles(
+    id: number,
+    input: z.infer<typeof AssignRolesSchema>,
+    actor: AuthUser,
+  ) {
     const roleIds = [...new Set(input.roleIds)];
     if (roleIds.length > 0) {
       const found = await prisma.role.count({ where: { id: { in: roleIds } } });
       if (found !== roleIds.length) throw AppError.validation("Role not found");
     }
+    await assertActorMayGrantSystemAdmin(actor, roleIds);
+    await assertActorMayAssignRoles(prisma, actor, roleIds);
+    assertFunctionalUserCapability(actor, FN.users.assignRoles);
 
     const user = await withTransaction(prisma, async (tx) => {
       const adminRole = await tx.role.findUnique({

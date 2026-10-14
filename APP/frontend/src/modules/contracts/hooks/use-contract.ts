@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useLegacyAnyOrFunctionalCapability,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import { useLocale } from "next-intl";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useContractsStore } from "../stores/contracts.store";
@@ -112,21 +116,42 @@ export interface UseContractResult {
 }
 
 export function useContract(): UseContractResult {
-  const { hasPermission } = usePermissions();
   const locale = useLocale();
   const store = useContractsStore();
 
+  const canRentalLink = useLegacyOrFunctionalCapability(
+    CONTRACTS_MANAGE_PERMISSION,
+    FN.contracts.rentalLink,
+  );
+  const canDeliveryReturn = useLegacyAnyOrFunctionalCapability(
+    [
+      CONTRACTS_ACTIVATE_PERMISSION,
+      CONTRACTS_CAR_OUT_PERMISSION,
+      CONTRACTS_RETURN_PERMISSION,
+      CONTRACTS_RECONCILE_PERMISSION,
+    ],
+    FN.contracts.deliveryReturnReconcile,
+  );
+  const canCollectionClosure = useLegacyAnyOrFunctionalCapability(
+    [CONTRACTS_RECONCILE_PERMISSION, CONTRACTS_CLOSE_PERMISSION],
+    FN.contracts.collectionClosure,
+  );
+  const canRenewal = useLegacyOrFunctionalCapability(
+    CONTRACTS_RENEW_PERMISSION,
+    FN.contracts.renewal,
+  );
+
   const permissions = useMemo<ContractPermissionFlags>(
     () => ({
-      canManage: hasPermission(CONTRACTS_MANAGE_PERMISSION),
-      canActivate: hasPermission(CONTRACTS_ACTIVATE_PERMISSION),
-      canCarOut: hasPermission(CONTRACTS_CAR_OUT_PERMISSION),
-      canReturn: hasPermission(CONTRACTS_RETURN_PERMISSION),
-      canReconcile: hasPermission(CONTRACTS_RECONCILE_PERMISSION),
-      canClose: hasPermission(CONTRACTS_CLOSE_PERMISSION),
-      canRenew: hasPermission(CONTRACTS_RENEW_PERMISSION),
+      canManage: canRentalLink,
+      canActivate: canDeliveryReturn,
+      canCarOut: canDeliveryReturn,
+      canReturn: canDeliveryReturn,
+      canReconcile: canDeliveryReturn,
+      canClose: canCollectionClosure,
+      canRenew: canRenewal,
     }),
-    [hasPermission],
+    [canRentalLink, canDeliveryReturn, canCollectionClosure, canRenewal],
   );
 
   const actions = store.detail

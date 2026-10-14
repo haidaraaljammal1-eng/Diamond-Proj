@@ -5,6 +5,7 @@ import styles from "./users-grid.module.css";
 export interface UsersGridProps {
   users: UserDto[];
   canUpdate: boolean;
+  canEnableDisable: boolean;
   canDelete: boolean;
   isStatusUpdating: (id: number) => boolean;
   isDeletingUser: (id: number) => boolean;
@@ -16,6 +17,7 @@ export interface UsersGridProps {
 export function UsersGrid({
   users,
   canUpdate,
+  canEnableDisable,
   canDelete,
   isStatusUpdating,
   isDeletingUser,
@@ -30,6 +32,7 @@ export function UsersGrid({
           key={user.id}
           user={user}
           canUpdate={canUpdate}
+          canEnableDisable={canEnableDisable}
           canDelete={canDelete}
           isStatusUpdating={isStatusUpdating(user.id)}
           isDeleting={isDeletingUser(user.id)}

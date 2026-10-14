@@ -6,14 +6,17 @@ import { CompanyIdentity } from "@/shared/components/company-identity";
 import { VehiclePhotoButton } from "../../forms/add-vehicle/vehicle-photo-button";
 import type { VehicleDetailDto } from "../../types/vehicle.types";
 import { getVehicleStatusPresentation } from "../../utils/vehicle-status";
-import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
+import {
+  getVehicleCardActions,
+  type VehicleFleetPermissions,
+} from "../../utils/vehicle-card-actions";
 import { VehicleImage } from "../vehicle-image/vehicle-image";
 import { VehicleStatus } from "../vehicle-status/vehicle-status";
 import styles from "./vehicle-detail.module.css";
 
 export interface VehicleDetailProps {
   vehicle: VehicleDetailDto;
-  canManage: boolean;
+  fleetPermissions: VehicleFleetPermissions;
   isPhotoActionPending: boolean;
   photoActionErrorMessage: string | null;
   onUploadPhoto: (file: File) => void;
@@ -26,7 +29,7 @@ export interface VehicleDetailProps {
 
 export function VehicleDetail({
   vehicle,
-  canManage,
+  fleetPermissions,
   isPhotoActionPending,
   photoActionErrorMessage,
   onUploadPhoto,
@@ -43,7 +46,8 @@ export function VehicleDetail({
     vehicle.currentRental?.status,
   );
   const rental = vehicle.currentRental;
-  const actions = getVehicleCardActions(vehicle, canManage);
+  const actions = getVehicleCardActions(vehicle, fleetPermissions);
+  const canAddDelete = fleetPermissions.canAddDelete;
   const hasRental =
     rental != null &&
     (vehicle.operationalStatus === "rented" || rental.status === "paid");
@@ -78,7 +82,7 @@ export function VehicleDetail({
               {vehicle.modelYear != null ? format.number(vehicle.modelYear) : null}
             </p>
           </div>
-          {canManage && primaryImage ? (
+          {canAddDelete && primaryImage ? (
             <div className={styles.heroPhotoAction}>
               <VehiclePhotoButton
                 label={t("detail.replacePhoto")}
@@ -103,7 +107,7 @@ export function VehicleDetail({
         {!primaryImage ? (
           <div className={styles.photoEmpty}>
             <span>{t("detail.noPhoto")}</span>
-            {canManage ? (
+            {canAddDelete ? (
               <VehiclePhotoButton
                 label={t("form.uploadPhoto")}
                 ariaLabel={t("form.uploadPhoto")}

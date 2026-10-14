@@ -16,6 +16,7 @@ import type {
 } from "../../types/official-contract.types";
 import { toggleDamageMark, type DiagramView } from "../../utils/official-contract-damage-zones";
 import { officialContractCompanyNames } from "../../utils/official-contract-company";
+import { officialContractTitleCompanyLines } from "../../utils/official-contract-title";
 import {
   buildOfficialContractDocument,
   type ContractFieldModel,
@@ -89,6 +90,7 @@ export function OfficialContractA4({
       ),
   });
   const companyNames = officialContractCompanyNames(contract);
+  const titleCompanyLines = officialContractTitleCompanyLines(contract);
   const [tool, setTool] = useState<DamageMarkType>("SCRATCH");
 
   const renderField = (field: ContractFieldModel, stacked: boolean) => {
@@ -214,12 +216,12 @@ export function OfficialContractA4({
         <div className={styles.ctEn}>
           {CONTRACT_TITLE.en[0]}
           <br />
-          {CONTRACT_TITLE.en[1]}
+          {titleCompanyLines.en}
         </div>
         <div className={styles.ctAr} dir="rtl" lang="ar">
           {CONTRACT_TITLE.ar[0]}
           <br />
-          {CONTRACT_TITLE.ar[1]}
+          {titleCompanyLines.ar}
         </div>
       </div>
 

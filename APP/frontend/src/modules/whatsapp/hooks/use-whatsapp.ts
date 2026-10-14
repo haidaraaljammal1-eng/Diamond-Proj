@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import {
+  isFunctionalRbacV2UiEnabled,
+  useDiamondPageAccess,
+} from "@/modules/functional-rbac";
 import { usePermissions } from "@/modules/auth";
 import { isDemoSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
@@ -99,12 +103,17 @@ export interface UseWhatsAppResult {
 
 export function useWhatsApp(): UseWhatsAppResult {
   const { hasPermission } = usePermissions();
-  const isAllowed = WHATSAPP_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
-  const hasSendPermission = hasPermission(WHATSAPP_SEND_PERMISSION);
-  const hasManageConnectionPermission = hasPermission(WHATSAPP_MANAGE_CONNECTION_PERMISSION);
-  const hasLinkCustomerPermission = hasPermission(WHATSAPP_LINK_CUSTOMER_PERMISSION);
+  const isAllowed = useDiamondPageAccess("whatsapp");
+  const v2 = isFunctionalRbacV2UiEnabled();
+  const hasSendPermission = v2
+    ? isAllowed
+    : hasPermission(WHATSAPP_SEND_PERMISSION);
+  const hasManageConnectionPermission = v2
+    ? isAllowed
+    : hasPermission(WHATSAPP_MANAGE_CONNECTION_PERMISSION);
+  const hasLinkCustomerPermission = v2
+    ? isAllowed
+    : hasPermission(WHATSAPP_LINK_CUSTOMER_PERMISSION);
   const simulationEnabled = isDemoSimulationEnabled();
   const simulationActive =
     simulationEnabled && useWhatsAppSimulationStore((state) => state.active);

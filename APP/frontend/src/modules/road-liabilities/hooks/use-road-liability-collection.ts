@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import { normalizeApiError, type ApiRequestError } from "@/infrastructure/api/errors";
 import {
   collectRoadLiabilityOffSession,
@@ -33,8 +36,10 @@ export function useRoadLiabilityCollection(
   items: RoadLiabilityListItemDto[],
   onUpdated: () => void,
 ) {
-  const { hasPermission } = usePermissions();
-  const canCharge = hasPermission(VIOLATIONS_CHARGE_PERMISSION);
+  const canCharge = useLegacyOrFunctionalCapability(
+    VIOLATIONS_CHARGE_PERMISSION,
+    FN.violations.collectCharges,
+  );
 
   const [capabilities, setCapabilities] = useState<Record<string, CapabilityEntry>>({});
   const probeRequestId = useRef(0);

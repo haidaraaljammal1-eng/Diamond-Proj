@@ -69,11 +69,11 @@ describe("archive interaction contracts", () => {
     assert.equal(ARCHIVE_COLUMNS.length, 24);
   });
 
-  it("permissions gate manage actions separately from page access", () => {
+  it("permissions gate manage and import on archive.manage / functional full", () => {
     const hookSource = read("hooks/use-archive.ts");
-    assert.match(hookSource, /ARCHIVE_PAGE_PERMISSIONS/);
-    assert.match(hookSource, /ARCHIVE_MANAGE_PERMISSION/);
-    assert.match(hookSource, /canManage = hasPermission\(ARCHIVE_MANAGE_PERMISSION\)/);
+    assert.match(hookSource, /useDiamondPageAccess\("archive"\)/);
+    assert.match(hookSource, /useLegacyOrFunctionalCapability/);
+    assert.match(hookSource, /FN\.archive\.full/);
     assert.equal(ARCHIVE_READ_PERMISSION, "archive.read");
     assert.equal(ARCHIVE_MANAGE_PERMISSION, "archive.manage");
   });
@@ -126,5 +126,27 @@ describe("archive interaction contracts", () => {
   it("editable cells register committers for export flush", () => {
     const source = read("components/archive-editable-cell/archive-editable-cell.tsx");
     assert.match(source, /registerArchiveCellCommitter/);
+  });
+
+  it("editable cell has no restore-auto control", () => {
+    const cell = read("components/archive-editable-cell/archive-editable-cell.tsx");
+    assert.doesNotMatch(cell, /restoreBtn|onRestoreAuto|manualOverride\.restoreAuto/);
+  });
+
+  it("sync summary shows only created, updated, and last sync", () => {
+    const source = read("components/archive-screen/archive-screen.tsx");
+    assert.match(source, /sync\.created/);
+    assert.match(source, /sync\.updated/);
+    assert.match(source, /sync\.lastSuccessful/);
+    assert.doesNotMatch(source, /sync\.unchanged/);
+    assert.doesNotMatch(source, /violationsCounted/);
+    assert.doesNotMatch(source, /sync\.errors/);
+  });
+
+  it("editable cell has no manual override gold or border styling", () => {
+    const cell = read("components/archive-editable-cell/archive-editable-cell.tsx");
+    const css = read("components/archive-editable-cell/archive-editable-cell.module.css");
+    assert.doesNotMatch(cell, /overrideCell|overrideInput|overrideReadonly|manualOverride\.tooltip/);
+    assert.doesNotMatch(css, /override|gold-hi|#d4a63a/i);
   });
 });

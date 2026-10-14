@@ -27,6 +27,7 @@ export interface InvoiceDetailDrawerProps {
   error: string | null;
   deliveriesError: string | null;
   canSendWhatsApp: boolean;
+  canDownloadPdf: boolean;
   onClose: () => void;
   onRetry: () => void;
   onViewPdf: () => void;
@@ -54,6 +55,7 @@ export function InvoiceDetailDrawer({
   error,
   deliveriesError,
   canSendWhatsApp,
+  canDownloadPdf,
   onClose,
   onRetry,
   onViewPdf,
@@ -198,26 +200,30 @@ export function InvoiceDetailDrawer({
             </section>
 
             <div className={styles.actions}>
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                disabled={pdfBusy}
-                data-testid="invoice-detail-view-pdf"
-                onClick={onViewPdf}
-              >
-                {t("actions.viewPdf")}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                disabled={pdfBusy}
-                data-testid="invoice-detail-download-pdf"
-                onClick={onDownloadPdf}
-              >
-                {t("actions.download")}
-              </Button>
+              {canDownloadPdf ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    disabled={pdfBusy}
+                    data-testid="invoice-detail-view-pdf"
+                    onClick={onViewPdf}
+                  >
+                    {t("actions.viewPdf")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    disabled={pdfBusy}
+                    data-testid="invoice-detail-download-pdf"
+                    onClick={onDownloadPdf}
+                  >
+                    {t("actions.download")}
+                  </Button>
+                </>
+              ) : null}
               {canSendWhatsApp && detail.status === "ISSUED" ? (
                 <Button
                   type="button"

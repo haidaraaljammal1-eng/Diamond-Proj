@@ -31,6 +31,33 @@ export interface ArchiveVehicle {
   plateNumber: string | null;
 }
 
+export type ArchiveManualOverrides = Partial<
+  Record<
+    | "kmOut"
+    | "kmIn"
+    | "km"
+    | "deliveryDate"
+    | "deliveryTime"
+    | "returnDate"
+    | "returnTime"
+    | "customerName"
+    | "customerPhone"
+    | "days"
+    | "dailyRate"
+    | "rentalTotal"
+    | "fuel"
+    | "salik"
+    | "blackPoints"
+    | "fines"
+    | "total"
+    | "cash"
+    | "visa",
+    boolean
+  >
+>;
+
+export type ArchiveManualCellValues = Partial<Record<ArchiveEditableField, string>>;
+
 export interface ArchiveRow {
   id: number;
   vehicleId: number;
@@ -59,10 +86,12 @@ export interface ArchiveRow {
   visa: number | null;
   transfer: number | null;
   remaining: number | null;
+  manualOverrides: ArchiveManualOverrides;
+  manualCellValues: ArchiveManualCellValues;
   createdAt: string;
   updatedAt: string;
 }
 
 export type ArchiveRowPatch = Partial<{
-  [K in ArchiveEditableField]: ArchiveRow[K];
+  [K in ArchiveEditableField]: ArchiveRow[K] | string;
 }>;

@@ -8,6 +8,36 @@
     "checking": "جارٍ الفحص...",
     "backend": "Backend: {status}"
   },
+  "FunctionalRbac": {
+    "rolesSubtitle": "صلاحيات تشغيلية مجمّعة حسب الصفحة — الأدوار أعمدة والصلاحيات الوظيفية صفوف.",
+    "modeBanner": {
+      "uiOnly": "واجهة RBAC V2 الوظيفية مفعّلة في هذا البناء. التطبيق على الخادم يتبع علامته المنفصلة.",
+      "mismatch": "وضع واجهة RBAC V2 لا يطابق وضع الخادم المُعرَّف. تعديل المنح الوظيفية معطّل حتى يتم مواءمة الإعداد."
+    },
+    "routeGuard": {
+      "loading": "جارٍ التحقق من صلاحية الصفحة…",
+      "deniedTitle": "لا تملك صلاحية هذه الصفحة",
+      "deniedDescription": "دورك لا يتضمن صلاحية الصفحة الوظيفية المطلوبة. تواصل مع المسؤول إذا كنت تحتاج وصولاً."
+    },
+    "matrix": {
+      "fullAccessBadge": "وصول كامل",
+      "fullAccessCount": "وصول كامل لجميع الصلاحيات الوظيفية"
+    },
+    "pages": {
+      "dashboard": "لوحة التحكم",
+      "vehicles": "المركبات",
+      "gps": "تتبع GPS",
+      "maintenance": "الصيانة",
+      "archive": "الأرشيف",
+      "violations": "المخالفات وسالك",
+      "finance": "المالية",
+      "invoices": "الفواتير",
+      "contracts": "العقود",
+      "whatsapp": "واتساب",
+      "users": "المستخدمون",
+      "roles": "الأدوار والصلاحيات"
+    }
+  },
   "Login": {
     "title": "أهلاً وسهلاً في مكتب Diamond",
     "email": "اسم المستخدم",
@@ -299,6 +329,7 @@
       "TOKEN_EXPIRED": "انتهت صلاحية الجلسة. سجّل الدخول من جديد.",
       "TOKEN_INVALID": "الجلسة لم تعد صالحة. سجّل الدخول من جديد.",
       "CONFLICT": "يوجد دور بهذا المفتاح مسبقًا.",
+      "RESOURCE_MODIFIED": "قام مسؤول آخر بتحديث هذا الدور. تم تحديث المصفوفة — راجع التغييرات ثم أعد المحاولة.",
       "VALIDATION_ERROR": "بعض القيم غير صالحة. راجع الحقول وحاول مرة أخرى."
     },
     "emptyRoles": {
@@ -3198,8 +3229,28 @@
       "addingRow": "جاري الإضافة…",
       "downloadExcel": "تنزيل ملف Excel",
       "downloadingExcel": "جاري التنزيل…",
+      "importExcel": "استيراد Excel",
+      "importingExcel": "جاري التحليل…",
+      "syncArchive": "مزامنة الأرشيف",
+      "syncingArchive": "جاري المزامنة…",
       "close": "إغلاق",
       "cancel": "إلغاء"
+    },
+    "manualOverride": {
+      "tooltip": "تم تعديل هذه القيمة يدوياً",
+      "restoreAuto": "استعادة القيمة التلقائية"
+    },
+    "sync": {
+      "successTitle": "تمت مزامنة الأرشيف",
+      "created": "عقود جديدة",
+      "updated": "سجلات محدثة",
+      "unchanged": "بدون تغييرات",
+      "violations": "مخالفات تم احتسابها",
+      "errors": "أخطاء",
+      "partialFailure": "تعذر تحديث {count} سجل",
+      "lastSuccessful": "آخر مزامنة ناجحة",
+      "alreadyRunning": "توجد عملية مزامنة جارية بالفعل.",
+      "dismiss": "إغلاق"
     },
     "table": {
       "actions": "إجراءات"
@@ -3218,7 +3269,39 @@
       "notFound": "صف الأرشيف أو المركبة غير موجود.",
       "ARCHIVE_ROW_NOT_FOUND": "صف الأرشيف غير موجود.",
       "VEHICLE_NOT_FOUND": "المركبة غير موجودة.",
-      "ARCHIVE_UNSAVED_CELL_ERROR": "يجب حل التعديلات غير المحفوظة على الأرشيف قبل تنزيل Excel."
+      "ARCHIVE_UNSAVED_CELL_ERROR": "يجب حل التعديلات غير المحفوظة على الأرشيف قبل تنزيل Excel.",
+      "ARCHIVE_IMPORT_INVALID_FILE_TYPE": "يُقبل فقط ملف .xlsx بصيغة أرشيف Diamond.",
+      "ARCHIVE_IMPORT_INVALID_WORKBOOK": "الملف ليس workbook أرشيف Diamond صالحاً.",
+      "ARCHIVE_IMPORT_TOKEN_INVALID": "انتهت جلسة الاستيراد. ارفع الملف مرة أخرى.",
+      "ARCHIVE_IMPORT_TOKEN_EXPIRED": "انتهت جلسة الاستيراد. ارفع الملف مرة أخرى.",
+      "SYNC_ALREADY_RUNNING": "توجد عملية مزامنة جارية بالفعل.",
+      "SYNC_ALREADY_RUNNING": "توجد عملية مزامنة جارية بالفعل."
+    },
+    "import": {
+      "previewTitle": "معاينة استيراد Excel",
+      "previewDescription": "الملف: {filename}",
+      "previewDescriptionGeneric": "راجع ملخص الاستيراد قبل التأكيد.",
+      "analyzing": "جاري تحليل الملف…",
+      "confirm": "تأكيد الاستيراد",
+      "confirming": "جاري الاستيراد…",
+      "success": "تم استيراد ملف Excel بنجاح.",
+      "summary": {
+        "totalSheets": "الأوراق",
+        "matched": "المركبات المطابقة",
+        "unmatched": "أوراق غير مطابقة",
+        "validRows": "صفوف صالحة",
+        "matchedRows": "الصفوف المطابقة",
+        "errors": "الأخطاء"
+      },
+      "existingRows": "السجلات الحالية",
+      "importRows": "للاستيراد",
+      "sheetLabel": "الورقة: {sheet}",
+      "matchedVehiclesTitle": "المركبات المطابقة",
+      "unmatchedTitle": "أوراق غير مطابقة",
+      "errorsTitle": "أخطاء التحقق",
+      "rowCounts": "{existing} حالية → {importing} للاستيراد",
+      "errorLine": "ورقة {sheet}، صف {row}، {column}: «{value}» — {reason}",
+      "moreErrors": "+{count} أخطاء إضافية"
     },
     "columns": {
       "kmIn": "KM IN",
@@ -3237,7 +3320,7 @@
       "salik": "سالك",
       "parking": "parking",
       "fuel": "بترول",
-      "blackPoints": "نقاط سوداء",
+      "blackPoints": "أضرار",
       "fines": "مخالفات",
       "total": "المجموع",
       "dollar": "دولار",

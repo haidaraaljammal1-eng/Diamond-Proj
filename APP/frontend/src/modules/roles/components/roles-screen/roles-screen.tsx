@@ -7,10 +7,13 @@ import { Input } from "@/shared/components/ui/input";
 import { PageHeader } from "@/shared/components/ui/page-header";
 import { Select } from "@/shared/components/ui/select";
 import type { SelectOption } from "@/shared/components/ui/select";
+import { RbacV2ModeBanner } from "@/modules/functional-rbac";
+import { useLocale } from "next-intl";
 import { useRolesPermissions } from "../../hooks/use-roles-permissions";
 import { usePermissionLabels } from "../../hooks/use-permission-labels";
 import { filterPermissionMatrix } from "../../utils/permission-matrix";
 import { PermissionMatrix } from "../permission-matrix/permission-matrix";
+import { FunctionalPermissionMatrix } from "../functional-permission-matrix/functional-permission-matrix";
 import { RoleFormDialog } from "../role-form-dialog";
 import type { RoleFormTarget } from "../role-form-dialog";
 import { useRoleMutations } from "../../hooks/use-role-mutations";
@@ -22,12 +25,26 @@ const GROUP_FILTER_MIN_GROUPS = 4;
 
 export function RolesScreen() {
   const t = useTranslations("Roles");
+  const tFn = useTranslations("FunctionalRbac");
+  const locale = useLocale();
   const labels = usePermissionLabels();
-  const { matrix, isAllowed, isLoading, isReady, error, refresh } =
-    useRolesPermissions();
+  const {
+    matrix,
+    functionalMatrix,
+    useFunctionalMatrix,
+    isAllowed,
+    isLoading,
+    isReady,
+    error,
+    refresh,
+  } = useRolesPermissions();
   const {
     canManage,
+    canEditRoleMetadata,
+    canEditMatrix,
+    matrixEditingDisabled,
     togglePermission,
+    toggleFunctionalGrant,
     isCellPending,
     error: writeError,
     clearError: clearWriteError,
@@ -51,22 +68,56 @@ export function RolesScreen() {
     [matrix, search, group, labels],
   );
 
-  const groupOptions = useMemo<SelectOption[]>(
-    () => [
+  const groupOptions = useMemo<SelectOption[]>(() => {
+    if (useFunctionalMatrix) {
+      return [
+        { value: ALL_GROUPS, label: t("allGroups") },
+        ...functionalMatrix.groups.map((matrixGroup) => ({
+          value: matrixGroup.pageId,
+          label: tFn(`pages.${matrixGroup.pageId}`),
+        })),
+      ];
+    }
+    return [
       { value: ALL_GROUPS, label: t("allGroups") },
       ...matrix.groups.map((matrixGroup) => ({
         value: matrixGroup.key,
         label: labels.groupLabelOf(matrixGroup.key),
       })),
-    ],
-    [matrix.groups, labels, t],
-  );
+    ];
+  }, [useFunctionalMatrix, functionalMatrix.groups, matrix.groups, labels, t, tFn]);
+
+  const visibleFunctionalMatrix = useMemo(() => {
+    if (!useFunctionalMatrix) return functionalMatrix;
+    const query = search.trim().toLowerCase();
+    const groups = functionalMatrix.groups
+      .filter((g) => group === ALL_GROUPS || g.pageId === group)
+      .map((g) => ({
+        ...g,
+        capabilities: g.capabilities.filter((cap) => {
+          if (!query) return true;
+          const label = locale === "ar" ? cap.labels.ar : cap.labels.en;
+          return (
+            label.toLowerCase().includes(query) ||
+            cap.key.toLowerCase().includes(query)
+          );
+        }),
+      }))
+      .filter((g) => g.capabilities.length > 0);
+    return { ...functionalMatrix, groups };
+  }, [useFunctionalMatrix, functionalMatrix, search, group, locale]);
+
+  const permissionCount = useFunctionalMatrix
+    ? functionalMatrix.capabilityCount
+    : matrix.permissionCount;
 
   const header = (
     <PageHeader
       crumbs={t("crumbs")}
       title={t("title")}
-      subtitle={t("subtitle")}
+      subtitle={
+        useFunctionalMatrix ? tFn("rolesSubtitle") : t("subtitle")
+      }
       actions={
         isReady ? (
           <div className={styles.summary}>
@@ -75,7 +126,7 @@ export function RolesScreen() {
               {t("summaryRoles")}
             </span>
             <span className={styles.stat}>
-              <span className={styles.statValue}>{matrix.permissionCount}</span>
+              <span className={styles.statValue}>{permissionCount}</span>
               {t("summaryPermissions")}
             </span>
             <Button
@@ -105,7 +156,7 @@ export function RolesScreen() {
     return (
       <>
         {header}
-        <section className={styles.panel} role="status">
+        <section className={styles.panel} role="status" data-testid="roles-denied">
           <p className={styles.panelTitle}>{t("denied.title")}</p>
           <p className={styles.panelText}>{t("denied.description")}</p>
         </section>
@@ -163,7 +214,7 @@ export function RolesScreen() {
     );
   }
 
-  if (matrix.permissionCount === 0) {
+  if (!useFunctionalMatrix && matrix.permissionCount === 0) {
     return (
       <>
         {header}
@@ -188,7 +239,9 @@ export function RolesScreen() {
           aria-label={t("searchLabel")}
           data-testid="roles-search"
         />
-        {matrix.groups.length >= GROUP_FILTER_MIN_GROUPS ? (
+        {(useFunctionalMatrix
+          ? functionalMatrix.groups.length
+          : matrix.groups.length) >= GROUP_FILTER_MIN_GROUPS ? (
           <Select
             className={styles.groupFilter}
             options={groupOptions}
@@ -202,28 +255,57 @@ export function RolesScreen() {
         ) : null}
       </div>
 
-      {visibleMatrix.groups.length === 0 ? (
-        <section className={styles.panel} role="status">
-          <p className={styles.panelTitle}>{t("noResults.title")}</p>
-          <p className={styles.panelText}>{t("noResults.description")}</p>
-        </section>
-      ) : (
-        <PermissionMatrix
-          matrix={visibleMatrix}
-          labels={labels}
-          onEditRole={
-            canManage ? (role) => setFormTarget({ mode: "edit", role }) : undefined
-          }
-          onTogglePermission={
-            canManage
-              ? (role, permissionKey, next) => {
-                  void togglePermission(role.id, permissionKey, next);
-                }
-              : undefined
-          }
-          isCellPending={isCellPending}
-        />
-      )}
+      <RbacV2ModeBanner />
+
+      <div className={styles.matrixSection}>
+        {useFunctionalMatrix ? (
+          visibleFunctionalMatrix.groups.length === 0 ? (
+            <section className={styles.panel} role="status">
+              <p className={styles.panelTitle}>{t("noResults.title")}</p>
+              <p className={styles.panelText}>{t("noResults.description")}</p>
+            </section>
+          ) : (
+            <FunctionalPermissionMatrix
+              matrix={visibleFunctionalMatrix}
+              matrixEditingDisabled={matrixEditingDisabled}
+              onEditRole={
+                canEditRoleMetadata
+                  ? (role) => setFormTarget({ mode: "edit", role })
+                  : undefined
+              }
+              onToggleGrant={
+                canEditMatrix
+                  ? (role, capabilityKey, next) => {
+                      void toggleFunctionalGrant(role.id, capabilityKey, next);
+                    }
+                  : undefined
+              }
+              isCellPending={isCellPending}
+            />
+          )
+        ) : visibleMatrix.groups.length === 0 ? (
+          <section className={styles.panel} role="status">
+            <p className={styles.panelTitle}>{t("noResults.title")}</p>
+            <p className={styles.panelText}>{t("noResults.description")}</p>
+          </section>
+        ) : (
+          <PermissionMatrix
+            matrix={visibleMatrix}
+            labels={labels}
+            onEditRole={
+              canManage ? (role) => setFormTarget({ mode: "edit", role }) : undefined
+            }
+            onTogglePermission={
+              canManage
+                ? (role, permissionKey, next) => {
+                    void togglePermission(role.id, permissionKey, next);
+                  }
+                : undefined
+            }
+            isCellPending={isCellPending}
+          />
+        )}
+      </div>
 
       {writeError && formTarget === null ? (
         <p className={styles.writeError} role="alert">

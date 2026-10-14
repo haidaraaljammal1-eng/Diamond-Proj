@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ARCHIVE_EDITABLE_FIELDS } from "src/modules/archive/archive-manual-cell-values.fields";
+import { ARCHIVE_SYNC_AUTO_FIELDS } from "src/modules/archive/archive-manual-overrides";
 
 /** Local wall-clock time label (HH:mm). */
 const ArchiveTime = z
@@ -9,7 +11,8 @@ const ArchiveTime = z
 const Mileage = z.number().int().nonnegative().max(9_999_999);
 const Days = z.number().int().nonnegative().max(9_999);
 const Money = z.number().int().nonnegative().max(999_999_999);
-const BlackPoints = z.number().int().nonnegative().max(99_999);
+/** Damage amount (stored in `blackPoints` column). Same whole-AED bounds as other money fields. */
+const BlackPoints = Money;
 const CustomerName = z.string().trim().min(1).max(200);
 const CustomerPhone = z.string().trim().min(1).max(40);
 const Description = z.string().trim().min(1).max(4000);
@@ -39,6 +42,29 @@ const archiveFieldShape = {
   visa: Money.nullable().optional(),
   transfer: Money.nullable().optional(),
   remaining: Money.nullable().optional(),
+};
+
+const manualOverrideFieldShape = Object.fromEntries(
+  ARCHIVE_SYNC_AUTO_FIELDS.map((field) => [field, z.boolean().optional()]),
+) as { [K in (typeof ARCHIVE_SYNC_AUTO_FIELDS)[number]]: z.ZodOptional<z.ZodBoolean> };
+
+export const ArchiveManualOverridesSchema = z.object(manualOverrideFieldShape).partial();
+export type ArchiveManualOverridesDto = z.infer<typeof ArchiveManualOverridesSchema>;
+
+const manualCellValueFieldShape = Object.fromEntries(
+  ARCHIVE_EDITABLE_FIELDS.map((field) => [field, z.string().optional()]),
+) as { [K in (typeof ARCHIVE_EDITABLE_FIELDS)[number]]: z.ZodOptional<z.ZodString> };
+
+export const ArchiveManualCellValuesSchema = z.object(manualCellValueFieldShape).partial();
+export type ArchiveManualCellValuesDto = z.infer<typeof ArchiveManualCellValuesSchema>;
+
+const FlexibleArchiveCellValue = z.union([z.string(), z.number(), z.null()]);
+const flexibleArchiveUpdateShape = Object.fromEntries(
+  ARCHIVE_EDITABLE_FIELDS.map((field) => [field, FlexibleArchiveCellValue.optional()]),
+) as {
+  [K in (typeof ARCHIVE_EDITABLE_FIELDS)[number]]: z.ZodOptional<
+    z.ZodUnion<[z.ZodString, z.ZodNumber, z.ZodNull]>
+  >;
 };
 
 export const ArchiveVehicleSchema = z.object({
@@ -76,6 +102,8 @@ export const ArchiveRowSchema = z.object({
   visa: z.number().int().nullable(),
   transfer: z.number().int().nullable(),
   remaining: z.number().int().nullable(),
+  manualOverrides: ArchiveManualOverridesSchema,
+  manualCellValues: ArchiveManualCellValuesSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -96,8 +124,12 @@ export const CreateArchiveRowSchema = z
   .default({});
 
 export const UpdateArchiveRowSchema = z
-  .object(archiveFieldShape)
+  .object(flexibleArchiveUpdateShape)
   .strict()
   .refine((body) => Object.keys(body).length > 0, {
     message: "At least one field is required",
   });
+
+export const RestoreArchiveChargeFieldSchema = z.object({
+  field: z.enum(ARCHIVE_SYNC_AUTO_FIELDS),
+});

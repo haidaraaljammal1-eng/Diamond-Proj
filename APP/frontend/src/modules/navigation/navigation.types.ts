@@ -1,3 +1,5 @@
+import type { FunctionalPageId } from "@/modules/functional-rbac";
+
 /**
  * Navigation types — Diamond Rent Car
  *
@@ -61,6 +63,8 @@ export interface NavigationItem {
    * `roles.read` and `permissions.read`).
    */
   permissions?: string[];
+  /** Functional RBAC V2 page id when the V2 UI flag is enabled. */
+  functionalPageId?: FunctionalPageId;
   /** Demo `adminonly` behavior (owner only). */
   adminOnly?: boolean;
   /** Demo badge count (visible only when > 0). */

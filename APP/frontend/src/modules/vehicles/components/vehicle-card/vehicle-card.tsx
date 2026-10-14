@@ -11,7 +11,10 @@ import {
   shouldShowCurrentRental,
   shouldShowRentalTimer,
 } from "../../utils/rental-timer";
-import { getVehicleCardActions } from "../../utils/vehicle-card-actions";
+import {
+  getVehicleCardActions,
+  type VehicleFleetPermissions,
+} from "../../utils/vehicle-card-actions";
 import { VehicleImage } from "../vehicle-image/vehicle-image";
 import { VehicleRentalTimer } from "../vehicle-rental-timer/vehicle-rental-timer";
 import { VehicleStatus } from "../vehicle-status/vehicle-status";
@@ -19,7 +22,7 @@ import styles from "./vehicle-card.module.css";
 
 export interface VehicleCardProps {
   vehicle: VehicleCardDto;
-  canManage: boolean;
+  fleetPermissions: VehicleFleetPermissions;
   onOpen: (vehicle: VehicleCardDto) => void;
   onPrimaryAction: (vehicle: VehicleCardDto) => void;
   onEditRates: (vehicle: VehicleCardDto) => void;
@@ -33,7 +36,7 @@ function stopOpen(event: MouseEvent | KeyboardEvent) {
 
 export function VehicleCard({
   vehicle,
-  canManage,
+  fleetPermissions,
   onOpen,
   onPrimaryAction,
   onEditRates,
@@ -42,7 +45,7 @@ export function VehicleCard({
 }: VehicleCardProps) {
   const t = useTranslations("Vehicles");
   const format = useFormatter();
-  const actions = getVehicleCardActions(vehicle, canManage);
+  const actions = getVehicleCardActions(vehicle, fleetPermissions);
   const showRenter = shouldShowCurrentRental(
     vehicle.operationalStatus,
     vehicle.currentRental,

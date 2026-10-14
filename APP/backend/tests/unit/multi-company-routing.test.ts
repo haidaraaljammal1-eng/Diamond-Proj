@@ -24,8 +24,8 @@ const UNIQUE = {
 const ELITE = {
   code: "ELITE",
   displayName: "ELITE",
-  legalNameAr: "شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و",
-  legalNameEn: "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C",
+  legalNameAr: "دايموند إليت لتأجير السيارات ش.ذ.م.م",
+  legalNameEn: "DIAMOND ELITE CAR RENTAL L.L.C",
   accentColor: "#3E5C76",
 };
 

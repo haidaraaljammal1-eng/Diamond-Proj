@@ -7,12 +7,13 @@ import { Button } from "@/shared/components/ui/button";
 import { useVehicle } from "../../hooks/use-vehicle";
 import { resolveVehiclesErrorMessage } from "../../utils/resolve-vehicles-error";
 import type { VehicleCardDto } from "../../types/vehicle.types";
+import type { VehicleFleetPermissions } from "../../utils/vehicle-card-actions";
 import { VehicleDetail } from "./vehicle-detail";
 import styles from "./vehicle-detail-dialog.module.css";
 
 export interface VehicleDetailDialogProps {
   vehicle: VehicleCardDto | null;
-  canManage: boolean;
+  fleetPermissions: VehicleFleetPermissions;
   onClose: () => void;
   onSetPrice: (vehicle: VehicleCardDto) => void;
   onPrimaryAction: (vehicle: VehicleCardDto) => void;
@@ -23,7 +24,7 @@ export interface VehicleDetailDialogProps {
 
 export function VehicleDetailDialog({
   vehicle,
-  canManage,
+  fleetPermissions,
   onClose,
   onSetPrice,
   onPrimaryAction,
@@ -108,7 +109,7 @@ export function VehicleDetailDialog({
       {isReady && detail ? (
         <VehicleDetail
           vehicle={detail}
-          canManage={canManage}
+          fleetPermissions={fleetPermissions}
           isPhotoActionPending={isPhotoActionPending}
           photoActionErrorMessage={photoActionErrorMessage}
           onUploadPhoto={(file) => void handleUploadPhoto(file)}

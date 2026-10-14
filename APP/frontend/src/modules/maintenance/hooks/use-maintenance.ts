@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useDiamondPageAccess,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
   MAINTENANCE_HISTORY_PAGE_SIZE,
   type PageMeta,
 } from "../api/maintenance.api.types";
-import {
-  MAINTENANCE_MANAGE_PERMISSION,
-  MAINTENANCE_PAGE_PERMISSIONS,
-} from "../maintenance.permissions";
+import { MAINTENANCE_MANAGE_PERMISSION } from "../maintenance.permissions";
 import { useMaintenanceStore } from "../stores/maintenance.store";
 import type {
   CreateMaintenancePayload,
@@ -36,6 +37,8 @@ export interface UseMaintenanceListResult {
   summary: MaintenanceSummaryDto | null;
   isAllowed: boolean;
   canManage: boolean;
+  canCreate: boolean;
+  canManageLifecycle: boolean;
   isLoading: boolean;
   isReady: boolean;
   isHistoryLoading: boolean;
@@ -57,7 +60,16 @@ export interface UseMaintenanceListResult {
 }
 
 export function useMaintenanceList(): UseMaintenanceListResult {
-  const { hasPermission } = usePermissions();
+  const isAllowed = useDiamondPageAccess("maintenance");
+  const canCreate = useLegacyOrFunctionalCapability(
+    MAINTENANCE_MANAGE_PERMISSION,
+    FN.maintenance.create,
+  );
+  const canManageLifecycle = useLegacyOrFunctionalCapability(
+    MAINTENANCE_MANAGE_PERMISSION,
+    FN.maintenance.manageLifecycle,
+  );
+  const canManage = canManageLifecycle;
   const items = useMaintenanceStore((state) => state.items);
   const meta = useMaintenanceStore((state) => state.meta);
   const query = useMaintenanceStore((state) => state.query);
@@ -75,11 +87,6 @@ export function useMaintenanceList(): UseMaintenanceListResult {
   const setQuery = useMaintenanceStore((state) => state.setQuery);
   const resetFilters = useMaintenanceStore((state) => state.resetFilters);
   const setHistoryPage = useMaintenanceStore((state) => state.setHistoryPage);
-
-  const isAllowed = MAINTENANCE_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
-  );
-  const canManage = hasPermission(MAINTENANCE_MANAGE_PERMISSION);
 
   useEffect(() => {
     if (isAllowed) void load();
@@ -114,6 +121,8 @@ export function useMaintenanceList(): UseMaintenanceListResult {
       summary,
       isAllowed,
       canManage,
+      canCreate,
+      canManageLifecycle,
       isLoading: status === "loading" || (isAllowed && status === "idle"),
       isReady: status === "ready",
       isHistoryLoading:
@@ -205,6 +214,8 @@ export function useMaintenanceDetail(): UseMaintenanceDetailResult {
 
 export interface UseMaintenanceActionsResult {
   canManage: boolean;
+  canCreate: boolean;
+  canManageLifecycle: boolean;
   isCreating: boolean;
   createError: ApiRequestError | null;
   isUpdating: boolean;
@@ -225,8 +236,15 @@ export interface UseMaintenanceActionsResult {
 }
 
 export function useMaintenanceActions(): UseMaintenanceActionsResult {
-  const { hasPermission } = usePermissions();
-  const canManage = hasPermission(MAINTENANCE_MANAGE_PERMISSION);
+  const canCreate = useLegacyOrFunctionalCapability(
+    MAINTENANCE_MANAGE_PERMISSION,
+    FN.maintenance.create,
+  );
+  const canManageLifecycle = useLegacyOrFunctionalCapability(
+    MAINTENANCE_MANAGE_PERMISSION,
+    FN.maintenance.manageLifecycle,
+  );
+  const canManage = canManageLifecycle;
   const isCreating = useMaintenanceStore((state) => state.isCreating);
   const createError = useMaintenanceStore((state) => state.createError);
   const isUpdating = useMaintenanceStore((state) => state.isUpdating);
@@ -244,6 +262,8 @@ export function useMaintenanceActions(): UseMaintenanceActionsResult {
   return useMemo(
     () => ({
       canManage,
+      canCreate,
+      canManageLifecycle,
       isCreating,
       createError,
       isUpdating,
@@ -265,6 +285,8 @@ export function useMaintenanceActions(): UseMaintenanceActionsResult {
     }),
     [
       canManage,
+      canCreate,
+      canManageLifecycle,
       isCreating,
       createError,
       isUpdating,

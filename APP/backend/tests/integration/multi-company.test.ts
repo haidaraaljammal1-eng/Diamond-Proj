@@ -160,9 +160,9 @@ if (!RUN) {
       assert.ok(unique, "UNIQUE missing");
       assert.ok(elite, "ELITE missing");
       assert.equal(unique!.legalNameEn, "DIAMOND UNIQUE CAR RENTALS CO. LLC S.O.C");
-      assert.equal(elite!.legalNameEn, "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C");
+      assert.equal(elite!.legalNameEn, "DIAMOND ELITE CAR RENTAL L.L.C");
       assert.match(String(unique!.legalNameAr), /دايموند يونيك/);
-      assert.match(String(elite!.legalNameAr), /دايموند إيليت/);
+      assert.equal(elite!.legalNameAr, "دايموند إليت لتأجير السيارات ش.ذ.م.م");
       assert.ok(String(unique!.accentColor).startsWith("#"));
       assert.ok(rows.every((row) => row.isActive === true));
     });
@@ -500,8 +500,8 @@ if (!RUN) {
         company: { code: string; legalNameEn: string; legalNameAr: string };
       };
       assert.equal(header.company.code, "ELITE");
-      assert.equal(header.company.legalNameEn, "DIAMOND ELITE CAR RENTALS CO. LLC S.O.C");
-      assert.match(header.company.legalNameAr, /دايموند إيليت/);
+      assert.equal(header.company.legalNameEn, "DIAMOND ELITE CAR RENTAL L.L.C");
+      assert.equal(header.company.legalNameAr, "دايموند إليت لتأجير السيارات ش.ذ.م.م");
 
       // The customer sees the renting company; they never choose it.
       const context = await app.inject({ method: "GET", url: `/contracts/rental/${rentalToken}` });

@@ -1,4 +1,6 @@
 import type { ArchiveRow } from "@prisma/client";
+import { parseManualCellValues } from "src/modules/archive/archive-manual-cell-values";
+import { parseManualOverrides } from "src/modules/archive/archive-manual-overrides";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import type { ArchiveRowDto, ArchiveVehicleDto } from "src/modules/archive/archive.schema";
 
@@ -52,6 +54,8 @@ export function toArchiveRow(row: ArchiveRow): ArchiveRowDto {
     visa: row.visa,
     transfer: row.transfer,
     remaining: row.remaining,
+    manualOverrides: parseManualOverrides(row.manualOverrides),
+    manualCellValues: parseManualCellValues(row.manualCellValues),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

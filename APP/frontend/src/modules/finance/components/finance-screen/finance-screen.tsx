@@ -236,7 +236,8 @@ export function FinanceScreen() {
         detail={expense.detail}
         loading={expense.isDetailLoading}
         error={expense.detailError}
-        canManage={overview.canManageExpenses}
+        canCorrect={overview.canCorrectExpense}
+        canVoid={overview.canVoidExpense}
         demoOnly={Boolean(expense.detailId && isSimulatedFinanceId(expense.detailId))}
         onClose={() => {
           setExpenseDrawerOpen(false);

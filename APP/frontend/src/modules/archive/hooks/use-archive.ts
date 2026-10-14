@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { usePermissions } from "@/modules/auth";
+import { FN, useDiamondPageAccess, useLegacyOrFunctionalCapability } from "@/modules/functional-rbac";
+import { ARCHIVE_MANAGE_PERMISSION } from "../archive.permissions";
+import type { ArchiveImportPreview } from "../types/archive-import.types";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
-import {
-  ARCHIVE_MANAGE_PERMISSION,
-  ARCHIVE_PAGE_PERMISSIONS,
-} from "../archive.permissions";
 import { useArchiveStore } from "../stores/archive.store";
 import type { ArchiveRow, ArchiveVehicle } from "../types/archive.types";
 import { formatArchiveVehicleLabel } from "../utils/archive-cell-value";
@@ -40,13 +38,30 @@ export interface UseArchiveResult {
   createRow: () => Promise<ArchiveRow | null>;
   deleteRow: (rowId: number) => Promise<boolean>;
   patchCell: ReturnType<typeof useArchiveStore.getState>["patchCell"];
+  restoreChargeField: ReturnType<typeof useArchiveStore.getState>["restoreChargeField"];
   clearCellError: ReturnType<typeof useArchiveStore.getState>["clearCellError"];
   exportExcel: ReturnType<typeof useArchiveStore.getState>["exportExcel"];
   clearExportError: ReturnType<typeof useArchiveStore.getState>["clearExportError"];
+  canImport: boolean;
+  importPreview: ArchiveImportPreview | null;
+  importPreviewOpen: boolean;
+  isImportPreviewLoading: boolean;
+  importPreviewError: ApiRequestError | null;
+  isImportConfirming: boolean;
+  importConfirmError: ApiRequestError | null;
+  importSuccess: boolean;
+  previewImportFile: ReturnType<typeof useArchiveStore.getState>["previewImportFile"];
+  confirmImport: ReturnType<typeof useArchiveStore.getState>["confirmImport"];
+  closeImportPreview: ReturnType<typeof useArchiveStore.getState>["closeImportPreview"];
+  syncStatus: ReturnType<typeof useArchiveStore.getState>["syncStatus"];
+  isSyncing: boolean;
+  syncError: ApiRequestError | null;
+  syncResult: ReturnType<typeof useArchiveStore.getState>["syncResult"];
+  runArchiveSync: ReturnType<typeof useArchiveStore.getState>["runArchiveSync"];
+  dismissSyncResult: ReturnType<typeof useArchiveStore.getState>["dismissSyncResult"];
 }
 
 export function useArchive(): UseArchiveResult {
-  const { hasPermission } = usePermissions();
   const vehicles = useArchiveStore((state) => state.vehicles);
   const vehiclesStatus = useArchiveStore((state) => state.vehiclesStatus);
   const vehiclesError = useArchiveStore((state) => state.vehiclesError);
@@ -66,21 +81,42 @@ export function useArchive(): UseArchiveResult {
   const createRow = useArchiveStore((state) => state.createRow);
   const deleteRow = useArchiveStore((state) => state.deleteRow);
   const patchCell = useArchiveStore((state) => state.patchCell);
+  const restoreChargeField = useArchiveStore((state) => state.restoreChargeField);
   const clearCellError = useArchiveStore((state) => state.clearCellError);
   const isExporting = useArchiveStore((state) => state.isExporting);
   const exportError = useArchiveStore((state) => state.exportError);
   const exportExcel = useArchiveStore((state) => state.exportExcel);
   const clearExportError = useArchiveStore((state) => state.clearExportError);
+  const importPreview = useArchiveStore((state) => state.importPreview);
+  const importPreviewOpen = useArchiveStore((state) => state.importPreviewOpen);
+  const isImportPreviewLoading = useArchiveStore((state) => state.isImportPreviewLoading);
+  const importPreviewError = useArchiveStore((state) => state.importPreviewError);
+  const isImportConfirming = useArchiveStore((state) => state.isImportConfirming);
+  const importConfirmError = useArchiveStore((state) => state.importConfirmError);
+  const importSuccess = useArchiveStore((state) => state.importSuccess);
+  const previewImportFile = useArchiveStore((state) => state.previewImportFile);
+  const confirmImport = useArchiveStore((state) => state.confirmImport);
+  const closeImportPreview = useArchiveStore((state) => state.closeImportPreview);
+  const syncStatus = useArchiveStore((state) => state.syncStatus);
+  const isSyncing = useArchiveStore((state) => state.isSyncing);
+  const syncError = useArchiveStore((state) => state.syncError);
+  const syncResult = useArchiveStore((state) => state.syncResult);
+  const loadSyncStatus = useArchiveStore((state) => state.loadSyncStatus);
+  const runArchiveSync = useArchiveStore((state) => state.runArchiveSync);
+  const dismissSyncResult = useArchiveStore((state) => state.dismissSyncResult);
 
-  const isAllowed = ARCHIVE_PAGE_PERMISSIONS.every((permission) =>
-    hasPermission(permission),
+  const isAllowed = useDiamondPageAccess("archive");
+  const canManage = useLegacyOrFunctionalCapability(
+    ARCHIVE_MANAGE_PERMISSION,
+    FN.archive.full,
   );
-  const canManage = hasPermission(ARCHIVE_MANAGE_PERMISSION);
+  const canImport = canManage;
 
   useEffect(() => {
     if (!isAllowed) return;
     void loadVehicles();
-  }, [isAllowed, loadVehicles]);
+    if (canManage) void loadSyncStatus();
+  }, [isAllowed, loadVehicles, canManage, loadSyncStatus]);
 
   const vehicleOptions = useMemo(
     () =>
@@ -131,11 +167,29 @@ export function useArchive(): UseArchiveResult {
     createRow,
     deleteRow,
     patchCell,
+    restoreChargeField,
     clearCellError,
     isExporting,
     exportError,
     hasFailedCellEdits,
     exportExcel,
     clearExportError,
+    canImport,
+    importPreview,
+    importPreviewOpen,
+    isImportPreviewLoading,
+    importPreviewError,
+    isImportConfirming,
+    importConfirmError,
+    importSuccess,
+    previewImportFile,
+    confirmImport,
+    closeImportPreview,
+    syncStatus,
+    isSyncing,
+    syncError,
+    syncResult,
+    runArchiveSync,
+    dismissSyncResult,
   };
 }
