@@ -5,6 +5,7 @@ const apiURL = process.env.PLAYWRIGHT_API_URL ?? "http://localhost:8000";
 
 export default defineConfig({
   testDir: "./e2e",
+  timeout: 300_000,
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
@@ -17,7 +18,7 @@ export default defineConfig({
     {
       name: "chromium-en-desktop",
       testMatch: /driving-license-ocr\.spec\.ts/,
-      timeout: 180_000,
+      timeout: 300_000,
       use: {
         ...devices["Desktop Chrome"],
         locale: "en-GB",

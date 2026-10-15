@@ -1415,7 +1415,6 @@
     }
   },
   "PublicRental": {
-    "simulation": { "validLicense": "Simulate Successful License OCR", "passportOcr": "Simulate Successful Passport OCR" },
     "brandAlt": "Diamond Elite Rent Car",
     "tagline": "Rent Car · Dubai",
     "fallbackOffice": "Diamond Rent Car",
@@ -1473,7 +1472,6 @@
       "signFailed": "The contract could not be signed. Please try again.",
       "missingSignatures": "Please sign: {slots}.",
       "missingFieldsIntro": "Cannot continue because the following information is incomplete:",
-      "fillTestData": "Fill Test Data",
       "errors": {
         "incompleteCustomerData": "Please complete the required contract fields (such as phone number and address) before signing."
       },
@@ -1509,8 +1507,8 @@
     },
     "license": {
       "title": "Driving License Verification",
-      "intro": "Please upload a clear photo of your driving license to continue.",
-      "uploadFrameHint": "Upload only the driving licence — no large outer margins or background. The full licence must appear straight, complete, and clear.",
+      "intro": "Please upload a clear photo of the front of your driving license to continue.",
+      "uploadFrameHint": "Upload only the front of the licence — no large outer margins or background. The full front must appear straight, complete, and clear.",
       "uploadFrameHintSecondary": "Do not upload a wide screenshot with empty space around the licence.",
       "badFrameTitle": "This image is not suitable for licence verification",
       "badFrameBody": "Upload only the full licence itself — not a wide screenshot with large empty margins around it — then try again.",
@@ -1535,6 +1533,35 @@
       "unavailableBody": "License verification cannot continue right now. Please contact the rental office.",
       "ocrDevNote": "OCR provider not configured",
       "invalidFile": "Please choose a JPEG or PNG image."
+    },
+    "documentAlignment": {
+      "licenseTitle": "Align driving licence photo",
+      "passportTitle": "Align passport photo",
+      "licenseSubtitle": "Move and zoom the image until the full licence is visible inside the frame.",
+      "passportSubtitle": "Move and zoom until the full data page is visible, including the MRZ area (the two symbol lines below the passport photo).",
+      "confirmUpload": "Confirm and adopt image",
+      "cancel": "Cancel",
+      "reset": "Reset",
+      "rotateLeft": "Rotate left",
+      "rotateRight": "Rotate right",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomSlider": "Zoom",
+      "zoomLabel": "Zoom",
+      "brightnessLabel": "Brightness {percent}%",
+      "brightnessDecrease": "Decrease brightness",
+      "brightnessIncrease": "Increase brightness",
+      "brightnessSlider": "Brightness {percent}%",
+      "contrastLabel": "Contrast {percent}%",
+      "contrastDecrease": "Decrease contrast",
+      "contrastIncrease": "Increase contrast",
+      "contrastSlider": "Contrast {percent}%",
+      "realignImage": "Re-align image",
+      "editCurrentImage": "Edit current image",
+      "chooseAnother": "Choose another image",
+      "cameraLicense": "Take licence photo",
+      "cameraPassport": "Take passport photo",
+      "cameraAnother": "Take new photo"
     },
     "documentProgress": {
       "label": "Document verification steps",

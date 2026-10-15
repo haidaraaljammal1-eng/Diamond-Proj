@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { confirmDocumentAlignmentDialog } from "./helpers/document-alignment";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -269,6 +270,7 @@ test.describe("Public rental premium UI (headed review)", () => {
       await page.goto(`/en/rental/${isolated.token}`, { waitUntil: "domcontentloaded" });
       const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
       await fileInput.setInputFiles(drivingLicenseFixturePath());
+      await confirmDocumentAlignmentDialog(page);
       await expect(page.getByTestId("license-unreadable")).toBeVisible({ timeout: 120_000 });
       await expect(page.getByTestId("passport-step")).toHaveCount(0);
       await expect(page.getByTestId("renter-details-step")).toHaveCount(0);
@@ -312,6 +314,7 @@ test.describe("Public rental premium UI (headed review)", () => {
       await page.getByRole("button", { name: /upload another passport/i }).click();
       const fileInput = page.locator('[data-testid="passport-capture"] input[type="file"]');
       await fileInput.setInputFiles(drivingLicenseFixturePath());
+      await confirmDocumentAlignmentDialog(page);
       await expect(page.getByTestId("passport-verified-number").locator("p")).toContainText("B7654321", {
         timeout: 120_000,
       });

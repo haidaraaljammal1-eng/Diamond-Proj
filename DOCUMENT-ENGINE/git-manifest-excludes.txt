@@ -48,9 +48,7 @@ LICENSE/scripts/v13_corpus_benchmark.py
 
 # Passport R&D / diagnostics (runtime keeps scripts/passport_number + mrz_detect chain)
 PASSPORT/scripts/diagnostics/
-PASSPORT/scripts/run_mrz_a1.py
 PASSPORT/scripts/run_mrz_a3_diagnose.py
 PASSPORT/scripts/run_mrz_a4_verify.py
-PASSPORT/scripts/diamond_mrz_acceptance.py
 PASSPORT/scripts/passport_number/run_argentina_blind.py
 PASSPORT/reports/

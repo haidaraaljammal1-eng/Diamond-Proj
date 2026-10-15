@@ -10,10 +10,7 @@ import type { PublicRentalContext, PublicRentalUiStage } from "../../types/publi
 import { canEnterStage, isLinkGoneReason } from "../../utils/flow-step";
 import { SIGNATURE_SLOT_PATHS } from "../../utils/official-contract-document";
 import { withNormalizedIdentity } from "../../utils/official-contract-identity";
-import {
-  isDevTestFillEnabled,
-  missingRequirementReviewFields,
-} from "../../utils/official-contract-completion";
+import { missingRequirementReviewFields } from "../../utils/official-contract-completion";
 import {
   formatMissingRequirementsMessage,
   resolveContractCompletionError,
@@ -247,18 +244,6 @@ export function ContractReviewStep({
             <>
               {view?.permissions.canEdit ? (
                 <>
-                  {isDevTestFillEnabled() ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="md"
-                      disabled={saving || signing}
-                      data-testid="contract-review-fill-test-data"
-                      onClick={() => contract.fillDevTestData()}
-                    >
-                      {t("fillTestData")}
-                    </Button>
-                  ) : null}
                   <Button
                     type="button"
                     variant="secondary"

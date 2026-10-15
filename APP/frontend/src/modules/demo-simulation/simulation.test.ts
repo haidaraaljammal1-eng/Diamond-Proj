@@ -21,13 +21,14 @@ describe("external provider simulation only", () => {
     assert.equal(read("../public-rental/stores/public-rental.store.ts").includes("shouldSkipRentalMutation"), false);
   });
 
-  it("shows only license, passport, and payment provider actions in the rental UI", () => {
+  it("shows only payment provider simulation in the public rental customer UI", () => {
     const screen = read("../public-rental/components/public-rental-screen/public-rental-screen.tsx");
     const payment = read("../public-rental/components/payment-step/payment-step.tsx");
     const review = read("../public-rental/components/contract-review-step/contract-review-step.tsx");
     const carOut = read("../contracts/forms/car-out/car-out-dialog.tsx");
-    assert.equal((screen.match(/<SimulationAction/g) ?? []).length, 2);
+    assert.equal((screen.match(/<SimulationAction/g) ?? []).length, 0);
     assert.equal((payment.match(/<SimulationAction/g) ?? []).length, 1);
+    assert.equal(review.includes("fillDevTestData"), false);
     assert.equal(review.includes("SimulationAction"), false);
     assert.equal(carOut.includes("SimulationAction"), false);
     assert.equal(read("../../app/[locale]/layout.tsx").includes("SimulationChrome"), false);

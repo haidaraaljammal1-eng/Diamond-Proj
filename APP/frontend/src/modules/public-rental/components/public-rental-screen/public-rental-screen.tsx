@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
@@ -8,6 +8,7 @@ import { Card } from "@/shared/components/ui/card/card";
 import { usePublicRental } from "../../hooks/use-public-rental";
 import type { PublicRentalUiStage } from "../../types/public-rental.types";
 import { canEnterStage, isLinkGoneReason, uiStageFromFlowStep } from "../../utils/flow-step";
+import { createNewDocumentAlignmentSession } from "../../utils/document-alignment-source";
 import { isAcceptedLicenseFile } from "../../utils/license-file";
 import { evaluateLicenseFramePreflight } from "../../utils/license-frame";
 import { readLicenseImageMeta } from "../../utils/read-license-image-meta";
@@ -29,7 +30,6 @@ import { RentalHeader } from "../rental-header/rental-header";
 import { RentalLinkError } from "../rental-link-error/rental-link-error";
 import { RentalProgress } from "../rental-progress/rental-progress";
 import { RentalSummary } from "../rental-summary/rental-summary";
-import { SimulationAction } from "@/modules/demo-simulation";
 import { isProviderSimulationEnabled } from "@/modules/demo-simulation/simulation.enabled";
 import {
   STAGE_SUCCESS_DURATION_MS,
@@ -37,7 +37,18 @@ import {
 } from "../../constants/stage-success";
 import motion from "../../styles/public-rental-motion.module.css";
 import { StageSuccessTransition } from "../stage-success-transition/stage-success-transition";
+import { DocumentAlignmentDialog } from "../document-alignment/document-alignment-dialog";
+import type {
+  DocumentAlignmentKind,
+  DocumentAlignmentTransform,
+} from "../document-alignment/document-alignment.types";
 import styles from "./public-rental-screen.module.css";
+
+type PendingAlignment = {
+  kind: DocumentAlignmentKind;
+  file: File;
+  initialTransform?: DocumentAlignmentTransform;
+};
 
 interface PublicRentalScreenProps {
   token: string;
@@ -65,6 +76,13 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
   const searchParams = useSearchParams();
   const [paymentCancelNotice, setPaymentCancelNotice] = useState<string | null>(null);
   const [stageSuccess, setStageSuccess] = useState<StageSuccessKind | null>(null);
+  const [pendingAlignment, setPendingAlignment] = useState<PendingAlignment | null>(null);
+  const licenseOriginalFileRef = useRef<File | null>(null);
+  const passportOriginalFileRef = useRef<File | null>(null);
+  const licenseLastTransformRef = useRef<DocumentAlignmentTransform | null>(null);
+  const passportLastTransformRef = useRef<DocumentAlignmentTransform | null>(null);
+  const [licenseHasEditableSource, setLicenseHasEditableSource] = useState(false);
+  const [passportHasEditableSource, setPassportHasEditableSource] = useState(false);
 
   const playStageSuccess = (kind: StageSuccessKind) =>
     new Promise<void>((resolve) => {
@@ -84,6 +102,13 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     setPassportHint(null);
     if (passportPreviewUrl) URL.revokeObjectURL(passportPreviewUrl);
     setPassportPreviewUrl(null);
+    setPendingAlignment(null);
+    licenseOriginalFileRef.current = null;
+    passportOriginalFileRef.current = null;
+    licenseLastTransformRef.current = null;
+    passportLastTransformRef.current = null;
+    setLicenseHasEditableSource(false);
+    setPassportHasEditableSource(false);
   }
 
   // Stripe Checkout cancel returns to the payment step with ?payment=cancelled.
@@ -178,13 +203,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     documentSubStage === "PASSPORT" ||
     (documentSubStage === "RENTER_DETAILS" && passportReady);
 
-  const handleFile = (file: File) => {
-    setFileHint(null);
-    setClientBadFrame(false);
-    if (!isAcceptedLicenseFile(file)) {
-      setFileHint(t("license.invalidFile"));
-      return;
-    }
+  const finishLicenseUpload = (file: File) => {
     void (async () => {
       try {
         const meta = await readLicenseImageMeta(file);
@@ -200,6 +219,7 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
         setFileHint(t("license.invalidFile"));
         return;
       }
+      setClientBadFrame(false);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(file));
       goToStage("license");
@@ -207,18 +227,95 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
     })();
   };
 
-  // Passport preview is an in-memory object URL only; never persisted.
-  const handlePassportFile = (file: File) => {
-    setPassportHint(null);
+  const openNewLicenseForAlignment = (file: File) => {
+    setFileHint(null);
+    setClientBadFrame(false);
     if (!isAcceptedLicenseFile(file)) {
-      setPassportHint(t("passport.invalidFile"));
+      setFileHint(t("license.invalidFile"));
       return;
     }
+    const session = createNewDocumentAlignmentSession("license", file);
+    licenseOriginalFileRef.current = session.file;
+    licenseLastTransformRef.current = session.lastTransform;
+    setLicenseHasEditableSource(session.hasEditableSource);
+    setPendingAlignment({ kind: session.kind, file: session.file });
+    goToStage("license");
+  };
+
+  const handleFile = openNewLicenseForAlignment;
+
+  const finishPassportUpload = (file: File) => {
     if (passportPreviewUrl) URL.revokeObjectURL(passportPreviewUrl);
     setPassportPreviewUrl(URL.createObjectURL(file));
     goToStage("license");
     void rental.uploadPassport(file);
   };
+
+  // Passport preview is an in-memory object URL only; never persisted.
+  const openNewPassportForAlignment = (file: File) => {
+    setPassportHint(null);
+    if (!isAcceptedLicenseFile(file)) {
+      setPassportHint(t("passport.invalidFile"));
+      return;
+    }
+    const session = createNewDocumentAlignmentSession("passport", file);
+    passportOriginalFileRef.current = session.file;
+    passportLastTransformRef.current = session.lastTransform;
+    setPassportHasEditableSource(session.hasEditableSource);
+    setPendingAlignment({ kind: session.kind, file: session.file });
+    goToStage("license");
+  };
+
+  const handlePassportFile = openNewPassportForAlignment;
+
+  const closeAlignmentDialog = () => {
+    setPendingAlignment(null);
+  };
+
+  const handleAlignmentConfirm = async (
+    exported: File,
+    confirmedTransform: DocumentAlignmentTransform,
+  ) => {
+    const kind = pendingAlignment?.kind;
+    setPendingAlignment(null);
+    if (!kind) return;
+    if (kind === "license") {
+      licenseLastTransformRef.current = confirmedTransform;
+      setLicenseHasEditableSource(true);
+      finishLicenseUpload(exported);
+      return;
+    }
+    passportLastTransformRef.current = confirmedTransform;
+    setPassportHasEditableSource(true);
+    finishPassportUpload(exported);
+  };
+
+  const reopenLicenseAlignment = () => {
+    const original = licenseOriginalFileRef.current;
+    if (!original) return;
+    setPendingAlignment({ kind: "license", file: original });
+  };
+
+  const editCurrentLicenseAlignment = () => {
+    const original = licenseOriginalFileRef.current;
+    const last = licenseLastTransformRef.current;
+    if (!original || !last) return;
+    setPendingAlignment({ kind: "license", file: original, initialTransform: last });
+  };
+
+  const reopenPassportAlignment = () => {
+    const original = passportOriginalFileRef.current;
+    if (!original) return;
+    setPendingAlignment({ kind: "passport", file: original });
+  };
+
+  const editCurrentPassportAlignment = () => {
+    const original = passportOriginalFileRef.current;
+    const last = passportLastTransformRef.current;
+    if (!original || !last) return;
+    setPendingAlignment({ kind: "passport", file: original, initialTransform: last });
+  };
+
   const passportError = resolvePublicRentalErrorMessage(
     errorTranslator(t),
     rental.passportError,
@@ -256,17 +353,10 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                       fileHint={fileHint ?? inlineError}
                       clientBadFrame={clientBadFrame}
                       onFile={handleFile}
-                      simulationAction={
-                        rentalSimulation
-                          ? (
-                              <SimulationAction
-                                label={t("simulation.validLicense")}
-                                testId="simulate-license-valid"
-                                disabled={rental.simulationPending}
-                                onClick={() => void rental.simulateLicense()}
-                              />
-                            )
-                          : null
+                      onRealign={reopenLicenseAlignment}
+                      hasEditableLicenseSource={licenseHasEditableSource}
+                      onEditCurrent={
+                        licenseHasEditableSource ? editCurrentLicenseAlignment : undefined
                       }
                     />
                   ) : null}
@@ -279,20 +369,10 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                       readOnly={documentsReadOnly}
                       fileHint={passportHint ?? passportError}
                       onFile={handlePassportFile}
-                      simulationAction={
-                        rentalSimulation
-                          ? (
-                              <SimulationAction
-                                label={t("simulation.passportOcr")}
-                                testId="simulate-passport-ready"
-                                disabled={
-                                  rental.simulationPending ||
-                                  context.licenseVerification.status !== "VALID"
-                                }
-                                onClick={() => void rental.simulatePassport()}
-                              />
-                            )
-                          : null
+                      onRealign={reopenPassportAlignment}
+                      hasEditablePassportSource={passportHasEditableSource}
+                      onEditCurrent={
+                        passportHasEditableSource ? editCurrentPassportAlignment : undefined
                       }
                     />
                   ) : null}
@@ -307,6 +387,11 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                         summaryOnly
                         fileHint={null}
                         onFile={handleFile}
+                        onRealign={reopenLicenseAlignment}
+                        hasEditableLicenseSource={licenseHasEditableSource}
+                        onEditCurrent={
+                          licenseHasEditableSource ? editCurrentLicenseAlignment : undefined
+                        }
                       />
                       {showPassportStep ? (
                         <PassportStep
@@ -317,6 +402,11 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                           summaryOnly
                           fileHint={passportHint ?? passportError}
                           onFile={handlePassportFile}
+                          onRealign={reopenPassportAlignment}
+                          hasEditablePassportSource={passportHasEditableSource}
+                          onEditCurrent={
+                            passportHasEditableSource ? editCurrentPassportAlignment : undefined
+                          }
                         />
                       ) : null}
                       <RenterDetailsStep
@@ -347,6 +437,11 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                       summaryOnly
                       fileHint={null}
                       onFile={handleFile}
+                      onRealign={reopenLicenseAlignment}
+                      hasEditableLicenseSource={licenseHasEditableSource}
+                      onEditCurrent={
+                        licenseHasEditableSource ? editCurrentLicenseAlignment : undefined
+                      }
                     />
                   </div>
                 ) : null}
@@ -421,6 +516,14 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
           }
         />
       ) : null}
+      <DocumentAlignmentDialog
+        open={pendingAlignment !== null}
+        kind={pendingAlignment?.kind ?? "license"}
+        file={pendingAlignment?.file ?? null}
+        initialTransform={pendingAlignment?.initialTransform ?? null}
+        onClose={closeAlignmentDialog}
+        onConfirm={handleAlignmentConfirm}
+      />
     </div>
   );
 }

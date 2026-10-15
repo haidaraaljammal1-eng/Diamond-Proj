@@ -11,6 +11,10 @@ import { ErrorCode } from "src/constants/error-codes";
 import { generateStorageKey, resolveStoragePath } from "src/lib/files/storage-key";
 import { verifyContentType } from "src/lib/files/magic-bytes";
 import type { AttachmentPublic } from "src/modules/files/files.schema";
+import {
+  attachmentReferenceTotal,
+  countAttachmentReferences,
+} from "src/modules/contracts/contract-document-image-retention";
 
 function toAttachmentPublic(attachment: Attachment): AttachmentPublic {
   return {
@@ -99,5 +103,27 @@ export function createFilesService(fastify: FastifyInstance) {
     await unlink(absolutePath).catch(() => undefined);
   }
 
-  return { save, openDownload, remove };
+  /** Delete attachment row + file only when no domain relation still references it. */
+  async function removeIfUnreferenced(id: string): Promise<boolean> {
+    const attachment = await prisma.attachment.findUnique({ where: { id } });
+    if (!attachment) return false;
+    const refs = await countAttachmentReferences(prisma, id);
+    if (attachmentReferenceTotal(refs) > 0) return false;
+    const absolutePath = resolveStoragePath(storageDir, attachment.storageKey);
+    await prisma.attachment.delete({ where: { id } });
+    await unlink(absolutePath).catch(() => undefined);
+    return true;
+  }
+
+  async function removeDetachedBatch(ids: readonly string[]): Promise<void> {
+    for (const id of ids) {
+      try {
+        await removeIfUnreferenced(id);
+      } catch (error) {
+        fastify.log.warn({ err: error, attachmentId: id }, "attachment_cleanup_failed");
+      }
+    }
+  }
+
+  return { save, openDownload, remove, removeIfUnreferenced, removeDetachedBatch };
 }
