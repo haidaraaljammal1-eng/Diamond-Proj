@@ -6,25 +6,48 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
+const require = createRequire(import.meta.url);
+const { loadBoundary, splitMigrations } = require("./fresh-database-baseline-lib.cjs");
+
 const PROBE_NAME = "20261015120000_phase1_future_probe";
+const PAYMENT_OBLIGATION_MIGRATION = "20261015190000_confirmed_payment_obligation_unique";
 const REQUIRED_INDEXES = [
   "invoices_contractId_one_current_idx",
   "contract_payment_attempts_one_active_per_payment_idx",
   "whatsapp_connections_one_current",
   "vehicle_gps_bindings_active_device_key",
+  "contract_payments_confirmed_obligation_idx",
 ];
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = path.join(root, "prisma", "migrations");
+const boundaryPath = path.join(root, "prisma", "baseline", "boundary.json");
 const probeSource = path.join(root, "prisma", "baseline", "probes", "future-custom.sql");
 const probeDir = path.join(migrationsDir, PROBE_NAME);
 const baselineScript = path.join(root, "scripts", "fresh-database-baseline.mjs");
 
 function redact(text) {
   return String(text).replace(/postgres(?:ql)?:\/\/[^@\s]+@/gi, "postgresql://***@");
+}
+
+function migrationDirectoryNames() {
+  return fs
+    .readdirSync(migrationsDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() && fs.existsSync(path.join(migrationsDir, entry.name, "migration.sql")),
+    )
+    .map((entry) => entry.name);
+}
+
+/** Sealed snapshot plus every later migration directory currently on disk. */
+function expectedFinishedCount() {
+  const split = splitMigrations(migrationDirectoryNames(), loadBoundary(boundaryPath));
+  return split.sealed.length + split.future.length;
 }
 
 function assertScenarioName(name) {
@@ -171,6 +194,9 @@ async function assertIntegrity(client, { migrations, probe }) {
   if (!/WHERE/i.test(byName.get("invoices_contractId_one_current_idx") ?? "")) {
     throw new Error("Invoice partial index is missing its predicate");
   }
+  if (!/CONFIRMED/i.test(byName.get("contract_payments_confirmed_obligation_idx") ?? "")) {
+    throw new Error("Confirmed payment obligation index is missing its predicate");
+  }
   if (!/PREPARING/.test(byName.get("contract_payment_attempts_one_active_per_payment_idx") ?? "")) {
     throw new Error("Payment partial index predicate is missing");
   }
@@ -232,9 +258,17 @@ async function main() {
     });
 
     expectBaselineOk("diamond_fresh_scn1", "fresh");
-    await withDatabase("diamond_fresh_scn1", (client) =>
-      assertIntegrity(client, { migrations: 56, probe: false }),
-    );
+    const freshCount = expectedFinishedCount();
+    await withDatabase("diamond_fresh_scn1", async (client) => {
+      await assertIntegrity(client, { migrations: freshCount, probe: false });
+      const payment = await client.query(
+        `SELECT finished_at FROM "_prisma_migrations" WHERE migration_name = $1`,
+        [PAYMENT_OBLIGATION_MIGRATION],
+      );
+      if (!payment.rows[0]?.finished_at) {
+        throw new Error(`${PAYMENT_OBLIGATION_MIGRATION} was not applied`);
+      }
+    });
     const firstTables = await withDatabase("diamond_fresh_scn1", async (client) => {
       const result = await client.query(
         `SELECT COUNT(*)::int AS count
@@ -246,7 +280,7 @@ async function main() {
     });
     expectBaselineOk("diamond_fresh_scn1", "second");
     await withDatabase("diamond_fresh_scn1", async (client) => {
-      await assertIntegrity(client, { migrations: 56, probe: false });
+      await assertIntegrity(client, { migrations: freshCount, probe: false });
       const result = await client.query(
         `SELECT COUNT(*)::int AS count
          FROM pg_class c
@@ -261,13 +295,17 @@ async function main() {
 
     expectBaselineOk("diamond_fresh_scn2", "existing-baseline");
     installProbe();
+    const probedCount = expectedFinishedCount();
+    if (probedCount !== freshCount + 1) {
+      throw new Error("Synthetic probe did not add exactly one future migration");
+    }
     expectBaselineOk("diamond_fresh_scn2", "upgrade");
     await withDatabase("diamond_fresh_scn2", (client) =>
-      assertIntegrity(client, { migrations: 57, probe: true }),
+      assertIntegrity(client, { migrations: probedCount, probe: true }),
     );
     expectBaselineOk("diamond_fresh_scn2", "upgrade-second");
     await withDatabase("diamond_fresh_scn2", (client) =>
-      assertIntegrity(client, { migrations: 57, probe: true }),
+      assertIntegrity(client, { migrations: probedCount, probe: true }),
     );
     console.log("baseline-scenario-ok future-upgrade");
 
@@ -276,7 +314,7 @@ async function main() {
     });
     expectBaselineOk("diamond_fresh_scn3", "fresh-with-future");
     await withDatabase("diamond_fresh_scn3", (client) =>
-      assertIntegrity(client, { migrations: 57, probe: true }),
+      assertIntegrity(client, { migrations: probedCount, probe: true }),
     );
     console.log("baseline-scenario-ok fresh-after-future-migration");
 
