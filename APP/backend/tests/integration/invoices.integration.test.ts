@@ -474,7 +474,15 @@ if (!RUN) {
       const damageInvLine = current!.lines.find((line) => line.sourceId === damageLine.id);
       assert.ok(damageInvLine);
       assert.equal(damageInvLine!.amount, 250);
-      assert.equal(current!.totalAmount, 250);
+      const roadInvLine = current!.lines.find((line) => line.sourceId === roadLine.id);
+      assert.ok(roadInvLine);
+      assert.equal(roadInvLine!.sourceType, "RECONCILIATION_LINE");
+      assert.equal(roadInvLine!.amount, 400);
+      assert.equal(
+        current!.lines.filter((line) => line.sourceId === charge.id).length,
+        0,
+      );
+      assert.equal(current!.totalAmount, 650);
     });
 
     test("H: revision history preserves rental snapshot; only one current", async () => {

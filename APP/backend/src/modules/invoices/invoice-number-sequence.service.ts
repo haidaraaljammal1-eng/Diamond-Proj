@@ -6,13 +6,19 @@ import { invoiceSequenceNotConfiguredError } from "src/modules/invoices/invoices
  * Requires a configured InvoiceNumberSequence row (production must set starting values explicitly).
  */
 export async function allocateInvoiceNumber(tx: Tx, companyId: number): Promise<number> {
-  const seq = await tx.invoiceNumberSequence.findUnique({ where: { companyId } });
-  if (!seq) throw invoiceSequenceNotConfiguredError();
-  const assigned = seq.nextNumber;
-  await tx.invoiceNumberSequence.update({
-    where: { companyId },
-    data: { nextNumber: assigned + 1 },
-  });
+  // One atomic UPDATE serializes concurrent issuers on the sequence row.
+  // RETURNING is the value after the increment, so the assigned number is one less.
+  const rows = await tx.$queryRaw<Array<{ nextNumber: number }>>`
+    UPDATE "invoice_number_sequences"
+    SET "nextNumber" = "nextNumber" + 1,
+        "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "companyId" = ${companyId}
+    RETURNING "nextNumber"
+  `;
+  const updated = rows[0]?.nextNumber;
+  if (updated == null) throw invoiceSequenceNotConfiguredError();
+  const assigned = Number(updated) - 1;
+  if (!Number.isInteger(assigned) || assigned < 1) throw invoiceSequenceNotConfiguredError();
   return assigned;
 }
 

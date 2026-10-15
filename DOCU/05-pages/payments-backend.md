@@ -35,6 +35,8 @@ Settlement linkage:
 
 `StripeWebhookEvent` is a **durable webhook inbox**. HTTP verifies the signature, inserts a row (`processingStatus=PENDING`), and returns **200 immediately**. The in-process worker (`background-runner` → `runStripeWebhookCycle`) claims rows with `FOR UPDATE SKIP LOCKED`, reads Stripe **outside** DB transactions, then applies settlement in a short transaction. Duplicate `stripeEventId` → 200 without re-settlement. Valid ignored events → 200 (`IGNORED`).
 
+One confirmed payment per obligation is enforced by `contract_payments_confirmed_obligation_idx` on `(purpose, targetId)` where `status = CONFIRMED`. A fresh Phase 1 baseline does not replay that historical migration, so `20261015190000_confirmed_payment_obligation_unique` creates the same index again. Databases that already have it are unchanged (`IF NOT EXISTS`).
+
 ## Routes
 
 | Route | Auth | Purpose |

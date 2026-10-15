@@ -354,6 +354,7 @@ model ContractPayment {
 
   @@index([contractId, status])
   @@index([purpose, targetId, status])
+  @@unique([purpose, targetId], map: "contract_payments_confirmed_obligation_idx", where: { status: "CONFIRMED" })
   @@map("contract_payments")
 }
 

@@ -47,6 +47,18 @@ const ELIGIBLE_CONTRACT_STATUSES: ContractStatus[] = [
   "CLOSED",
 ];
 
+/**
+ * A renewal line is an applied contract obligation.
+ * Public approval alone (AWAITING_PAYMENT) has not changed the contract yet.
+ * A captured payment that could not be applied stays off the invoice.
+ */
+export function renewalBelongsOnConsolidatedInvoice(renewal: {
+  additionalAmount: number;
+  appliedAt: Date | null;
+}): boolean {
+  return Number.isInteger(renewal.additionalAmount) && renewal.additionalAmount > 0 && renewal.appliedAt != null;
+}
+
 export type ConsolidatedLineInput = {
   lineType: InvoiceLineType;
   serviceLabel: string;
@@ -157,8 +169,7 @@ export async function buildConsolidatedInvoiceLines(
   }
 
   for (const renewal of contract.renewals) {
-    if (renewal.additionalAmount <= 0) continue;
-    if (!renewal.approvedAt && !renewal.appliedAt) continue;
+    if (!renewalBelongsOnConsolidatedInvoice(renewal)) continue;
     lines.push({
       lineType: "RENEWAL",
       serviceLabel: "Contract Renewal",
@@ -174,7 +185,6 @@ export async function buildConsolidatedInvoiceLines(
   const recon = contract.reconciliation;
   if (recon && (recon.finalizedAt || recon.approvedAt)) {
     for (const line of recon.lines) {
-      if (line.roadLiabilityId) continue;
       if (line.amount <= 0) continue;
       const serviceLabel = reconciliationServiceLabel(line.type);
       lines.push({
@@ -239,6 +249,7 @@ export async function buildConsolidatedInvoiceLines(
 
   for (const receivable of postCloseReceivables) {
     if (directChargeIds.has(receivable.customerChargeId)) continue;
+    if (reconRlIds.has(receivable.roadLiabilityId)) continue;
     const rl = receivable.roadLiability;
     const serviceLabel =
       rl.staffChargeCategory === "TRAFFIC_VIOLATION"

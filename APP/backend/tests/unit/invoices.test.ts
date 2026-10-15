@@ -315,12 +315,9 @@ test("safeInvoiceSequenceNextNumber is independent per company inputs", () => {
 test("allocateInvoiceNumber assigns 1100 then advances to 1101", async () => {
   let next = 1100;
   const tx = {
-    invoiceNumberSequence: {
-      findUnique: async () => ({ companyId: 1, nextNumber: next }),
-      update: async ({ data }: { data: { nextNumber: number } }) => {
-        next = data.nextNumber;
-        return {};
-      },
+    $queryRaw: async () => {
+      next += 1;
+      return [{ nextNumber: next }];
     },
   } as unknown as Tx;
   const first = await allocateInvoiceNumber(tx, 1);
@@ -400,6 +397,25 @@ test("UNIQUE PDF embeds raster logo (Image XObject)", async () => {
   if (text) {
     assert.ok(text.includes("Diamond Unique Car Rental CO.L.L.C.S.O.C"));
   }
+});
+
+test("renewal invoice lines require an applied extension", async () => {
+  const { renewalBelongsOnConsolidatedInvoice } = await import(
+    "src/modules/invoices/contract-invoice-consolidation.service"
+  );
+  const applied = new Date("2026-10-01T00:00:00.000Z");
+  assert.equal(
+    renewalBelongsOnConsolidatedInvoice({ additionalAmount: 200, appliedAt: applied }),
+    true,
+  );
+  assert.equal(
+    renewalBelongsOnConsolidatedInvoice({ additionalAmount: 200, appliedAt: null }),
+    false,
+  );
+  assert.equal(
+    renewalBelongsOnConsolidatedInvoice({ additionalAmount: 0, appliedAt: applied }),
+    false,
+  );
 });
 
 test("WhatsApp message body does not accept phone override (builder is server-side only)", () => {

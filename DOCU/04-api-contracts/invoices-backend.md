@@ -4,15 +4,18 @@ Backend-only customer invoice documents. Invoices are **immutable snapshots** is
 
 ## Automatic triggers
 
-| Event | Source | Invoice type | Idempotency |
-|-------|--------|--------------|-------------|
-| `contract.paid` | `Contract` (`agreedAmount`, **CONFIRMED** RENTAL payment) | `RENTAL` | `RENTAL:<contractId>` |
-| `road_liability.customer_charge.confirmed` | `RoadLiabilityCustomerCharge` | `ROAD_LIABILITY` | `ROAD_LIABILITY:<chargeId>` |
-| `reconciliation.finalized` | `ContractReconciliationLine` (non–road-liability lines) | `RECONCILIATION` (one invoice per line) | `RECONCILIATION_LINE:<lineId>` |
+Issuance keeps one current consolidated invoice per contract (`CONTRACT_INVOICE:<contractId>:rN`). A later event creates the next revision and marks the previous snapshot historical. Closing a contract does not create a second rental invoice.
 
-**Renewal:** model supports `RENEWAL`; automatic generation is **deferred** until renewal payment semantics are unambiguous.
+| Event | Line added to the current revision |
+|-------|--------------------------------------|
+| `contract.paid` / confirmed rental payment | `RENTAL`, from the confirmed rental payment amount |
+| `contract.renewed` | `RENEWAL`, only after `appliedAt` |
+| `reconciliation.finalized` | Reconciliation lines, including a road-liability line |
+| `road_liability.customer_charge.confirmed` | `DIRECT_COLLECTION` charge, or the reconciliation line when that is the destination |
 
-**Double billing:** Road liability amounts invoice from `RoadLiabilityCustomerCharge` only. Reconciliation invoice generation skips lines with `roadLiabilityId`.
+**Renewal:** a renewal line is added only after the extension is applied (`appliedAt`). Public approval that is still awaiting payment does not invoice the offer. A captured renewal payment that could not be applied stays off the invoice.
+
+**Double billing:** a road liability appears once. `DIRECT_COLLECTION` uses the customer charge. A `RECONCILIATION` charge is the reconciliation line itself, including lines with `roadLiabilityId`. The same liability is not added again from the charge or from a post-close receivable.
 
 **RENTAL payment timing:** Electronic rentals stay `SIGNED` until trusted payment confirmation → `PAID`; only then is the RENTAL invoice issued. CASH rentals still settle on signature in the same authoritative flow, emit `contract.paid`, and issue the invoice immediately after commit. New RENTAL PDFs for fully collected rentals show **Paid in full**, **balance due 0**, and **Received in full** (not Net 30 / full balance due).
 
@@ -22,7 +25,7 @@ Backend-only customer invoice documents. Invoices are **immutable snapshots** is
 
 ## Invoice numbering
 
-Per-company `InvoiceNumberSequence` (`companyId` → `nextNumber`). Allocator assigns `nextNumber` then increments. **Approved dev initial value (human decision): 1100 for ELITE and UNIQUE independently** — configured idempotently by `dev:bootstrap` (`ensureDevelopmentInvoiceNumberSequences`) when no invoices exist yet; existing production sequences are never silently overwritten if invoices were issued. Reference PDF numbers (1035 / 1044) are not used as defaults.
+Per-company `InvoiceNumberSequence` (`companyId` → `nextNumber`). The allocator increments the row in one `UPDATE ... RETURNING`, so concurrent contracts in the same company cannot take the same number. **Approved dev initial value (human decision): 1100 for ELITE and UNIQUE independently** — configured idempotently by `dev:bootstrap` (`ensureDevelopmentInvoiceNumberSequences`) when no invoices exist yet; existing production sequences are never silently overwritten if invoices were issued. Reference PDF numbers (1035 / 1044) are not used as defaults.
 
 ## Staff APIs (admin)
 
