@@ -1,0 +1,232 @@
+{
+  "id": "phase1-20261015",
+  "lastMigration": "20261014120000_archive_manual_cell_values",
+  "schemaSha256": "5e38840030a334c698514d5a616f3f084955d5c1d0ae20ffa2dd414d622af57d",
+  "supplementalSha256": "a1a2b3da5e53209cb663c16d71df72e8d6bd93e23d4abd8ec605b5e6c66f35db",
+  "migrations": [
+    {
+      "name": "20260903000000_init",
+      "sha256": "1c9702afd55a5529dc81030c31c0735a3b141d37c8f3b2d07d1a91d0edb4be57"
+    },
+    {
+      "name": "20260906143000_vehicle_fleet_page",
+      "sha256": "e16626a35dba99656965a1e70cb898e1075f1596d14ffe04dbef7e34757e0479"
+    },
+    {
+      "name": "20260907120000_vehicle_name_direct",
+      "sha256": "dcec114dcf943279e5d21423f347ef430dd42a80b2f21e1c824bed7bea083d14"
+    },
+    {
+      "name": "20260908000000_contracts_v1",
+      "sha256": "9ef13f38a7190845a40313911b1fe4bb7f8b13b26df48f306312296aba61c84e"
+    },
+    {
+      "name": "20260909000000_public_rental_flow_v2",
+      "sha256": "1250485816b4b79dbb2216cbba779b7ce6fe6432534be1f73e5da6a0be6973d6"
+    },
+    {
+      "name": "20260909130000_tars_integration_foundation",
+      "sha256": "c7116362345e3f4ec75261d5e26fc63b86f5ec2645e9c7559f0051bbfe7a9f80"
+    },
+    {
+      "name": "20260909233530_maintenance_center",
+      "sha256": "778739afebc748b7930e26815f5c1c3e514c08764a7491cadd77aa9c45845403"
+    },
+    {
+      "name": "20260910120000_maintenance_cost",
+      "sha256": "988fa881eaa5d13b18297c4946be102b3f4508414197e39617299805f4801850"
+    },
+    {
+      "name": "20260910180000_gps_operations_foundation",
+      "sha256": "0e173954c18dee909c0215122b9f2b1e9937d6c1a3be439527b145676bcb2b76"
+    },
+    {
+      "name": "20260910190000_gps_multi_provider_foundation",
+      "sha256": "e8b52a7ca8d00baf8e57a6a09929db1327a63f77be128eb3c842452087302b75"
+    },
+    {
+      "name": "20260910190000_road_liabilities_foundation",
+      "sha256": "25f6e1d8619eb1baa66fca4a9176b799776de6562f4110c4245c87baef95cf2a"
+    },
+    {
+      "name": "20260910210000_road_liability_reconciliation_charge",
+      "sha256": "2645a20aa465623a3ae944cd8c61087a2c6563fdbed56d0ebb2e9817a31d6ef4"
+    },
+    {
+      "name": "20260910220000_road_liability_customer_charge_post_close",
+      "sha256": "ccdf389699ab1ac169feb7c0381fc5cf281e662f436244faa11387086ba03039"
+    },
+    {
+      "name": "20260911000000_unified_stripe_payments",
+      "sha256": "47ff0e57e0bed7346f6a80435b6e7063645b7bac2d65fed4b1bb81ad48dd87de"
+    },
+    {
+      "name": "20260911120000_finance_v1",
+      "sha256": "925582b34d5ab1923ff5e923294c00be7961a56deb0394399d77bda39b05119b"
+    },
+    {
+      "name": "20260911200000_manual_expense_revisions",
+      "sha256": "ff9bc898fa7a625f81ba7f9ec2b81edb1839edb7869e82d279d8bcd92281ead7"
+    },
+    {
+      "name": "20260912180000_whatsapp_connection_foundation",
+      "sha256": "a83616f623c7347da11ac2be30ef56a9e58685ed90208e9cc31f450656299a00"
+    },
+    {
+      "name": "20260912200000_whatsapp_webhook_foundation",
+      "sha256": "1b4e495e7e5e7e6e01f8a509047ff7303c2242309929022b543c74879a90b601"
+    },
+    {
+      "name": "20260912210000_whatsapp_conversation_message",
+      "sha256": "fc508aa34efa32afee5d600d036f419633127ad3c78e199dcd9609781b6ca4d6"
+    },
+    {
+      "name": "20260912220000_whatsapp_outbound_send",
+      "sha256": "e3c48676571f3518e0668394ac09776dd743277e7591a95968a83811607d126e"
+    },
+    {
+      "name": "20260913000000_whatsapp_final_completion",
+      "sha256": "2cbbcc1e9ca5df2b7b27b2b2b1d2f35b7a65cce753310f2d4f74cc02cca17fe2"
+    },
+    {
+      "name": "20260914200000_whatsapp_ultramsg_provider",
+      "sha256": "58f0c094e5f8875be68513f379fdaefb4ef0d0d070f519b3eae1d6f46aa40c62"
+    },
+    {
+      "name": "20260916203232_passport_document_ocr_foundation",
+      "sha256": "bf231f5cc0597b007ed98ac03341699a84a8710f4a43a5895e96ced304703df8"
+    },
+    {
+      "name": "20260916215731_official_contract_review_draft",
+      "sha256": "ec0bbbdd810a8b956ff273e7716e1f0e94cabb2838c571c2e5a1acebcb58b31f"
+    },
+    {
+      "name": "20260916234302_official_contract_interactive",
+      "sha256": "64f8adedefa0c18f2c84c9f032122bd7862327fdc0c0a56a7074673da6c2e514"
+    },
+    {
+      "name": "20260917133219_contract_card_payment_method",
+      "sha256": "696a806c8a2cd93a822e46a0a5b03949956bae94835d9b9afd92466a3a7471b0"
+    },
+    {
+      "name": "20260918000000_car_out_handover_draft",
+      "sha256": "d59d4f027a16398478b2397c0060b13b599e9d6fd118f78684d43d5ef94cac2a"
+    },
+    {
+      "name": "20260918010000_dev_simulation_card_source",
+      "sha256": "9761c8989da98c3148b9096c52f78f769a23ed37794e43b91eeb94acf0f1e4d2"
+    },
+    {
+      "name": "20260919225224_car_in_handover_draft",
+      "sha256": "0a61994d7a5c90fb1a68ca92af568ff26a6f9b4fa44ab43b4211b7cbad8f0e3b"
+    },
+    {
+      "name": "20260920012059_multi_company_foundation",
+      "sha256": "50ad770f97d081ac4e99afe0fc2e1936b7ba143a66be3f75ef854f894e4cbbd4"
+    },
+    {
+      "name": "20260920033000_vehicle_external_id_per_company",
+      "sha256": "ba33d76e917aa552a6e0a573d1eabbc916facd218da60630849093450764ba58"
+    },
+    {
+      "name": "20260921090000_finance_company_classification",
+      "sha256": "c5a666418827d81a34489f759932818417e1658cd6113c8e12459f08be72f5b2"
+    },
+    {
+      "name": "20260922040000_tars_official_foundation",
+      "sha256": "9eccf66d729c6fe48c2605c8a4e994f9101fe455c492f3afe2c2fd0447833f5b"
+    },
+    {
+      "name": "20260922050000_tars_otp_metadata",
+      "sha256": "c4d8158e918c10e648c130a33ef9449152b71fede3f24cd488fce5ef1f06218f"
+    },
+    {
+      "name": "20260922100000_stripe_payment_method_consent",
+      "sha256": "355f7cc2b3508c2a80521ab92915339f023a9044b9d61d6cb2492da7fbb0c3bb"
+    },
+    {
+      "name": "20260922120000_stripe4_payment_foundation",
+      "sha256": "18e462bc8952d80b1db5f3a6095992ece6c8b69323141a0f7a8f5f6d9c8e26b8"
+    },
+    {
+      "name": "20260923120000_stripe_checkout_attempt_foundation",
+      "sha256": "05d449a50e6152a144b585db9e7976f873b4cfca3081abfc8437d33f71ea7e6f"
+    },
+    {
+      "name": "20260923180000_stripe5_road_liability_collection",
+      "sha256": "e44516fc2cf426d9d3c2482df9b8f8458630c6d1720f941ccad20954fc0f139e"
+    },
+    {
+      "name": "20260923184447_archive_foundation",
+      "sha256": "a9551b27ce55c9b2295cf7e8dcbb6b32b1573039224bbe61f8feb1a9de5d7d4a"
+    },
+    {
+      "name": "20260923200000_cash_collection_foundation",
+      "sha256": "149e13d5026938b99a75ba5bd30e2f69747aabab266a65f934cc5f5cf8099f7c"
+    },
+    {
+      "name": "20260924100000_contract_car_in_performed_by",
+      "sha256": "f3f9b6a42359e33f72fd7665b1362315e13f92bb5dd98180de55e0a5c4d10ea0"
+    },
+    {
+      "name": "20260924180000_vehicle_default_rates_hourly",
+      "sha256": "cec7968c02144e7a9993fb8ec511c3482745c2a1f0c67ef779af55bc88b0989c"
+    },
+    {
+      "name": "20260924200000_contract_rental_duration",
+      "sha256": "85901a1a32c67ef9790048eee5129417d54b8893b3dc320ab9f9d54b37e40fa3"
+    },
+    {
+      "name": "20260925140000_final_reconciliation",
+      "sha256": "7fc518ea6b96c5a95f1dbf46bf9ab7f4d2107a8639f5ce28388fb9d4e6e5b6a2"
+    },
+    {
+      "name": "20260926020000_combined_final_settlement",
+      "sha256": "5275915686646512824d995951ee2f3ed076828a589150bb10f3ad626079e34b"
+    },
+    {
+      "name": "20261001140000_invoices_foundation",
+      "sha256": "d7e7695049bf8691fd87693874098c54e3e576439e06687d362fbfdab910c068"
+    },
+    {
+      "name": "20261002120000_whatsapp_whapi_provider",
+      "sha256": "51bd43763128eab696b561b0d6b0459de904036620a07bb7c345abad59b3990c"
+    },
+    {
+      "name": "20261004120000_driving_license_extraction",
+      "sha256": "07bfb1272e8395f326a64a7d334494dd55f069579c15565faebe23a555eb2463"
+    },
+    {
+      "name": "20261009120000_gps_provider_account_sync_lease",
+      "sha256": "a890e153a217f03d85be05a7911e83f922bf859e282f5fc9d3c1612ff57068b1"
+    },
+    {
+      "name": "20261013120000_staff_manual_road_liability",
+      "sha256": "811da0c9f6ffc01dadf9428a1160e1a0064878aad94f2feb35a0963a109bf613"
+    },
+    {
+      "name": "20261013140000_unified_contract_invoice",
+      "sha256": "077f8c1d2f4345605da1fe4b2f1c22737c9d8f93b66411b1f5ffa49cadce38d9"
+    },
+    {
+      "name": "20261013150000_invoice_single_current_per_contract",
+      "sha256": "2022b221082de8d5308638344a1dee3de523522bf505d032be4ffb4be6a2c8e0"
+    },
+    {
+      "name": "20261013180000_archive_pull_sync",
+      "sha256": "1d085f4d2af2f38dc53a361e7b92f79f522dae48b437db7f7c757bd6869aff1e"
+    },
+    {
+      "name": "20261013210000_archive_manual_overrides",
+      "sha256": "43e9ddbe436833f9487b16bdf7ff21d1232ecffdce5596cdcd7a02708b332f9a"
+    },
+    {
+      "name": "20261013210000_contract_renewal_duration",
+      "sha256": "32a61fd54313cc2cd929e541d859afa284f275c49d183d2158ece59e895936fc"
+    },
+    {
+      "name": "20261014120000_archive_manual_cell_values",
+      "sha256": "07fc420f844893d211ad2abf2075c45629f9442bb525fbf4d1f8af03ea3cf031"
+    }
+  ]
+}

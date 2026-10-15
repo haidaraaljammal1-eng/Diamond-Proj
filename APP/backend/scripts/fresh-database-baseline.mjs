@@ -1,18 +1,11 @@
 /**
- * Fresh PostgreSQL initialization when historical migrate replay cannot run.
+ * Initializes an allowlisted empty PostgreSQL database from the sealed
+ * Phase 1 baseline, then applies only migrations created after that boundary.
  *
- * Existing databases (already recorded in _prisma_migrations) use
- * `prisma migrate deploy` only. This script refuses haidara and haidara_test.
- *
- * Empty allowlisted database:
- *   1. Apply the current Prisma schema.
- *   2. Apply supplemental objects Prisma cannot model.
- *   3. Verify those objects exist.
- *   4. Record every historical migration as applied, using Prisma's own checksum.
- *   5. Insert the approved company master rows.
- *   6. Run migrate deploy so a later migration still applies.
- *
- * A second run on a completed baseline does not rebuild the schema.
+ * Historical migration SQL is not executed and is not edited. Its result is
+ * prisma/baseline/schema.sql plus prisma/baseline/supplemental.sql.
+ * Later migration directories run through `prisma migrate deploy`.
+ * This script refuses haidara and haidara_test.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -26,12 +19,20 @@ const {
   APPROVED_COMPANIES,
   HISTORICAL_WRONG_LEGAL_NAMES,
   assertFreshDatabaseTarget,
+  assertMigrationHistory,
+  driftPreservesCustomSql,
+  loadBoundary,
+  splitMigrations,
+  verifySnapshotFiles,
 } = require("./fresh-database-baseline-lib.cjs");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const schemaPath = path.join(root, "prisma", "schema");
 const migrationsDir = path.join(root, "prisma", "migrations");
-const supplementalPath = path.join(root, "prisma", "baseline", "supplemental.sql");
+const baselineDir = path.join(root, "prisma", "baseline");
+const frozenSchemaPath = path.join(baselineDir, "schema.sql");
+const supplementalPath = path.join(baselineDir, "supplemental.sql");
+const boundaryPath = path.join(baselineDir, "boundary.json");
 const prismaCli = path.join(root, "node_modules", "prisma", "build", "index.js");
 
 const REQUIRED_INDEXES = [
@@ -40,6 +41,10 @@ const REQUIRED_INDEXES = [
   "whatsapp_connections_one_current",
   "vehicle_gps_bindings_active_device_key",
 ];
+
+function redact(text) {
+  return String(text).replace(/postgres(?:ql)?:\/\/[^@\s]+@/gi, "postgresql://***@");
+}
 
 function prismaEnv(databaseUrl) {
   return { ...process.env, DATABASE_URL: databaseUrl };
@@ -54,18 +59,29 @@ function runPrisma(args, databaseUrl, input) {
     maxBuffer: 64 * 1024 * 1024,
   });
   if (result.status !== 0) {
-    const detail = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
+    const detail = redact(`${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim());
     throw new Error(`prisma ${args.join(" ")} failed\n${detail}`);
   }
   return result.stdout ?? "";
 }
 
-function migrationNames() {
+function migrationDirectoryNames() {
   return fs
     .readdirSync(migrationsDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(migrationsDir, entry.name, "migration.sql")))
+    .filter(
+      (entry) =>
+        entry.isDirectory() && fs.existsSync(path.join(migrationsDir, entry.name, "migration.sql")),
+    )
     .map((entry) => entry.name)
     .sort();
+}
+
+function migrationBytes(names) {
+  const bytes = new Map();
+  for (const name of names) {
+    bytes.set(name, fs.readFileSync(path.join(migrationsDir, name, "migration.sql")));
+  }
+  return bytes;
 }
 
 async function publicTables(client) {
@@ -77,6 +93,15 @@ async function publicTables(client) {
      ORDER BY c.relname`,
   );
   return result.rows.map((row) => row.name);
+}
+
+async function readHistory(client) {
+  const result = await client.query(
+    `SELECT migration_name, checksum, finished_at, rolled_back_at
+     FROM "_prisma_migrations"
+     ORDER BY migration_name`,
+  );
+  return result.rows;
 }
 
 async function upsertCompanies(client) {
@@ -123,66 +148,7 @@ async function assertIndexes(client) {
   if (missing.length > 0) throw new Error(`Missing indexes: ${missing.join(", ")}`);
 }
 
-async function main() {
-  const databaseUrl = process.env.DATABASE_URL ?? "";
-  const databaseName = assertFreshDatabaseTarget(
-    databaseUrl,
-    process.env.DIAMOND_FRESH_DATABASE_CONFIRM,
-  );
-  const names = migrationNames();
-  if (names.length === 0) throw new Error("No migration directories found");
-
-  const client = new pg.Client({ connectionString: databaseUrl });
-  await client.connect();
-  try {
-    const current = await client.query("SELECT current_database() AS name");
-    if (current.rows[0]?.name !== databaseName) {
-      throw new Error("Connected database does not match the confirmed name");
-    }
-
-    const tables = await publicTables(client);
-    const hasHistory = tables.includes("_prisma_migrations");
-    if (!hasHistory && tables.length > 0) {
-      throw new Error(
-        `Database ${databaseName} has tables but no migration history. Drop this disposable database and rerun. Refusing to mark missing history as applied.`,
-      );
-    }
-
-    if (!hasHistory) {
-      const schemaSql = runPrisma(
-        ["migrate", "diff", "--from-empty", "--to-schema", schemaPath, "--script"],
-        databaseUrl,
-      );
-      if (!schemaSql.trim()) throw new Error("Prisma schema diff was empty");
-      runPrisma(["db", "execute", "--stdin"], databaseUrl, schemaSql);
-      const supplemental = fs.readFileSync(supplementalPath, "utf8");
-      runPrisma(["db", "execute", "--stdin"], databaseUrl, supplemental);
-      await assertIndexes(client);
-      for (const name of names) {
-        runPrisma(["migrate", "resolve", "--applied", name], databaseUrl);
-      }
-    } else {
-      const applied = await client.query(
-        `SELECT COUNT(*)::int AS count
-         FROM "_prisma_migrations"
-         WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL`,
-      );
-      const count = applied.rows[0]?.count ?? 0;
-      if (count < names.length) {
-        throw new Error(
-          `Migration history is incomplete (${count}/${names.length}). Drop this disposable database and rerun. Refusing to resolve over a partial history.`,
-        );
-      }
-    }
-
-    await upsertCompanies(client);
-    await assertCompanies(client);
-    await assertIndexes(client);
-  } finally {
-    await client.end();
-  }
-
-  runPrisma(["migrate", "deploy"], databaseUrl);
+function assertDrift(databaseUrl) {
   const drift = spawnSync(
     process.execPath,
     [
@@ -203,26 +169,95 @@ async function main() {
     },
   );
   if (drift.status === 2) {
-    const script = drift.stdout ?? "";
-    const statements = script
-      .split(";")
-      .map((part) => part.replace(/--[^\n]*/g, "").trim())
-      .filter(Boolean);
-    const allowedDrift =
-      /DROP INDEX[\s\S]*"(whatsapp_connections_one_current|contract_payment_attempts_one_active_per_payment_idx)"|DROP EXTENSION[\s\S]*"?pgcrypto"?/i;
-    const onlyKnownSupplemental = statements.every((statement) =>
-      allowedDrift.test(statement),
-    );
-    if (!onlyKnownSupplemental) {
-      throw new Error(`Schema drift after baseline:\n${script}\n${drift.stderr ?? ""}`);
+    if (!driftPreservesCustomSql(drift.stdout ?? "")) {
+      throw new Error(
+        `Schema drift changes objects outside the custom-SQL preservation policy:\n${redact(drift.stdout ?? "")}`,
+      );
     }
-  } else if (drift.status !== 0) {
-    throw new Error(`prisma migrate diff failed\n${drift.stdout ?? ""}\n${drift.stderr ?? ""}`);
+    return;
   }
-  console.log(`fresh-baseline-ok database=${databaseName} migrations=${names.length}`);
+  if (drift.status !== 0) {
+    throw new Error(
+      `prisma migrate diff failed\n${redact(drift.stdout ?? "")}\n${redact(drift.stderr ?? "")}`,
+    );
+  }
+}
+
+async function main() {
+  const databaseUrl = process.env.DATABASE_URL ?? "";
+  const databaseName = assertFreshDatabaseTarget(
+    databaseUrl,
+    process.env.DIAMOND_FRESH_DATABASE_CONFIRM,
+  );
+  const boundary = loadBoundary(boundaryPath);
+  verifySnapshotFiles(boundary, {
+    schemaPath: frozenSchemaPath,
+    supplementalPath,
+    migrationsDir,
+  });
+  const names = migrationDirectoryNames();
+  const split = splitMigrations(names, boundary);
+  const bytes = migrationBytes(names);
+
+  const client = new pg.Client({ connectionString: databaseUrl });
+  await client.connect();
+  try {
+    const current = await client.query("SELECT current_database() AS name");
+    if (current.rows[0]?.name !== databaseName) {
+      throw new Error("Connected database does not match the confirmed name");
+    }
+
+    const tables = await publicTables(client);
+    const hasHistory = tables.includes("_prisma_migrations");
+    if (!hasHistory && tables.length > 0) {
+      throw new Error(
+        `Database ${databaseName} has tables but no migration history. Refusing to mark missing history as applied.`,
+      );
+    }
+
+    if (!hasHistory) {
+      runPrisma(["db", "execute", "--stdin"], databaseUrl, fs.readFileSync(frozenSchemaPath, "utf8"));
+      runPrisma(["db", "execute", "--stdin"], databaseUrl, fs.readFileSync(supplementalPath, "utf8"));
+      await assertIndexes(client);
+      for (const name of split.sealed) {
+        runPrisma(["migrate", "resolve", "--applied", name], databaseUrl);
+      }
+      assertMigrationHistory(await readHistory(client), split.sealed, [], bytes);
+    } else {
+      assertMigrationHistory(await readHistory(client), split.sealed, split.future, bytes);
+    }
+
+    await upsertCompanies(client);
+    await assertCompanies(client);
+    await assertIndexes(client);
+  } finally {
+    await client.end();
+  }
+
+  runPrisma(["migrate", "deploy"], databaseUrl);
+
+  const verify = new pg.Client({ connectionString: databaseUrl });
+  await verify.connect();
+  try {
+    assertMigrationHistory(
+      await readHistory(verify),
+      [...split.sealed, ...split.future],
+      [],
+      bytes,
+    );
+    await assertCompanies(verify);
+    await assertIndexes(verify);
+  } finally {
+    await verify.end();
+  }
+
+  assertDrift(databaseUrl);
+  console.log(
+    `fresh-baseline-ok database=${databaseName} boundary=${split.sealed.length} future=${split.future.length}`,
+  );
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  console.error(redact(error instanceof Error ? error.message : error));
   process.exit(1);
 });

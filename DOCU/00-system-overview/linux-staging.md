@@ -52,15 +52,21 @@ export DIAMOND_FRESH_DATABASE_CONFIRM=diamond_fresh_example
 node scripts/fresh-database-baseline.mjs
 ```
 
-The script applies the current Prisma schema, then `prisma/baseline/supplemental.sql`, checks the partial indexes exist, and records every historical migration with Prisma's own checksum. It inserts the approved company legal names. It does not replay the old company insert, which used different English names. A second run does not rebuild the schema. `prisma migrate deploy` then applies only migrations added after this baseline.
+The sealed boundary is `prisma/baseline/boundary.json`, id `phase1-20261015`, ending at `20261014120000_archive_manual_cell_values`. The script checks that file against `schema.sql`, `supplemental.sql`, and each sealed `migration.sql` before it touches the database.
 
-Existing database upgrade:
+On an empty allowlisted database it applies the frozen schema, then `prisma/baseline/supplemental.sql`, checks the partial indexes, and records only the sealed migrations with Prisma's own checksum. It inserts the approved company legal names. It does not replay the old company insert, which used different English names. A migration directory that sorts after the boundary is not marked applied.
+
+`prisma migrate deploy` then executes those later migrations, including custom SQL that Prisma cannot model. A second run checks the finished history and does not rebuild the schema.
+
+The same script is the staging migrator. On a database that already has the sealed history, it accepts that history and deploys only migrations that are still pending. It stops when a sealed migration is missing, unfinished, rolled back, unknown, or checksum-mismatched. It does not mark that gap as applied.
+
+Operational databases stay on the normal command:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-Run that only against a database whose `_prisma_migrations` history is already complete. Do not run the fresh baseline script against it.
+Run that only against a database whose `_prisma_migrations` history is already consistent. The fresh baseline script refuses `haidara` and `haidara_test`.
 
 `NEXT_PUBLIC_API_URL` has no image default. `deploy/.env` must set the origin the browser will call. `http://127.0.0.1:3000` is only for a browser on the same host. A reverse proxy requires that public origin and a frontend rebuild.
 
