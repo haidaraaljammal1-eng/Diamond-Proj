@@ -106,6 +106,9 @@ model Invoice {
   deliveries InvoiceDelivery[]
 
   @@unique([companyId, invoiceNumber])
+  // One CURRENT revision per contract. The historical migration created this
+  // partial index; it is declared here so a fresh baseline matches that database.
+  @@unique([contractId], map: "invoices_contractId_one_current_idx", where: { isCurrent: true })
   @@index([contractId])
   @@index([contractId, isCurrent])
   @@index([vehicleId])

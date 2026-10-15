@@ -1,0 +1,136 @@
+name: phase1-linux-staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - integration/ruls-local-20261014
+    paths:
+      - ".github/workflows/phase1-linux-staging.yml"
+      - "APP/backend/Dockerfile"
+      - "APP/backend/docker-entrypoint.sh"
+      - "APP/backend/scripts/fresh-database-baseline.mjs"
+      - "APP/backend/scripts/fresh-database-baseline-lib.cjs"
+      - "APP/backend/scripts/fresh-staging-smoke.mjs"
+      - "APP/backend/prisma/baseline/**"
+      - "APP/frontend/Dockerfile"
+      - "deploy/**"
+
+jobs:
+  linux-containers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write synthetic staging env
+        working-directory: deploy
+        run: |
+          set -euo pipefail
+          umask 077
+          openssl rand -hex 32 > /tmp/secret-a
+          openssl rand -hex 32 > /tmp/secret-b
+          openssl rand -hex 32 > /tmp/secret-c
+          openssl rand -hex 32 > /tmp/secret-d
+          openssl rand -hex 24 > /tmp/db-pass
+          openssl rand -hex 24 > /tmp/auth-secret
+          openssl rand -hex 16 > /tmp/smoke-pass
+          {
+            echo "POSTGRES_PASSWORD=$(cat /tmp/db-pass)"
+            echo "AUTH_SECRET=$(cat /tmp/auth-secret)"
+            echo "NEXT_PUBLIC_API_URL=http://127.0.0.1:3000"
+          } > .env
+          {
+            echo "NODE_ENV=production"
+            echo "LOG_LEVEL=info"
+            echo "JWT_ACCESS_SECRET=$(cat /tmp/secret-a)"
+            echo "JWT_REFRESH_SECRET=$(cat /tmp/secret-b)"
+            echo "COOKIE_SECRET=$(cat /tmp/secret-c)"
+            echo "TWO_FACTOR_ENCRYPTION_KEY=$(cat /tmp/secret-d)"
+            echo "COOKIE_SECURE=false"
+            echo "CORS_ORIGINS=http://127.0.0.1:3100"
+            echo "FRONTEND_URL=http://127.0.0.1:3100"
+            echo "SCHEDULER_ENABLED=true"
+            echo "FILE_STORAGE_DIR=/app/uploads"
+            echo "BUSINESS_TIMEZONE_OFFSET_MINUTES=240"
+            echo "PAYMENT_PROVIDER=none"
+            echo "GPS_ENABLED=false"
+            echo "TARS_ENABLED=false"
+            echo "EMAIL_ENABLED=false"
+            echo "SEED_DEV_ADMIN=false"
+          } > staging.env
+
+      - name: Build images
+        working-directory: deploy
+        run: docker compose -f docker-compose.staging.yml build
+
+      - name: Initialize disposable Postgres and start the stack
+        working-directory: deploy
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.staging.yml up -d postgres
+          docker compose -f docker-compose.staging.yml --profile migrate run --rm migrate
+          docker compose -f docker-compose.staging.yml --profile migrate run --rm migrate
+          docker compose -f docker-compose.staging.yml up -d backend frontend
+
+      - name: Confirm Postgres is not published
+        working-directory: deploy
+        run: |
+          set -euo pipefail
+          if docker compose -f docker-compose.staging.yml port postgres 5432; then
+            echo "Postgres port was published"
+            exit 1
+          fi
+
+      - name: Wait for health and locale routes
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000/health/ready; then
+              break
+            fi
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:3000/health/ready
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3100/ar)" = "200"
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3100/en)" = "200"
+
+      - name: Synthetic login, PDF, and upload
+        working-directory: deploy
+        run: |
+          set -euo pipefail
+          SMOKE_PASSWORD="$(cat /tmp/smoke-pass)"
+          docker compose -f docker-compose.staging.yml exec -T \
+            -e SMOKE_PASSWORD="$SMOKE_PASSWORD" \
+            -e DIAMOND_FRESH_DATABASE_CONFIRM=diamond_staging \
+            backend node scripts/fresh-staging-smoke.mjs
+          code="$(curl -sS -o /tmp/login.json -w '%{http_code}' \
+            -H 'content-type: application/json' \
+            -d "{\"email\":\"phase1-smoke@example.test\",\"password\":\"${SMOKE_PASSWORD}\"}" \
+            http://127.0.0.1:3000/auth/login)"
+          test "$code" = "200"
+          node -e "const j=require('/tmp/login.json'); if(JSON.stringify(j).includes('passwordHash')) process.exit(1); if(!j.accessToken && !(j.data&&j.data.accessToken)) process.exit(2);"
+          starts="$(docker compose -f docker-compose.staging.yml logs backend | grep -c 'background scheduler: started' || true)"
+          test "$starts" = "1"
+          test "$(docker compose -f docker-compose.staging.yml ps -q backend | wc -l)" = "1"
+          docker compose -f docker-compose.staging.yml restart backend
+          docker compose -f docker-compose.staging.yml exec -T backend cat /app/uploads/phase1-synthetic.txt | grep phase1-synthetic-file
+
+      - name: Measure and stop
+        working-directory: deploy
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.staging.yml ps
+          test "$(docker compose -f docker-compose.staging.yml ps -q backend | wc -l)" = "1"
+          docker stats --no-stream
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}'
+          docker compose -f docker-compose.staging.yml stop backend
+          docker compose -f docker-compose.staging.yml up -d backend
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000/health/ready; then
+              break
+            fi
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:3000/health/ready
+          docker compose -f docker-compose.staging.yml down -v

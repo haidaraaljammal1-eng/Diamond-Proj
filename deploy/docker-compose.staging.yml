@@ -33,6 +33,7 @@ services:
       target: migrator
     environment:
       DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@postgres:5432/diamond_staging
+      DIAMOND_FRESH_DATABASE_CONFIRM: diamond_staging
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,7 +78,7 @@ services:
     build:
       context: ../APP/frontend
       args:
-        NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL in deploy/.env}
     environment:
       NODE_ENV: production
       AUTH_URL: http://127.0.0.1:3100

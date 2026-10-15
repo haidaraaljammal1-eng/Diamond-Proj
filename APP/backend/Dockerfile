@@ -20,7 +20,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app /app
 ENV NODE_ENV=production
-CMD ["npx", "prisma", "migrate", "deploy"]
+ENV DIAMOND_FRESH_DATABASE_CONFIRM=diamond_staging
+CMD ["node", "scripts/fresh-database-baseline.mjs"]
 
 FROM node:22.21.0-bookworm-slim AS runner
 WORKDIR /app
@@ -35,6 +36,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build /app/scripts/fresh-staging-smoke.mjs ./scripts/fresh-staging-smoke.mjs
+COPY --from=build /app/scripts/fresh-database-baseline-lib.cjs ./scripts/fresh-database-baseline-lib.cjs
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
   && chmod 755 /usr/local/bin/docker-entrypoint.sh \

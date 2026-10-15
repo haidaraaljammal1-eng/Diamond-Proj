@@ -10,9 +10,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DOCKER_BUILD=1
-ARG NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
+# No localhost default. Compose or the operator must pass the browser-visible API origin.
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-RUN npm run build
+RUN test -n "$NEXT_PUBLIC_API_URL"
+# Turbopack is the Next 16 production bundler. Webpack fails on existing
+# CSS modules and then looks for a proxy NFT file that this app does not emit.
+RUN npx next build --turbopack
 
 FROM node:22.21.0-bookworm-slim AS runner
 WORKDIR /app

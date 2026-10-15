@@ -22,8 +22,10 @@ enum WhatsAppProviderSessionStatus {
   UNKNOWN
 }
 
-/// Current office connection. V1 allows at most one non-DISCONNECTED row
-/// (enforced by a partial unique index in the migration + advisory lock).
+/// Current office connection. V1 allows at most one non-DISCONNECTED row.
+/// The expression index `whatsapp_connections_one_current` cannot be modeled
+/// as a Prisma field unique, so fresh baselines apply it from
+/// `prisma/baseline/supplemental.sql`. An advisory lock remains in the service.
 enum WhatsAppConnectionStatus {
   DISCONNECTED
   LINKING

@@ -39,10 +39,27 @@ export default tseslint.config(
         console: "readonly",
         __dirname: "readonly",
         __filename: "readonly",
+        URL: "readonly",
+        Buffer: "readonly",
       },
     },
     rules: {
       "@typescript-eslint/no-require-imports": "off",
+      "no-console": "off",
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      sourceType: "module",
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        URL: "readonly",
+      },
+    },
+    rules: {
       "no-console": "off",
     },
   },
