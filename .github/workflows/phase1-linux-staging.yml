@@ -77,10 +77,10 @@ jobs:
         working-directory: deploy
         run: |
           set -euo pipefail
-          if docker compose -f docker-compose.staging.yml port postgres 5432; then
-            echo "Postgres port was published"
-            exit 1
-          fi
+          cid="$(docker compose -f docker-compose.staging.yml ps -q postgres)"
+          bindings="$(docker inspect "$cid" --format '{{json .HostConfig.PortBindings}}')"
+          echo "postgres PortBindings=$bindings"
+          test "$bindings" = "{}" || test "$bindings" = "null"
 
       - name: Wait for health and locale routes
         run: |
