@@ -187,6 +187,14 @@ export function buildSyncArchiveRowUpdate(
   };
 }
 
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
 export function syncPayloadChanged(
   existing: ArchiveRow,
   next: Prisma.ArchiveRowUncheckedUpdateInput,
@@ -196,7 +204,14 @@ export function syncPayloadChanged(
   for (const key of keys) {
     const a = existing[key];
     const b = next[key];
+    if ((a == null && b == null) || a === b) continue;
     if (a instanceof Date && b instanceof Date) {
+      // deliveryDate/returnDate are PostgreSQL DATE. Writes use UTC noon so a
+      // timezone cannot roll the day; reads come back at UTC midnight.
+      if (key === "deliveryDate" || key === "returnDate") {
+        if (!sameCalendarDay(a, b)) return true;
+        continue;
+      }
       if (a.getTime() !== b.getTime()) return true;
       continue;
     }

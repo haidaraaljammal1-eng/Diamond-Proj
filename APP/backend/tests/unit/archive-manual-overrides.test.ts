@@ -9,6 +9,7 @@ import {
   parseManualOverrides,
   serializeManualOverrides,
   shouldRecalculateTotalAfterPatch,
+  syncPayloadChanged,
   totalAfterPatch,
 } from "src/modules/archive/archive-manual-overrides";
 import type { ArchiveAutoFields } from "src/modules/archive/archive-sync.recompute";
@@ -223,4 +224,34 @@ test("L import unchanged keeps meta overrides", () => {
   };
   const merged = mergeImportManualOverrides("c1", prev, imported, { fuel: true });
   assert.deepEqual(parseManualOverrides(serializeManualOverrides(merged)), { fuel: true });
+});
+
+test("DATE columns stored at UTC noon match a midnight read of the same day", () => {
+  const stored = baseRow();
+  stored.deliveryDate = new Date(Date.UTC(2026, 9, 13, 0, 0, 0));
+  const next = {
+    kmOut: stored.kmOut,
+    kmIn: stored.kmIn,
+    km: stored.km,
+    deliveryDate: new Date(Date.UTC(2026, 9, 13, 12, 0, 0)),
+    deliveryTime: stored.deliveryTime,
+    returnDate: stored.returnDate,
+    returnTime: stored.returnTime,
+    customerName: stored.customerName,
+    customerPhone: stored.customerPhone,
+    days: stored.days,
+    dailyRate: stored.dailyRate,
+    rentalTotal: stored.rentalTotal,
+    fuel: stored.fuel,
+    salik: stored.salik,
+    blackPoints: stored.blackPoints,
+    fines: stored.fines,
+    total: stored.total,
+    cash: stored.cash,
+    visa: stored.visa,
+    parking: stored.parking,
+  };
+  assert.equal(syncPayloadChanged(stored, next), false);
+  next.deliveryDate = new Date(Date.UTC(2026, 9, 14, 12, 0, 0));
+  assert.equal(syncPayloadChanged(stored, next), true);
 });

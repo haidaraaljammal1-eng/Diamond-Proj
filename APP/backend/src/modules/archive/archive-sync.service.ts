@@ -253,5 +253,35 @@ export function createArchiveSyncService(fastify: FastifyInstance) {
     return result;
   }
 
-  return { runSync, getStatus };
+  /**
+   * Sync an explicit contract id list. Does not move the global cursor and does
+   * not discover other contracts. Staff HTTP sync keeps using `runSync`.
+   */
+  async function syncContractIds(contractIds: string[]) {
+    const summary = {
+      created: 0,
+      updated: 0,
+      unchanged: 0,
+      failed: 0,
+      violationsCounted: 0,
+      errors: [] as Array<{ contractId: string; message: string }>,
+    };
+    if (contractIds.length > 0) {
+      await processBatch(contractIds, summary);
+    }
+    return summary;
+  }
+
+  async function acquireRunningLock(userId: number): Promise<boolean> {
+    await ensureSyncStateRow(prisma);
+    return tryAcquireRunningLock(userId, new Date());
+  }
+
+  return {
+    runSync,
+    getStatus,
+    syncContractIds,
+    acquireRunningLock,
+    releaseRunningLock,
+  };
 }

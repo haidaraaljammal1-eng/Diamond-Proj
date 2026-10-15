@@ -598,6 +598,101 @@ if (!RUN) {
       assert.equal(detail.json().data.agreedAmount, 2200);
     });
 
+    test("renewal without a duration is rejected and leaves the contract unchanged", async () => {
+      const { contractId } = await createActiveContract();
+      const before = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      const rejected = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renew`,
+        headers: auth(),
+        payload: { additionalAmount: 100 },
+      });
+      assert.equal(rejected.statusCode, 422, rejected.body);
+      assert.equal(rejected.json().error.details[0].message, "renewal_duration_required");
+      const after = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      assert.equal(after.endAt?.toISOString(), before.endAt?.toISOString());
+      assert.equal(after.agreedAmount, before.agreedAmount);
+      assert.equal(after.status, "ACTIVE");
+      assert.equal(await prisma.contractRenewal.count({ where: { contractId } }), 0);
+    });
+
+    test("day-based staff renewal keeps the original contract and settles once", async () => {
+      const { contractId, contractNumber } = await createActiveContract();
+      const before = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      const ledgerBefore = await prisma.financialLedgerEntry.count({ where: { contractId } });
+      const invoicesBefore = await prisma.invoice.count({ where: { contractId } });
+      const staffRenew = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renew`,
+        headers: auth(),
+        payload: {
+          additionalDurationValue: 2,
+          additionalDurationUnit: "DAY",
+          additionalAmount: 800,
+        },
+      });
+      assert.equal(staffRenew.statusCode, 200, staffRenew.body);
+      const after = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      assert.equal(after.id, contractId);
+      assert.equal(after.contractNumber, contractNumber);
+      assert.equal(after.status, "ACTIVE");
+      assert.equal(after.agreedAmount, before.agreedAmount + 800);
+      assert.equal(after.rentalDays, before.rentalDays + 2);
+      assert.equal(after.endAt!.getTime() - before.endAt!.getTime(), 2 * 86_400_000);
+      const renewal = await prisma.contractRenewal.findFirstOrThrow({
+        where: { contractId, additionalDurationUnit: "DAY", additionalDurationValue: 2 },
+      });
+      assert.equal(renewal.contractId, contractId);
+      assert.equal(renewal.additionalAmount, 800);
+      assert.equal(renewal.additionalDays, 2);
+      assert.ok(renewal.appliedAt);
+      assert.equal(renewal.settledPaymentId, null);
+
+      const cash = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renewals/${renewal.id}/cash/settle`,
+        headers: auth(),
+      });
+      assert.equal(cash.statusCode, 200, cash.body);
+      const payments = await prisma.contractPayment.findMany({
+        where: { contractId, purpose: "RENEWAL", targetId: renewal.id },
+      });
+      assert.equal(payments.length, 1);
+      assert.equal(payments[0]?.status, "CONFIRMED");
+      assert.equal(payments[0]?.amount, 800);
+      assert.equal(payments[0]?.method, "CASH");
+      const renewalLedger = await prisma.financialLedgerEntry.findMany({
+        where: { contractId, contractPaymentId: payments[0]!.id },
+      });
+      assert.equal(renewalLedger.length, 1);
+      assert.equal(renewalLedger[0]?.amount, 800);
+      assert.equal(
+        await prisma.financialLedgerEntry.count({ where: { contractId } }),
+        ledgerBefore + 1,
+      );
+
+      const replay = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/renewals/${renewal.id}/cash/settle`,
+        headers: auth(),
+      });
+      assert.equal(replay.statusCode, 200, replay.body);
+      assert.equal(
+        await prisma.contractPayment.count({ where: { contractId, purpose: "RENEWAL" } }),
+        1,
+      );
+      assert.equal(
+        await prisma.financialLedgerEntry.count({ where: { contractId } }),
+        ledgerBefore + 1,
+      );
+      const invoices = await prisma.invoice.findMany({ where: { contractId } });
+      assert.ok(invoices.every((row) => row.contractId === contractId));
+      assert.ok(invoices.length >= invoicesBefore);
+      const still = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });
+      assert.equal(still.contractNumber, contractNumber);
+      assert.equal(still.status, "ACTIVE");
+    });
+
     test("hourly staff renewal extends endAt by exact hours", async () => {
       const { contractId } = await createActiveContract();
       const before = await prisma.contract.findUniqueOrThrow({ where: { id: contractId } });

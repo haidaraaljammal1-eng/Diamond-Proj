@@ -161,7 +161,6 @@ function primaryDescription(line: FinanceStatementLine): string {
   if (line.description && line.description !== line.categoryLabel) {
     parts.push(line.description);
   }
-  if (line.referenceId) parts.push(line.referenceId);
   return parts.join(" — ");
 }
 
