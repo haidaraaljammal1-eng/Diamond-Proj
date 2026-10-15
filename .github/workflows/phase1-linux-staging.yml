@@ -14,6 +14,12 @@ on:
       - "APP/backend/scripts/fresh-staging-smoke.mjs"
       - "APP/backend/scripts/fresh-database-baseline-scenarios.mjs"
       - "APP/backend/prisma/baseline/**"
+      - "APP/backend/prisma/migrations/**"
+      - "APP/backend/prisma/schema/**"
+      - "APP/backend/src/modules/contracts/**"
+      - "APP/backend/src/modules/finance/**"
+      - "APP/backend/src/modules/invoices/**"
+      - "APP/backend/tests/integration/phase2a-stage2.integrity.test.ts"
       - "APP/frontend/Dockerfile"
       - "deploy/**"
 
@@ -75,6 +81,9 @@ jobs:
           docker compose -f docker-compose.staging.yml --profile migrate run --rm --no-deps --entrypoint node \
             -e DIAMOND_BASELINE_SCENARIOS=1 \
             migrate scripts/fresh-database-baseline-scenarios.mjs
+          docker compose -f docker-compose.staging.yml --profile migrate run --rm --no-deps --entrypoint node \
+            -e DIAMOND_STAGE2_USE_DATABASE_URL=1 \
+            migrate --import tsx --test --test-force-exit tests/integration/phase2a-stage2.integrity.test.ts
           docker compose -f docker-compose.staging.yml up -d backend frontend
 
       - name: Confirm Postgres is not published

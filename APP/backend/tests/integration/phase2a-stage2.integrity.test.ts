@@ -1,7 +1,9 @@
 /**
  * Phase 2A financial integrity checks.
- * Runs only when STAGE2_DATABASE_URL names diamond_fresh_stage2 exactly.
- * Refuses haidara and haidara_test. Does not read APP/backend/.env.
+ * Runs only when STAGE2_DATABASE_URL, or DIAMOND_STAGE2_USE_DATABASE_URL=1
+ * with DATABASE_URL, names an approved disposable database.
+ * haidara_test is accepted only on the disposable server port 5433.
+ * Does not read APP/backend/.env by itself.
  */
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
@@ -18,17 +20,25 @@ import {
   configureInvoiceNumberSequence,
 } from "src/modules/invoices/invoice-number-sequence.service";
 
-const STAGE2_NAME = "diamond_fresh_stage2";
-const stage2Url = process.env.STAGE2_DATABASE_URL ?? "";
+const stage2Url =
+  process.env.STAGE2_DATABASE_URL ??
+  (process.env.DIAMOND_STAGE2_USE_DATABASE_URL === "1" ? process.env.DATABASE_URL ?? "" : "");
 
 function databaseName(url: string): string {
   return decodeURIComponent(new URL(url).pathname.replace(/^\//, "").split("/")[0] ?? "");
 }
 
+function approvedDatabaseName(name: string): boolean {
+  if (name === "haidara") return false;
+  if (name === "haidara_test") return true;
+  if (name === "diamond_staging" || name === "diamond_fresh_stage2") return true;
+  return /^diamond_fresh_[a-z0-9]+$/.test(name);
+}
+
 const enabled = (() => {
   if (!stage2Url) return false;
   try {
-    return databaseName(stage2Url) === STAGE2_NAME;
+    return approvedDatabaseName(databaseName(stage2Url));
   } catch {
     return false;
   }
@@ -71,9 +81,9 @@ if (!enabled) {
   });
 
   test("isolated database, invoice lines, and concurrent numbering", async () => {
-    assert.equal(databaseName(stage2Url), STAGE2_NAME);
-    assert.notEqual(STAGE2_NAME, "haidara");
-    assert.notEqual(STAGE2_NAME, "haidara_test");
+    const expectedName = databaseName(stage2Url);
+    assert.equal(approvedDatabaseName(expectedName), true);
+    assert.notEqual(expectedName, "haidara");
 
     const probe = new pg.Client({ connectionString: stage2Url });
     await probe.connect();
@@ -84,12 +94,19 @@ if (!enabled) {
               current_setting('server_version') AS version`,
     );
     const row = identity.rows[0];
-    assert.equal(row.name, STAGE2_NAME);
+    assert.equal(row.name, expectedName);
     assert.match(String(row.version), /^16\./);
-    const forbidden = await probe.query(
-      `SELECT datname FROM pg_database WHERE datname IN ('haidara', 'haidara_test')`,
-    );
-    assert.equal(forbidden.rowCount, 0);
+    if (row.name === "haidara_test") {
+      assert.equal(Number(row.port), 5433);
+      const directory = await probe.query("SHOW data_directory");
+      assert.match(String(directory.rows[0].data_directory), /diamond-phase1/);
+    }
+    if (row.name === "diamond_staging") {
+      const forbidden = await probe.query(
+        `SELECT datname FROM pg_database WHERE datname IN ('haidara', 'haidara_test')`,
+      );
+      assert.equal(forbidden.rowCount, 0);
+    }
     const migrations = await probe.query(
       `SELECT COUNT(*)::int AS count
        FROM "_prisma_migrations"
@@ -320,6 +337,13 @@ if (!enabled) {
     assert.equal(first.balanceDueSnapshot, 925);
     assert.equal(await prisma.invoice.count({ where: { contractId: contract.id, isCurrent: true } }), 1);
     assert.equal(await prisma.invoice.count({ where: { contractId: contract.id } }), 1);
+    const [retryA, retryB] = await Promise.all([
+      service.ensureConsolidatedContractInvoice(contract.id, user.id),
+      service.ensureConsolidatedContractInvoice(contract.id, user.id),
+    ]);
+    assert.equal(retryA.id, first.id);
+    assert.equal(retryB.id, first.id);
+    assert.equal(await prisma.invoice.count({ where: { contractId: contract.id, isCurrent: true } }), 1);
     const issued = await prisma.invoice.findFirstOrThrow({
       where: { id: first.id },
       include: { company: true },
@@ -356,6 +380,119 @@ if (!enabled) {
       /unique|contract_payments_confirmed_obligation_idx/i,
     );
 
-    console.log("stage2-ok invoice-lines numbering legal-names one-current duplicate-payment-rejected");
+    const revised = await service.ensureConsolidatedContractInvoice(contract.id, user.id);
+    assert.equal(revised.revisionNumber, 2);
+    assert.equal(revised.totalAmount, 1725);
+    assert.equal(revised.balanceDueSnapshot, 925);
+    assert.equal(await prisma.invoice.count({ where: { contractId: contract.id, isCurrent: true } }), 1);
+    assert.equal(await prisma.invoice.count({ where: { contractId: contract.id } }), 2);
+
+    const sequenceBeforeRollback = await prisma.invoiceNumberSequence.findUniqueOrThrow({
+      where: { companyId: elite.id },
+    });
+    await assert.rejects(
+      withTransaction(prisma, async (tx) => {
+        await allocateInvoiceNumber(tx, elite.id);
+        throw new Error("force rollback");
+      }),
+      /force rollback/,
+    );
+    const sequenceAfterRollback = await prisma.invoiceNumberSequence.findUniqueOrThrow({
+      where: { companyId: elite.id },
+    });
+    assert.equal(sequenceAfterRollback.nextNumber, sequenceBeforeRollback.nextNumber);
+
+    const pendingContract = await prisma.contract.create({
+      data: {
+        companyId: elite.id,
+        contractNumber: `P2A-ORD-${run}`,
+        status: "REVIEW",
+        vehicleId: vehicle.id,
+        customerId: customer.id,
+        createdByUserId: user.id,
+        priceType: "DAILY",
+        rentalDays: 1,
+        durationValue: 1,
+        durationUnit: "DAY",
+        agreedAmount: 100,
+        collectionMode: "CASH",
+        renewals: {
+          create: {
+            additionalDays: 1,
+            additionalDurationValue: 1,
+            additionalDurationUnit: "DAY",
+            additionalAmount: 50,
+            previousEndAt: new Date("2026-10-04T08:00:00.000Z"),
+            newEndAt: new Date("2026-10-05T08:00:00.000Z"),
+            appliedAt: new Date("2026-10-04T08:00:00.000Z"),
+          },
+        },
+      },
+    });
+    createdContractIds.push(pendingContract.id);
+    const pendingLiability = await prisma.roadLiability.create({
+      data: {
+        type: "RTA_VIOLATION",
+        vehicleId: vehicle.id,
+        occurredAt: new Date("2026-10-04T09:00:00.000Z"),
+        amount: 20,
+        currency: "AED",
+        confirmationStatus: "CONFIRMED",
+        attributionStatus: "MATCHED",
+        collectionStatus: "OPEN",
+        attributedContractId: pendingContract.id,
+        confirmedAt: new Date("2026-10-04T09:00:00.000Z"),
+      },
+    });
+    const pendingRecon = await prisma.contractReconciliation.create({
+      data: {
+        contractId: pendingContract.id,
+        chargesTotal: 20,
+        finalAmount: 20,
+        depositAmount: 0,
+        deductions: 0,
+      },
+    });
+    const pendingLine = await prisma.contractReconciliationLine.create({
+      data: {
+        reconciliationId: pendingRecon.id,
+        type: "VIOLATION",
+        description: "toll before approval",
+        amount: 20,
+        roadLiabilityId: pendingLiability.id,
+        officialAmountSnapshot: 20,
+        adjustmentAmount: 0,
+      },
+    });
+    const beforeApproval = await withTransaction(prisma, (tx) =>
+      buildConsolidatedInvoiceLines(tx, pendingContract.id),
+    );
+    assert.equal(beforeApproval.some((line) => line.sourceId === pendingLine.id), false);
+    assert.equal(beforeApproval.some((line) => line.amount === 50), true);
+    await prisma.contractReconciliation.update({
+      where: { id: pendingRecon.id },
+      data: { approvedAt: new Date("2026-10-04T10:00:00.000Z"), finalizedAt: new Date("2026-10-04T10:00:00.000Z") },
+    });
+    const afterApproval = await withTransaction(prisma, (tx) =>
+      buildConsolidatedInvoiceLines(tx, pendingContract.id),
+    );
+    assert.equal(afterApproval.filter((line) => line.sourceId === pendingLine.id).length, 1);
+
+    const webhookId = `evt-${run}`;
+    await prisma.stripeWebhookEvent.create({
+      data: { stripeEventId: webhookId, eventType: "checkout.session.completed" },
+    });
+    await assert.rejects(
+      () =>
+        prisma.stripeWebhookEvent.create({
+          data: { stripeEventId: webhookId, eventType: "checkout.session.completed" },
+        }),
+      /unique/i,
+    );
+    await prisma.stripeWebhookEvent.deleteMany({ where: { stripeEventId: webhookId } });
+
+    console.log(
+      "stage2-ok invoice-lines numbering legal-names one-current duplicate-payment-rejected rollback webhook-order",
+    );
   });
 }
