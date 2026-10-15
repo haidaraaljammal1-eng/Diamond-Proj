@@ -1,0 +1,98 @@
+# Isolated staging on one Ubuntu host.
+# Assumptions: 4 shared vCPU, 8 GB RAM, 100 GB SSD.
+# PostgreSQL is not published. The browser talks to loopback only.
+# One backend process owns the scheduler. Do not scale backend past 1
+# unless SCHEDULER_ENABLED=false on the extra replicas.
+# OCR engines are not part of this stack.
+
+name: diamond-staging
+
+services:
+  postgres:
+    image: postgres:16.10-bookworm
+    environment:
+      POSTGRES_USER: diamond
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: diamond_staging
+      TZ: Asia/Dubai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diamond -d diamond_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1536m
+    cpus: 1.0
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  migrate:
+    build:
+      context: ../APP/backend
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@postgres:5432/diamond_staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    profiles: ["migrate"]
+
+  backend:
+    build:
+      context: ../APP/backend
+    env_file:
+      - path: ./staging.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      TZ: Asia/Dubai
+      DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@postgres:5432/diamond_staging
+      FILE_STORAGE_DIR: /app/uploads
+      SCHEDULER_ENABLED: "true"
+      BUSINESS_TIMEZONE_OFFSET_MINUTES: "240"
+      PAYMENT_PROVIDER: none
+      GPS_ENABLED: "false"
+      TARS_ENABLED: "false"
+      EMAIL_ENABLED: "false"
+      CORS_ORIGINS: http://127.0.0.1:3100
+      FRONTEND_URL: http://127.0.0.1:3100
+      PASSPORT_NUMBER_API_URL: ""
+      UAE_DRIVING_LICENSE_API_URL: ""
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    mem_limit: 1536m
+    cpus: 1.5
+    restart: unless-stopped
+    stop_grace_period: 20s
+
+  frontend:
+    build:
+      context: ../APP/frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
+    environment:
+      NODE_ENV: production
+      AUTH_URL: http://127.0.0.1:3100
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_TRUST_HOST: "true"
+      TZ: Asia/Dubai
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3100:3100"
+    mem_limit: 1024m
+    cpus: 1.0
+    restart: unless-stopped
+    stop_grace_period: 20s
+
+volumes:
+  pgdata:
+  uploads:

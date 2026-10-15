@@ -4,9 +4,23 @@ import { env } from "src/config/env";
 async function main() {
   const app = await buildApp();
 
+  let shuttingDown = false;
   const shutdown = (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     app.log.info({ signal }, "shutting down");
-    void app.close().then(() => process.exit(0));
+    const force = setTimeout(() => {
+      app.log.error("shutdown timed out");
+      process.exit(1);
+    }, 12_000);
+    force.unref();
+    void app
+      .close()
+      .then(() => process.exit(0))
+      .catch((err: unknown) => {
+        app.log.error(err, "shutdown failed");
+        process.exit(1);
+      });
   };
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));

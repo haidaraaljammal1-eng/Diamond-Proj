@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
 import cookie from "@fastify/cookie";
-import { env } from "src/config/env";
+import { env, isCookieSecure } from "src/config/env";
 
 export const cookiesPlugin = fp(
   async (fastify) => {
@@ -9,7 +9,7 @@ export const cookiesPlugin = fp(
       parseOptions: {
         httpOnly: true,
         sameSite: "lax",
-        secure: env.NODE_ENV === "production",
+        secure: isCookieSecure(),
         path: "/",
       },
     });

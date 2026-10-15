@@ -41,8 +41,11 @@ class EngineProcessingError(Exception):
 
 def _crop_python() -> Path:
     win = LICENSE_ROOT / ".venv" / "Scripts" / "python.exe"
+    unix = LICENSE_ROOT / ".venv" / "bin" / "python"
     if win.is_file():
         return win
+    if unix.is_file():
+        return unix
     return Path(sys.executable)
 
 

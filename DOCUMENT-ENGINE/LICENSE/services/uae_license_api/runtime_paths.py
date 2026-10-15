@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -24,6 +25,10 @@ def apply_runtime_environment() -> None:
         default_tesseract = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
         if default_tesseract.is_file():
             os.environ["LICENSE_TESSERACT_CMD"] = str(default_tesseract)
+        else:
+            on_path = shutil.which("tesseract")
+            if on_path:
+                os.environ["LICENSE_TESSERACT_CMD"] = on_path
     v5_win = LICENSE_ROOT / ".venv_ppocrv5" / "Scripts" / "python.exe"
     v5_unix = LICENSE_ROOT / ".venv_ppocrv5" / "bin" / "python"
     if "LICENSE_PPOCRV5_PYTHON" not in os.environ:

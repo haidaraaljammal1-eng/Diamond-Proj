@@ -12,6 +12,8 @@ coverage/
 .env.*
 !.env.example
 !.env.development
+deploy/staging.env
+deploy/.env
 
 # Runtime data and uploads
 logs/

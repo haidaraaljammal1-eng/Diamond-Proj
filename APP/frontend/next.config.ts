@@ -14,6 +14,9 @@ const rbacE2eApiPort = process.env.RBAC_E2E_API_PORT?.trim();
 
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR?.trim() || ".next",
+  // The container build sets DOCKER_BUILD=1 and runs `node server.js`.
+  // Local production remains `next start`.
+  ...(process.env.DOCKER_BUILD === "1" ? { output: "standalone" as const } : {}),
   // Isolated E2E API proxy: `src/app/backend-api/[...path]/route.ts` + exclude
   // `backend-api` in `src/proxy.ts` matcher (Next 16 proxy / next-intl).
   env: {

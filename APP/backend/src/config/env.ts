@@ -41,6 +41,9 @@ const EnvSchema = z
       .string()
       .min(32, "JWT_REFRESH_SECRET must be at least 32 chars"),
     COOKIE_SECRET: z.string().min(32, "COOKIE_SECRET must be at least 32 chars"),
+    // Unset follows NODE_ENV: secure cookies in production. Set "false" only for
+    // an HTTP staging box that is not exposed to browsers on the public internet.
+    COOKIE_SECURE: z.enum(["true", "false", "1", "0"]).optional(),
     // Dedicated key for TOTP secrets at rest. Deliberately NOT derived from
     // COOKIE_SECRET: rotating a cookie/session secret must not lock every user
     // out of their authenticator.
@@ -340,6 +343,13 @@ export type Env = typeof env;
 export const isProduction = env.NODE_ENV === "production";
 export const isDevelopment = env.NODE_ENV === "development";
 export const isTest = env.NODE_ENV === "test";
+
+/** Secure cookie flag. Explicit COOKIE_SECURE wins; otherwise production is secure. */
+export function isCookieSecure(): boolean {
+  if (env.COOKIE_SECURE === "true" || env.COOKIE_SECURE === "1") return true;
+  if (env.COOKIE_SECURE === "false" || env.COOKIE_SECURE === "0") return false;
+  return env.NODE_ENV === "production";
+}
 
 /** Runtime gate for legacy card-link routes (tests may set env after module load). */
 export function legacyCardLinkEnabled(): boolean {
