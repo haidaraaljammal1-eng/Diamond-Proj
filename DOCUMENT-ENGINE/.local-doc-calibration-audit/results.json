@@ -1,0 +1,4327 @@
+{
+  "cases": [
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "baseline_png",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 5336,
+          "ocr": 3595,
+          "total": 9016
+        }
+      },
+      "ms": 9229
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "scale_85",
+      "meta": {
+        "w": 430,
+        "h": 259,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.85
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 731
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "scale_70",
+      "meta": {
+        "w": 354,
+        "h": 214,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.7
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 481
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "scale_50",
+      "meta": {
+        "w": 253,
+        "h": 152,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.5
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 434
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "scale_35",
+      "meta": {
+        "w": 177,
+        "h": 107,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.35
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 450
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "brightness_-30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.861405,
+        "expiry_conf": 0.9468300077650282,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1949,
+          "ocr": 2412,
+          "total": 4412
+        }
+      },
+      "ms": 4433
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "brightness_-20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8362133333333333,
+        "expiry_conf": 0.9464296831025018,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1847,
+          "ocr": 2557,
+          "total": 4435
+        }
+      },
+      "ms": 4458
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "brightness_-10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8270133333333334,
+        "expiry_conf": 0.9463832841979133,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1839,
+          "ocr": 2260,
+          "total": 4138
+        }
+      },
+      "ms": 4156
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "brightness_+0",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2039,
+          "ocr": 2238,
+          "total": 4311
+        }
+      },
+      "ms": 4330
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "brightness_+10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8163233333333334,
+        "expiry_conf": 0.9465737475289239,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1740,
+          "ocr": 2707,
+          "total": 4479
+        }
+      },
+      "ms": 4495
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "brightness_+20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8087833333333333,
+        "expiry_conf": 0.9465080499649048,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1990,
+          "ocr": 2516,
+          "total": 4553
+        }
+      },
+      "ms": 4571
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "brightness_+30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.7952166666666667,
+        "expiry_conf": 0.9463149971432157,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2235,
+          "ocr": 2393,
+          "total": 4663
+        }
+      },
+      "ms": 4685
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_-30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": -30
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9598966666666667,
+        "expiry_conf": 0.8972313404083252,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2027,
+          "ocr": 1844,
+          "total": 3917
+        }
+      },
+      "ms": 3950
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_-20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": -20
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9669233333333334,
+        "expiry_conf": 0.9247529685497284,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1927,
+          "ocr": 1502,
+          "total": 3469
+        }
+      },
+      "ms": 3490
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_-10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": -10
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9324,
+        "expiry_conf": 0.9116052150726318,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2168,
+          "ocr": 1365,
+          "total": 3583
+        }
+      },
+      "ms": 3603
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_+0",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1990,
+          "ocr": 2460,
+          "total": 4484
+        }
+      },
+      "ms": 4503
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_+10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 10
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.84152,
+        "expiry_conf": 0.9464655054940118,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2531,
+          "ocr": 2834,
+          "total": 5410
+        }
+      },
+      "ms": 5426
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_+20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 20
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.77444,
+        "expiry_conf": 0.9454550213283963,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2252,
+          "ocr": 2481,
+          "total": 4781
+        }
+      },
+      "ms": 4801
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_+30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 30
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.86048,
+        "expiry_conf": 0.8912690162658692,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2057,
+          "ocr": 1737,
+          "total": 3841
+        }
+      },
+      "ms": 3952
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "contrast_+40",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 40
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.77554,
+        "expiry_conf": 0.8998230695724487,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2103,
+          "ocr": 3053,
+          "total": 5195
+        }
+      },
+      "ms": 5236
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "combo_b0_c15",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9137550000000001,
+        "expiry_conf": 0.8954534769058228,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2434,
+          "ocr": 1779,
+          "total": 4264
+        }
+      },
+      "ms": 4288
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "combo_b-10_c15",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8391550000000001,
+        "expiry_conf": 0.9456901417838203,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1981,
+          "ocr": 2733,
+          "total": 4765
+        }
+      },
+      "ms": 4790
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "combo_b10_c15",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.908135,
+        "expiry_conf": 0.8952722072601318,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3128,
+          "ocr": 1546,
+          "total": 4726
+        }
+      },
+      "ms": 4750
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "combo_b-10_c25",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -10,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.81689,
+        "expiry_conf": 0.902080374956131,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1920,
+          "ocr": 1447,
+          "total": 3404
+        }
+      },
+      "ms": 3421
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "combo_b0_c25",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.794065,
+        "expiry_conf": 0.88635094165802,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2401,
+          "ocr": 1258,
+          "total": 3701
+        }
+      },
+      "ms": 3720
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "jpeg_q100",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 100
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8078066666666667,
+        "expiry_conf": 0.9467512898974948,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1964,
+          "ocr": 2686,
+          "total": 4682
+        }
+      },
+      "ms": 4700
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "jpeg_q95",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 95
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8063633333333334,
+        "expiry_conf": 0.9464427895016141,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2010,
+          "ocr": 2495,
+          "total": 4556
+        }
+      },
+      "ms": 4577
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "jpeg_q90",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 90
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9462499088711209,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2156,
+          "ocr": 2920,
+          "total": 5118
+        }
+      },
+      "ms": 5137
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "jpeg_q85",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 85
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.794095,
+        "expiry_conf": 0.9241163015365601,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2192,
+          "ocr": 1440,
+          "total": 3688
+        }
+      },
+      "ms": 3729
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "jpeg_q75",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 75
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8732700000000001,
+        "expiry_conf": 0.9421000811788771,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2201,
+          "ocr": 3374,
+          "total": 5627
+        }
+      },
+      "ms": 5645
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "crop_margin_0",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "margin_frac": 0.0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2115,
+          "ocr": 2856,
+          "total": 5007
+        }
+      },
+      "ms": 5031
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "crop_margin_5",
+      "meta": {
+        "w": 456,
+        "h": 275,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "margin_frac": 0.05
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 1016
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "crop_margin_12",
+      "meta": {
+        "w": 386,
+        "h": 233,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "margin_frac": 0.12
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 527
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_+2",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 2
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8780676901340485,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2041,
+          "ocr": 96,
+          "total": 2319
+        }
+      },
+      "ms": 2349
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_-2",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -2
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8099546560219355,
+        "expiry_conf": 0.8517194092273712,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1841,
+          "ocr": 2248,
+          "total": 4131
+        }
+      },
+      "ms": 4152
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_+4",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 4
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 1030
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_-4",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -4
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 921
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_+6",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 6
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 848
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_-6",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -6
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 772
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_+10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 10
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 788
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.jpg",
+      "transform": "rotate_-10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -10
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 983
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "baseline_png",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8939721286296844,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2726,
+          "ocr": 2376,
+          "total": 5144
+        }
+      },
+      "ms": 5341
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "scale_85",
+      "meta": {
+        "w": 638,
+        "h": 396,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "scale": 0.85
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9544419169425964,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2989,
+          "ocr": 2355,
+          "total": 5383
+        }
+      },
+      "ms": 5407
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "scale_70",
+      "meta": {
+        "w": 525,
+        "h": 326,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "scale": 0.7
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9740955352783203,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2224,
+          "ocr": 2189,
+          "total": 4454
+        }
+      },
+      "ms": 4496
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "scale_50",
+      "meta": {
+        "w": 375,
+        "h": 233,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "scale": 0.5
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 561
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "scale_35",
+      "meta": {
+        "w": 262,
+        "h": 163,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "scale": 0.35
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 509
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "brightness_-30",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": -30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9001733064651489,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2622,
+          "ocr": 2234,
+          "total": 4909
+        }
+      },
+      "ms": 4931
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "brightness_-20",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": -20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8961201965808868,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2912,
+          "ocr": 2331,
+          "total": 5298
+        }
+      },
+      "ms": 5319
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "brightness_-10",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": -10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8962787330150604,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3055,
+          "ocr": 2556,
+          "total": 5705
+        }
+      },
+      "ms": 5730
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "brightness_+0",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8939721286296844,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3524,
+          "ocr": 2008,
+          "total": 5581
+        }
+      },
+      "ms": 5604
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "brightness_+10",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.891743803024292,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3040,
+          "ocr": 2178,
+          "total": 5259
+        }
+      },
+      "ms": 5370
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "brightness_+20",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8803229391574859,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2988,
+          "ocr": 2008,
+          "total": 5048
+        }
+      },
+      "ms": 5248
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "brightness_+30",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8657200485467911,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3633,
+          "ocr": 2722,
+          "total": 6602
+        }
+      },
+      "ms": 6624
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_-30",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": -30
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9419331789016724,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3583,
+          "ocr": 2216,
+          "total": 5842
+        }
+      },
+      "ms": 5895
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_-20",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": -20
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9414055824279786,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3837,
+          "ocr": 2127,
+          "total": 6000
+        }
+      },
+      "ms": 6068
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_-10",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": -10
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9050882160663605,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3628,
+          "ocr": 2120,
+          "total": 5803
+        }
+      },
+      "ms": 5846
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_+0",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8939721286296844,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2764,
+          "ocr": 2115,
+          "total": 4921
+        }
+      },
+      "ms": 4954
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_+10",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 10
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9091708123683929,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3094,
+          "ocr": 2436,
+          "total": 5565
+        }
+      },
+      "ms": 5592
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_+20",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 20
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9354846119880676,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3540,
+          "ocr": 2310,
+          "total": 5903
+        }
+      },
+      "ms": 6033
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_+30",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 30
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9571525752544403,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3003,
+          "ocr": 2461,
+          "total": 5499
+        }
+      },
+      "ms": 5595
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "contrast_+40",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 40
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9696759641170501,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2826,
+          "ocr": 2287,
+          "total": 5154
+        }
+      },
+      "ms": 5177
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "combo_b0_c15",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.910231864452362,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3503,
+          "ocr": 2152,
+          "total": 5704
+        }
+      },
+      "ms": 5745
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "combo_b-10_c15",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": -10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9118283331394196,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3672,
+          "ocr": 2041,
+          "total": 5890
+        }
+      },
+      "ms": 5921
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "combo_b10_c15",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9263452231884003,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3814,
+          "ocr": 2196,
+          "total": 6054
+        }
+      },
+      "ms": 6084
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "combo_b-10_c25",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": -10,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9365497827529907,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3076,
+          "ocr": 162,
+          "total": 3280
+        }
+      },
+      "ms": 3331
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "combo_b0_c25",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "brightness_pct": 0,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9441088199615478,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3128,
+          "ocr": 2217,
+          "total": 5404
+        }
+      },
+      "ms": 5429
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "jpeg_q100",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "jpeg_quality": 100
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8943341434001922,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2864,
+          "ocr": 2018,
+          "total": 4944
+        }
+      },
+      "ms": 4966
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "jpeg_q95",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "jpeg_quality": 95
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.890368527173996,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3000,
+          "ocr": 1901,
+          "total": 4951
+        }
+      },
+      "ms": 4974
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "jpeg_q90",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "jpeg_quality": 90
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8831476092338562,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3615,
+          "ocr": 1900,
+          "total": 5570
+        }
+      },
+      "ms": 5589
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "jpeg_q85",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "jpeg_quality": 85
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8619323611259461,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3484,
+          "ocr": 2334,
+          "total": 5870
+        }
+      },
+      "ms": 5907
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "jpeg_q75",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "jpeg_quality": 75
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.9162484765052795,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2967,
+          "ocr": 2178,
+          "total": 5193
+        }
+      },
+      "ms": 5279
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "crop_margin_0",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "margin_frac": 0.0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8939721286296844,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3484,
+          "ocr": 1771,
+          "total": 5294
+        }
+      },
+      "ms": 5403
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "crop_margin_5",
+      "meta": {
+        "w": 676,
+        "h": 420,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "margin_frac": 0.05
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.89882592856884,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3820,
+          "ocr": 341,
+          "total": 4208
+        }
+      },
+      "ms": 4253
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "crop_margin_12",
+      "meta": {
+        "w": 570,
+        "h": 356,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "margin_frac": 0.12
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 2331
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_+2",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": 2
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 2669
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_-2",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": -2
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 6338
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_+4",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": 4
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 1166
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_-4",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": -4
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 1570
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_+6",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": 6
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 1519
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_-6",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": -6
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 2028
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_+10",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": 10
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 4169
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-ocr-test.png",
+      "transform": "rotate_-10",
+      "meta": {
+        "w": 750,
+        "h": 466,
+        "aspect": 1.609,
+        "laplacian_var": 8303.2,
+        "mean_luma": 194.4,
+        "rotate_deg": -10
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 1428
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "baseline_png",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2068,
+          "ocr": 3010,
+          "total": 5239
+        }
+      },
+      "ms": 5262
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "scale_85",
+      "meta": {
+        "w": 430,
+        "h": 259,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.85
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 946
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "scale_70",
+      "meta": {
+        "w": 354,
+        "h": 214,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.7
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 618
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "scale_50",
+      "meta": {
+        "w": 253,
+        "h": 152,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.5
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 587
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "scale_35",
+      "meta": {
+        "w": 177,
+        "h": 107,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "scale": 0.35
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 647
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "brightness_-30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.861405,
+        "expiry_conf": 0.9468300077650282,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2064,
+          "ocr": 2906,
+          "total": 5020
+        }
+      },
+      "ms": 5039
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "brightness_-20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8362133333333333,
+        "expiry_conf": 0.9464296831025018,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2132,
+          "ocr": 2765,
+          "total": 4932
+        }
+      },
+      "ms": 4955
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "brightness_-10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8270133333333334,
+        "expiry_conf": 0.9463832841979133,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2598,
+          "ocr": 2682,
+          "total": 5486
+        }
+      },
+      "ms": 5506
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "brightness_+0",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 4813,
+          "ocr": 2596,
+          "total": 7636
+        }
+      },
+      "ms": 7661
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "brightness_+10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8163233333333334,
+        "expiry_conf": 0.9465737475289239,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2357,
+          "ocr": 2649,
+          "total": 5140
+        }
+      },
+      "ms": 5157
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "brightness_+20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8087833333333333,
+        "expiry_conf": 0.9465080499649048,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2167,
+          "ocr": 2542,
+          "total": 4890
+        }
+      },
+      "ms": 4934
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "brightness_+30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.7952166666666667,
+        "expiry_conf": 0.9463149971432157,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 4150,
+          "ocr": 3169,
+          "total": 7609
+        }
+      },
+      "ms": 7757
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_-30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": -30
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9598966666666667,
+        "expiry_conf": 0.8972313404083252,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2620,
+          "ocr": 1973,
+          "total": 4640
+        }
+      },
+      "ms": 4661
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_-20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": -20
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9669233333333334,
+        "expiry_conf": 0.9247529685497284,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2666,
+          "ocr": 1436,
+          "total": 4202
+        }
+      },
+      "ms": 4334
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_-10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": -10
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9324,
+        "expiry_conf": 0.9116052150726318,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2303,
+          "ocr": 1831,
+          "total": 4171
+        }
+      },
+      "ms": 4191
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_+0",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2303,
+          "ocr": 2442,
+          "total": 4780
+        }
+      },
+      "ms": 4813
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_+10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 10
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.84152,
+        "expiry_conf": 0.9464655054940118,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 3011,
+          "ocr": 2567,
+          "total": 5801
+        }
+      },
+      "ms": 5826
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_+20",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 20
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.77444,
+        "expiry_conf": 0.9454550213283963,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2183,
+          "ocr": 2951,
+          "total": 5170
+        }
+      },
+      "ms": 5197
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_+30",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 30
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.86048,
+        "expiry_conf": 0.8912690162658692,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2938,
+          "ocr": 1154,
+          "total": 4240
+        }
+      },
+      "ms": 4303
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "contrast_+40",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 40
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.77554,
+        "expiry_conf": 0.8998230695724487,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2312,
+          "ocr": 2981,
+          "total": 5343
+        }
+      },
+      "ms": 5409
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "combo_b0_c15",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.9137550000000001,
+        "expiry_conf": 0.8954534769058228,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2445,
+          "ocr": 1337,
+          "total": 3831
+        }
+      },
+      "ms": 3852
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "combo_b-10_c15",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8391550000000001,
+        "expiry_conf": 0.9456901417838203,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2301,
+          "ocr": 2451,
+          "total": 4796
+        }
+      },
+      "ms": 4828
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "combo_b10_c15",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.908135,
+        "expiry_conf": 0.8952722072601318,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2574,
+          "ocr": 1227,
+          "total": 3835
+        }
+      },
+      "ms": 3863
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "combo_b-10_c25",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": -10,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.81689,
+        "expiry_conf": 0.902080374956131,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2448,
+          "ocr": 1443,
+          "total": 3943
+        }
+      },
+      "ms": 3963
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "combo_b0_c25",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "brightness_pct": 0,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.794065,
+        "expiry_conf": 0.88635094165802,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2796,
+          "ocr": 1263,
+          "total": 4101
+        }
+      },
+      "ms": 4119
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "jpeg_q100",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 100
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8078066666666667,
+        "expiry_conf": 0.9467512898974948,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2169,
+          "ocr": 3173,
+          "total": 5386
+        }
+      },
+      "ms": 5411
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "jpeg_q95",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 95
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8063633333333334,
+        "expiry_conf": 0.9464427895016141,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2160,
+          "ocr": 2430,
+          "total": 4630
+        }
+      },
+      "ms": 4650
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "jpeg_q90",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 90
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9462499088711209,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2046,
+          "ocr": 2791,
+          "total": 4871
+        }
+      },
+      "ms": 4891
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "jpeg_q85",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 85
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.794095,
+        "expiry_conf": 0.9241163015365601,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2742,
+          "ocr": 1642,
+          "total": 4683
+        }
+      },
+      "ms": 4704
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "jpeg_q75",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "jpeg_quality": 75
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8732700000000001,
+        "expiry_conf": 0.9421000811788771,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2520,
+          "ocr": 2653,
+          "total": 5211
+        }
+      },
+      "ms": 5224
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "crop_margin_0",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "margin_frac": 0.0
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8225433333333333,
+        "expiry_conf": 0.9464907646179199,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 2201,
+          "ocr": 2563,
+          "total": 4801
+        }
+      },
+      "ms": 4819
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "crop_margin_5",
+      "meta": {
+        "w": 456,
+        "h": 275,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "margin_frac": 0.05
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 925
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "crop_margin_12",
+      "meta": {
+        "w": 386,
+        "h": 233,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "margin_frac": 0.12
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 473
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_+2",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 2
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "REJECT",
+        "license_field_status": "REJECT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": null,
+        "expiry_conf": 0.8780676901340485,
+        "has_license_value": false,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1616,
+          "ocr": 118,
+          "total": 1778
+        }
+      },
+      "ms": 1795
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_-2",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -2
+      },
+      "http": 200,
+      "summary": {
+        "document_status": "ACCEPT",
+        "license_field_status": "ACCEPT",
+        "expiry_field_status": "ACCEPT",
+        "license_conf": 0.8099546560219355,
+        "expiry_conf": 0.8517194092273712,
+        "has_license_value": true,
+        "has_expiry_value": true,
+        "runtime_ms": {
+          "crop": 1932,
+          "ocr": 1627,
+          "total": 3603
+        }
+      },
+      "ms": 3624
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_+4",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 4
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 982
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_-4",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -4
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 853
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_+6",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 6
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 1091
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_-6",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -6
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 796
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_+10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": 10
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 628
+    },
+    {
+      "engine": "license",
+      "sample": "uae-driving-license-expired-corpus.jpg",
+      "transform": "rotate_-10",
+      "meta": {
+        "w": 506,
+        "h": 305,
+        "aspect": 1.659,
+        "laplacian_var": 3116.1,
+        "mean_luma": 161.4,
+        "rotate_deg": -10
+      },
+      "http": 422,
+      "summary": {
+        "document_status": null,
+        "license_field_status": null,
+        "expiry_field_status": null,
+        "license_conf": null,
+        "expiry_conf": null,
+        "has_license_value": false,
+        "has_expiry_value": false,
+        "runtime_ms": null
+      },
+      "ms": 678
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "baseline_png",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4955
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "scale_85",
+      "meta": {
+        "w": 411,
+        "h": 275,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "scale": 0.85
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 7376
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "scale_70",
+      "meta": {
+        "w": 338,
+        "h": 226,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "scale": 0.7
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 7574
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "scale_50",
+      "meta": {
+        "w": 242,
+        "h": 162,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "scale": 0.5
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5576
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "scale_35",
+      "meta": {
+        "w": 169,
+        "h": 113,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "scale": 0.35
+      },
+      "http": 200,
+      "summary": {
+        "status": "REVIEW",
+        "has_number": false,
+        "error": null
+      },
+      "ms": 77
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "brightness_-30",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": -30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4637
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "brightness_-20",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": -20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4765
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "brightness_-10",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": -10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4649
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "brightness_+0",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5070
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "brightness_+10",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 10,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4661
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "brightness_+20",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 20,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4562
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "brightness_+30",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 30,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4866
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_-30",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": -30
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4605
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_-20",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": -20
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5013
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_-10",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": -10
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 6482
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_+0",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5013
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_+10",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 10
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4581
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_+20",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 20
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4605
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_+30",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 30
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4813
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "contrast_+40",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 40
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4574
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "combo_b0_c15",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4829
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "combo_b-10_c15",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": -10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5059
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "combo_b10_c15",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 10,
+        "contrast_pct": 15
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4980
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "combo_b-10_c25",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": -10,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5097
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "combo_b0_c25",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "brightness_pct": 0,
+        "contrast_pct": 25
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5499
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "jpeg_q100",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "jpeg_quality": 100
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5625
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "jpeg_q95",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "jpeg_quality": 95
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5475
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "jpeg_q90",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "jpeg_quality": 90
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5096
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "jpeg_q85",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "jpeg_quality": 85
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5746
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "jpeg_q75",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "jpeg_quality": 75
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 3017
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "crop_margin_0",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "margin_frac": 0.0
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5705
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "crop_margin_5",
+      "meta": {
+        "w": 435,
+        "h": 291,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "margin_frac": 0.05
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4900
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "crop_margin_12",
+      "meta": {
+        "w": 369,
+        "h": 247,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "margin_frac": 0.12
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 5374
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_+2",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": 2
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4595
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_-2",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": -2
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4896
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_+4",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": 4
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4846
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_-4",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": -4
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 4634
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_+6",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": 6
+      },
+      "http": 200,
+      "summary": {
+        "status": "REVIEW",
+        "has_number": false,
+        "error": null
+      },
+      "ms": 22876
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_-6",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": -6
+      },
+      "http": 200,
+      "summary": {
+        "status": "REVIEW",
+        "has_number": false,
+        "error": null
+      },
+      "ms": 7868
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_+10",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": 10
+      },
+      "http": 200,
+      "summary": {
+        "status": "REVIEW",
+        "has_number": false,
+        "error": null
+      },
+      "ms": 8303
+    },
+    {
+      "engine": "passport",
+      "sample": "spanish_passport_local",
+      "transform": "rotate_-10",
+      "meta": {
+        "w": 483,
+        "h": 323,
+        "aspect": 1.495,
+        "laplacian_var": 2148.5,
+        "mean_luma": 178.7,
+        "rotate_deg": -10
+      },
+      "http": 200,
+      "summary": {
+        "status": "VALID",
+        "has_number": true,
+        "error": null
+      },
+      "ms": 6483
+    }
+  ]
+}

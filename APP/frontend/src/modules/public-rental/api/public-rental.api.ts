@@ -285,6 +285,16 @@ export async function signPublicOfficialContract(
   return response.data;
 }
 
+export async function markPublicRenterReviewEditOpened(
+  token: string,
+): Promise<{ renterDataEditedAt: string }> {
+  const response = await apiRequest<{ renterDataEditedAt: string }>(
+    `${CONTRACTS_PATH}/rental/${token}/renter-review/edit-opened`,
+    { method: "POST", ...publicRentalRequestOptions() },
+  );
+  return response.data;
+}
+
 export async function submitPublicRentalForm(
   token: string,
   payload: PublicRentalFormPayload,

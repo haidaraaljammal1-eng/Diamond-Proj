@@ -893,6 +893,7 @@
     },
     "detail": {
       "title": "Contract details",
+      "renterDataEditedWarning": "The renter edited the information for this contract. Please review the details before vehicle handover.",
       "close": "Close",
       "loading": "Loading contract…",
       "mobile": "Mobile",
@@ -1576,6 +1577,23 @@
       "editableTitle": "Your details",
       "save": "Save details",
       "saving": "Saving…"
+    },
+    "renterReview": {
+      "title": "Review Information",
+      "continueToReview": "Review information",
+      "editInformation": "Edit information",
+      "saveChanges": "Save changes",
+      "confirmAndContinue": "Confirm and continue",
+      "personalInformation": "Personal information",
+      "passportInformation": "Passport information",
+      "licenseInformation": "Driving licence information",
+      "responsibilityNotice": "Please review your information carefully before continuing. The renter is responsible for the accuracy of the information entered or extracted from the documents. The rental office will review and verify these details when the vehicle is handed over.",
+      "sex": "Sex",
+      "passportIssueDate": "Passport issue date",
+      "passportExpiryDate": "Passport expiry date",
+      "issuingCountry": "Issuing country",
+      "licenseHolderName": "Licence holder name",
+      "licenseNationality": "Licence nationality"
     },
     "passport": {
       "title": "Passport",

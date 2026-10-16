@@ -410,14 +410,13 @@ export function PublicRentalScreen({ token }: PublicRentalScreenProps) {
                         />
                       ) : null}
                       <RenterDetailsStep
+                        rentalToken={token}
                         context={context}
                         formPending={rental.formPending}
                         formError={inlineError}
                         readOnly={documentsReadOnly}
                         onSubmitForm={async (values) => {
-                        const ok = await rental.submitForm(
-                          toPublicRentalFormPayload(values, context),
-                        );
+                        const ok = await rental.submitForm(toPublicRentalFormPayload(values));
                         if (!ok) return;
                         await playStageSuccess("documents");
                         goToStage("contract");

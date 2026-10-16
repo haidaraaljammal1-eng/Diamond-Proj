@@ -4,6 +4,32 @@
   gap: 16px;
 }
 
+.renterEditedBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgb(201 130 40 / 38%);
+  background: rgb(232 160 48 / 14%);
+  color: rgba(42, 32, 22, 0.92);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.renterEditedBanner p {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.renterEditedBanner svg {
+  color: rgb(176 110 20);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .summary,
 .section {
   padding: 12px 14px;

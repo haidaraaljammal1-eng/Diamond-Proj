@@ -10,7 +10,7 @@ interface VerifiedDocumentValueProps {
   ltr?: boolean;
 }
 
-/** Read-only verified field — not an editable control. */
+/** Read-only verified field — label (with icon) on the right, value on the left. */
 export function VerifiedDocumentValue({
   label,
   value,
@@ -20,10 +20,10 @@ export function VerifiedDocumentValue({
   return (
     <div className={styles.field} data-testid={testId}>
       <div className={styles.labelRow}>
-        <span className={styles.label}>{label}</span>
         <Icon name="mdi:shield-check-outline" size={14} className={styles.verifiedIcon} aria-hidden />
+        <span className={styles.label}>{label}</span>
       </div>
-      <p className={styles.value} dir={ltr ? "ltr" : undefined}>{value}</p>
+      <p className={styles.value} dir={ltr ? "ltr" : "auto"}>{value}</p>
     </div>
   );
 }

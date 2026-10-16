@@ -1,12 +1,16 @@
+/* Card layout: value on the left, label + icon on the right (RTL-aware row). */
 .field {
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 6px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid rgb(201 161 92 / 18%);
   background: rgb(201 161 92 / 05%);
+  direction: rtl;
   transition:
     border-color var(--pr-duration, 220ms) ease,
     background var(--pr-duration, 220ms) ease;
@@ -14,8 +18,13 @@
 
 .labelRow {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  flex-shrink: 0;
+  max-width: 52%;
+  text-align: end;
 }
 
 .label {
@@ -30,13 +39,36 @@
 .verifiedIcon {
   color: var(--diamond-gold-hi);
   opacity: 0.9;
+  flex-shrink: 0;
 }
 
 .value {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--diamond-champagne);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.35;
   word-break: break-word;
+  text-align: left;
+  unicode-bidi: isolate;
+}
+
+@media (max-width: 640px) {
+  .field {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 8px;
+  }
+
+  .labelRow {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .value {
+    width: 100%;
+    flex-basis: 100%;
+  }
 }

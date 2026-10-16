@@ -151,6 +151,7 @@ export function toPublicRentalContext(
         verification?.status,
         row.drivingLicenseExtractions[0]?.fieldsMeta,
       ),
+      activeDocumentId: verification?.documentId ?? null,
     },
     drivingLicenseExtraction,
     identity: {
@@ -171,6 +172,7 @@ export function toPublicRentalContext(
               }
             : null,
         previewAvailable: Boolean(passport?.attachmentId),
+        activeDocumentId: passport?.documentId ?? null,
       },
       identityReady: identity.identityReady,
     },

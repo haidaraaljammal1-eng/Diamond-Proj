@@ -40,10 +40,11 @@ function baseContext(overrides: Partial<PublicRentalContext> = {}): PublicRental
       expiryDate: "2030-01-01",
       confidence: 1,
       unreadableReason: null,
+      activeDocumentId: null,
     },
     identity: {
       licenseStatus: "LICENSE_VALID",
-      passport: { status: "READY", fields: null, previewAvailable: false },
+      passport: { status: "READY", fields: null, previewAvailable: false, activeDocumentId: null },
       identityReady: true,
     },
     payment: {

@@ -1,0 +1,56 @@
+.root {
+  display: grid;
+  gap: 16px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid rgb(201 161 92 / 14%);
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--diamond-champagne);
+}
+
+.notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgb(201 161 92 / 08%);
+  border: 1px solid rgb(201 161 92 / 18%);
+  color: var(--diamond-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.group {
+  display: grid;
+  gap: 10px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(42, 32, 22, 0.88);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.actions button {
+  flex: 1 1 min(100%, 10.5rem);
+}
+
+.editPane {
+  display: grid;
+  gap: 12px;
+}

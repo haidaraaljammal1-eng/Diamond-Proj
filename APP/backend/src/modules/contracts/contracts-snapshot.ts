@@ -38,7 +38,7 @@ export interface ContractSnapshot {
   termsVersion: string;
 }
 
-type CustomerSnapInput = {
+export type CustomerSnapInput = {
   name: string;
   mobile: string | null;
   email: string | null;
@@ -49,6 +49,29 @@ type CustomerSnapInput = {
   drivingLicenseExpiry: Date | null;
   address: string | null;
 };
+
+/** Customer block already stored on this contract (form or signed snapshot). */
+export function customerSnapInputFromContractSnapshot(snapshot: unknown): CustomerSnapInput | null {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const customer = (snapshot as ContractSnapshot).customer;
+  if (!customer || typeof customer.name !== "string" || !customer.name.trim()) return null;
+  const expiry =
+    typeof customer.drivingLicenseExpiry === "string" && customer.drivingLicenseExpiry
+      ? new Date(customer.drivingLicenseExpiry)
+      : null;
+  return {
+    name: customer.name.trim(),
+    mobile: typeof customer.mobile === "string" ? customer.mobile : null,
+    email: typeof customer.email === "string" ? customer.email : null,
+    nationality: typeof customer.nationality === "string" ? customer.nationality : null,
+    identityNumber: typeof customer.identityNumber === "string" ? customer.identityNumber : null,
+    passportNumber: typeof customer.passportNumber === "string" ? customer.passportNumber : null,
+    drivingLicenseNumber:
+      typeof customer.drivingLicenseNumber === "string" ? customer.drivingLicenseNumber : null,
+    drivingLicenseExpiry: expiry && !Number.isNaN(expiry.getTime()) ? expiry : null,
+    address: typeof customer.address === "string" ? customer.address : null,
+  };
+}
 
 type VehicleSnapInput = {
   vehicleName: string | null;

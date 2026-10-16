@@ -16,6 +16,7 @@ import {
   type FullReconciliationRow,
 } from "src/modules/contracts/contracts-reconciliation";
 import { deriveRenewalCollectionState } from "src/modules/contracts/contracts-renewal-collection";
+import { resolveContractDisplayCustomerName } from "src/modules/contracts/contract-display-customer";
 
 const DETAIL_INCLUDE = {
   company: { select: { id: true, code: true, displayName: true, accentColor: true } },
@@ -104,6 +105,7 @@ export function toListItem(row: {
   company: ContractDetailRow["company"];
   vehicle: ContractDetailRow["vehicle"];
   customer: { name: string } | null;
+  snapshot?: unknown;
   hasSalikGpsSignal?: boolean;
   canCarOut: boolean;
   canReconcile: boolean;
@@ -119,7 +121,7 @@ export function toListItem(row: {
     vehicleName: displayName(row.vehicle),
     plateNumber: row.vehicle.plateNumber,
     customerId: row.customerId,
-    customerName: row.customer?.name ?? null,
+    customerName: resolveContractDisplayCustomerName(row.snapshot, row.customer?.name ?? null),
     priceType: row.priceType,
     rentalDays: row.rentalDays,
     durationValue: row.durationValue,
@@ -261,6 +263,7 @@ export function toDetail(
     snapshot: row.snapshot,
     activatedAt: row.activatedAt,
     closedAt: row.closedAt,
+    renterDataEditedAt: row.renterDataEditedAt ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     vehicle: {
@@ -272,7 +275,9 @@ export function toDetail(
     customer: row.customer
       ? {
           id: row.customer.id,
-          name: row.customer.name,
+          name:
+            resolveContractDisplayCustomerName(row.snapshot, row.customer.name) ??
+            row.customer.name,
           mobile: row.customer.mobile,
           email: row.customer.email,
         }

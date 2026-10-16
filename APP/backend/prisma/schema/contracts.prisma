@@ -218,6 +218,8 @@ model Contract {
 
   activatedAt DateTime?
   closedAt    DateTime?
+  /// Set when the renter opens Review Information edit mode (public rental).
+  renterDataEditedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   revision    Int       @default(0)

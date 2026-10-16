@@ -893,6 +893,7 @@
     },
     "detail": {
       "title": "تفاصيل العقد",
+      "renterDataEditedWarning": "تم تعديل بيانات هذا العقد من قبل المستأجر. يُرجى مراجعة البيانات قبل تسليم السيارة.",
       "close": "إغلاق",
       "loading": "جارٍ تحميل العقد…",
       "mobile": "الجوال",
@@ -1576,6 +1577,23 @@
       "editableTitle": "بياناتك",
       "save": "حفظ البيانات",
       "saving": "جارٍ الحفظ…"
+    },
+    "renterReview": {
+      "title": "مراجعة البيانات",
+      "continueToReview": "مراجعة البيانات",
+      "editInformation": "تعديل البيانات",
+      "saveChanges": "حفظ التعديلات",
+      "confirmAndContinue": "تأكيد البيانات والمتابعة",
+      "personalInformation": "البيانات الشخصية",
+      "passportInformation": "بيانات جواز السفر",
+      "licenseInformation": "بيانات رخصة القيادة",
+      "responsibilityNotice": "يرجى مراجعة بياناتك بعناية قبل المتابعة. يتحمل المستأجر مسؤولية صحة البيانات المدخلة أو المستخرجة من الوثائق، وسيقوم المكتب بمراجعة هذه البيانات والتحقق منها عند تسليم السيارة.",
+      "sex": "الجنس",
+      "passportIssueDate": "تاريخ إصدار الجواز",
+      "passportExpiryDate": "تاريخ انتهاء الجواز",
+      "issuingCountry": "بلد الإصدار",
+      "licenseHolderName": "اسم صاحب الرخصة",
+      "licenseNationality": "جنسية الرخصة"
     },
     "passport": {
       "title": "جواز السفر",

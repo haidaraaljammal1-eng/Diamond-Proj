@@ -33,7 +33,10 @@ import {
 } from "src/modules/contracts/contracts.constants";
 import { allocateContractNumber } from "src/modules/contracts/contracts-number";
 import { assertStatus, assertTransition } from "src/modules/contracts/contracts-status";
-import { buildContractSnapshot } from "src/modules/contracts/contracts-snapshot";
+import {
+  buildContractSnapshot,
+  customerSnapInputFromContractSnapshot,
+} from "src/modules/contracts/contracts-snapshot";
 import {
   completeReturnLinks,
   issueContractLink,
@@ -58,6 +61,7 @@ import {
 } from "src/lib/http/public-frontend-url";
 import { createTarsWorkflowOrchestrator } from "src/modules/integrations/tars/tars-workflow.orchestrator";
 import { tarsError } from "src/modules/integrations/tars/tars.errors";
+import { applyCanonicalPublicFormIdentity } from "src/modules/contracts/canonical-public-form-identity";
 import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
 import {
   calendarDateToStoredUtc,
@@ -1110,6 +1114,29 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  async function markPublicRenterDataEdited(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL");
+      const contract = await tx.contract.findUnique({
+        where: { id: link.contractId },
+        select: { id: true, status: true, renterDataEditedAt: true },
+      });
+      if (!contract) throw contractError.notFound();
+      if (contract.renterDataEditedAt) {
+        return { renterDataEditedAt: contract.renterDataEditedAt };
+      }
+      if (contract.status !== "AWAITING" && contract.status !== "FORM") {
+        throw contractError.invalidTransition(contract.status, "FORM");
+      }
+      const updated = await tx.contract.update({
+        where: { id: contract.id },
+        data: { renterDataEditedAt: new Date() },
+        select: { renterDataEditedAt: true },
+      });
+      return { renterDataEditedAt: updated.renterDataEditedAt! };
+    });
+  }
+
   async function submitPublicForm(
     token: string,
     input: z.infer<typeof PublicFormSchema>,
@@ -1131,6 +1158,9 @@ export function createContractsService(fastify: FastifyInstance) {
         throw contractError.invalidTransition(contract.status, "FORM");
       }
 
+      await acquireAdvisoryLock(tx, CONTRACT_LICENSE_LOCK_NS, contract.id);
+      await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, contract.id);
+
       const verification = await latestLicense(tx, contract.id);
       const partialLicenseSave =
         verification?.status === "UNREADABLE" || verification?.status === "REVIEW_REQUIRED";
@@ -1148,11 +1178,14 @@ export function createContractsService(fastify: FastifyInstance) {
         }
       }
 
-      const parseFormDate = (iso: string | undefined): Date | null => {
-        if (!iso) return null;
-        const parsed = parseCalendarDate(iso);
-        return parsed ? calendarDateToStoredUtc(parsed) : null;
-      };
+      const canonical = await applyCanonicalPublicFormIdentity(
+        tx,
+        contract.id,
+        input,
+        verification,
+        new Date(),
+        env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
+      );
 
       const materialized = {
         name: input.name,
@@ -1160,13 +1193,13 @@ export function createContractsService(fastify: FastifyInstance) {
         email: input.email ? normalizeEmail(input.email) : null,
         nationality: input.nationality,
         identityNumber: input.identityNumber ?? null,
-        passportNumber: input.passportNumber ?? null,
-        drivingLicenseNumber: verification.licenseNumber,
-        drivingLicenseExpiry: verification.expiryDate,
+        passportNumber: canonical.passportNumber,
+        drivingLicenseNumber: canonical.drivingLicenseNumber,
+        drivingLicenseExpiry: canonical.drivingLicenseExpiry,
         address: input.address ?? null,
-        dateOfBirth: parseFormDate(input.dateOfBirth),
-        drivingLicenseIssueDate: parseFormDate(input.drivingLicenseIssueDate),
-        drivingLicensePlaceOfIssue: input.drivingLicensePlaceOfIssue?.trim() || null,
+        dateOfBirth: canonical.dateOfBirth,
+        drivingLicenseIssueDate: canonical.drivingLicenseIssueDate,
+        drivingLicensePlaceOfIssue: canonical.drivingLicensePlaceOfIssue,
       };
 
       const customerId = await resolvePublicFormCustomerId(
@@ -1194,9 +1227,47 @@ export function createContractsService(fastify: FastifyInstance) {
 
       const nextStatus = contract.status === "AWAITING" ? "FORM" : contract.status;
       if (contract.status === "AWAITING") assertTransition("AWAITING", "FORM");
+      const formSnapshot = buildContractSnapshot({
+        contractNumber: contract.contractNumber,
+        customer: {
+          name: materialized.name,
+          mobile: materialized.mobile,
+          email: materialized.email,
+          nationality: materialized.nationality,
+          identityNumber: materialized.identityNumber,
+          passportNumber: materialized.passportNumber,
+          drivingLicenseNumber: materialized.drivingLicenseNumber,
+          drivingLicenseExpiry: materialized.drivingLicenseExpiry,
+          address: materialized.address,
+        },
+        vehicle: {
+          vehicleName: contract.vehicle.vehicleName,
+          plateNumber: contract.vehicle.plateNumber,
+          modelYear: contract.vehicle.modelYear,
+          color: contract.vehicle.color,
+          vin: contract.vehicle.vin,
+          modelName: contract.vehicle.model?.name ?? null,
+        },
+        commercial: {
+          agreedAmount: contract.agreedAmount,
+          priceType: contract.priceType,
+          rentalDays: contract.rentalDays,
+          durationValue: contract.durationValue,
+          durationUnit: contract.durationUnit,
+          startAt: contract.startAt,
+          endAt: contract.endAt,
+          currency: contract.currency,
+        },
+        termsVersion: contract.termsVersion,
+      });
       await tx.contract.update({
         where: { id: contract.id },
-        data: { customerId, status: nextStatus, revision: { increment: 1 } },
+        data: {
+          customerId,
+          status: nextStatus,
+          snapshot: formSnapshot as unknown as Prisma.InputJsonValue,
+          revision: { increment: 1 },
+        },
       });
       if (contract.status === "AWAITING") {
         await emit(tx, "contract.form_completed", contract.id);
@@ -1233,13 +1304,30 @@ export function createContractsService(fastify: FastifyInstance) {
       const verification = await latestLicense(tx, contract.id);
       assertLicenseProgress(verification?.status, verification?.expiryDate);
 
+      const frozenCustomer = customerSnapInputFromContractSnapshot(contract.snapshot);
       const snapshot = buildContractSnapshot({
         contractNumber: contract.contractNumber,
-        customer: {
-          ...contract.customer,
-          drivingLicenseNumber: verification?.licenseNumber ?? contract.customer.drivingLicenseNumber,
-          drivingLicenseExpiry: verification?.expiryDate ?? contract.customer.drivingLicenseExpiry,
-        },
+        customer: frozenCustomer
+          ? {
+              ...frozenCustomer,
+              drivingLicenseNumber:
+                verification?.licenseNumber ?? frozenCustomer.drivingLicenseNumber,
+              drivingLicenseExpiry:
+                verification?.expiryDate ?? frozenCustomer.drivingLicenseExpiry,
+            }
+          : {
+              name: contract.customer.name,
+              mobile: contract.customer.mobile,
+              email: contract.customer.email,
+              nationality: contract.customer.nationality,
+              identityNumber: contract.customer.identityNumber,
+              passportNumber: contract.customer.passportNumber,
+              drivingLicenseNumber:
+                verification?.licenseNumber ?? contract.customer.drivingLicenseNumber,
+              drivingLicenseExpiry:
+                verification?.expiryDate ?? contract.customer.drivingLicenseExpiry,
+              address: contract.customer.address,
+            },
         vehicle: {
           vehicleName: contract.vehicle.vehicleName,
           plateNumber: contract.vehicle.plateNumber,
@@ -3231,6 +3319,7 @@ export function createContractsService(fastify: FastifyInstance) {
     uploadCarOutSignature,
     deleteCarOutPhoto,
     openCarOutSignatureStream,
+    markPublicRenterDataEdited,
     submitPublicForm,
     submitPublicOfficialContractReview,
     acceptPublic,

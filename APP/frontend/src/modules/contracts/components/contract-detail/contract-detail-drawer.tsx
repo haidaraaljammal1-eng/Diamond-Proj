@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Drawer } from "@/shared/components/ui/drawer";
+import { Icon } from "@/shared/components/ui/icon/icon";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import { StripePaymentActions } from "@/modules/payments/components/stripe-payment-actions";
 import { useStripeCheckout } from "@/modules/payments/hooks/use-stripe-checkout";
@@ -125,6 +126,16 @@ export function ContractDetailDrawer({
 
       {detail ? (
         <div className={styles.root} data-testid="contract-detail">
+          {detail.renterDataEditedAt ? (
+            <div
+              className={styles.renterEditedBanner}
+              role="status"
+              data-testid="contract-renter-edited-warning"
+            >
+              <Icon name="mdi:alert-circle-outline" size={20} aria-hidden />
+              <p>{t("detail.renterDataEditedWarning")}</p>
+            </div>
+          ) : null}
           <div className={styles.summary}>
             <div className={styles.summaryHead}>
               <ContractStatusChip status={detail.status} />

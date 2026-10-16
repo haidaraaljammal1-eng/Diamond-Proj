@@ -325,6 +325,7 @@ export interface ContractDetailDto {
   snapshot: unknown;
   activatedAt: string | null;
   closedAt: string | null;
+  renterDataEditedAt: string | null;
   createdAt: string;
   updatedAt: string;
   company: ContractCompanyRefDto;
