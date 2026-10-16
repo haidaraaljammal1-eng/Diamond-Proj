@@ -80,6 +80,7 @@ export interface PublicIdentityStatus {
     status: PublicPassportStatus;
     fields: PublicPassportFields | null;
     previewAvailable: boolean;
+    activeDocumentId: string | null;
   };
   identityReady: boolean;
 }
@@ -204,6 +205,7 @@ export interface PublicRentalContext {
     expiryDate: string | null;
     confidence: number | null;
     unreadableReason: "BAD_FRAME" | "OCR" | null;
+    activeDocumentId: string | null;
   };
   identity: PublicIdentityStatus;
   payment: {
@@ -290,6 +292,20 @@ export interface PublicRentalFormPayload {
   dateOfBirth?: string;
   drivingLicenseIssueDate?: string;
   drivingLicensePlaceOfIssue?: string;
+  licenseDocumentId?: string;
+  passportDocumentId?: string;
+  drivingLicenseNumber?: string;
+  drivingLicenseExpiryDate?: string;
+  licenseHolderNameEn?: string;
+  licenseNationality?: string;
+  licenseDateOfBirth?: string;
+  passportFullName?: string;
+  passportNationality?: string;
+  passportDateOfBirth?: string;
+  passportSex?: string;
+  passportIssueDate?: string;
+  passportExpiryDate?: string;
+  passportIssuingCountry?: string;
 }
 
 export type PublicRentalUiStage =

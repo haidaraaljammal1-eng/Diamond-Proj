@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
 import { Icon } from "@/shared/components/ui/icon/icon";
 import type {
@@ -24,7 +24,9 @@ interface PassportStepProps {
   readOnly: boolean;
   fileHint: string | null;
   onFile: (file: File) => void;
-  simulationAction?: ReactNode;
+  onRealign?: () => void;
+  onEditCurrent?: () => void;
+  hasEditablePassportSource?: boolean;
   /** Compact verified summary (e.g. above renter details). */
   summaryOnly?: boolean;
 }
@@ -40,10 +42,13 @@ export function PassportStep({
   readOnly,
   fileHint,
   onFile,
-  simulationAction,
+  onRealign,
+  onEditCurrent,
+  hasEditablePassportSource = false,
   summaryOnly = false,
 }: PassportStepProps) {
   const t = useTranslations("PublicRental.passport");
+  const tAlign = useTranslations("PublicRental.documentAlignment");
   const kind = passportPanelFromState({
     licenseStatus: context.licenseVerification.status,
     passportStatus: context.identity?.passport.status,
@@ -58,15 +63,22 @@ export function PassportStep({
     formats: t("formats"),
     previewAlt: t("previewAlt"),
   };
+  const hasDocumentPreview = Boolean(previewUrl);
+  const showDocumentActionRow =
+    !readOnly && kind !== "locked" && kind !== "idle" && hasDocumentPreview;
+  const passportCameraLabel =
+    hasDocumentPreview || kind !== "idle"
+      ? tAlign("cameraAnother")
+      : tAlign("cameraPassport");
   const showDropzone =
     !readOnly &&
+    !summaryOnly &&
     kind !== "locked" &&
-    kind !== "ready" &&
+    !hasDocumentPreview &&
     (kind === "idle" ||
       kind === "notRecognized" ||
       kind === "failed" ||
       kind === "unavailable");
-  const showSuccessReplace = !readOnly && kind === "ready";
 
   return (
     <Card data-testid="passport-step" data-summary={summaryOnly || undefined} aria-disabled={kind === "locked"}>
@@ -116,6 +128,17 @@ export function PassportStep({
             <div className={`${panel.panel} ${panel.warn}`} role="alert" data-testid="passport-not-recognized">
               <p className={panel.title}>{t("notRecognizedTitle")}</p>
               <p className={panel.body}>{t("notRecognizedBody")}</p>
+              {onRealign ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  data-testid="passport-realign"
+                  onClick={onRealign}
+                >
+                  {tAlign("realignImage")}
+                </Button>
+              ) : null}
             </div>
           ) : null}
 
@@ -123,6 +146,17 @@ export function PassportStep({
             <div className={`${panel.panel} ${panel.warn}`} role="alert" data-testid="passport-failed">
               <p className={panel.title}>{t("failedTitle")}</p>
               <p className={panel.body}>{t("failedBody")}</p>
+              {onRealign ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  data-testid="passport-realign"
+                  onClick={onRealign}
+                >
+                  {tAlign("realignImage")}
+                </Button>
+              ) : null}
             </div>
           ) : null}
 
@@ -140,7 +174,7 @@ export function PassportStep({
             </p>
           ) : null}
 
-          {showSuccessReplace ? (
+          {showDocumentActionRow ? (
             <LicenseUpload
               testId="passport-capture"
               icon="mdi:passport"
@@ -150,6 +184,13 @@ export function PassportStep({
               pending={busy}
               labels={captureLabels}
               onFile={onFile}
+              onEditCurrent={hasEditablePassportSource ? onEditCurrent : undefined}
+              editCurrentLabel={
+                hasEditablePassportSource ? tAlign("editCurrentImage") : undefined
+              }
+              editCurrentTestId="passport-edit-current"
+              cameraLabel={passportCameraLabel}
+              cameraTestId="passport-camera"
             />
           ) : null}
           {showDropzone ? (
@@ -160,14 +201,13 @@ export function PassportStep({
               pending={busy}
               labels={captureLabels}
               onFile={onFile}
+              cameraLabel={passportCameraLabel}
+              cameraTestId="passport-camera"
             />
           ) : null}
         </>
       )}
 
-      {readOnly ? null : simulationAction ? (
-        <div className={styles.footer}>{simulationAction}</div>
-      ) : null}
     </Card>
   );
 }

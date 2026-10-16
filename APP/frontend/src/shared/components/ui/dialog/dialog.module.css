@@ -49,6 +49,7 @@
   );
 }
 
+.lg { width: min(720px, 100%); max-height: min(92dvh, 900px); }
 .xl { width: min(960px, 100%); }
 .twoXl { width: min(1320px, 100%); max-height: min(94dvh, 1080px); }
 .wide {

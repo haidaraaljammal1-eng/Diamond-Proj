@@ -279,7 +279,7 @@ Staff only. Public token routes have no staff permissions.
 | GET | `/contracts/:id/car-in/photos/:photoId/stream` | read |
 | GET | `/contracts/:id/tars` | read |
 
-List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. List items include `hasSalikGpsSignal` (batched). Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, `roadLiabilitySignals`, `postCloseReceivables`, and `actions` capability flags (`canCarIn` is true on RETOUT with no Car-In yet). No raw tokens.
+List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. List items include `hasSalikGpsSignal` (batched). `customerName` on list/detail prefers the hirer name stored on that contract’s `snapshot` (written at public form submit, frozen again at signing); the shared `Customer` master row is only a fallback when no snapshot name exists. Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, `roadLiabilitySignals`, `postCloseReceivables`, and `actions` capability flags (`canCarIn` is true on RETOUT with no Car-In yet). No raw tokens.
 
 ## Public routes
 

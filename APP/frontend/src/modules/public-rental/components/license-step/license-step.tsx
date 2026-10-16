@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
 import { Icon } from "@/shared/components/ui/icon/icon";
 import type { PublicRentalContext } from "../../types/public-rental.types";
@@ -9,6 +9,7 @@ import { resolveLicenseStatusCardValues } from "../../utils/license-status-card-
 import { licensePanelFromStatus } from "../../utils/license-view";
 import { DocumentVerificationSuccessLayout } from "../document-verification-success-layout/document-verification-success-layout";
 import { LicenseUpload } from "../license-upload/license-upload";
+import { VerifiedDocumentValue } from "../verified-document-value/verified-document-value";
 import { VerificationProcessingStatus } from "../verification-loading-dots/verification-loading-dots";
 import grid from "../../styles/public-rental-field-grid.module.css";
 import styles from "./license-step.module.css";
@@ -50,7 +51,10 @@ interface LicenseStepProps {
   fileHint: string | null;
   clientBadFrame?: boolean;
   onFile: (file: File) => void;
-  simulationAction?: ReactNode;
+  onRealign?: () => void;
+  onEditCurrent?: () => void;
+  /** True after alignment confirm while original source is kept for re-edit (not OCR-gated). */
+  hasEditableLicenseSource?: boolean;
   /** When set, hides framing hints (used after licence is verified). */
   summaryOnly?: boolean;
 }
@@ -63,10 +67,13 @@ export function LicenseStep({
   fileHint,
   clientBadFrame = false,
   onFile,
-  simulationAction,
+  onRealign,
+  onEditCurrent,
+  hasEditableLicenseSource = false,
   summaryOnly = false,
 }: LicenseStepProps) {
   const t = useTranslations("PublicRental.license");
+  const tAlign = useTranslations("PublicRental.documentAlignment");
   const panel = licensePanelFromStatus(
     context.licenseVerification.status,
     pending,
@@ -76,6 +83,14 @@ export function LicenseStep({
   const { licenseNumber, expiryDisplay: expiry, showFacts: showStatusFacts } =
     resolveLicenseStatusCardValues(context);
   const isDev = process.env.NODE_ENV === "development";
+  const showInitialDropzone = !readOnly && !summaryOnly && panel === "idle";
+  const hasDocumentPreview = Boolean(previewUrl);
+  const showDocumentActionRow =
+    !readOnly && panel !== "idle" && hasDocumentPreview;
+  const licenseCameraLabel =
+    hasDocumentPreview || panel !== "idle"
+      ? tAlign("cameraAnother")
+      : tAlign("cameraLicense");
 
   return (
     <Card data-testid="license-step" data-summary={summaryOnly || undefined}>
@@ -103,12 +118,20 @@ export function LicenseStep({
           previewTestId="license-preview-image"
         >
           {showStatusFacts && licenseNumber && expiry ? (
-            <LicenseStatusFacts
-              licenseNumber={licenseNumber}
-              expiry={expiry}
-              labelNumber={t("number")}
-              labelExpiry={t("expiry")}
-            />
+            <div className={grid.gridTwo}>
+              <VerifiedDocumentValue
+                label={t("number")}
+                value={licenseNumber}
+                testId="license-fact-value-number"
+                ltr
+              />
+              <VerifiedDocumentValue
+                label={t("expiry")}
+                value={expiry}
+                testId="license-fact-value-expiry"
+                ltr
+              />
+            </div>
           ) : null}
         </DocumentVerificationSuccessLayout>
       ) : null}
@@ -141,6 +164,17 @@ export function LicenseStep({
         >
           <p className={styles.title}>{t("badFrameTitle")}</p>
           <p className={styles.body}>{t("badFrameBody")}</p>
+          {onRealign ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              data-testid="license-realign"
+              onClick={onRealign}
+            >
+              {tAlign("realignImage")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -148,6 +182,17 @@ export function LicenseStep({
         <div className={`${styles.panel} ${styles.warn}`} data-testid="license-unreadable">
           <p className={styles.title}>{t("unreadableTitle")}</p>
           <p className={styles.body}>{t("unreadableOcrBody")}</p>
+          {onRealign ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              data-testid="license-realign"
+              onClick={onRealign}
+            >
+              {tAlign("realignImage")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -155,6 +200,17 @@ export function LicenseStep({
         <div className={`${styles.panel} ${styles.warn}`} data-testid="license-review">
           <p className={styles.title}>{t("reviewTitle")}</p>
           <p className={styles.body}>{t("reviewBody")}</p>
+          {onRealign ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              data-testid="license-realign"
+              onClick={onRealign}
+            >
+              {tAlign("realignImage")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -175,7 +231,17 @@ export function LicenseStep({
         </p>
       ) : null}
 
-      {readOnly ? null : panel === "valid" ? (
+      {showInitialDropzone ? (
+        <LicenseUpload
+          previewUrl={previewUrl}
+          pending={pending}
+          testId="license-capture"
+          onFile={onFile}
+          cameraLabel={licenseCameraLabel}
+          cameraTestId="license-camera"
+        />
+      ) : null}
+      {showDocumentActionRow ? (
         <LicenseUpload
           previewUrl={previewUrl}
           pending={pending}
@@ -183,16 +249,15 @@ export function LicenseStep({
           showPreview={false}
           variant="replaceAction"
           onFile={onFile}
+          onEditCurrent={hasEditableLicenseSource ? onEditCurrent : undefined}
+          editCurrentLabel={
+            hasEditableLicenseSource ? tAlign("editCurrentImage") : undefined
+          }
+          editCurrentTestId="license-edit-current"
+          cameraLabel={licenseCameraLabel}
+          cameraTestId="license-camera"
         />
-      ) : summaryOnly ? null : (
-        <LicenseUpload
-          previewUrl={previewUrl}
-          pending={pending}
-          testId="license-capture"
-          onFile={onFile}
-        />
-      )}
-      {!readOnly ? simulationAction : null}
+      ) : null}
     </Card>
   );
 }

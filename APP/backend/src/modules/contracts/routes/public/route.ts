@@ -9,6 +9,7 @@ import {
   PublicAcceptSchema,
   PublicContractViewSchema,
   PublicFormSchema,
+  PublicRenterDataEditedMarkerSchema,
   PublicIdentityDraftSchema,
   OfficialContractReviewPatchSchema,
   OfficialContractSignSchema,
@@ -416,6 +417,26 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       });
       return { data: result.view };
     },
+  );
+
+  app.post(
+    "/rental/:token/renter-review/edit-opened",
+    {
+      schema: {
+        summary: "Mark that the renter opened review information edit mode",
+        operationId: "markPublicRenterReviewEditOpened",
+        tags: ["Contracts"],
+        public: true,
+        params: ContractTokenParam,
+        response: {
+          200: dataResponse(PublicRenterDataEditedMarkerSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => ({
+      data: await contracts.markPublicRenterDataEdited(request.params.token),
+    }),
   );
 
   app.post(

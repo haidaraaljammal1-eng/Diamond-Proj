@@ -28,6 +28,7 @@ function baseContext(
       expiryDate: null,
       confidence: null,
       unreadableReason: null,
+      activeDocumentId: null,
       ...overrides,
     },
     customer: null,

@@ -63,7 +63,12 @@ describe("resolveDocumentVerificationSubStage", () => {
           } as PublicRentalContext["licenseVerification"],
           identity: {
             identityReady: false,
-            passport: { status: "REQUIRED", fields: null, previewAvailable: false },
+            passport: {
+              status: "REQUIRED",
+              fields: null,
+              previewAvailable: false,
+              activeDocumentId: null,
+            },
             licenseStatus: "LICENSE_VALID",
           },
         }),
@@ -88,6 +93,7 @@ describe("resolveDocumentVerificationSubStage", () => {
             passport: {
               status: "READY",
               previewAvailable: true,
+              activeDocumentId: null,
               fields: {
                 passportNumber: "P1234567",
                 fullName: "Test",

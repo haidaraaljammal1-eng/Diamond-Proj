@@ -112,7 +112,21 @@ if (!enabled) {
        FROM "_prisma_migrations"
        WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`,
     );
-    assert.equal(migrations.rows[0].count, 57);
+    // 56 sealed + payment obligation + nullable document attachment + renter edit marker.
+    assert.equal(migrations.rows[0].count, 59);
+    const laterMigrations = await probe.query(
+      `SELECT migration_name
+       FROM "_prisma_migrations"
+       WHERE finished_at IS NOT NULL
+         AND rolled_back_at IS NULL
+         AND migration_name = ANY($1::text[])`,
+      [[
+        "20261015190000_confirmed_payment_obligation_unique",
+        "20261016103000_contract_document_nullable_attachment",
+        "20261016120000_contract_renter_data_edited_at",
+      ]],
+    );
+    assert.equal(laterMigrations.rowCount, 3);
     const indexes = await probe.query(
       `SELECT indexname FROM pg_indexes
        WHERE schemaname = 'public'

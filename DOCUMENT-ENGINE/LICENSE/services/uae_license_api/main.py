@@ -34,7 +34,7 @@ logger = logging.getLogger("uae_license_api")
 
 _pipeline: Any = None
 _process_lock = asyncio.Lock()
-KEEP_JOB_ARTIFACTS = os.environ.get("KEEP_JOB_ARTIFACTS", "true").lower() in (
+KEEP_JOB_ARTIFACTS = os.environ.get("KEEP_JOB_ARTIFACTS", "false").lower() in (
     "1",
     "true",
     "yes",

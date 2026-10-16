@@ -11,6 +11,7 @@ import {
   completeIdentitySimulation,
   fillAndSaveRenterDetails,
 } from "./helpers/rental-contract";
+import { confirmDocumentAlignmentDialog } from "./helpers/document-alignment";
 
 test.use({ channel: "chrome" });
 test.describe.configure({ mode: "serial", timeout: 180_000 });
@@ -37,6 +38,7 @@ test.describe("Public rental document verification sub-flow", () => {
       await page.goto(`/ar/rental/${isolated.token}`, { waitUntil: "domcontentloaded" });
       const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
       await fileInput.setInputFiles(drivingLicenseFixturePath());
+      await confirmDocumentAlignmentDialog(page);
       const validVisible = await page
         .getByTestId("license-valid")
         .waitFor({ state: "visible", timeout: 90_000 })

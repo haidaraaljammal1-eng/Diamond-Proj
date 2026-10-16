@@ -150,6 +150,12 @@ export const contractError = {
       "Driving license and passport must be completed first",
       "CONTRACT_IDENTITY_NOT_READY",
     ),
+  identityDocumentStale: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "Document capture changed; refresh and review again",
+      "PUBLIC_RENTAL_IDENTITY_DOCUMENT_STALE",
+    ),
   publicFormIncomplete: () =>
     err(
       ErrorCode.VALIDATION_ERROR,

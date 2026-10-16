@@ -18,21 +18,13 @@ const STATUS_TO_DTO: Record<"PAID" | "ACTIVE" | "RETOUT", CurrentRentalDto["stat
   RETOUT: "retout",
 };
 
-type SnapshotCustomer = { name?: unknown };
+import { customerNameFromContractSnapshot } from "src/modules/contracts/contract-display-customer";
 
 type DuplicateHandler = (info: {
   vehicleId: number;
   keptContractId: string;
   ignoredContractId: string;
 }) => void;
-
-function customerNameFromSnapshot(snapshot: unknown): string | null {
-  if (!snapshot || typeof snapshot !== "object") return null;
-  const customer = (snapshot as { customer?: SnapshotCustomer }).customer;
-  return typeof customer?.name === "string" && customer.name.trim()
-    ? customer.name.trim()
-    : null;
-}
 
 function toCurrentRental(row: {
   id: string;
@@ -52,7 +44,7 @@ function toCurrentRental(row: {
   const endAt =
     row.endAt ?? new Date(row.createdAt.getTime() + row.rentalDays * 86_400_000);
   const customerName =
-    customerNameFromSnapshot(row.snapshot) ?? row.customer?.name ?? "Customer";
+    customerNameFromContractSnapshot(row.snapshot) ?? row.customer?.name ?? "Customer";
   return {
     contractId: row.id,
     contractNumber: row.contractNumber,

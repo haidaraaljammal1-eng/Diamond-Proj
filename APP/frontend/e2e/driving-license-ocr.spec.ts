@@ -15,9 +15,15 @@ import {
   a8LocalFixturePath,
 } from "./helpers/driving-license-ocr";
 import { wideLicenseFrameFixturePath } from "./helpers/license-frame-fixture";
+import {
+  cancelDocumentAlignmentDialog,
+  confirmDocumentAlignmentDialog,
+  expectDocumentAlignmentDialog,
+} from "./helpers/document-alignment";
+import { E2E_TEST_TIMEOUT_MS } from "./helpers/test-timeout";
 
 test.use({ channel: "chrome" });
-test.describe.configure({ mode: "serial", timeout: 180_000 });
+test.describe.configure({ mode: "serial", timeout: E2E_TEST_TIMEOUT_MS });
 
 const expectations = loadDrivingLicenseOcrExpectations();
 const fixtureDir = path.join(process.cwd(), "e2e/fixtures/driving-license");
@@ -41,7 +47,7 @@ test.describe("Driving licence OCR V1.2 two-field (real engine)", () => {
     }
   });
 
-  test("invalid wide frame → client preflight, no OCR upload", async ({ page }) => {
+  test("wide frame → alignment dialog, cancel uploads nothing", async ({ page }) => {
     let licensePosts = 0;
     await page.goto(`/en/rental/${rentalToken}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("license-step")).toBeVisible({ timeout: 60_000 });
@@ -51,12 +57,9 @@ test.describe("Driving licence OCR V1.2 two-field (real engine)", () => {
     });
     const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
     await fileInput.setInputFiles(wideLicenseFrameFixturePath());
-    await expect(page.getByTestId("license-bad-frame")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/not suitable for licence verification/i)).toBeVisible();
+    await expectDocumentAlignmentDialog(page);
+    await cancelDocumentAlignmentDialog(page);
     expect(licensePosts).toBe(0);
-    await expect(
-      page.getByTestId("license-capture").getByRole("button", { name: /upload another license/i }),
-    ).toBeVisible();
   });
 
   test("upload framing hint and failed number read → re-upload required", async ({ page }) => {
@@ -66,6 +69,7 @@ test.describe("Driving licence OCR V1.2 two-field (real engine)", () => {
 
     const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
     await fileInput.setInputFiles(drivingLicenseFixturePath());
+    await confirmDocumentAlignmentDialog(page);
 
     await expect(page.getByTestId("license-unreadable")).toBeVisible({ timeout: 120_000 });
     await expect(page.getByText(/could not read the licence details correctly/i)).toBeVisible();
@@ -81,6 +85,7 @@ test.describe("Driving licence OCR V1.2 two-field (real engine)", () => {
     await page.goto(`/en/rental/${rentalToken}`, { waitUntil: "domcontentloaded" });
     const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
     await fileInput.setInputFiles(expiredPath);
+    await confirmDocumentAlignmentDialog(page);
     await expect(page.getByTestId("license-expired")).toBeVisible({ timeout: 120_000 });
     const expiredPanel = page.getByTestId("license-expired");
     await expect(expiredPanel.getByTestId("license-status-facts")).toBeVisible();
@@ -114,7 +119,8 @@ test.describe("Driving licence OCR V1.3.1 A8 local fixture", () => {
     await expect(page.getByTestId("license-step")).toBeVisible({ timeout: 60_000 });
     const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
     await fileInput.setInputFiles(a8Path);
-    await expect(page.getByTestId("license-expired")).toBeVisible({ timeout: 180_000 });
+    await confirmDocumentAlignmentDialog(page);
+    await expect(page.getByTestId("license-expired")).toBeVisible({ timeout: 240_000 });
     await expect(page.getByTestId("license-unreadable")).toHaveCount(0);
     const expiredPanel = page.getByTestId("license-expired");
     await expect(expiredPanel.getByTestId("license-status-facts")).toBeVisible();
@@ -164,6 +170,7 @@ test.describe("Driving licence OCR V1.2H Marlon local fixture", () => {
     await expect(page.getByTestId("license-step")).toBeVisible({ timeout: 60_000 });
     const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
     await fileInput.setInputFiles(marlonPath);
+    await confirmDocumentAlignmentDialog(page);
     await expect(page.getByTestId("license-expired")).toBeVisible({ timeout: 120_000 });
     const marlonExpiredPanel = page.getByTestId("license-expired");
     await expect(marlonExpiredPanel.getByTestId("license-status-facts")).toBeVisible();
@@ -187,6 +194,7 @@ test.describe("Driving licence OCR V1.2H Marlon local fixture", () => {
 
     const fileInput = page.locator('[data-testid="license-capture"] input[type="file"]').first();
     await fileInput.setInputFiles(marlonPath);
+    await confirmDocumentAlignmentDialog(page);
     await expect(page.getByTestId("license-valid")).toBeVisible({ timeout: 120_000 });
     const validPanel = page.getByTestId("license-valid");
     await expect(validPanel.getByTestId("license-status-facts")).toBeVisible();

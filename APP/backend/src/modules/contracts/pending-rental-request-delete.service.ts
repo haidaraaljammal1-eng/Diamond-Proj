@@ -105,7 +105,9 @@ async function deletePendingRentalRequestInTx(
     where: { contractId },
     select: { attachmentId: true },
   });
-  for (const doc of docs) attachmentIds.add(doc.attachmentId);
+  for (const doc of docs) {
+    if (doc.attachmentId) attachmentIds.add(doc.attachmentId);
+  }
   const signatures = await tx.officialContractSignature.findMany({
     where: { contractId },
     select: { attachmentId: true },

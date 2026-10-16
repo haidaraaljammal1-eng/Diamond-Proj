@@ -4,6 +4,11 @@ import { randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { setDrivingLicenseDocumentAnalysisForTests } from "src/modules/contracts/ocr/driving-license-ocr.adapter";
+import {
+  getFakeUaeDrivingLicenseExtractCallCount,
+  resetFakeUaeDrivingLicenseExtractCallCount,
+} from "../helpers/fake-uae-driving-license-api";
+import { SYNTHETIC_PASSPORT_NUMBER } from "../helpers/fake-passport-number-api";
 import { createFakeUaeDrivingLicenseApi } from "../helpers/fake-uae-driving-license-api";
 import { createFakePassportNumberApi } from "../helpers/fake-passport-number-api";
 import { companyId as testCompanyId } from "tests/helpers/operating-company";
@@ -128,7 +133,7 @@ if (!RUN) {
       await app.close();
     });
 
-    test("form submit persists confirmed metadata; extraction unchanged", async () => {
+    test("form submit canonicalizes reviewed identity onto active extraction rows", async () => {
       const { token, contractId } = await rentalWithLicense();
       const extractionBefore = await prisma.drivingLicenseExtraction.findFirst({
         where: { contractId },
@@ -136,6 +141,12 @@ if (!RUN) {
       assert.ok(extractionBefore);
       assert.equal(extractionBefore!.placeOfIssue, null);
       assert.equal(extractionBefore!.holderNameEn, null);
+
+      const rentalCtx = await app.inject({ method: "GET", url: `/contracts/rental/${token}` });
+      const licenseDocId = rentalCtx.json().data.licenseVerification.activeDocumentId as string;
+      const passportDocId = rentalCtx.json().data.identity.passport.activeDocumentId as string;
+      const licenseNumber = rentalCtx.json().data.licenseVerification.licenseNumber as string;
+      const passportNumber = rentalCtx.json().data.identity.passport.fields.passportNumber as string;
 
       const form = await app.inject({
         method: "POST",
@@ -148,6 +159,11 @@ if (!RUN) {
           dateOfBirth: "1990-05-03",
           drivingLicenseIssueDate: "2020-01-01",
           drivingLicensePlaceOfIssue: "ABU DHABI",
+          licenseDocumentId: licenseDocId,
+          passportDocumentId: passportDocId,
+          drivingLicenseNumber: licenseNumber,
+          passportNumber,
+          licenseHolderNameEn: "OCR NAME",
         },
       });
       assert.equal(form.statusCode, 200, form.body);
@@ -164,12 +180,102 @@ if (!RUN) {
       const extractionAfter = await prisma.drivingLicenseExtraction.findUnique({
         where: { id: extractionBefore!.id },
       });
-      assert.equal(extractionAfter!.placeOfIssue, null);
-      assert.equal(extractionAfter!.holderNameEn, null);
+      assert.equal(extractionAfter!.placeOfIssue, "ABU DHABI");
+      assert.equal(extractionAfter!.holderNameEn, "OCR NAME");
 
       const ctx = await app.inject({ method: "GET", url: `/contracts/rental/${token}` });
       assert.equal(ctx.json().data.customer.drivingLicensePlaceOfIssue, "ABU DHABI");
-      assert.equal(ctx.json().data.drivingLicenseExtraction.fields.placeOfIssue.value, null);
+      assert.equal(ctx.json().data.drivingLicenseExtraction.fields.placeOfIssue.value, "ABU DHABI");
+    });
+
+    test("corrected licence and passport numbers replace active OCR rows without OCR rerun", async () => {
+      resetFakeUaeDrivingLicenseExtractCallCount();
+      const ocrCallsBefore = getFakeUaeDrivingLicenseExtractCallCount();
+      const { token, contractId } = await rentalWithLicense();
+
+      const rentalCtx = await app.inject({ method: "GET", url: `/contracts/rental/${token}` });
+      const licenseDocId = rentalCtx.json().data.licenseVerification.activeDocumentId as string;
+      const passportDocId = rentalCtx.json().data.identity.passport.activeDocumentId as string;
+      assert.equal(rentalCtx.json().data.licenseVerification.licenseNumber, "90527");
+      assert.equal(rentalCtx.json().data.identity.passport.fields.passportNumber, SYNTHETIC_PASSPORT_NUMBER);
+
+      const verificationBefore = await prisma.drivingLicenseVerification.findFirst({
+        where: { contractId },
+      });
+      const extractionBefore = await prisma.drivingLicenseExtraction.findFirst({
+        where: { contractId },
+      });
+      const passportBefore = await prisma.passportExtraction.findFirst({
+        where: { documentId: passportDocId },
+      });
+      assert.ok(verificationBefore && extractionBefore && passportBefore);
+
+      const form = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${token}/form`,
+        payload: {
+          name: "CANONICAL RENTER",
+          mobile: "+971501112233",
+          nationality: "INDIA",
+          identityNumber: "7841990123456789",
+          licenseDocumentId: licenseDocId,
+          passportDocumentId: passportDocId,
+          drivingLicenseNumber: "905274",
+          passportNumber: "TEST123457",
+        },
+      });
+      assert.equal(form.statusCode, 200, form.body);
+      assert.equal(getFakeUaeDrivingLicenseExtractCallCount(), ocrCallsBefore);
+
+      const verificationAfter = await prisma.drivingLicenseVerification.findUnique({
+        where: { id: verificationBefore.id },
+      });
+      const extractionAfter = await prisma.drivingLicenseExtraction.findUnique({
+        where: { id: extractionBefore.id },
+      });
+      const passportAfter = await prisma.passportExtraction.findUnique({
+        where: { id: passportBefore.id },
+      });
+      assert.equal(verificationAfter!.licenseNumber, "905274");
+      assert.equal(extractionAfter!.licenseNumber, "905274");
+      assert.equal(passportAfter!.passportNumber, "TEST123457");
+      assert.equal(verificationAfter!.status, verificationBefore.status);
+      assert.equal(extractionAfter!.status, extractionBefore.status);
+      assert.equal(passportAfter!.status, passportBefore.status);
+      assert.equal(verificationAfter!.confidence, verificationBefore.confidence);
+      assert.equal(passportAfter!.provider, passportBefore.provider);
+
+      const customer = await prisma.customer.findFirst({
+        where: { contracts: { some: { id: contractId } } },
+      });
+      assert.equal(customer!.drivingLicenseNumber, "905274");
+      assert.equal(customer!.passportNumber, "TEST123457");
+
+      const ctx = await app.inject({ method: "GET", url: `/contracts/rental/${token}` });
+      assert.equal(ctx.json().data.customer.drivingLicenseNumber, "905274");
+      assert.equal(ctx.json().data.customer.passportNumber, "TEST123457");
+    });
+
+    test("rejects canonical submit when active document id is stale", async () => {
+      const { token } = await rentalWithLicense();
+      const rentalCtx = await app.inject({ method: "GET", url: `/contracts/rental/${token}` });
+      const passportDocId = rentalCtx.json().data.identity.passport.activeDocumentId as string;
+
+      const form = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${token}/form`,
+        payload: {
+          name: "STALE DOC",
+          mobile: "+971501112233",
+          nationality: "INDIA",
+          licenseDocumentId: "00000000-0000-4000-8000-000000000099",
+          passportDocumentId: passportDocId,
+          drivingLicenseNumber: "905274",
+          passportNumber: SYNTHETIC_PASSPORT_NUMBER,
+        },
+      });
+      assert.equal(form.statusCode, 409);
+      assert.equal(form.json().error.code, "PUBLIC_RENTAL_IDENTITY_DOCUMENT_STALE");
     });
   });
 }

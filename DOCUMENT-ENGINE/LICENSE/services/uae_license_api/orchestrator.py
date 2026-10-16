@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -37,6 +38,14 @@ class EngineProcessingError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def release_job_workspace(job_dir: Path, keep_artifacts: bool) -> None:
+    """Remove per-request job dir when retention is disabled (never touches shared caches)."""
+    if keep_artifacts:
+        return
+    if job_dir.is_dir():
+        shutil.rmtree(job_dir, ignore_errors=True)
 
 
 def _crop_python() -> Path:
@@ -188,7 +197,7 @@ def process_driver_license(
     image_path: Path,
     pipeline: Any,
     job_id: Optional[str] = None,
-    keep_artifacts: bool = True,
+    keep_artifacts: bool = False,
 ) -> dict[str, Any]:
     job_id = job_id or str(uuid.uuid4())
     job_dir = JOBS_ROOT / job_id
@@ -197,6 +206,23 @@ def process_driver_license(
     input_dir.mkdir(parents=True, exist_ok=True)
     crop_dir.mkdir(parents=True, exist_ok=True)
 
+    try:
+        return _process_driver_license_inner(
+            image_path, pipeline, job_id, job_dir, input_dir, crop_dir, keep_artifacts
+        )
+    finally:
+        release_job_workspace(job_dir, keep_artifacts)
+
+
+def _process_driver_license_inner(
+    image_path: Path,
+    pipeline: Any,
+    job_id: str,
+    job_dir: Path,
+    input_dir: Path,
+    crop_dir: Path,
+    keep_artifacts: bool,
+) -> dict[str, Any]:
     dest_input = input_dir / f"original{image_path.suffix.lower()}"
     if not dest_input.exists():
         dest_input.write_bytes(image_path.read_bytes())
@@ -281,9 +307,5 @@ def process_driver_license(
 
     if keep_artifacts:
         (job_dir / "result.json").write_text(json.dumps(body, indent=2), encoding="utf-8")
-    elif crop_dir.exists():
-        import shutil
-
-        shutil.rmtree(crop_dir, ignore_errors=True)
 
     return body

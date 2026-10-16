@@ -218,6 +218,8 @@ model Contract {
 
   activatedAt DateTime?
   closedAt    DateTime?
+  /// Set when the renter opens Review Information edit mode (public rental).
+  renterDataEditedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   revision    Int       @default(0)
@@ -492,8 +494,9 @@ model ContractDocument {
   contractId   String
   contract     Contract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
   type         ContractDocumentType
-  attachmentId String
-  attachment   Attachment           @relation("ContractDocumentAttachment", fields: [attachmentId], references: [id], onDelete: Restrict)
+  /// Null only on superseded history after image bytes were purged; active rows always have an attachment.
+  attachmentId String?
+  attachment   Attachment?          @relation("ContractDocumentAttachment", fields: [attachmentId], references: [id], onDelete: Restrict)
   supersededAt DateTime?
   createdAt    DateTime             @default(now())
 

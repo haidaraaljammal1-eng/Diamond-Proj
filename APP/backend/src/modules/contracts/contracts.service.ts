@@ -33,7 +33,10 @@ import {
 } from "src/modules/contracts/contracts.constants";
 import { allocateContractNumber } from "src/modules/contracts/contracts-number";
 import { assertStatus, assertTransition } from "src/modules/contracts/contracts-status";
-import { buildContractSnapshot } from "src/modules/contracts/contracts-snapshot";
+import {
+  buildContractSnapshot,
+  customerSnapInputFromContractSnapshot,
+} from "src/modules/contracts/contracts-snapshot";
 import {
   completeReturnLinks,
   issueContractLink,
@@ -60,6 +63,7 @@ import {
 } from "src/lib/http/public-frontend-url";
 import { createTarsWorkflowOrchestrator } from "src/modules/integrations/tars/tars-workflow.orchestrator";
 import { tarsError } from "src/modules/integrations/tars/tars.errors";
+import { applyCanonicalPublicFormIdentity } from "src/modules/contracts/canonical-public-form-identity";
 import { evaluateDrivingLicenseOcr } from "src/modules/contracts/driving-license-policy";
 import {
   calendarDateToStoredUtc,
@@ -103,6 +107,7 @@ import {
 import { createPaymentProvider, devPaymentSimulationEnabled, requiresCardSetupBeforeSigning } from "src/modules/contracts/payment/payment-provider.factory";
 import { createContractPaymentService } from "src/modules/contracts/payment/contract-payment.service";
 import { createFilesService } from "src/modules/files/files.service";
+import { detachSupersededContractDocumentImages } from "src/modules/contracts/contract-document-image-retention";
 import type { MultipartFile } from "@fastify/multipart";
 import type {
   CarInSchema,
@@ -1120,6 +1125,29 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  async function markPublicRenterDataEdited(token: string) {
+    return withTransaction(prisma, async (tx) => {
+      const link = await resolveContractLink(tx, token, "RENTAL");
+      const contract = await tx.contract.findUnique({
+        where: { id: link.contractId },
+        select: { id: true, status: true, renterDataEditedAt: true },
+      });
+      if (!contract) throw contractError.notFound();
+      if (contract.renterDataEditedAt) {
+        return { renterDataEditedAt: contract.renterDataEditedAt };
+      }
+      if (contract.status !== "AWAITING" && contract.status !== "FORM") {
+        throw contractError.invalidTransition(contract.status, "FORM");
+      }
+      const updated = await tx.contract.update({
+        where: { id: contract.id },
+        data: { renterDataEditedAt: new Date() },
+        select: { renterDataEditedAt: true },
+      });
+      return { renterDataEditedAt: updated.renterDataEditedAt! };
+    });
+  }
+
   async function submitPublicForm(
     token: string,
     input: z.infer<typeof PublicFormSchema>,
@@ -1141,6 +1169,9 @@ export function createContractsService(fastify: FastifyInstance) {
         throw contractError.invalidTransition(contract.status, "FORM");
       }
 
+      await acquireAdvisoryLock(tx, CONTRACT_LICENSE_LOCK_NS, contract.id);
+      await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, contract.id);
+
       const verification = await latestLicense(tx, contract.id);
       const partialLicenseSave =
         verification?.status === "UNREADABLE" || verification?.status === "REVIEW_REQUIRED";
@@ -1158,11 +1189,14 @@ export function createContractsService(fastify: FastifyInstance) {
         }
       }
 
-      const parseFormDate = (iso: string | undefined): Date | null => {
-        if (!iso) return null;
-        const parsed = parseCalendarDate(iso);
-        return parsed ? calendarDateToStoredUtc(parsed) : null;
-      };
+      const canonical = await applyCanonicalPublicFormIdentity(
+        tx,
+        contract.id,
+        input,
+        verification,
+        new Date(),
+        env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
+      );
 
       const materialized = {
         name: input.name,
@@ -1170,13 +1204,13 @@ export function createContractsService(fastify: FastifyInstance) {
         email: input.email ? normalizeEmail(input.email) : null,
         nationality: input.nationality,
         identityNumber: input.identityNumber ?? null,
-        passportNumber: input.passportNumber ?? null,
-        drivingLicenseNumber: verification.licenseNumber,
-        drivingLicenseExpiry: verification.expiryDate,
+        passportNumber: canonical.passportNumber,
+        drivingLicenseNumber: canonical.drivingLicenseNumber,
+        drivingLicenseExpiry: canonical.drivingLicenseExpiry,
         address: input.address ?? null,
-        dateOfBirth: parseFormDate(input.dateOfBirth),
-        drivingLicenseIssueDate: parseFormDate(input.drivingLicenseIssueDate),
-        drivingLicensePlaceOfIssue: input.drivingLicensePlaceOfIssue?.trim() || null,
+        dateOfBirth: canonical.dateOfBirth,
+        drivingLicenseIssueDate: canonical.drivingLicenseIssueDate,
+        drivingLicensePlaceOfIssue: canonical.drivingLicensePlaceOfIssue,
       };
 
       const customerId = await resolvePublicFormCustomerId(
@@ -1189,7 +1223,7 @@ export function createContractsService(fastify: FastifyInstance) {
       const activeLicense = await tx.contractDocument.findFirst({
         where: { contractId: contract.id, type: "DRIVING_LICENSE", supersededAt: null },
       });
-      if (activeLicense) {
+      if (activeLicense?.attachmentId) {
         await tx.customerDocument.createMany({
           data: [
             {
@@ -1204,9 +1238,47 @@ export function createContractsService(fastify: FastifyInstance) {
 
       const nextStatus = contract.status === "AWAITING" ? "FORM" : contract.status;
       if (contract.status === "AWAITING") assertTransition("AWAITING", "FORM");
+      const formSnapshot = buildContractSnapshot({
+        contractNumber: contract.contractNumber,
+        customer: {
+          name: materialized.name,
+          mobile: materialized.mobile,
+          email: materialized.email,
+          nationality: materialized.nationality,
+          identityNumber: materialized.identityNumber,
+          passportNumber: materialized.passportNumber,
+          drivingLicenseNumber: materialized.drivingLicenseNumber,
+          drivingLicenseExpiry: materialized.drivingLicenseExpiry,
+          address: materialized.address,
+        },
+        vehicle: {
+          vehicleName: contract.vehicle.vehicleName,
+          plateNumber: contract.vehicle.plateNumber,
+          modelYear: contract.vehicle.modelYear,
+          color: contract.vehicle.color,
+          vin: contract.vehicle.vin,
+          modelName: contract.vehicle.model?.name ?? null,
+        },
+        commercial: {
+          agreedAmount: contract.agreedAmount,
+          priceType: contract.priceType,
+          rentalDays: contract.rentalDays,
+          durationValue: contract.durationValue,
+          durationUnit: contract.durationUnit,
+          startAt: contract.startAt,
+          endAt: contract.endAt,
+          currency: contract.currency,
+        },
+        termsVersion: contract.termsVersion,
+      });
       await tx.contract.update({
         where: { id: contract.id },
-        data: { customerId, status: nextStatus, revision: { increment: 1 } },
+        data: {
+          customerId,
+          status: nextStatus,
+          snapshot: formSnapshot as unknown as Prisma.InputJsonValue,
+          revision: { increment: 1 },
+        },
       });
       if (contract.status === "AWAITING") {
         await emit(tx, "contract.form_completed", contract.id);
@@ -1243,13 +1315,30 @@ export function createContractsService(fastify: FastifyInstance) {
       const verification = await latestLicense(tx, contract.id);
       assertLicenseProgress(verification?.status, verification?.expiryDate);
 
+      const frozenCustomer = customerSnapInputFromContractSnapshot(contract.snapshot);
       const snapshot = buildContractSnapshot({
         contractNumber: contract.contractNumber,
-        customer: {
-          ...contract.customer,
-          drivingLicenseNumber: verification?.licenseNumber ?? contract.customer.drivingLicenseNumber,
-          drivingLicenseExpiry: verification?.expiryDate ?? contract.customer.drivingLicenseExpiry,
-        },
+        customer: frozenCustomer
+          ? {
+              ...frozenCustomer,
+              drivingLicenseNumber:
+                verification?.licenseNumber ?? frozenCustomer.drivingLicenseNumber,
+              drivingLicenseExpiry:
+                verification?.expiryDate ?? frozenCustomer.drivingLicenseExpiry,
+            }
+          : {
+              name: contract.customer.name,
+              mobile: contract.customer.mobile,
+              email: contract.customer.email,
+              nationality: contract.customer.nationality,
+              identityNumber: contract.customer.identityNumber,
+              passportNumber: contract.customer.passportNumber,
+              drivingLicenseNumber:
+                verification?.licenseNumber ?? contract.customer.drivingLicenseNumber,
+              drivingLicenseExpiry:
+                verification?.expiryDate ?? contract.customer.drivingLicenseExpiry,
+              address: contract.customer.address,
+            },
         vehicle: {
           vehicleName: contract.vehicle.vehicleName,
           plateNumber: contract.vehicle.plateNumber,
@@ -2199,94 +2288,117 @@ export function createContractsService(fastify: FastifyInstance) {
     const attachment = await files.save(file, null, {
       allowedMime: DRIVING_LICENSE_UPLOAD_MIME,
     });
-    const bytes = await readFile(
-      resolveStoragePath(env.FILE_STORAGE_DIR, (await prisma.attachment.findUniqueOrThrow({
-        where: { id: attachment.id },
-      })).storageKey),
-    );
-
-    const ocr = await analyzeDrivingLicenseDocument({
-      bytes,
-      mimeType: attachment.mimeType,
-      filename: attachment.originalName ?? undefined,
-    });
-    if (env.NODE_ENV !== "production") {
-      const safeMeta = probeLicenseUploadSafeMeta(bytes, attachment.mimeType);
-      fastify.log.info(
-        { contractId: preview.contractId, licenseUpload: safeMeta },
-        "driving_license_upload_meta",
+    let orphanAttachmentId: string | null = attachment.id;
+    try {
+      const bytes = await readFile(
+        resolveStoragePath(env.FILE_STORAGE_DIR, (await prisma.attachment.findUniqueOrThrow({
+          where: { id: attachment.id },
+        })).storageKey),
       );
-    }
-    const policyNow = options?.policyNow ?? new Date();
-    const evaluated = evaluateDrivingLicenseOcr(
-      ocr,
-      policyNow,
-      env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
-    );
 
-    return withTransaction(prisma, async (tx) => {
-      const link = await resolveContractLink(tx, token, "RENTAL");
-      await acquireAdvisoryLock(tx, CONTRACT_LICENSE_LOCK_NS, link.contractId);
-      const contract = await tx.contract.findUnique({ where: { id: link.contractId } });
-      if (!contract) throw contractError.notFound();
-      if (contract.status !== "AWAITING" && contract.status !== "FORM") {
-        throw contractError.invalidTransition(contract.status, contract.status);
+      const ocr = await analyzeDrivingLicenseDocument({
+        bytes,
+        mimeType: attachment.mimeType,
+        filename: attachment.originalName ?? undefined,
+      });
+      if (env.NODE_ENV !== "production") {
+        const safeMeta = probeLicenseUploadSafeMeta(bytes, attachment.mimeType);
+        fastify.log.info(
+          { contractId: preview.contractId, licenseUpload: safeMeta },
+          "driving_license_upload_meta",
+        );
       }
+      const policyNow = options?.policyNow ?? new Date();
+      const evaluated = evaluateDrivingLicenseOcr(
+        ocr,
+        policyNow,
+        env.BUSINESS_TIMEZONE_OFFSET_MINUTES,
+      );
 
-      await tx.contractDocument.updateMany({
-        where: { contractId: contract.id, type: "DRIVING_LICENSE", supersededAt: null },
-        data: { supersededAt: new Date() },
-      });
-      const document = await tx.contractDocument.create({
-        data: {
-          contractId: contract.id,
-          type: "DRIVING_LICENSE",
-          attachmentId: attachment.id,
-        },
-      });
-      const extraction = ocr.ok
-        ? await createDrivingLicenseExtractionForUpload(tx, {
+      const { rental, detachedAttachmentIds } = await withTransaction(prisma, async (tx) => {
+        const link = await resolveContractLink(tx, token, "RENTAL");
+        await acquireAdvisoryLock(tx, CONTRACT_LICENSE_LOCK_NS, link.contractId);
+        const contract = await tx.contract.findUnique({ where: { id: link.contractId } });
+        if (!contract) throw contractError.notFound();
+        if (contract.status !== "AWAITING" && contract.status !== "FORM") {
+          throw contractError.invalidTransition(contract.status, contract.status);
+        }
+
+        await tx.contractDocument.updateMany({
+          where: { contractId: contract.id, type: "DRIVING_LICENSE", supersededAt: null },
+          data: { supersededAt: new Date() },
+        });
+        const document = await tx.contractDocument.create({
+          data: {
             contractId: contract.id,
-            documentId: document.id,
+            type: "DRIVING_LICENSE",
             attachmentId: attachment.id,
-            ocr,
-          })
-        : evaluated.uploadFailureCode
-          ? await createFailedDrivingLicenseExtractionForUpload(tx, {
+          },
+        });
+        const extraction = ocr.ok
+          ? await createDrivingLicenseExtractionForUpload(tx, {
               contractId: contract.id,
               documentId: document.id,
               attachmentId: attachment.id,
-              provider: evaluated.provider,
-              providerVersion: evaluated.providerVersion,
-              failureCode: evaluated.uploadFailureCode,
+              ocr,
             })
-          : null;
-      const verification = await tx.drivingLicenseVerification.create({
-        data: {
-          contractId: contract.id,
+          : evaluated.uploadFailureCode
+            ? await createFailedDrivingLicenseExtractionForUpload(tx, {
+                contractId: contract.id,
+                documentId: document.id,
+                attachmentId: attachment.id,
+                provider: evaluated.provider,
+                providerVersion: evaluated.providerVersion,
+                failureCode: evaluated.uploadFailureCode,
+              })
+            : null;
+        const verification = await tx.drivingLicenseVerification.create({
+          data: {
+            contractId: contract.id,
+            documentId: document.id,
+            attachmentId: attachment.id,
+            status: evaluated.status,
+            licenseNumber: evaluated.licenseNumber,
+            expiryDate: evaluated.expiryDate,
+            confidence: evaluated.confidence,
+            provider: evaluated.provider,
+            providerVersion: evaluated.providerVersion,
+            verifiedAt: new Date(),
+            extractionId: extraction?.id ?? null,
+          },
+        });
+        await emit(tx, "contract.license_uploaded", contract.id, {
           documentId: document.id,
-          attachmentId: attachment.id,
-          status: evaluated.status,
-          licenseNumber: evaluated.licenseNumber,
-          expiryDate: evaluated.expiryDate,
-          confidence: evaluated.confidence,
-          provider: evaluated.provider,
-          providerVersion: evaluated.providerVersion,
-          verifiedAt: new Date(),
-          extractionId: extraction?.id ?? null,
-        },
+          dedupe: document.id,
+        });
+        await emit(tx, "contract.license_verified", contract.id, {
+          verificationId: verification.id,
+          status: verification.status,
+          dedupe: verification.id,
+        });
+        const detachedAttachmentIds = await detachSupersededContractDocumentImages(tx, {
+          contractId: contract.id,
+          type: "DRIVING_LICENSE",
+        });
+        return {
+          rental: await loadPublicRental(tx, contract.id, "en"),
+          detachedAttachmentIds,
+        };
       });
-      await emit(tx, "contract.license_uploaded", contract.id, {
-        documentId: document.id,
-        dedupe: document.id,
-      });
-      await emit(tx, "contract.license_verified", contract.id, {
-        verificationId: verification.id,
-        status: verification.status,
-        dedupe: verification.id,
-      });
-      return loadPublicRental(tx, contract.id, "en");
-    });
+      orphanAttachmentId = null;
+      await files.removeDetachedBatch(detachedAttachmentIds);
+      return rental;
+    } catch (error) {
+      if (orphanAttachmentId) {
+        await files.removeIfUnreferenced(orphanAttachmentId).catch((cleanupError) => {
+          fastify.log.warn(
+            { err: cleanupError, attachmentId: orphanAttachmentId },
+            "driving_license_orphan_attachment_cleanup_failed",
+          );
+        });
+      }
+      throw error;
+    }
   }
 
   /** DEV-only OCR substitution on a real rental link and persisted contract. */
@@ -2338,7 +2450,14 @@ export function createContractsService(fastify: FastifyInstance) {
         },
       });
       await emit(tx, "contract.license_simulated", contract.id, { documentId: document.id, dedupe: document.id });
-      return loadPublicRental(tx, contract.id);
+      const detachedAttachmentIds = await detachSupersededContractDocumentImages(tx, {
+        contractId: contract.id,
+        type: "DRIVING_LICENSE",
+      });
+      return { rental: await loadPublicRental(tx, contract.id), detachedAttachmentIds };
+    }).then(async ({ rental, detachedAttachmentIds }) => {
+      await files.removeDetachedBatch(detachedAttachmentIds);
+      return rental;
     });
   }
 
@@ -2382,75 +2501,100 @@ export function createContractsService(fastify: FastifyInstance) {
     await assertPassportAllowed(prisma, preview.contractId);
 
     const attachment = await files.save(file, null, { allowedMime: PASSPORT_UPLOAD_MIME });
-    const stored = await prisma.attachment.findUniqueOrThrow({ where: { id: attachment.id } });
-    const bytes = await readFile(resolveStoragePath(env.FILE_STORAGE_DIR, stored.storageKey));
-
-    const attempt = await withTransaction(prisma, async (tx) => {
-      const link = await resolveContractLink(tx, token, "RENTAL");
-      await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, link.contractId);
-      const contract = await assertPassportAllowed(tx, link.contractId);
-
-      await tx.contractDocument.updateMany({
-        where: { contractId: contract.id, type: "PASSPORT", supersededAt: null },
-        data: { supersededAt: new Date() },
-      });
-      const document = await tx.contractDocument.create({
-        data: { contractId: contract.id, type: "PASSPORT", attachmentId: attachment.id },
-      });
-      const extraction = await tx.passportExtraction.create({
-        data: {
-          contractId: contract.id,
-          documentId: document.id,
-          attachmentId: attachment.id,
-          status: "PROCESSING",
-        },
-      });
-      await emit(tx, "contract.passport_uploaded", contract.id, {
-        documentId: document.id,
-        dedupe: document.id,
-      });
-      return { contractId: contract.id, extractionId: extraction.id };
-    });
-
-    let engineOutcome;
+    let orphanAttachmentId: string | null = attachment.id;
+    let documentLinked = false;
     try {
-      engineOutcome = await extractPassportNumberFromImage({
-        bytes,
-        mimeType: attachment.mimeType,
-        filename: attachment.originalName,
-      });
-    } catch {
-      engineOutcome = {
-        kind: "error" as const,
-        code: "INVALID_RESPONSE" as const,
-        provider: "passport-number-engine",
-        providerVersion: null,
-      };
-    }
-    const evaluated = evaluatePassportNumberEngine(engineOutcome);
+      const stored = await prisma.attachment.findUniqueOrThrow({ where: { id: attachment.id } });
+      const bytes = await readFile(resolveStoragePath(env.FILE_STORAGE_DIR, stored.storageKey));
 
-    return withTransaction(prisma, async (tx) => {
-      await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, attempt.contractId);
-      const current = await tx.passportExtraction.findUnique({
-        where: { id: attempt.extractionId },
-        include: { document: { select: { supersededAt: true } } },
-      });
-      const stillActive =
-        current && current.status === "PROCESSING" && current.document.supersededAt === null;
-      if (stillActive) {
-        const { status, ...fields } = evaluated;
-        await tx.passportExtraction.update({
-          where: { id: current.id },
-          data: { ...fields, status, completedAt: new Date() },
+      const attempt = await withTransaction(prisma, async (tx) => {
+        const link = await resolveContractLink(tx, token, "RENTAL");
+        await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, link.contractId);
+        const contract = await assertPassportAllowed(tx, link.contractId);
+
+        await tx.contractDocument.updateMany({
+          where: { contractId: contract.id, type: "PASSPORT", supersededAt: null },
+          data: { supersededAt: new Date() },
         });
-        await emit(tx, "contract.passport_processed", attempt.contractId, {
-          extractionId: current.id,
-          status,
-          dedupe: current.id,
+        const document = await tx.contractDocument.create({
+          data: { contractId: contract.id, type: "PASSPORT", attachmentId: attachment.id },
+        });
+        const extraction = await tx.passportExtraction.create({
+          data: {
+            contractId: contract.id,
+            documentId: document.id,
+            attachmentId: attachment.id,
+            status: "PROCESSING",
+          },
+        });
+        await emit(tx, "contract.passport_uploaded", contract.id, {
+          documentId: document.id,
+          dedupe: document.id,
+        });
+        return { contractId: contract.id, extractionId: extraction.id };
+      });
+      documentLinked = true;
+      orphanAttachmentId = null;
+
+      let engineOutcome;
+      try {
+        engineOutcome = await extractPassportNumberFromImage({
+          bytes,
+          mimeType: attachment.mimeType,
+          filename: attachment.originalName,
+        });
+      } catch {
+        engineOutcome = {
+          kind: "error" as const,
+          code: "INVALID_RESPONSE" as const,
+          provider: "passport-number-engine",
+          providerVersion: null,
+        };
+      }
+      const evaluated = evaluatePassportNumberEngine(engineOutcome);
+
+      const { rental, detachedAttachmentIds } = await withTransaction(prisma, async (tx) => {
+        await acquireAdvisoryLock(tx, CONTRACT_PASSPORT_LOCK_NS, attempt.contractId);
+        const current = await tx.passportExtraction.findUnique({
+          where: { id: attempt.extractionId },
+          include: { document: { select: { supersededAt: true } } },
+        });
+        const stillActive =
+          current && current.status === "PROCESSING" && current.document.supersededAt === null;
+        if (stillActive) {
+          const { status, ...fields } = evaluated;
+          await tx.passportExtraction.update({
+            where: { id: current.id },
+            data: { ...fields, status, completedAt: new Date() },
+          });
+          await emit(tx, "contract.passport_processed", attempt.contractId, {
+            extractionId: current.id,
+            status,
+            dedupe: current.id,
+          });
+        }
+        const detachedAttachmentIds = await detachSupersededContractDocumentImages(tx, {
+          contractId: attempt.contractId,
+          type: "PASSPORT",
+        });
+        return {
+          rental: await loadPublicRental(tx, attempt.contractId),
+          detachedAttachmentIds,
+        };
+      });
+      await files.removeDetachedBatch(detachedAttachmentIds);
+      return rental;
+    } catch (error) {
+      if (orphanAttachmentId && !documentLinked) {
+        await files.removeIfUnreferenced(orphanAttachmentId).catch((cleanupError) => {
+          fastify.log.warn(
+            { err: cleanupError, attachmentId: orphanAttachmentId },
+            "passport_orphan_attachment_cleanup_failed",
+          );
         });
       }
-      return loadPublicRental(tx, attempt.contractId);
-    });
+      throw error;
+    }
   }
 
   /** DEV-only passport OCR substitution on the same persisted contract. */
@@ -2683,7 +2827,7 @@ export function createContractsService(fastify: FastifyInstance) {
       include: { document: { include: { attachment: true } } },
     });
     const attachment = extraction?.document?.attachment;
-    if (!attachment) throw AppError.notFound("Passport preview not found");
+    if (!attachment?.storageKey) throw AppError.notFound("Passport preview not found");
     return {
       mimeType: attachment.mimeType,
       stream: createReadStream(resolveStoragePath(env.FILE_STORAGE_DIR, attachment.storageKey)),
@@ -3233,6 +3377,7 @@ export function createContractsService(fastify: FastifyInstance) {
     uploadCarOutSignature,
     deleteCarOutPhoto,
     openCarOutSignatureStream,
+    markPublicRenterDataEdited,
     submitPublicForm,
     submitPublicOfficialContractReview,
     acceptPublic,

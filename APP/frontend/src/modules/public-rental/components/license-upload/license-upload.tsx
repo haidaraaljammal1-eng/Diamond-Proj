@@ -5,6 +5,10 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
 import { Icon } from "@/shared/components/ui/icon/icon";
 import { LICENSE_ACCEPT } from "../../utils/license-file";
+import {
+  documentCameraInputAttributes,
+  readCameraCaptureFile,
+} from "../../utils/document-alignment-source";
 import styles from "./license-upload.module.css";
 
 export interface DocumentCaptureLabels {
@@ -27,6 +31,11 @@ interface LicenseUploadProps {
   /** After verification: replace button only, directly under document preview. */
   variant?: "dropzone" | "replaceAction";
   onFile: (file: File) => void;
+  onEditCurrent?: () => void;
+  editCurrentLabel?: string;
+  editCurrentTestId?: string;
+  cameraLabel: string;
+  cameraTestId?: string;
 }
 
 export function LicenseUpload({
@@ -39,6 +48,11 @@ export function LicenseUpload({
   showPreview = true,
   variant = "dropzone",
   onFile,
+  onEditCurrent,
+  editCurrentLabel,
+  editCurrentTestId,
+  cameraLabel,
+  cameraTestId,
 }: LicenseUploadProps) {
   const t = useTranslations("PublicRental.license");
   const copy = labels ?? {
@@ -47,15 +61,28 @@ export function LicenseUpload({
     formats: t("formats"),
     previewAlt: t("previewAlt"),
   };
-  const inputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const cameraAttrs = documentCameraInputAttributes();
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const deliverFile = (file: File) => {
+    onFile(file);
+  };
+
+  const handleUploadChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) onFile(file);
+    if (file) deliverFile(file);
+  };
+
+  const handleCameraChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = readCameraCaptureFile(event.target.files);
+    event.target.value = "";
+    if (file) deliverFile(file);
   };
 
   const replaceOnly = variant === "replaceAction";
+  const hasExistingDocument = Boolean(previewUrl) || replaceOnly;
 
   return (
     <div
@@ -75,6 +102,18 @@ export function LicenseUpload({
       ) : null}
       {replaceOnly ? null : <p className={styles.hint}>{copy.formats}</p>}
       <div className={styles.actions}>
+        {replaceOnly && onEditCurrent && editCurrentLabel ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            disabled={disabled || pending}
+            data-testid={editCurrentTestId}
+            onClick={onEditCurrent}
+          >
+            {editCurrentLabel}
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="primary"
@@ -82,20 +121,42 @@ export function LicenseUpload({
           loading={pending}
           disabled={disabled || pending}
           data-testid={testId ? `${testId}-replace` : undefined}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => uploadInputRef.current?.click()}
         >
-          {previewUrl || replaceOnly ? copy.replace : copy.upload}
+          {hasExistingDocument ? copy.replace : copy.upload}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          disabled={disabled || pending}
+          data-testid={cameraTestId ?? (testId ? `${testId}-camera` : undefined)}
+          onClick={() => cameraInputRef.current?.click()}
+        >
+          <Icon name="mdi:camera-outline" size={18} aria-hidden />
+          {cameraLabel}
         </Button>
       </div>
       <input
-        ref={inputRef}
+        ref={uploadInputRef}
         className={styles.hiddenInput}
         type="file"
         accept={LICENSE_ACCEPT}
-        capture="environment"
         disabled={disabled || pending}
-        onChange={handleChange}
-        aria-label={copy.upload}
+        onChange={handleUploadChange}
+        aria-label={hasExistingDocument ? copy.replace : copy.upload}
+        data-testid={testId ? `${testId}-upload-input` : undefined}
+      />
+      <input
+        ref={cameraInputRef}
+        className={styles.hiddenInput}
+        type="file"
+        accept={cameraAttrs.accept}
+        capture={cameraAttrs.capture}
+        disabled={disabled || pending}
+        onChange={handleCameraChange}
+        aria-label={cameraLabel}
+        data-testid={testId ? `${testId}-camera-input` : undefined}
       />
     </div>
   );

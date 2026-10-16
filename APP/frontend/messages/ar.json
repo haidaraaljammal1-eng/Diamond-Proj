@@ -937,6 +937,7 @@
     },
     "detail": {
       "title": "تفاصيل العقد",
+      "renterDataEditedWarning": "تم تعديل بيانات هذا العقد من قبل المستأجر. يُرجى مراجعة البيانات قبل تسليم السيارة.",
       "close": "إغلاق",
       "loading": "جارٍ تحميل العقد…",
       "mobile": "الجوال",
@@ -1485,7 +1486,6 @@
     }
   },
   "PublicRental": {
-    "simulation": { "validLicense": "محاكاة نجاح التحقق من الرخصة", "passportOcr": "محاكاة نجاح قراءة جواز السفر" },
     "brandAlt": "Diamond Elite Rent Car",
     "tagline": "Rent Car · Dubai",
     "fallbackOffice": "Diamond Rent Car",
@@ -1543,7 +1543,6 @@
       "signFailed": "تعذر توقيع العقد. يرجى المحاولة مرة أخرى.",
       "missingSignatures": "يرجى التوقيع: {slots}.",
       "missingFieldsIntro": "لا يمكن المتابعة لأن المعلومات التالية غير مكتملة:",
-      "fillTestData": "تعبئة بيانات تجريبية",
       "errors": {
         "incompleteCustomerData": "يرجى إكمال حقول العقد المطلوبة (مثل رقم الهاتف والعنوان) قبل التوقيع."
       },
@@ -1579,8 +1578,8 @@
     },
     "license": {
       "title": "التحقق من رخصة القيادة",
-      "intro": "يرجى رفع صورة واضحة لرخصة القيادة للمتابعة.",
-      "uploadFrameHint": "ارفع صورة الرخصة فقط بدون حواف خارجية أو خلفية كبيرة. يجب أن تظهر الرخصة كاملة، مستقيمة وواضحة.",
+      "intro": "يرجى رفع صورة واضحة للوجه الأمامي لرخصة القيادة للمتابعة.",
+      "uploadFrameHint": "ارفع صورة الوجه الأمامي للرخصة فقط — بدون حواف خارجية أو خلفية كبيرة. يجب أن تظهر الرخصة كاملة، مستقيمة وواضحة.",
       "uploadFrameHintSecondary": "لا ترفع لقطة شاشة تحتوي على مساحات حول الرخصة.",
       "badFrameTitle": "الصورة غير مناسبة للتحقق من الرخصة",
       "badFrameBody": "تأكد من رفع صورة الرخصة كاملة فقط، بدون مساحات خارجية كبيرة أو لقطة شاشة، ثم حاول مرة أخرى.",
@@ -1606,6 +1605,35 @@
       "ocrDevNote": "OCR provider not configured",
       "invalidFile": "يرجى اختيار صورة JPEG أو PNG."
     },
+    "documentAlignment": {
+      "licenseTitle": "ضبط صورة الرخصة",
+      "passportTitle": "ضبط صورة جواز السفر",
+      "licenseSubtitle": "حرّك وكبّر الصورة حتى تظهر الرخصة كاملة داخل الإطار.",
+      "passportSubtitle": "حرّك وكبّر الصورة حتى تظهر صفحة البيانات كاملة، بما فيها منطقة MRZ (سطري الرموز أسفل صورة الجواز).",
+      "confirmUpload": "تأكيد واعتماد الصورة",
+      "cancel": "إلغاء",
+      "reset": "إعادة ضبط",
+      "rotateLeft": "تدوير لليسار",
+      "rotateRight": "تدوير لليمين",
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "zoomSlider": "التكبير",
+      "zoomLabel": "تقريب",
+      "brightnessLabel": "السطوع {percent}%",
+      "brightnessDecrease": "تقليل السطوع",
+      "brightnessIncrease": "زيادة السطوع",
+      "brightnessSlider": "السطوع {percent}%",
+      "contrastLabel": "التباين {percent}%",
+      "contrastDecrease": "تقليل التباين",
+      "contrastIncrease": "زيادة التباين",
+      "contrastSlider": "التباين {percent}%",
+      "realignImage": "إعادة ضبط الصورة",
+      "editCurrentImage": "تعديل على الصورة الحالية",
+      "chooseAnother": "اختيار صورة أخرى",
+      "cameraLicense": "التقاط صورة للرخصة",
+      "cameraPassport": "التقاط صورة للجواز",
+      "cameraAnother": "التقاط صورة جديدة"
+    },
     "documentProgress": {
       "label": "خطوات التحقق من المستندات",
       "license": "رخصة القيادة",
@@ -1619,6 +1647,23 @@
       "editableTitle": "بياناتك",
       "save": "حفظ البيانات",
       "saving": "جارٍ الحفظ…"
+    },
+    "renterReview": {
+      "title": "مراجعة البيانات",
+      "continueToReview": "مراجعة البيانات",
+      "editInformation": "تعديل البيانات",
+      "saveChanges": "حفظ التعديلات",
+      "confirmAndContinue": "تأكيد البيانات والمتابعة",
+      "personalInformation": "البيانات الشخصية",
+      "passportInformation": "بيانات جواز السفر",
+      "licenseInformation": "بيانات رخصة القيادة",
+      "responsibilityNotice": "يرجى مراجعة بياناتك بعناية قبل المتابعة. يتحمل المستأجر مسؤولية صحة البيانات المدخلة أو المستخرجة من الوثائق، وسيقوم المكتب بمراجعة هذه البيانات والتحقق منها عند تسليم السيارة.",
+      "sex": "الجنس",
+      "passportIssueDate": "تاريخ إصدار الجواز",
+      "passportExpiryDate": "تاريخ انتهاء الجواز",
+      "issuingCountry": "بلد الإصدار",
+      "licenseHolderName": "اسم صاحب الرخصة",
+      "licenseNationality": "جنسية الرخصة"
     },
     "passport": {
       "title": "جواز السفر",

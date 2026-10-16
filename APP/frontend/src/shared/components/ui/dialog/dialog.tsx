@@ -20,7 +20,7 @@ export interface DialogProps {
    * tighter padding, caller owns the hero/header inside children.
    */
   presentation?: "default" | "flush";
-  size?: "default" | "xl" | "2xl" | "wide";
+  size?: "default" | "lg" | "xl" | "2xl" | "wide";
   children: ReactNode;
 }
 
@@ -121,6 +121,7 @@ export function Dialog({
         className={[
           styles.dialog,
           presentation === "flush" ? styles.flush : "",
+          size === "lg" ? styles.lg : "",
           size === "xl" ? styles.xl : "",
           size === "2xl" ? styles.twoXl : "",
           size === "wide" ? styles.wide : "",

@@ -487,6 +487,24 @@ export const PublicFormSchema = z.object({
   dateOfBirth: PublicFormIsoDateSchema.optional(),
   drivingLicenseIssueDate: PublicFormIsoDateSchema.optional(),
   drivingLicensePlaceOfIssue: z.string().trim().max(120).optional(),
+  licenseDocumentId: z.string().uuid().optional(),
+  passportDocumentId: z.string().uuid().optional(),
+  drivingLicenseNumber: z.string().trim().min(1).max(50).optional(),
+  drivingLicenseExpiryDate: PublicFormIsoDateSchema.optional(),
+  licenseHolderNameEn: z.string().trim().max(200).optional(),
+  licenseNationality: z.string().trim().max(80).optional(),
+  licenseDateOfBirth: PublicFormIsoDateSchema.optional(),
+  passportFullName: z.string().trim().max(200).optional(),
+  passportNationality: z.string().trim().max(80).optional(),
+  passportDateOfBirth: PublicFormIsoDateSchema.optional(),
+  passportSex: z.string().trim().max(20).optional(),
+  passportIssueDate: PublicFormIsoDateSchema.optional(),
+  passportExpiryDate: PublicFormIsoDateSchema.optional(),
+  passportIssuingCountry: z.string().trim().max(80).optional(),
+});
+
+export const PublicRenterDataEditedMarkerSchema = z.object({
+  renterDataEditedAt: z.date(),
 });
 
 export const PublicAcceptSchema = z.object({
@@ -641,6 +659,10 @@ export const ContractDetailSchema = z.object({
   snapshot: z.unknown().nullable(),
   activatedAt: z.date().nullable(),
   closedAt: z.date().nullable(),
+  renterDataEditedAt: z.preprocess(
+    (value) => (value === undefined ? null : value),
+    z.date().nullable(),
+  ),
   createdAt: z.date(),
   updatedAt: z.date(),
   vehicle: z.object({
@@ -853,6 +875,7 @@ export const PublicLicenseVerificationSchema = z.object({
   expiryDate: z.string().nullable(),
   confidence: z.number().nullable(),
   unreadableReason: PublicLicenseUnreadableReasonSchema,
+  activeDocumentId: z.string().uuid().nullable(),
 });
 
 /** Normalized passport fields only — never a raw OCR payload. */
@@ -874,6 +897,7 @@ export const PublicIdentityStatusSchema = z.object({
     fields: PublicPassportFieldsSchema.nullable(),
     /** Active passport capture exists; preview via token-scoped GET (no attachment id exposed). */
     previewAvailable: z.boolean(),
+    activeDocumentId: z.string().uuid().nullable(),
   }),
   identityReady: z.boolean(),
 });

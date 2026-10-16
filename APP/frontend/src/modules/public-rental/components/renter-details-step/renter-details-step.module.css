@@ -1,3 +1,22 @@
+.groupLabel {
+  grid-column: 1 / -1;
+  margin: 12px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(42, 32, 22, 0.88);
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.editPane {
+  display: grid;
+  gap: 8px;
+}
+
 .intro {
   margin: 0 0 16px;
   color: var(--diamond-muted);
@@ -62,6 +81,26 @@
   margin-top: 14px;
   color: var(--diamond-danger);
   font-size: 13px;
+}
+
+.enterReviewRow {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.enterReviewRow button {
+  flex: 1 1 min(100%, 14rem);
+}
+
+.confirmRow {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.confirmRow button {
+  flex: 1 1 min(100%, 14rem);
 }
 
 @media (max-width: 640px) {
