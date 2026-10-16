@@ -1,22 +1,26 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { parseWhapiWebhook } from "src/modules/whatsapp/whapi.webhook-parse";
 import { isWhapiMediaId, readWhapiInboundMedia } from "src/modules/whatsapp/whapi.media-fields";
 import { WhapiWhatsAppProvider } from "src/modules/whatsapp/providers/whapi.provider";
-import { prepareWhatsAppVoice } from "src/modules/whatsapp/whapi.voice";
+import { prepareWhatsAppVoice, resolveFfmpegExecutable } from "src/modules/whatsapp/whapi.voice";
 import {
   WHATSAPP_MEDIA_RETENTION_MS,
   allocateMediaKey,
   buildMediaStoreRecord,
   markMediaStoreExpired,
   mediaStoreExpired,
+  readMediaStore,
   readStoredMedia,
   resolveStoredMediaPath,
+  storedMediaExists,
   writeStoredMedia,
 } from "src/modules/whatsapp/whatsapp.media-store";
+import { cleanupExpiredWhatsAppMedia } from "src/modules/whatsapp/whatsapp.media-retention";
 import { archiveWhatsAppMediaBytes } from "src/modules/whatsapp/whatsapp.media-archive";
 
 const PNG = Buffer.from(
@@ -148,6 +152,52 @@ describe("shared media store", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("deletes only an expired shared file and leaves the message record", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "diamond-wa-clean-"));
+    const messageId = "22222222-2222-4222-8222-222222222222";
+    try {
+      const written = await writeStoredMedia(root, PNG);
+      const ingested = new Date("2026-10-01T00:00:00.000Z");
+      let payload: unknown = {
+        mediaStore: buildMediaStoreRecord({
+          key: written.key,
+          sha256: written.sha256,
+          bytes: PNG.length,
+          ingestedAt: ingested,
+          voice: false,
+        }),
+        captionKept: "gate photo",
+      };
+      let updates = 0;
+      const prisma = {
+        $queryRaw: async () => [{ id: messageId, payload }],
+        whatsAppMessage: {
+          update: async ({ data }: { data: { displayPayload: unknown } }) => {
+            updates += 1;
+            payload = data.displayPayload;
+            return { id: messageId };
+          },
+        },
+      };
+      const early = await cleanupExpiredWhatsAppMedia(prisma as never, ingested, root);
+      assert.equal(early.expired, 0);
+      assert.equal(updates, 0);
+      assert.equal(await storedMediaExists(root, written.key), true);
+      const expiredAt = new Date(ingested.getTime() + WHATSAPP_MEDIA_RETENTION_MS);
+      const result = await cleanupExpiredWhatsAppMedia(prisma as never, expiredAt, root);
+      assert.equal(result.expired, 1);
+      assert.equal(await storedMediaExists(root, written.key), false);
+      const cleared = readMediaStore(payload);
+      assert.equal(cleared?.expired, true);
+      assert.equal(cleared?.key, "");
+      assert.equal((payload as { captionKept: string }).captionKept, "gate photo");
+      const again = await cleanupExpiredWhatsAppMedia(prisma as never, expiredAt, root);
+      assert.equal(again.expired, 0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("Whapi voice and download", () => {
@@ -191,5 +241,41 @@ describe("Whapi voice and download", () => {
     if (downloaded.ok) assert.equal(downloaded.value.body.equals(PNG), true);
     const rejected = await provider.downloadMedia("token", "https://evil.example/file");
     assert.equal(rejected.ok, false);
+  });
+
+  it("converts WebM and MP4 to OGG with ffmpeg and removes the temp files", async (t) => {
+    const binary = resolveFfmpegExecutable();
+    const probe = spawnSync(binary, ["-hide_banner", "-version"], { windowsHide: true });
+    if (probe.status !== 0) {
+      t.skip("ffmpeg is not installed");
+      return;
+    }
+    async function synthesize(format: "webm" | "mp4", codec: "libopus" | "aac"): Promise<Buffer> {
+      const dir = await mkdtemp(path.join(tmpdir(), "diamond-wa-src-"));
+      const output = path.join(dir, `tone.${format}`);
+      try {
+        const rendered = spawnSync(
+          binary,
+          ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.3", "-c:a", codec, output],
+          { windowsHide: true },
+        );
+        assert.equal(rendered.status, 0);
+        const { readFile } = await import("node:fs/promises");
+        return await readFile(output);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    }
+    const before = (await readdir(tmpdir())).filter((name) => name.startsWith("diamond-wa-voice-"));
+    const webm = await synthesize("webm", "libopus");
+    const mp4 = await synthesize("mp4", "aac");
+    const fromWebm = await prepareWhatsAppVoice(webm, "audio/webm");
+    const fromMp4 = await prepareWhatsAppVoice(mp4, "audio/mp4");
+    assert.equal(fromWebm.mimeType, "audio/ogg");
+    assert.equal(fromMp4.mimeType, "audio/ogg");
+    assert.equal(fromWebm.bytes.subarray(0, 4).toString(), "OggS");
+    assert.equal(fromMp4.bytes.subarray(0, 4).toString(), "OggS");
+    const after = (await readdir(tmpdir())).filter((name) => name.startsWith("diamond-wa-voice-"));
+    assert.deepEqual(after, before);
   });
 });
