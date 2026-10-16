@@ -54,6 +54,34 @@ function asBool(value: unknown): boolean {
   return false;
 }
 
+function isDiamondWhapiHook(hook: unknown, webhookUrl: string): boolean {
+  const record = asRecord(hook);
+  if (!record) return false;
+  const url = asString(record.url) ?? "";
+  return url === webhookUrl || url.includes("/whatsapp/webhooks/whapi/");
+}
+
+function whapiHookAlreadyMatches(
+  hook: unknown,
+  desired: { url: string; mode: string; headers: Record<string, string>; events: { type: string; method: string }[] },
+): boolean {
+  const record = asRecord(hook);
+  if (!record) return false;
+  if ((asString(record.url) ?? "") !== desired.url) return false;
+  if ((asString(record.mode) ?? "") !== desired.mode) return false;
+  const headers = asRecord(record.headers) ?? {};
+  const headerName = whapiWebhookSecretHeaderName();
+  const presented =
+    asString(headers[headerName]) ?? asString(headers[headerName.toLowerCase()]) ?? "";
+  if (presented !== desired.headers[headerName]) return false;
+  const events = Array.isArray(record.events) ? record.events : null;
+  if (!events || events.length !== desired.events.length) return false;
+  return desired.events.every((wanted, index) => {
+    const event = asRecord(events[index]);
+    return asString(event?.type) === wanted.type && asString(event?.method) === wanted.method;
+  });
+}
+
 function parseSendAccepted(json: unknown): WhatsAppSendTextAccepted | null {
   const body = asRecord(json);
   if (!body) return null;
@@ -259,11 +287,13 @@ export class WhapiWhatsAppProvider implements WhatsAppProvider {
   async applyWebhookSettings(
     accessToken: string,
     settings: WhatsAppInstanceSettings,
+    options?: { webhookSecret?: string; force?: boolean },
   ): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>> {
-    if (!env.WHAPI_CONFIGURE_WEBHOOK) {
+    const force = options?.force === true;
+    if (!force && !env.WHAPI_CONFIGURE_WEBHOOK) {
       return { ok: false, code: "NOT_CONFIGURED" };
     }
-    const secret = env.WHAPI_WEBHOOK_SECRET.trim();
+    const secret = (options?.webhookSecret ?? env.WHAPI_WEBHOOK_SECRET).trim();
     if (!secret) return { ok: false, code: "NOT_CONFIGURED" };
     try {
       const events: { type: string; method: string }[] = [];
@@ -273,20 +303,45 @@ export class WhapiWhatsAppProvider implements WhatsAppProvider {
       if (settings.webhookMessageAck) {
         events.push({ type: "statuses", method: "post" });
       }
+      const diamondHook = {
+        url: settings.webhookUrl ?? "",
+        mode: "body",
+        headers: {
+          [whapiWebhookSecretHeaderName()]: secret,
+        },
+        events,
+      };
+      const client = this.client(accessToken);
+      if (force) {
+        const current = await client.getJson("/settings");
+        if (current.status < 200 || current.status >= 300) {
+          return { ok: false, code: mapWhapiHttpFailure(current.status, current.json) };
+        }
+        const root = asRecord(current.json) ?? {};
+        const existing = Array.isArray(root.webhooks) ? root.webhooks : [];
+        const media = asRecord(root.media);
+        const autoDownload = media?.auto_download;
+        const downloadsDisabled =
+          autoDownload === undefined || (Array.isArray(autoDownload) && autoDownload.length === 0);
+        if (downloadsDisabled && whapiHookAlreadyMatches(existing[0], diamondHook)) {
+          return this.getInstanceSettings(accessToken);
+        }
+        const kept = existing.filter((hook) => !isDiamondWhapiHook(hook, diamondHook.url));
+        const patchBody = {
+          webhooks: [diamondHook, ...kept],
+          media: { auto_download: [] },
+        };
+        const patched = await client.patchJson("/settings", patchBody);
+        if (patched.status < 200 || patched.status >= 300) {
+          return { ok: false, code: mapWhapiHttpFailure(patched.status, patched.json) };
+        }
+        return this.getInstanceSettings(accessToken);
+      }
       const patchBody: Record<string, unknown> = {
-        webhooks: [
-          {
-            url: settings.webhookUrl ?? "",
-            mode: "body",
-            headers: {
-              [whapiWebhookSecretHeaderName()]: secret,
-            },
-            events,
-          },
-        ],
+        webhooks: [diamondHook],
         media: { auto_download: [] },
       };
-      const { status, json } = await this.client(accessToken).patchJson("/settings", patchBody);
+      const { status, json } = await client.patchJson("/settings", patchBody);
       if (status < 200 || status >= 300) return { ok: false, code: mapWhapiHttpFailure(status, json) };
       return this.getInstanceSettings(accessToken);
     } catch (error) {

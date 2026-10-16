@@ -350,3 +350,13 @@ A Mobile/Web echo attaches only when exactly one pending Diamond send has the sa
 Conversation order uses provider time, then `createdAt`, then id. A status, read receipt, edit, deletion, or older message does not move `lastMessageAt`. Unread increases for a new inbound row ahead of the conversation head whose provider time is within 15 minutes of receipt. Older history does not increase it. Edits update `textBody`. Deletions keep the row, clear the visible body, and set `revoked`. Both flags live in `displayPayload.whapi` (`editedAt`, `revokedAt`). No new table.
 
 SSE replays at most 100 events. A larger gap or an expired cursor sends `whatsapp.realtime.resync`. That frame is not treated as a copy of a business event, and the open thread is merged with the server page. Groups stay excluded until the group stage. Media bytes and voice notes are not part of this stage.
+
+Unread still ignores an inbound whose provider time is more than 15 minutes before receipt, including a genuine delayed message. That exclusion stays until final acceptance changes it.
+
+## Whapi channel replacement (P1)
+
+One office Whapi channel. ELITE and UNIQUE share it. `POST /whatsapp/connection/whapi` (`whatsapp.manage_connection`) accepts the API token and channel id. The token and a generated webhook secret are encrypted in the existing connection columns (`credentialCiphertext`, `webhookCallbackCiphertext`). The secret is not a new column: version 2 of that ciphertext is JSON `{v, callbackKey, webhookSecret}`; older rows remain a raw callback key and still accept `WHAPI_WEBHOOK_SECRET`.
+
+The route checks Whapi health and channel identity, suspends the current Whapi session, registers `messages` post and `statuses` post, then commits the new row. A different channel id disconnects the previous row and clears its token. Conversations stay on their original connection and leave the active inbox. A failed webhook registration does not restore sending on the previous channel. Same-channel save updates that row in place. Contacts, groups, and history import are not started here (`whapiDeferredSyncPlan`).
+
+`PUBLIC_BACKEND_URL` and the Whapi API host stay deployment settings. Channel token, channel id, callback key, and webhook secret come from the active connection after this setup. Inbound events must match that connection's callback and channel id. A send re-reads the active credential immediately before the provider call and does not leave on a suspended or replaced channel.

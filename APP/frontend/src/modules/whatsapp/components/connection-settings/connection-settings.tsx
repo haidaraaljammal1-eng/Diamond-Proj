@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { z } from "zod";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
+import { FormBuilder } from "@/shared/components/forms/form-builder";
 import {
   activateWhatsAppWebhook,
   authorizeWhatsAppConnectionAttempt,
   bootstrapWhatsAppConnection,
+  configureWhapiConnection,
   disconnectWhatsAppConnection,
   getWhatsAppConnection,
   getWhatsAppConnectionQr,
@@ -19,6 +22,13 @@ import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error"
 import { connectionBanner, connectionCapabilities } from "../../utils/whatsapp-view-model";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
 import styles from "./connection-settings.module.css";
+
+const whapiConfigureSchema = z.object({
+  token: z.string().trim().min(8, { message: "required" }),
+  channelId: z.string().trim().min(1, { message: "required" }),
+});
+
+type WhapiConfigureValues = z.infer<typeof whapiConfigureSchema>;
 
 interface FbLoginResponse {
   authResponse?: { code?: string };
@@ -72,6 +82,7 @@ export function WhatsAppConnectionSettings({
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [confirmChange, setConfirmChange] = useState(false);
+  const [whapiFormKey, setWhapiFormKey] = useState(0);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const linked = connection && connection.status !== "DISCONNECTED";
@@ -121,6 +132,25 @@ export function WhatsAppConnectionSettings({
       setQrImage(null);
     }
   }, [open]);
+
+  async function saveWhapi(values: WhapiConfigureValues) {
+    setBusy(true);
+    setError(null);
+    try {
+      if (inbox.simulationActive) {
+        inbox.simulationSetConnection?.("LINKED_ACTIVE");
+        setWhapiFormKey((key) => key + 1);
+        return;
+      }
+      await configureWhapiConnection({ token: values.token, channelId: values.channelId });
+      setWhapiFormKey((key) => key + 1);
+      await inbox.refresh();
+    } catch (err) {
+      setError(resolveWhatsAppErrorMessage(t, err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function connect() {
     setBusy(true);
@@ -247,6 +277,34 @@ export function WhatsAppConnectionSettings({
         {connection?.displayPhoneNumber ? <p dir="ltr">{connection.displayPhoneNumber}</p> : null}
         {connection?.verifiedName ? <p>{connection.verifiedName}</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
+        {caps.provider === "WHAPI" ? (
+          <>
+          <p>{t("manage.whapiHint")}</p>
+          <FormBuilder<WhapiConfigureValues>
+            key={whapiFormKey}
+            schema={whapiConfigureSchema}
+            defaultValues={{ token: "", channelId: "" }}
+            fields={[
+              {
+                type: "password",
+                name: "token",
+                placeholder: t("manage.whapiToken"),
+                autoComplete: "off",
+              },
+              {
+                type: "text",
+                name: "channelId",
+                placeholder: t("manage.whapiChannel"),
+                autoComplete: "off",
+              },
+            ]}
+            submitLabel={linked ? t("manage.changeAccount") : t("manage.whapiSave")}
+            submittingLabel={t("manage.whapiSaving")}
+            submitDisabled={busy}
+            onSubmit={saveWhapi}
+          />
+          </>
+        ) : null}
         {caps.supportsEmbeddedSignup && choices.length > 0 ? (
           <ul className={styles.choices}>
             {choices.map((choice) => (
@@ -259,6 +317,7 @@ export function WhatsAppConnectionSettings({
           </ul>
         ) : (
           <div className={styles.actions}>
+            {caps.provider === "WHAPI" ? null : (
             <Button
               type="button"
               variant="primary"
@@ -274,6 +333,7 @@ export function WhatsAppConnectionSettings({
             >
               {linked ? t("manage.changeAccount") : t("manage.connect")}
             </Button>
+            )}
             {linked && banner === "qrRequired" ? (
               <Button type="button" variant="secondary" disabled={busy} onClick={() => setQrOpen(true)}>
                 {t("manage.showQr")}

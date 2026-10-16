@@ -275,6 +275,17 @@ export async function activateWhatsAppWebhook(): Promise<WhatsAppConnectionDto> 
   return response.data;
 }
 
+export async function configureWhapiConnection(input: {
+  token: string;
+  channelId: string;
+}): Promise<WhatsAppConnectionDto> {
+  const response = await apiRequest<WhatsAppConnectionDto>(`${WHATSAPP_PATH}/connection/whapi`, {
+    method: "POST",
+    body: { token: input.token, channelId: input.channelId },
+  });
+  return response.data;
+}
+
 export async function bootstrapWhatsAppConnection(): Promise<WhatsAppConnectionDto> {
   const response = await apiRequest<WhatsAppConnectionDto>(
     `${WHATSAPP_PATH}/connection/bootstrap`,

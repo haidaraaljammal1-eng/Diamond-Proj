@@ -106,6 +106,15 @@ export const WhatsAppAuthorizeResponseSchema = z.object({
   choices: z.array(WhatsAppGrantedChoiceSchema),
 });
 
+export const WhatsAppWhapiConfigureBodySchema = z
+  .object({
+    token: z.string().trim().min(8).max(4096),
+    channelId: z.string().trim().min(1).max(128),
+  })
+  .strict();
+
+export type WhatsAppWhapiConfigureBody = z.infer<typeof WhatsAppWhapiConfigureBodySchema>;
+
 export const WhatsAppAuthorizeBodySchema = z.object({
   authorizationCode: z
     .string()

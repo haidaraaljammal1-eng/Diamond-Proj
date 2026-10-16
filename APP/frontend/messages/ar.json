@@ -3185,6 +3185,7 @@
       "WHATSAPP_PROVIDER_NOT_AUTHENTICATED": "اتصال واتساب غير جاهز حالياً.",
       "WHATSAPP_QR_REQUIRED": "امسح رمز QR لربط واتساب.",
       "WHATSAPP_PUBLIC_WEBHOOK_URL_REQUIRED": "يلزم عنوان خلفية HTTPS عام لتفعيل الويب هوك.",
+      "WHATSAPP_WHAPI_CHANNEL_MISMATCH": "معرّف القناة لا يطابق حساب Whapi الذي فوّض هذا الرمز.",
       "ULTRAMSG_WEBHOOK_SETUP_FAILED": "تعذر إكمال إعداد ويب هوك واتساب.",
       "WHATSAPP_QR_UNAVAILABLE": "رمز QR لواتساب غير متاح."
     },
@@ -3219,6 +3220,11 @@
       "changeAccountConfirm": "الرسائل القادمة ستستخدم الحساب الجديد. المحادثات التاريخية تبقى على الربط السابق.",
       "providerUltraMsg": "المزوّد: UltraMsg",
       "providerWhapi": "المزوّد: Whapi",
+      "whapiToken": "رمز Whapi",
+      "whapiChannel": "معرّف قناة Whapi",
+      "whapiSave": "حفظ قناة Whapi",
+      "whapiSaving": "جارٍ التحقق من القناة",
+      "whapiHint": "قناة واحدة للمكتب. حفظ قناة مختلفة يؤرشف صندوق الوارد السابق دون حذف سجلاته.",
       "showQr": "عرض رمز QR",
       "qrHint": "امسح رمز QR لربط واتساب.",
       "qrLoading": "جارٍ تحميل رمز QR…"

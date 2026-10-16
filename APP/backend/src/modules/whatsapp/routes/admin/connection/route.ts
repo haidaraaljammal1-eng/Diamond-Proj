@@ -13,6 +13,7 @@ import {
   WhatsAppConnectionSchema,
   WhatsAppQrSchema,
   WhatsAppSelectBodySchema,
+  WhatsAppWhapiConfigureBodySchema,
 } from "src/modules/whatsapp/whatsapp.schema";
 
 const T = ["WhatsApp"];
@@ -53,6 +54,31 @@ export default async function whatsappConnectionRoutes(fastify: FastifyInstance)
       },
     },
     async () => ({ data: await whatsapp.getQr() }),
+  );
+
+  app.post(
+    "/whapi",
+    {
+      config: sensitiveMutationRateLimit(),
+      schema: {
+        summary: "Validate and activate the office Whapi channel",
+        operationId: "configureWhapiConnection",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_MANAGE_CONNECTION],
+        body: WhatsAppWhapiConfigureBodySchema,
+        response: {
+          200: dataResponse(WhatsAppConnectionSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const identity = requireAuth(request);
+      const data = await whatsapp.configureWhapi(identity.id, request.body, (partial) =>
+        request.setAudit(partial),
+      );
+      return { data };
+    },
   );
 
   app.post(

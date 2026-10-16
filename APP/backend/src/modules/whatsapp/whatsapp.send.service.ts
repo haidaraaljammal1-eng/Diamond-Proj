@@ -12,6 +12,7 @@ import {
   WHATSAPP_CURRENT_STATUSES,
 } from "src/modules/whatsapp/whatsapp.constants";
 import { decryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
+import { outboundCredentialStillCurrent } from "src/modules/whatsapp/whapi.outbound-gate";
 import {
   evaluateMessagingEligibility,
   type WhatsAppMessagingEligibility,
@@ -192,6 +193,19 @@ function routingForSend(
 
 export function createWhatsAppSendService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
+
+  async function credentialStillAuthorized(ciphertext: string): Promise<boolean> {
+    const row = await prisma.whatsAppConnection.findFirst({
+      where: { status: "LINKED" },
+      select: {
+        provider: true,
+        status: true,
+        providerSessionStatus: true,
+        credentialCiphertext: true,
+      },
+    });
+    return outboundCredentialStillCurrent(row, ciphertext);
+  }
 
   async function currentOfficeConnection() {
     return prisma.whatsAppConnection.findFirst({
@@ -431,6 +445,21 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       accessToken = decryptWhatsAppCredential(reserved.credentialCiphertext);
     } catch {
       await completeAttempt(reserved.messageId, "FAILED", null, "WHATSAPP_SEND_AUTH_FAILED");
+      params.audit({
+        action: WHATSAPP_AUDIT.MESSAGE_SEND_FAILED,
+        entityType: "WhatsAppMessage",
+        entityId: reserved.messageId,
+        metadata: {
+          conversationId: params.conversationId,
+          connectionId: reserved.connectionId,
+          sendState: "FAILED",
+        },
+      });
+      return loadSendResult(reserved.messageId, params.conversationId);
+    }
+
+    if (!(await credentialStillAuthorized(reserved.credentialCiphertext))) {
+      await completeAttempt(reserved.messageId, "FAILED", null, "WHATSAPP_PROVIDER_NOT_AUTHENTICATED");
       params.audit({
         action: WHATSAPP_AUDIT.MESSAGE_SEND_FAILED,
         entityType: "WhatsAppMessage",
@@ -755,6 +784,17 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       metadata: { conversationId: params.conversationId, sendState: "PENDING" },
     });
 
+    if (!(await credentialStillAuthorized(current.credentialCiphertext))) {
+      await completeAttempt(reserved.messageId, "FAILED", null, "WHATSAPP_PROVIDER_NOT_AUTHENTICATED");
+      params.audit({
+        action: WHATSAPP_AUDIT.MESSAGE_SEND_FAILED,
+        entityType: "WhatsAppMessage",
+        entityId: reserved.messageId,
+        metadata: { conversationId: params.conversationId, sendState: "FAILED" },
+      });
+      return loadSendResult(reserved.messageId, params.conversationId);
+    }
+
     const sent = await provider.sendTemplateMessage({
       accessToken,
       phoneNumberId: current.phoneNumberId,
@@ -975,6 +1015,16 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       accessToken = decryptWhatsAppCredential(reserved.credentialCiphertext);
     } catch {
       await completeAttempt(reserved.messageId, "FAILED", null, "WHATSAPP_SEND_AUTH_FAILED");
+      return loadSendResult(reserved.messageId, params.conversationId);
+    }
+    if (!(await credentialStillAuthorized(reserved.credentialCiphertext))) {
+      await completeAttempt(reserved.messageId, "FAILED", null, "WHATSAPP_PROVIDER_NOT_AUTHENTICATED");
+      params.audit({
+        action: WHATSAPP_AUDIT.MESSAGE_SEND_FAILED,
+        entityType: "WhatsAppMessage",
+        entityId: reserved.messageId,
+        metadata: { conversationId: params.conversationId, sendState: "FAILED" },
+      });
       return loadSendResult(reserved.messageId, params.conversationId);
     }
     const sent = await provider.sendOutboundMedia({

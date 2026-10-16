@@ -6,6 +6,7 @@ import { env } from "src/config/env";
 import { WHATSAPP_CURRENT_STATUSES } from "src/modules/whatsapp/whatsapp.constants";
 import { WhatsAppErrorReason } from "src/modules/whatsapp/whatsapp.errors";
 import { decryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
+import { whapiWebhookAuthorized } from "src/modules/whatsapp/whapi.webhook-material";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
 import { choosePendingEchoCandidate } from "src/modules/whatsapp/whatsapp.echo-match";
 import { materializeOutboundEchoMessage } from "src/modules/whatsapp/whatsapp.outbound-echo.service";
@@ -22,13 +23,8 @@ import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-
 import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
 import { sanitizeWebhookPayload } from "src/modules/whatsapp/whatsapp.webhook-sanitize";
 import { sha256Hex } from "src/modules/whatsapp/whatsapp.webhook-signature";
-import { timingSafeCallbackKey } from "src/modules/whatsapp/ultramsg.webhook-parse";
 import { parseWhapiWebhookBatch, type ParsedWhapiWebhook } from "src/modules/whatsapp/whapi.webhook-parse";
-import {
-  timingSafeWhapiWebhookSecret,
-  whapiChannelIdsMatch,
-  WHAPI_WEBHOOK_MAX_BYTES,
-} from "src/modules/whatsapp/whapi.config";
+import { whapiChannelIdsMatch, WHAPI_WEBHOOK_MAX_BYTES } from "src/modules/whatsapp/whapi.config";
 import type { WhatsAppWebhookHttpResult } from "src/modules/whatsapp/whatsapp.webhook.service";
 
 const CURRENT_STATUSES: WhatsAppConnectionStatus[] = [...WHATSAPP_CURRENT_STATUSES];
@@ -41,19 +37,13 @@ function parseJson(raw: Buffer): unknown | undefined {
   }
 }
 
-function expectedCallbackKeys(stored: string | null): string[] {
-  const keys: string[] = [];
-  const envKey = env.WHAPI_WEBHOOK_CALLBACK_KEY.trim();
-  if (envKey) keys.push(envKey);
-  if (stored) {
-    try {
-      const decrypted = decryptWhatsAppCredential(stored);
-      if (decrypted && !keys.includes(decrypted)) keys.push(decrypted);
-    } catch {
-      /* ignore */
-    }
+function storedWebhookPlaintext(stored: string | null): string | null {
+  if (!stored) return null;
+  try {
+    return decryptWhatsAppCredential(stored);
+  } catch {
+    return null;
   }
-  return keys;
 }
 
 export function createWhapiWebhookService(fastify: FastifyInstance) {
@@ -68,11 +58,6 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
       return { httpStatus: 400, code: WhatsAppErrorReason.WEBHOOK_MALFORMED_PAYLOAD };
     }
 
-    const configuredSecret = env.WHAPI_WEBHOOK_SECRET.trim();
-    if (!configuredSecret || !webhookSecret || !timingSafeWhapiWebhookSecret(configuredSecret, webhookSecret)) {
-      return { httpStatus: 403, code: WhatsAppErrorReason.WEBHOOK_CALLBACK_INVALID };
-    }
-
     const connection = await prisma.whatsAppConnection.findFirst({
       where: { provider: "WHAPI", status: { in: CURRENT_STATUSES } },
       select: {
@@ -81,8 +66,13 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
         webhookCallbackCiphertext: true,
       },
     });
-    const expected = expectedCallbackKeys(connection?.webhookCallbackCiphertext ?? null);
-    const accepted = expected.some((key) => timingSafeCallbackKey(key, callbackKey));
+    const accepted = whapiWebhookAuthorized({
+      presentedCallbackKey: callbackKey,
+      presentedSecret: webhookSecret,
+      storedPlaintext: storedWebhookPlaintext(connection?.webhookCallbackCiphertext ?? null),
+      envCallbackKey: env.WHAPI_WEBHOOK_CALLBACK_KEY,
+      envSecret: env.WHAPI_WEBHOOK_SECRET,
+    });
     if (!accepted) {
       return { httpStatus: 403, code: WhatsAppErrorReason.WEBHOOK_CALLBACK_INVALID };
     }
@@ -94,9 +84,9 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
 
     const envelopeHash = sha256Hex(rawBody);
     const batch = parseWhapiWebhookBatch(parsedJson, envelopeHash);
-    const configuredChannel = connection?.providerInstanceId || env.WHAPI_CHANNEL_ID.trim();
+    const configuredChannel = connection?.providerInstanceId?.trim() ?? "";
     const channelId = batch.find((item) => item.channelId)?.channelId ?? null;
-    if (configuredChannel && !whapiChannelIdsMatch(configuredChannel, channelId)) {
+    if (!configuredChannel || !whapiChannelIdsMatch(configuredChannel, channelId)) {
       for (const parsed of batch) {
         await persistTrace(parsed, parsedJson, new Date(), null, "IGNORED", WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND);
       }

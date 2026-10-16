@@ -3185,6 +3185,7 @@
       "WHATSAPP_PROVIDER_NOT_AUTHENTICATED": "WhatsApp connection is not ready.",
       "WHATSAPP_QR_REQUIRED": "Scan the QR code to connect WhatsApp.",
       "WHATSAPP_PUBLIC_WEBHOOK_URL_REQUIRED": "A public HTTPS backend URL is required to activate the webhook.",
+      "WHATSAPP_WHAPI_CHANNEL_MISMATCH": "The channel id does not match the Whapi account that authorized this token.",
       "ULTRAMSG_WEBHOOK_SETUP_FAILED": "WhatsApp webhook setup could not be completed.",
       "WHATSAPP_QR_UNAVAILABLE": "The WhatsApp QR code is not available."
     },
@@ -3219,6 +3220,11 @@
       "changeAccountConfirm": "Future messages will use the newly selected account. Historical conversations stay on the previous connection.",
       "providerUltraMsg": "Provider: UltraMsg",
       "providerWhapi": "Provider: Whapi",
+      "whapiToken": "Whapi API token",
+      "whapiChannel": "Whapi channel id",
+      "whapiSave": "Save Whapi channel",
+      "whapiSaving": "Checking channel",
+      "whapiHint": "One office channel. Saving a different channel archives the previous inbox without deleting it.",
       "showQr": "Show QR Code",
       "qrHint": "Scan the QR code to connect WhatsApp.",
       "qrLoading": "Loading QR code…"

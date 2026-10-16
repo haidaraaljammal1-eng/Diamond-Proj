@@ -206,6 +206,7 @@ export interface WhatsAppProvider {
   applyWebhookSettings(
     accessToken: string,
     settings: WhatsAppInstanceSettings,
+    options?: { webhookSecret?: string; force?: boolean },
   ): Promise<WhatsAppProviderResult<WhatsAppInstanceSettings>>;
   sendOutboundMedia(
     input: WhatsAppSendOutboundMediaInput,

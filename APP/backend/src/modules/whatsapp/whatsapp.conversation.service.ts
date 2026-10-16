@@ -83,7 +83,9 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
   async function list(query: ListWhatsAppConversationsQuery) {
-    const where: Prisma.WhatsAppConversationWhereInput = {};
+    const where: Prisma.WhatsAppConversationWhereInput = {
+      connection: { status: { in: CURRENT_STATUSES } },
+    };
     if (query.unread === "true") where.unreadCount = { gt: 0 };
     if (query.search) {
       where.OR = [

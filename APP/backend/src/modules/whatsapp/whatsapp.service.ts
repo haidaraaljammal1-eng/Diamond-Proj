@@ -28,7 +28,11 @@ import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realti
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
 import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
 import { createWhatsAppProvider } from "src/modules/whatsapp/whatsapp.provider";
-import type { WhatsAppAuthorizeBody, WhatsAppSelectBody } from "src/modules/whatsapp/whatsapp.schema";
+import type {
+  WhatsAppAuthorizeBody,
+  WhatsAppSelectBody,
+  WhatsAppWhapiConfigureBody,
+} from "src/modules/whatsapp/whatsapp.schema";
 import type {
   WhatsAppGrantMetadata,
   WhatsAppProviderFailure,
@@ -44,6 +48,11 @@ import {
   whapiChannelIdsMatch,
   whapiRuntimeConfig,
 } from "src/modules/whatsapp/whapi.config";
+import { configureWhapiOfficeConnection } from "src/modules/whatsapp/whapi.office-connection";
+import {
+  decodeWhapiWebhookMaterial,
+  encodeWhapiWebhookMaterial,
+} from "src/modules/whatsapp/whapi.webhook-material";
 import { env } from "src/config/env";
 
 type AuditWrite = (partial: Partial<AuditContext>) => void;
@@ -843,8 +852,6 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
       throw whatsappError.connectionNotFound();
     }
     if (publicWebhookUrlRequired()) throw whatsappError.publicWebhookUrlRequired();
-    if (!env.WHAPI_CONFIGURE_WEBHOOK) throw whatsappError.webhookSetupFailed();
-    if (!env.WHAPI_WEBHOOK_SECRET.trim()) throw whatsappError.webhookSetupFailed();
 
     const provider = createWhatsAppProvider();
     if (!provider.configured) throw whatsappError.providerNotConfigured();
@@ -855,15 +862,23 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
       throw whatsappError.sendAuthFailed();
     }
 
-    let callbackKey = env.WHAPI_WEBHOOK_CALLBACK_KEY.trim();
-    if (!callbackKey && current.webhookCallbackCiphertext) {
+    let storedMaterial: { callbackKey: string; webhookSecret: string | null } | null = null;
+    if (current.webhookCallbackCiphertext) {
       try {
-        callbackKey = decryptWhatsAppCredential(current.webhookCallbackCiphertext);
+        storedMaterial = decodeWhapiWebhookMaterial(
+          decryptWhatsAppCredential(current.webhookCallbackCiphertext),
+        );
       } catch {
-        callbackKey = "";
+        storedMaterial = null;
       }
     }
+    if (!env.WHAPI_CONFIGURE_WEBHOOK && !storedMaterial?.webhookSecret) {
+      throw whatsappError.webhookSetupFailed();
+    }
+    let callbackKey = storedMaterial?.callbackKey || env.WHAPI_WEBHOOK_CALLBACK_KEY.trim();
     if (!callbackKey) callbackKey = generateOpaqueToken();
+    const webhookSecret = storedMaterial?.webhookSecret || env.WHAPI_WEBHOOK_SECRET.trim();
+    if (!webhookSecret) throw whatsappError.webhookSetupFailed();
     const webhookUrl = diamondWhapiWebhookUrl(callbackKey);
     if (!webhookUrl) throw whatsappError.publicWebhookUrlRequired();
 
@@ -879,15 +894,22 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
       throw whatsappError.webhookSetupFailed();
     }
 
-    const applied = await provider.applyWebhookSettings(token, {
-      sendDelay: 0,
-      sendDelayMax: 0,
-      webhookUrl,
-      webhookMessageReceived: true,
-      webhookMessageCreate: true,
-      webhookMessageAck: true,
-      webhookMessageDownloadMedia: false,
-    });
+    const applied = await provider.applyWebhookSettings(
+      token,
+      {
+        sendDelay: 0,
+        sendDelayMax: 0,
+        webhookUrl,
+        webhookMessageReceived: true,
+        webhookMessageCreate: true,
+        webhookMessageAck: true,
+        webhookMessageDownloadMedia: false,
+      },
+      {
+        webhookSecret,
+        force: Boolean(storedMaterial?.webhookSecret),
+      },
+    );
     const verified =
       applied.ok &&
       applied.value.webhookUrl === webhookUrl &&
@@ -900,7 +922,9 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
         data: {
           webhookStatus: verified ? "ACTIVE" : "ERROR",
           lastProviderErrorCode: verified ? null : WhatsAppErrorReason.WEBHOOK_SETUP_FAILED,
-          webhookCallbackCiphertext: encryptWhatsAppCredential(callbackKey),
+          webhookCallbackCiphertext: encryptWhatsAppCredential(
+            encodeWhapiWebhookMaterial({ callbackKey, webhookSecret }),
+          ),
         },
         select: CONNECTION_PUBLIC,
       });
@@ -1024,7 +1048,27 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
     return toConnectionDto(updated.row, provider.capabilities());
   }
 
-  return { getConnection, startAttempt, authorize, select, disconnect, activateWebhook, bootstrap, getQr };
+  async function configureWhapi(userId: number, body: WhatsAppWhapiConfigureBody, audit: AuditWrite) {
+    return configureWhapiOfficeConnection(prisma, {
+      userId,
+      token: body.token,
+      channelId: body.channelId,
+      audit,
+      provider: createWhatsAppProvider(),
+    });
+  }
+
+  return {
+    getConnection,
+    startAttempt,
+    authorize,
+    select,
+    disconnect,
+    activateWebhook,
+    bootstrap,
+    getQr,
+    configureWhapi,
+  };
 }
 
 export type WhatsAppConnectionService = ReturnType<typeof createWhatsAppConnectionService>;

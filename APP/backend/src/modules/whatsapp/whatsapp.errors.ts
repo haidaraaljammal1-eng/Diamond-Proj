@@ -53,6 +53,7 @@ export const WhatsAppErrorReason = {
   PROVIDER_NOT_AUTHENTICATED: "WHATSAPP_PROVIDER_NOT_AUTHENTICATED",
   QR_REQUIRED: "WHATSAPP_QR_REQUIRED",
   PUBLIC_WEBHOOK_URL_REQUIRED: "WHATSAPP_PUBLIC_WEBHOOK_URL_REQUIRED",
+  WHAPI_CHANNEL_MISMATCH: "WHATSAPP_WHAPI_CHANNEL_MISMATCH",
   WEBHOOK_CALLBACK_INVALID: "WHATSAPP_WEBHOOK_CALLBACK_INVALID",
   GROUP_NOT_SUPPORTED: "ULTRAMSG_GROUP_NOT_SUPPORTED",
   QR_UNAVAILABLE: "WHATSAPP_QR_UNAVAILABLE",
@@ -246,6 +247,12 @@ export const whatsappError = {
       ErrorCode.CONFLICT,
       "A public HTTPS backend URL is required to configure the WhatsApp webhook",
       R.PUBLIC_WEBHOOK_URL_REQUIRED,
+    ),
+  whapiChannelMismatch: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "The Whapi channel id does not match the authorized channel",
+      R.WHAPI_CHANNEL_MISMATCH,
     ),
   webhookCallbackInvalid: () =>
     err(ErrorCode.FORBIDDEN, "WhatsApp webhook callback was rejected", R.WEBHOOK_CALLBACK_INVALID),
