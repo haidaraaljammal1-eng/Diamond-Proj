@@ -45,7 +45,7 @@ import {
 } from "src/modules/whatsapp/ultramsg.config";
 import {
   diamondWhapiWebhookUrl,
-  whapiChannelIdsMatch,
+  whapiReportedChannelMatches,
   whapiRuntimeConfig,
 } from "src/modules/whatsapp/whapi.config";
 import { configureWhapiOfficeConnection } from "src/modules/whatsapp/whapi.office-connection";
@@ -719,14 +719,14 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
       throw whatsappError.validationFailed("WHATSAPP_PROVIDER_NOT_AUTHENTICATED");
     }
     const identity = await provider.getInstanceIdentity(cfg.token);
+    const providerChannelId = identity.ok ? (identity.value.channelId?.trim() ?? "") : "";
     const resolvedChannelId =
       cfg.channelId.trim() ||
-      (identity.ok ? (identity.value.chatId ?? "").trim() : "") ||
+      providerChannelId ||
+      (identity.ok && !providerChannelId ? (identity.value.chatId ?? "").trim() : "") ||
       "whapi";
-    if (cfg.channelId && identity.ok && identity.value.chatId) {
-      if (!whapiChannelIdsMatch(cfg.channelId, identity.value.chatId) && !whapiChannelIdsMatch(cfg.channelId, resolvedChannelId)) {
-        throw whatsappError.validationFailed("WHAPI_CHANNEL_MISMATCH");
-      }
+    if (cfg.channelId && identity.ok && !whapiReportedChannelMatches(cfg.channelId, identity.value)) {
+      throw whatsappError.validationFailed("WHAPI_CHANNEL_MISMATCH");
     }
     const instanceId = resolvedChannelId;
     const ciphertext = encryptWhatsAppCredential(cfg.token);

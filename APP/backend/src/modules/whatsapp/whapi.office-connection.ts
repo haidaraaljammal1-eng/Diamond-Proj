@@ -20,7 +20,7 @@ import type { WhatsAppProvider } from "src/modules/whatsapp/whatsapp.types";
 import {
   diamondWhapiWebhookUrl,
   publicWebhookUrlRequired,
-  whapiChannelIdsMatch,
+  whapiReportedChannelMatches,
   whapiRuntimeConfig,
 } from "src/modules/whatsapp/whapi.config";
 import { encodeWhapiWebhookMaterial } from "src/modules/whatsapp/whapi.webhook-material";
@@ -86,7 +86,7 @@ export async function configureWhapiOfficeConnection(
 
   const identity = await input.provider.getInstanceIdentity(token);
   if (!identity.ok) throw whatsappError.validationFailed(identity.providerErrorCode);
-  if (identity.value.chatId && !whapiChannelIdsMatch(channelId, identity.value.chatId)) {
+  if (!whapiReportedChannelMatches(channelId, identity.value)) {
     throw whatsappError.whapiChannelMismatch();
   }
   if (publicWebhookUrlRequired()) throw whatsappError.publicWebhookUrlRequired();

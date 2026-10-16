@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { WhapiWhatsAppProvider } from "src/modules/whatsapp/providers/whapi.provider";
+import { whapiReportedChannelMatches } from "src/modules/whatsapp/whapi.config";
 import { outboundCredentialStillCurrent } from "src/modules/whatsapp/whapi.outbound-gate";
 import {
   decodeWhapiWebhookMaterial,
@@ -200,4 +201,43 @@ test("forced webhook setup does not patch when the Diamond hook is already curre
   );
   assert.equal(applied.ok, true);
   assert.equal(calls.includes("PATCH"), false);
+});
+
+test("health channel_id is the channel and user.id stays the WhatsApp account", async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    if (String(input).endsWith("/health")) {
+      return new Response(
+        JSON.stringify({
+          status: { text: "AUTH" },
+          channel_id: "BLKWID-4FG3P",
+          user: {
+            id: "971500000111@s.whatsapp.net",
+            name: "Office",
+            phone: "971500000111",
+          },
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response("{}", { status: 404 });
+  };
+  const provider = new WhapiWhatsAppProvider("https://gate.whapi.cloud", fetchImpl);
+  const identity = await provider.getInstanceIdentity("channel-token");
+  assert.equal(identity.ok, true);
+  if (!identity.ok) return;
+  assert.equal(identity.value.channelId, "BLKWID-4FG3P");
+  assert.equal(identity.value.chatId, "971500000111@s.whatsapp.net");
+  assert.equal(identity.value.displayPhone, "971500000111");
+  assert.equal(whapiReportedChannelMatches("BLKWID-4FG3P", identity.value), true);
+  assert.equal(whapiReportedChannelMatches("OTHER-CHANNEL", identity.value), false);
+  assert.equal(
+    whapiReportedChannelMatches("971500000111@s.whatsapp.net", identity.value),
+    false,
+  );
+});
+
+test("channel comparison falls back to chat id only when health has no channel_id", () => {
+  assert.equal(whapiReportedChannelMatches("CHAN-A", { chatId: "CHAN-A" }), true);
+  assert.equal(whapiReportedChannelMatches("CHAN-B", { chatId: "CHAN-A" }), false);
+  assert.equal(whapiReportedChannelMatches("CHAN-A", {}), true);
 });

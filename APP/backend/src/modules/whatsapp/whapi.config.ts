@@ -95,6 +95,22 @@ export function whapiChannelIdsMatch(
   return a.length > 0 && a === b;
 }
 
+/**
+ * Whapi health returns `channel_id` and `user.id` as different fields.
+ * When `channel_id` is present it is the only channel comparison.
+ * `user.id` remains the WhatsApp account and is used only when no channel id was returned.
+ */
+export function whapiReportedChannelMatches(
+  expectedChannelId: string,
+  identity: { channelId?: string | null; chatId?: string | null },
+): boolean {
+  const reported = identity.channelId?.trim() ?? "";
+  if (reported.length > 0) return whapiChannelIdsMatch(expectedChannelId, reported);
+  const accountId = identity.chatId?.trim() ?? "";
+  if (!accountId) return true;
+  return whapiChannelIdsMatch(expectedChannelId, accountId);
+}
+
 export function timingSafeWhapiWebhookSecret(expected: string, incoming: string): boolean {
   const a = Buffer.from(expected);
   const b = Buffer.from(incoming);

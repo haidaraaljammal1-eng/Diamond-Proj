@@ -162,6 +162,8 @@ export interface WhatsAppInstanceIdentity {
   chatId: string | null;
   displayPhone: string | null;
   displayName: string | null;
+  /** Provider channel id when the API returns one. Not a WhatsApp account id. */
+  channelId?: string | null;
 }
 
 export interface WhatsAppInstanceSettings {

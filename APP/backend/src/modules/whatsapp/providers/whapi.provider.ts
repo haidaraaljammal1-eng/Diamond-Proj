@@ -219,15 +219,16 @@ export class WhapiWhatsAppProvider implements WhatsAppProvider {
         return { ok: false, code: mapWhapiHttpFailure(health.status, health.json) };
       }
       const body = asRecord(health.json) ?? {};
-      const user = asRecord(body.user) ?? asRecord(body.me) ?? body;
-      const chatId = asString(user.id) ?? asString(user.chat_id) ?? asString(body.channel_id);
-      const displayName = asString(user.name) ?? asString(user.pushname);
+      const user = asRecord(body.user) ?? asRecord(body.me);
+      const channelId = asString(body.channel_id);
+      const chatId = user ? (asString(user.id) ?? asString(user.chat_id)) : null;
+      const displayName = user ? (asString(user.name) ?? asString(user.pushname)) : null;
+      const explicitPhone = user ? asString(user.phone) : asString(body.phone);
       const displayPhone =
-        asString(user.phone) ??
-        asString(body.phone) ??
-        (chatId && chatId.includes("@") ? chatId.split("@")[0] : chatId) ??
-        null;
-      return { ok: true, value: { chatId, displayPhone, displayName } };
+        explicitPhone ??
+        (chatId?.includes("@") ? (chatId.split("@")[0] ?? null) : null) ??
+        (chatId && /^[0-9]+$/.test(chatId) ? chatId : null);
+      return { ok: true, value: { chatId, displayPhone, displayName, channelId } };
     } catch (error) {
       return { ok: false, code: error instanceof WhapiHttpError ? error.code : "SEND_UNKNOWN" };
     }
