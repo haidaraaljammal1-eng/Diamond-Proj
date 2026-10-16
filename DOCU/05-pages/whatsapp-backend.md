@@ -340,3 +340,13 @@ Public client values (App ID, Embedded Signup config id) come from the attempt b
 ### Live Meta still deferred
 
 Unverified live Graph calls are not claimed. Automated tests use `tests/helpers/fake-whatsapp-provider.ts`.
+
+## Whapi message integrity (P0)
+
+Whapi `messages[]` and `statuses[]` are applied element by element. Each element has its own `providerEventKey`, so a retry does not insert a second row. Distinct statuses and distinct edits keep distinct keys. The public Whapi webhook uses `whatsappWebhookRateLimit` (3,000 requests per minute on that route only). It does not use the login limiter. A failed batch item is stored as `FAILED` and the response stays 500 so the provider retries that payload. Finished rows are not run again.
+
+A Mobile/Web echo attaches only when exactly one pending Diamond send has the same text inside 15 minutes. Several identical texts stay unmatched, and Diamond stores the echo as its own outbound row. Status webhooks that arrive first stay on `WhatsAppWebhookEvent` and are applied when the outbound row exists. `READ` does not move backward to `DELIVERED` or `SENT`.
+
+Conversation order uses provider time, then `createdAt`, then id. A status, read receipt, edit, deletion, or older message does not move `lastMessageAt`. Unread increases for a new inbound row ahead of the conversation head whose provider time is within 15 minutes of receipt. Older history does not increase it. Edits update `textBody`. Deletions keep the row, clear the visible body, and set `revoked`. Both flags live in `displayPayload.whapi` (`editedAt`, `revokedAt`). No new table.
+
+SSE replays at most 100 events. A larger gap or an expired cursor sends `whatsapp.realtime.resync`. That frame is not treated as a copy of a business event, and the open thread is merged with the server page. Groups stay excluded until the group stage. Media bytes and voice notes are not part of this stage.

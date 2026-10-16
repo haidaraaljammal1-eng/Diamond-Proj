@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { WhatsAppErrorReason } from "src/modules/whatsapp/whatsapp.errors";
 import { mapWhapiDeliveryStatus } from "src/modules/whatsapp/whapi.ack";
 import {
@@ -9,9 +10,11 @@ import { mapWhatsAppMessageType } from "src/modules/whatsapp/whatsapp.message-ty
 import type { WhatsAppMessageProviderStatus, WhatsAppWebhookEventType } from "@prisma/client";
 
 export type WhapiWebhookKind = "message" | "status" | "unknown";
+export type WhapiWebhookAction = "create" | "update" | "delete";
 
 export interface ParsedWhapiWebhook {
   kind: WhapiWebhookKind;
+  action: WhapiWebhookAction;
   eventType: WhatsAppWebhookEventType;
   providerEventKey: string;
   channelId: string | null;
@@ -51,7 +54,7 @@ function unixSeconds(value: unknown): Date | null {
 
 function parseMessageRecord(message: Record<string, unknown>): Omit<
   ParsedWhapiWebhook,
-  "kind" | "eventType" | "providerEventKey" | "channelId" | "status" | "ignoreReason"
+  "kind" | "action" | "eventType" | "providerEventKey" | "channelId" | "status" | "ignoreReason"
 > {
   const chatId = asString(message.chat_id) ?? asString(message.chatId);
   const fromMe = message.from_me === true || message.from_me === 1;
@@ -85,72 +88,97 @@ function parseMessageRecord(message: Record<string, unknown>): Omit<
   };
 }
 
-export function parseWhapiWebhook(json: unknown, envelopeHash: string): ParsedWhapiWebhook {
-  const root = asRecord(json) ?? {};
-  const channelId = asString(root.channel_id) ?? asString(root.channelId);
+function actionFromName(name: string): WhapiWebhookAction {
+  const normalized = name.toLowerCase();
+  if (normalized === "delete" || normalized === "remove" || normalized.includes("delete")) return "delete";
+  if (
+    normalized === "patch" ||
+    normalized === "put" ||
+    normalized === "edit" ||
+    normalized.includes("edit")
+  ) {
+    return "update";
+  }
+  return "create";
+}
+
+function readEnvelopeAction(root: Record<string, unknown>): WhapiWebhookAction {
   const event = asRecord(root.event);
-  const eventTypeRaw = `${asString(event?.type) ?? ""}:${asString(event?.event) ?? ""}`.toLowerCase();
+  const name = asString(event?.event) ?? "post";
+  return actionFromName(name);
+}
 
-  const statuses = Array.isArray(root.statuses) ? root.statuses : [];
-  if (statuses.length > 0 || eventTypeRaw.includes("status")) {
-    const statusRow = asRecord(statuses[0]) ?? {};
-    const providerMessageId = asString(statusRow.id) ?? asString(statusRow.message_id);
-    const status = mapWhapiDeliveryStatus(asString(statusRow.status) ?? asString(statusRow.state));
-    const providerEventKey = providerMessageId
-      ? `whapi:status:${providerMessageId}:${asString(statusRow.status) ?? envelopeHash}`
-      : `whapi:status:${envelopeHash}`;
-    return {
-      kind: "status",
-      eventType: "MESSAGE_STATUS",
-      providerEventKey,
-      channelId,
-      providerMessageId,
-      chatId: asString(statusRow.chat_id),
-      customerWaId: null,
-      displayName: null,
-      fromMe: false,
-      isGroup: false,
-      source: null,
-      messageType: null,
-      textBody: null,
-      mediaFilename: null,
-      caption: null,
-      status,
-      occurredAt: unixSeconds(statusRow.timestamp),
-      ignoreReason: status ? null : WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,
-    };
+function readMessageAction(
+  message: Record<string, unknown>,
+  fallback: WhapiWebhookAction,
+): WhapiWebhookAction {
+  const name = asString(message.action);
+  if (!name) return fallback;
+  return actionFromName(name);
+}
+
+function messageEventKey(
+  providerMessageId: string | null,
+  action: WhapiWebhookAction,
+  occurredAt: Date | null,
+  textBody: string | null,
+  caption: string | null,
+  envelopeHash: string,
+): string {
+  if (!providerMessageId) return `whapi:message:${action}:${envelopeHash}`;
+  if (action === "delete") return `whapi:message:${providerMessageId}:delete`;
+  if (action === "update") {
+    const stamp = occurredAt ? String(Math.floor(occurredAt.getTime() / 1000)) : "na";
+    const digest = createHash("sha256")
+      .update(`${textBody ?? ""}\n${caption ?? ""}`)
+      .digest("hex")
+      .slice(0, 12);
+    return `whapi:message:${providerMessageId}:update:${stamp}:${digest}`;
   }
+  return `whapi:message:${providerMessageId}`;
+}
 
-  const messages = Array.isArray(root.messages) ? root.messages : [];
-  const message = asRecord(messages[0]);
-  if (!message) {
-    return {
-      kind: "unknown",
-      eventType: "UNKNOWN",
-      providerEventKey: `whapi:unknown:${envelopeHash}`,
-      channelId,
-      providerMessageId: null,
-      chatId: null,
-      customerWaId: null,
-      displayName: null,
-      fromMe: false,
-      isGroup: false,
-      source: null,
-      messageType: null,
-      textBody: null,
-      mediaFilename: null,
-      caption: null,
-      status: null,
-      occurredAt: null,
-      ignoreReason: WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,
-    };
-  }
+function parseStatusItem(
+  statusRow: Record<string, unknown>,
+  channelId: string | null,
+  envelopeHash: string,
+): ParsedWhapiWebhook {
+  const providerMessageId = asString(statusRow.id) ?? asString(statusRow.message_id);
+  const rawStatus = asString(statusRow.status) ?? asString(statusRow.state);
+  const status = mapWhapiDeliveryStatus(rawStatus);
+  const providerEventKey = providerMessageId
+    ? `whapi:status:${providerMessageId}:${rawStatus ?? envelopeHash}`
+    : `whapi:status:${envelopeHash}`;
+  return {
+    kind: "status",
+    action: "create",
+    eventType: "MESSAGE_STATUS",
+    providerEventKey,
+    channelId,
+    providerMessageId,
+    chatId: asString(statusRow.chat_id),
+    customerWaId: null,
+    displayName: null,
+    fromMe: false,
+    isGroup: false,
+    source: null,
+    messageType: null,
+    textBody: null,
+    mediaFilename: null,
+    caption: null,
+    status,
+    occurredAt: unixSeconds(statusRow.timestamp),
+    ignoreReason: status ? null : WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,
+  };
+}
 
+function parseMessageItem(
+  message: Record<string, unknown>,
+  channelId: string | null,
+  action: WhapiWebhookAction,
+  envelopeHash: string,
+): ParsedWhapiWebhook {
   const parsedMessage = parseMessageRecord(message);
-  const providerEventKey = parsedMessage.providerMessageId
-    ? `whapi:message:${parsedMessage.providerMessageId}`
-    : `whapi:message:${envelopeHash}`;
-
   let ignoreReason: string | null = null;
   if (parsedMessage.isGroup) ignoreReason = WhatsAppErrorReason.GROUP_NOT_SUPPORTED;
   else if (!isWhapiDirectChatId(parsedMessage.chatId)) {
@@ -158,14 +186,73 @@ export function parseWhapiWebhook(json: unknown, envelopeHash: string): ParsedWh
   } else if (!parsedMessage.customerWaId || !parsedMessage.providerMessageId) {
     ignoreReason = WhatsAppErrorReason.INBOUND_CUSTOMER_MISSING;
   }
-
   return {
     kind: "message",
+    action,
     eventType: "MESSAGE_RECEIVED",
-    providerEventKey,
+    providerEventKey: messageEventKey(
+      parsedMessage.providerMessageId,
+      action,
+      parsedMessage.occurredAt,
+      parsedMessage.textBody,
+      parsedMessage.caption,
+      envelopeHash,
+    ),
     channelId,
     ...parsedMessage,
     status: null,
     ignoreReason,
   };
+}
+
+function unknownEvent(channelId: string | null, envelopeHash: string): ParsedWhapiWebhook {
+  return {
+    kind: "unknown",
+    action: "create",
+    eventType: "UNKNOWN",
+    providerEventKey: `whapi:unknown:${envelopeHash}`,
+    channelId,
+    providerMessageId: null,
+    chatId: null,
+    customerWaId: null,
+    displayName: null,
+    fromMe: false,
+    isGroup: false,
+    source: null,
+    messageType: null,
+    textBody: null,
+    mediaFilename: null,
+    caption: null,
+    status: null,
+    occurredAt: null,
+    ignoreReason: WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,
+  };
+}
+
+/** Every `messages[]` and `statuses[]` element. The first element is not a stand-in for the batch. */
+export function parseWhapiWebhookBatch(json: unknown, envelopeHash: string): ParsedWhapiWebhook[] {
+  const root = asRecord(json);
+  if (!root) return [unknownEvent(null, envelopeHash)];
+  const channelId = asString(root.channel_id) ?? asString(root.channelId);
+  const envelopeAction = readEnvelopeAction(root);
+  const statuses = Array.isArray(root.statuses) ? root.statuses : [];
+  const messages = Array.isArray(root.messages) ? root.messages : [];
+  const events: ParsedWhapiWebhook[] = [];
+  for (const item of statuses) {
+    events.push(parseStatusItem(asRecord(item) ?? {}, channelId, envelopeHash));
+  }
+  for (const item of messages) {
+    const message = asRecord(item);
+    if (!message) continue;
+    events.push(parseMessageItem(message, channelId, readMessageAction(message, envelopeAction), envelopeHash));
+  }
+  if (events.length > 0) return events;
+  const event = asRecord(root.event);
+  const typeName = (asString(event?.type) ?? "").toLowerCase();
+  if (typeName.includes("status")) return [parseStatusItem({}, channelId, envelopeHash)];
+  return [unknownEvent(channelId, envelopeHash)];
+}
+
+export function parseWhapiWebhook(json: unknown, envelopeHash: string): ParsedWhapiWebhook {
+  return parseWhapiWebhookBatch(json, envelopeHash)[0]!;
 }

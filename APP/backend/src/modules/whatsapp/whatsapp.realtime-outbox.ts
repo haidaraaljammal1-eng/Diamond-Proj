@@ -82,6 +82,21 @@ export async function listWhatsAppRealtimeSince(
   return rows.map(toEnvelope).filter((row): row is WhatsAppRealtimeEvent => row !== null);
 }
 
+/**
+ * Replay missed more events than the window, or the cursor points at events
+ * that aged out of retention. The client must reload from REST.
+ */
+export function shouldResyncWhatsAppRealtime(input: {
+  returnedCount: number;
+  limit: number;
+  afterId: number;
+  latestId: number;
+}): boolean {
+  if (input.returnedCount > input.limit) return true;
+  if (input.afterId > 0 && input.returnedCount === 0 && input.latestId > input.afterId) return true;
+  return false;
+}
+
 export async function latestWhatsAppRealtimeId(prisma: PrismaClient): Promise<number> {
   const row = await prisma.domainOutboxEvent.findFirst({
     where: { eventType: { startsWith: WHATSAPP_REALTIME_EVENT_PREFIX } },

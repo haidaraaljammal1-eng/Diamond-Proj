@@ -8,6 +8,7 @@ import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-
 import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
 import {
   buildMessagePreview,
+  inboundCountsAsUnread,
   isNewerConversationMessage,
   mapWhatsAppMessageType,
   nextCustomerDisplayName,
@@ -208,7 +209,24 @@ export async function materializeInboundMessage(
     await tx.whatsAppConversation.update({
       where: { id: conversation.id },
       data: {
-        unreadCount: { increment: 1 },
+        ...(inboundCountsAsUnread({
+          incoming: {
+            occurredAt: input.providerOccurredAt,
+            createdAt: message.createdAt,
+            id: message.id,
+            receivedAt: input.receivedAt,
+          },
+          currentLast: currentLast
+            ? {
+                occurredAt: currentLast.providerOccurredAt,
+                createdAt: currentLast.createdAt,
+                id: currentLast.id,
+              }
+            : null,
+          lastReadAt: conversation.lastReadAt,
+        })
+          ? { unreadCount: { increment: 1 } }
+          : {}),
         customerDisplayName: nextCustomerDisplayName(
           conversation.customerDisplayName,
           input.customerDisplayName,

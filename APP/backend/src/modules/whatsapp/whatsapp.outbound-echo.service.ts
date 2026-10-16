@@ -129,20 +129,18 @@ export async function materializeOutboundEchoMessage(
         : null,
     );
     const outboundAt = input.providerOccurredAt ?? input.receivedAt;
-    await tx.whatsAppConversation.update({
-      where: { id: conversation.id },
-      data: {
-        lastOutboundAt: outboundAt,
-        ...(newer
-          ? {
-              lastMessageId: message.id,
-              lastMessageAt: outboundAt,
-              lastMessagePreview: preview,
-              lastMessageType: messageType,
-            }
-          : {}),
-      },
-    });
+    if (newer) {
+      await tx.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          lastOutboundAt: outboundAt,
+          lastMessageId: message.id,
+          lastMessageAt: outboundAt,
+          lastMessagePreview: preview,
+          lastMessageType: messageType,
+        },
+      });
+    }
 
     await tx.whatsAppWebhookEvent.update({
       where: { id: input.webhookEventId },

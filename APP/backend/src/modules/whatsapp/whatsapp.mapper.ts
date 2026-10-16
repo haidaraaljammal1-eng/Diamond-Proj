@@ -1,5 +1,6 @@
 import type { Prisma, WhatsAppConnection, User } from "@prisma/client";
 import { WHATSAPP_PROTECTED_MEDIA_TYPES } from "src/modules/whatsapp/whatsapp.constants";
+import { readWhapiRevisionFlags } from "src/modules/whatsapp/whatsapp.message-revision";
 import { createWhatsAppProvider } from "src/modules/whatsapp/whatsapp.provider";
 import type { WhatsAppProviderCapabilities } from "src/modules/whatsapp/whatsapp.capabilities";
 import type {
@@ -207,5 +208,6 @@ export function toMessageDto(row: {
     receivedAt: row.receivedAt,
     providerStatus: row.providerStatus,
     sendState: row.sendState ?? null,
+    ...readWhapiRevisionFlags(row.displayPayload),
   };
 }

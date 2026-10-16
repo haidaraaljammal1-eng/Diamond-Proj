@@ -32,6 +32,14 @@ describe("whatsapp realtime parser", () => {
     assert.equal(JSON.stringify(events[0]).includes("textBody"), false);
     assert.equal(rest.includes("eventId"), true);
     assert.equal(validateRealtimeEvent({ type: "nope", eventId: "x" }), null);
+    const resync = validateRealtimeEvent({
+      type: "whatsapp.realtime.resync",
+      eventId: "90",
+      occurredAt: "2026-10-16T12:00:00.000Z",
+    });
+    assert.equal(resync?.type, "whatsapp.realtime.resync");
+    assert.equal(resync?.eventId, "90");
+    assert.equal(resync?.conversationId, undefined);
   });
 
   it("uses bounded backoff", () => {

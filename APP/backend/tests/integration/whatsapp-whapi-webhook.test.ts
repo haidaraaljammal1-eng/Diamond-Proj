@@ -198,5 +198,285 @@ if (!RUN) {
       const msg = await prisma.whatsAppMessage.findFirst({ where: { providerMessageId: "m-grp" } });
       assert.equal(msg, null);
     });
+
+    test("materializes every message in one webhook batch", async () => {
+      const res = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-batch-1",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000010@s.whatsapp.net",
+            timestamp: 1_790_000_310,
+            text: { body: "batch-one" },
+          },
+          {
+            id: "m-batch-2",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000011@s.whatsapp.net",
+            timestamp: 1_790_000_311,
+            text: { body: "batch-two" },
+          },
+        ],
+        statuses: [{ id: "m-out-status", status: "read", timestamp: 1_790_000_312 }],
+        event: { type: "messages", event: "post" },
+      });
+      assert.equal(res.statusCode, 200);
+      const count = await prisma.whatsAppMessage.count({
+        where: { providerMessageId: { in: ["m-batch-1", "m-batch-2"] } },
+      });
+      assert.equal(count, 2);
+      const statusRow = await prisma.whatsAppMessage.findFirst({
+        where: { providerMessageId: "m-out-status" },
+      });
+      assert.equal(statusRow?.providerStatus, "READ");
+    });
+
+    test("applies a status that arrived before the mobile echo", async () => {
+      const early = await postWebhook(app, {
+        channel_id: CHANNEL,
+        statuses: [{ id: "m-echo-early", status: "delivered", timestamp: 1_790_000_400 }],
+        event: { type: "statuses", event: "post" },
+      });
+      assert.equal(early.statusCode, 200);
+      const echo = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-echo-early",
+            from_me: true,
+            type: "text",
+            chat_id: "971500000012@s.whatsapp.net",
+            timestamp: 1_790_000_399,
+            source: "mobile",
+            text: { body: "sent from the phone" },
+          },
+        ],
+        event: { type: "messages", event: "post" },
+      });
+      assert.equal(echo.statusCode, 200);
+      const row = await prisma.whatsAppMessage.findFirst({
+        where: { providerMessageId: "m-echo-early" },
+      });
+      assert.equal(row?.direction, "OUTBOUND");
+      assert.equal(row?.providerStatus, "DELIVERED");
+    });
+
+    test("matches a phone echo to the pending Diamond send with the same text", async () => {
+      const conversation = await prisma.whatsAppConversation.create({
+        data: {
+          connectionId,
+          customerWaId: "971500000013",
+          providerChatId: "971500000013@s.whatsapp.net",
+        },
+      });
+      await prisma.whatsAppMessage.create({
+        data: {
+          conversationId: conversation.id,
+          connectionId,
+          direction: "OUTBOUND",
+          messageType: "TEXT",
+          textBody: "desk reply",
+          receivedAt: new Date(),
+          sendState: "ACCEPTED",
+          providerStatus: "PENDING",
+        },
+      });
+      const res = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-echo-match",
+            from_me: true,
+            type: "text",
+            chat_id: "971500000013@s.whatsapp.net",
+            timestamp: 1_790_000_420,
+            source: "web",
+            text: { body: "desk reply" },
+          },
+        ],
+        event: { type: "messages", event: "post" },
+      });
+      assert.equal(res.statusCode, 200);
+      const rows = await prisma.whatsAppMessage.findMany({
+        where: { conversationId: conversation.id },
+      });
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0]?.providerMessageId, "m-echo-match");
+    });
+
+    test("does not move the conversation backward for an older message or a read receipt", async () => {
+      const first = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-order-new",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000014@s.whatsapp.net",
+            timestamp: 1_790_000_500,
+            text: { body: "latest" },
+          },
+        ],
+        event: { type: "messages", event: "post" },
+      });
+      assert.equal(first.statusCode, 200);
+      const before = await prisma.whatsAppConversation.findFirstOrThrow({
+        where: { providerChatId: "971500000014@s.whatsapp.net" },
+      });
+      const late = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-order-old",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000014@s.whatsapp.net",
+            timestamp: 1_790_000_100,
+            text: { body: "older" },
+          },
+        ],
+        event: { type: "messages", event: "post" },
+      });
+      assert.equal(late.statusCode, 200);
+      const after = await prisma.whatsAppConversation.findUniqueOrThrow({ where: { id: before.id } });
+      assert.equal(after.lastMessageId, before.lastMessageId);
+      assert.equal(after.lastMessageAt?.toISOString(), before.lastMessageAt?.toISOString());
+      assert.equal(after.lastMessagePreview, "latest");
+    });
+
+    test("edits and deletes the message without reordering the conversation", async () => {
+      const created = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-revise",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000015@s.whatsapp.net",
+            timestamp: 1_790_000_600,
+            text: { body: "original" },
+          },
+        ],
+        event: { type: "messages", event: "post" },
+      });
+      assert.equal(created.statusCode, 200);
+      const before = await prisma.whatsAppConversation.findFirstOrThrow({
+        where: { providerChatId: "971500000015@s.whatsapp.net" },
+      });
+      const edited = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-revise",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000015@s.whatsapp.net",
+            timestamp: 1_790_000_610,
+            text: { body: "revised" },
+          },
+        ],
+        event: { type: "messages", event: "patch" },
+      });
+      assert.equal(edited.statusCode, 200);
+      const message = await prisma.whatsAppMessage.findFirstOrThrow({
+        where: { providerMessageId: "m-revise" },
+      });
+      assert.equal(message.textBody, "revised");
+      const afterEdit = await prisma.whatsAppConversation.findUniqueOrThrow({ where: { id: before.id } });
+      assert.equal(afterEdit.lastMessageAt?.toISOString(), before.lastMessageAt?.toISOString());
+      assert.equal(afterEdit.lastMessagePreview, "revised");
+
+      const editedAgain = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-revise",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000015@s.whatsapp.net",
+            timestamp: 1_790_000_611,
+            text: { body: "revised again" },
+          },
+        ],
+        event: { type: "messages", event: "patch" },
+      });
+      assert.equal(editedAgain.statusCode, 200);
+      const second = await prisma.whatsAppMessage.findUniqueOrThrow({ where: { id: message.id } });
+      assert.equal(second.textBody, "revised again");
+      const edits = await prisma.whatsAppWebhookEvent.count({
+        where: { providerMessageId: "m-revise", providerEventKey: { contains: ":update:" } },
+      });
+      assert.equal(edits, 2);
+
+      const removed = await postWebhook(app, {
+        channel_id: CHANNEL,
+        messages: [
+          {
+            id: "m-revise",
+            from_me: false,
+            type: "text",
+            chat_id: "971500000015@s.whatsapp.net",
+            timestamp: 1_790_000_620,
+          },
+        ],
+        event: { type: "messages", event: "delete" },
+      });
+      assert.equal(removed.statusCode, 200);
+      const deleted = await prisma.whatsAppMessage.findUniqueOrThrow({ where: { id: message.id } });
+      assert.equal(deleted.textBody, null);
+      const afterDelete = await prisma.whatsAppConversation.findUniqueOrThrow({ where: { id: before.id } });
+      assert.equal(afterDelete.lastMessageAt?.toISOString(), before.lastMessageAt?.toISOString());
+      assert.equal(afterDelete.lastMessageId, before.lastMessageId);
+    });
+
+    test("does not regress READ when an older delivered status arrives", async () => {
+      const conversation = await prisma.whatsAppConversation.create({
+        data: {
+          connectionId,
+          customerWaId: "971500000016",
+          providerChatId: "971500000016@s.whatsapp.net",
+        },
+      });
+      const message = await prisma.whatsAppMessage.create({
+        data: {
+          conversationId: conversation.id,
+          connectionId,
+          direction: "OUTBOUND",
+          messageType: "TEXT",
+          textBody: "status-order",
+          receivedAt: new Date(),
+          providerMessageId: "m-status-order",
+          sendState: "ACCEPTED",
+          providerStatus: "SENT",
+        },
+      });
+      assert.equal(
+        (
+          await postWebhook(app, {
+            channel_id: CHANNEL,
+            statuses: [{ id: "m-status-order", status: "read", timestamp: 1_790_000_700 }],
+            event: { type: "statuses", event: "post" },
+          })
+        ).statusCode,
+        200,
+      );
+      assert.equal(
+        (
+          await postWebhook(app, {
+            channel_id: CHANNEL,
+            statuses: [{ id: "m-status-order", status: "delivered", timestamp: 1_790_000_690 }],
+            event: { type: "statuses", event: "post" },
+          })
+        ).statusCode,
+        200,
+      );
+      const updated = await prisma.whatsAppMessage.findUniqueOrThrow({ where: { id: message.id } });
+      assert.equal(updated.providerStatus, "READ");
+      const listed = await prisma.whatsAppConversation.findUniqueOrThrow({ where: { id: conversation.id } });
+      assert.equal(listed.lastMessageAt, null);
+    });
   });
 }

@@ -99,8 +99,13 @@ export function WhatsAppMessageBubble({ message }: { message: WhatsAppMessageDto
       data-direction={message.direction}
       data-type={message.messageType}
       data-send-state={message.sendState ?? undefined}
+      data-revoked={message.revoked ? "true" : undefined}
     >
-      {message.messageType === "TEXT" ? (
+      {message.revoked ? (
+        <p className={styles.text} dir="auto" data-testid="whatsapp-message-revoked">
+          {t("message.revoked")}
+        </p>
+      ) : message.messageType === "TEXT" ? (
         <p className={styles.text} dir="auto">
           {message.textBody ?? ""}
         </p>
@@ -171,6 +176,7 @@ export function WhatsAppMessageBubble({ message }: { message: WhatsAppMessageDto
             {format.dateTime(when, { hour: "2-digit", minute: "2-digit" })}
           </time>
         ) : null}
+        {message.edited && !message.revoked ? <span>{t("message.edited")}</span> : null}
         {outbound ? (
           <span
             className={styles.status}

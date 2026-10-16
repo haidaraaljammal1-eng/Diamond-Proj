@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { authRateLimit } from "src/plugins/rate-limit";
+import { whatsappWebhookRateLimit } from "src/plugins/rate-limit";
 import { WhatsAppErrorReason } from "src/modules/whatsapp/whatsapp.errors";
 import { createWhapiWebhookService } from "src/modules/whatsapp/whapi.webhook.service";
 import { whapiWebhookSecretHeaderName } from "src/modules/whatsapp/whapi.config";
@@ -25,7 +25,7 @@ export default async function whatsappWhapiWebhookRoutes(fastify: FastifyInstanc
     instance.post(
       "/:callbackKey",
       {
-        config: authRateLimit(),
+        config: whatsappWebhookRateLimit(),
         schema: {
           summary: "Whapi WhatsApp webhook events",
           operationId: "receiveWhatsAppWhapiWebhook",

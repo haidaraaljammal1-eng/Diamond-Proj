@@ -7,15 +7,23 @@ import { WHATSAPP_CURRENT_STATUSES } from "src/modules/whatsapp/whatsapp.constan
 import { WhatsAppErrorReason } from "src/modules/whatsapp/whatsapp.errors";
 import { decryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
+import { choosePendingEchoCandidate } from "src/modules/whatsapp/whatsapp.echo-match";
 import { materializeOutboundEchoMessage } from "src/modules/whatsapp/whatsapp.outbound-echo.service";
-import { applyOutboundProviderStatus } from "src/modules/whatsapp/whatsapp.outbound-status";
+import {
+  applyOutboundProviderStatus,
+  reconcileOutboundStatusEvents,
+} from "src/modules/whatsapp/whatsapp.outbound-status";
+import {
+  applyDeferredMessageRevisions,
+  applyWhapiMessageRevision,
+} from "src/modules/whatsapp/whatsapp.message-revision";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
 import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
 import { sanitizeWebhookPayload } from "src/modules/whatsapp/whatsapp.webhook-sanitize";
 import { sha256Hex } from "src/modules/whatsapp/whatsapp.webhook-signature";
 import { timingSafeCallbackKey } from "src/modules/whatsapp/ultramsg.webhook-parse";
-import { parseWhapiWebhook, type ParsedWhapiWebhook } from "src/modules/whatsapp/whapi.webhook-parse";
+import { parseWhapiWebhookBatch, type ParsedWhapiWebhook } from "src/modules/whatsapp/whapi.webhook-parse";
 import {
   timingSafeWhapiWebhookSecret,
   whapiChannelIdsMatch,
@@ -85,23 +93,40 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
     }
 
     const envelopeHash = sha256Hex(rawBody);
-    const parsed = parseWhapiWebhook(parsedJson, envelopeHash);
+    const batch = parseWhapiWebhookBatch(parsedJson, envelopeHash);
     const configuredChannel = connection?.providerInstanceId || env.WHAPI_CHANNEL_ID.trim();
-    if (configuredChannel && !whapiChannelIdsMatch(configuredChannel, parsed.channelId)) {
-      await persistTrace(parsed, parsedJson, new Date(), null, "IGNORED", WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND);
+    const channelId = batch.find((item) => item.channelId)?.channelId ?? null;
+    if (configuredChannel && !whapiChannelIdsMatch(configuredChannel, channelId)) {
+      for (const parsed of batch) {
+        await persistTrace(parsed, parsedJson, new Date(), null, "IGNORED", WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND);
+      }
       return { httpStatus: 200, code: "RECEIVED" };
     }
     if (!connection) {
-      await persistTrace(parsed, parsedJson, new Date(), null, "IGNORED", WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND);
+      for (const parsed of batch) {
+        await persistTrace(parsed, parsedJson, new Date(), null, "IGNORED", WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND);
+      }
       return { httpStatus: 200, code: "RECEIVED" };
     }
 
-    try {
-      await persistParsed(parsed, parsedJson, connection.id, new Date());
-    } catch (err) {
-      fastify.log.error({ err, eventKey: parsed.providerEventKey }, "whapi webhook persist failed");
-      return { httpStatus: 500, code: "WHATSAPP_WEBHOOK_INTERNAL_FAILURE" };
+    let failed = false;
+    for (const parsed of batch) {
+      try {
+        await persistParsed(parsed, parsedJson, connection.id, new Date());
+      } catch (err) {
+        failed = true;
+        fastify.log.error({ err, eventKey: parsed.providerEventKey }, "whapi webhook persist failed");
+        try {
+          await recordBatchItemFailure(parsed, parsedJson, connection.id, new Date());
+        } catch (recordErr) {
+          fastify.log.error(
+            { err: recordErr, eventKey: parsed.providerEventKey },
+            "whapi webhook failure row was not recorded",
+          );
+        }
+      }
     }
+    if (failed) return { httpStatus: 500, code: "WHATSAPP_WEBHOOK_INTERNAL_FAILURE" };
     return { httpStatus: 200, code: "RECEIVED" };
   }
 
@@ -118,6 +143,10 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
     }
     if (parsed.kind === "status") {
       await ingestStatus(parsed, json, connectionId, receivedAt);
+      return;
+    }
+    if (parsed.kind === "message" && (parsed.action === "update" || parsed.action === "delete")) {
+      await ingestRevision(parsed, json, connectionId, receivedAt);
       return;
     }
     if (parsed.kind === "message") {
@@ -180,6 +209,9 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
         where: { id: eventRow.id },
         data: { status: "PROCESSED", processedAt: new Date(), failureCode: null },
       });
+      if (parsed.providerMessageId) {
+        await applyDeferredMessageRevisions(prisma, connectionId, parsed.providerMessageId);
+      }
       await touchConnection(connectionId, receivedAt);
     } catch (err) {
       await prisma.whatsAppWebhookEvent.update({
@@ -218,6 +250,8 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
     });
     if (existing) {
       await persistTrace(parsed, json, receivedAt, connectionId, "PROCESSED", null);
+      await reconcileEchoStatuses(connectionId, parsed.providerMessageId);
+      await applyDeferredMessageRevisions(prisma, connectionId, parsed.providerMessageId);
       await touchConnection(connectionId, receivedAt);
       return;
     }
@@ -235,16 +269,22 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
           sendState: { in: ["PENDING", "ACCEPTED", "UNKNOWN"] },
           createdAt: { gte: new Date(receivedAt.getTime() - 15 * 60_000) },
         },
-        orderBy: { createdAt: "desc" },
-        take: 2,
-        select: { id: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, textBody: true, messageType: true, createdAt: true },
       });
-      if (candidates.length === 1) {
-        await prisma.whatsAppMessage.update({
-          where: { id: candidates[0]!.id },
-          data: { providerMessageId: parsed.providerMessageId },
-        });
+      const chosen = choosePendingEchoCandidate(candidates, { textBody: parsed.textBody });
+      if (chosen) {
+        try {
+          await prisma.whatsAppMessage.update({
+            where: { id: chosen.id },
+            data: { providerMessageId: parsed.providerMessageId },
+          });
+        } catch (err) {
+          if (!isUniqueViolation(err)) throw err;
+        }
         await persistTrace(parsed, json, receivedAt, connectionId, "PROCESSED", null);
+        await reconcileEchoStatuses(connectionId, parsed.providerMessageId);
+        await applyDeferredMessageRevisions(prisma, connectionId, parsed.providerMessageId);
         await touchConnection(connectionId, receivedAt);
         return;
       }
@@ -266,7 +306,38 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
       webhookEventId: eventRow.id,
       source: parsed.source,
     });
+    await reconcileEchoStatuses(connectionId, parsed.providerMessageId);
+    await applyDeferredMessageRevisions(prisma, connectionId, parsed.providerMessageId);
     await touchConnection(connectionId, receivedAt);
+  }
+
+  async function reconcileEchoStatuses(connectionId: string, providerMessageId: string) {
+    const events = await reconcileOutboundStatusEvents(prisma, { connectionId, providerMessageId });
+    publishWhatsAppRealtime(events);
+  }
+
+  async function ingestRevision(
+    parsed: ParsedWhapiWebhook,
+    json: unknown,
+    connectionId: string,
+    receivedAt: Date,
+  ) {
+    if (!parsed.providerMessageId || parsed.action === "create") {
+      await persistTrace(parsed, json, receivedAt, connectionId, "IGNORED", WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT);
+      return;
+    }
+    const eventRow = await ensureReceivedEvent(parsed, json, receivedAt, connectionId);
+    if (!eventRow || eventRow.status === "PROCESSED" || eventRow.status === "IGNORED") return;
+    const state = await applyWhapiMessageRevision(prisma, {
+      connectionId,
+      providerMessageId: parsed.providerMessageId,
+      action: parsed.action,
+      textBody: parsed.textBody,
+      caption: parsed.caption,
+      occurredAt: parsed.occurredAt,
+      webhookEventId: eventRow.id,
+    });
+    if (state === "waiting" || state === "applied") await touchConnection(connectionId, receivedAt);
   }
 
   async function ingestStatus(
@@ -275,16 +346,21 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
     connectionId: string,
     receivedAt: Date,
   ) {
-    const insert = await persistTrace(
-      parsed,
-      json,
-      receivedAt,
-      connectionId,
-      parsed.status ? "PROCESSED" : "IGNORED",
-      parsed.status ? null : WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,
-    );
-    if (insert === "duplicate") return;
-    if (parsed.providerMessageId && parsed.status) {
+    if (!parsed.providerMessageId || !parsed.status) {
+      await persistTrace(
+        parsed,
+        json,
+        receivedAt,
+        connectionId,
+        "IGNORED",
+        WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,
+      );
+      return;
+    }
+    const eventRow = await ensureReceivedEvent(parsed, json, receivedAt, connectionId);
+    if (!eventRow || eventRow.status === "PROCESSED" || eventRow.status === "IGNORED") return;
+    try {
+      // Delivery and read receipts update the message row only. They must not move lastMessageAt.
       const statusEvents = await withTransaction(prisma, async (tx) => {
         const applied = await applyOutboundProviderStatus(tx, {
           connectionId,
@@ -311,8 +387,48 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
         return realtime ? [realtime] : [];
       });
       publishWhatsAppRealtime(statusEvents);
+      await prisma.whatsAppWebhookEvent.update({
+        where: { id: eventRow.id },
+        data: { status: "PROCESSED", processedAt: new Date(), failureCode: null },
+      });
+      await touchConnection(connectionId, receivedAt);
+    } catch (err) {
+      await prisma.whatsAppWebhookEvent.update({
+        where: { id: eventRow.id },
+        data: {
+          status: "FAILED",
+          processedAt: null,
+          failureCode: "WHATSAPP_WEBHOOK_INTERNAL_FAILURE",
+        },
+      });
+      throw err;
     }
-    await touchConnection(connectionId, receivedAt);
+  }
+
+  async function recordBatchItemFailure(
+    parsed: ParsedWhapiWebhook,
+    json: unknown,
+    connectionId: string,
+    receivedAt: Date,
+  ) {
+    const existing = await prisma.whatsAppWebhookEvent.findUnique({
+      where: { providerEventKey: parsed.providerEventKey },
+      select: { id: true, status: true },
+    });
+    const disposition = webhookFailureDisposition(existing?.status ?? null);
+    if (disposition === "leave") return;
+    if (disposition === "insert") {
+      await persistTrace(parsed, json, receivedAt, connectionId, "FAILED", "WHATSAPP_WEBHOOK_INTERNAL_FAILURE");
+      return;
+    }
+    await prisma.whatsAppWebhookEvent.update({
+      where: { id: existing!.id },
+      data: {
+        status: "FAILED",
+        processedAt: null,
+        failureCode: "WHATSAPP_WEBHOOK_INTERNAL_FAILURE",
+      },
+    });
   }
 
   async function persistTrace(
@@ -375,16 +491,23 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
           customerWaId: parsed.customerWaId,
           customerDisplayName: parsed.displayName,
           occurredAt: parsed.occurredAt,
-          messageType: parsed.messageType,
+          messageType: parsed.kind === "status" ? parsed.status : parsed.messageType,
           textBody: parsed.textBody,
         },
       });
       return row;
     } catch (err) {
       if (!isUniqueViolation(err)) throw err;
-      return prisma.whatsAppWebhookEvent.findUnique({
+      const existing = await prisma.whatsAppWebhookEvent.findUnique({
         where: { providerEventKey: parsed.providerEventKey },
       });
+      if (existing && parsed.kind === "status" && parsed.status && existing.messageType !== parsed.status) {
+        return prisma.whatsAppWebhookEvent.update({
+          where: { id: existing.id },
+          data: { messageType: parsed.status },
+        });
+      }
+      return existing;
     }
   }
 
@@ -396,4 +519,13 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
   }
 
   return { ingest };
+}
+
+/** A failed batch item stays retryable. A finished or ignored row is left alone. */
+export function webhookFailureDisposition(
+  status: "RECEIVED" | "PROCESSED" | "FAILED" | "IGNORED" | null,
+): "insert" | "mark-failed" | "leave" {
+  if (status === null) return "insert";
+  if (status === "PROCESSED" || status === "IGNORED") return "leave";
+  return "mark-failed";
 }

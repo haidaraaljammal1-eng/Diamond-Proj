@@ -3058,7 +3058,9 @@
     "message": {
       "unsupported": "Unsupported message",
       "mediaUnavailable": "Media is not available",
-      "mediaLoading": "Loading media"
+      "mediaLoading": "Loading media",
+      "revoked": "This message was deleted",
+      "edited": "Edited"
     },
     "messageType": {
       "TEXT": "Message",

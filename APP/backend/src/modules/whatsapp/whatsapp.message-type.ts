@@ -79,6 +79,31 @@ export interface MessageChronology {
   id: string;
 }
 
+/** Provider time older than this, relative to webhook receipt, is history and must not raise unread. */
+export const WHATSAPP_UNREAD_LIVE_LAG_MS = 15 * 60 * 1000;
+
+/**
+ * Unread rises for a newly stored inbound row that is ahead of the conversation head
+ * and within the live receipt window. Older history does not raise it.
+ * After the office has read the conversation, an undated row does not raise it either.
+ */
+export function inboundCountsAsUnread(input: {
+  incoming: MessageChronology & { receivedAt: Date };
+  currentLast: MessageChronology | null;
+  lastReadAt: Date | null;
+}): boolean {
+  if (!isNewerConversationMessage(input.incoming, input.currentLast)) return false;
+  const occurredAt = input.incoming.occurredAt;
+  if (
+    occurredAt &&
+    input.incoming.receivedAt.getTime() - occurredAt.getTime() > WHATSAPP_UNREAD_LIVE_LAG_MS
+  ) {
+    return false;
+  }
+  if (input.lastReadAt && !occurredAt) return false;
+  return true;
+}
+
 /**
  * True when incoming should become the conversation last-message.
  * Primary: providerOccurredAt. Tie: createdAt then stable id.

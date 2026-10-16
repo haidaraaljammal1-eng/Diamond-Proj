@@ -110,6 +110,7 @@ const reconcileInFlight = new Map<string, Promise<void>>();
 const REALTIME_CONTENT_EVENTS = new Set<WhatsAppRealtimeEvent["type"]>([
   "whatsapp.message.received",
   "whatsapp.message.outbound_created",
+  "whatsapp.message.updated",
   "whatsapp.conversation.created",
   "whatsapp.conversation.updated",
 ]);
@@ -188,6 +189,10 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
   },
 
   async applyRealtimeEvent(event) {
+    if (event.type === "whatsapp.realtime.resync") {
+      await get().reconcileRealtime();
+      return;
+    }
     if (rememberRealtimeEvent(event.eventId)) return;
     switch (event.type) {
       case "whatsapp.connection.updated":
@@ -218,6 +223,7 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
       case "whatsapp.conversation.updated":
       case "whatsapp.message.received":
       case "whatsapp.message.outbound_created":
+      case "whatsapp.message.updated":
         if (event.conversationId) {
           await queueConversationReconcile(event.conversationId, event, get, set);
         }
@@ -649,7 +655,7 @@ async function reconcileConversationFromServer(
         get().selectedConversationId,
       );
       const listRow = nextConversations.find((item) => item.id === conversationId) ?? detail;
-      const current = get().messagesByConversation[conversationId] ?? [];
+      const latest = get().messagesByConversation[conversationId] ?? [];
       set({
         conversations: nextConversations,
         selectedConversation:
@@ -658,10 +664,7 @@ async function reconcileConversationFromServer(
             : get().selectedConversation,
         messagesByConversation: {
           ...get().messagesByConversation,
-          [conversationId]: mergeAndSortWhatsAppMessages(
-            current,
-            messages.data,
-          ),
+          [conversationId]: mergeAndSortWhatsAppMessages(latest, messages.data),
         },
         messageMetaByConversation: {
           ...get().messageMetaByConversation,

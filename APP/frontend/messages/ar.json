@@ -3058,7 +3058,9 @@
     "message": {
       "unsupported": "رسالة غير مدعومة",
       "mediaUnavailable": "الوسائط غير متاحة",
-      "mediaLoading": "جاري تحميل الوسائط"
+      "mediaLoading": "جاري تحميل الوسائط",
+      "revoked": "تم حذف هذه الرسالة",
+      "edited": "معدّلة"
     },
     "messageType": {
       "TEXT": "رسالة",

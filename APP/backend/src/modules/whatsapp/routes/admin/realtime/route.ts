@@ -11,7 +11,11 @@ import {
 } from "src/modules/whatsapp/whatsapp.constants";
 import { formatSseFrame } from "src/modules/whatsapp/whatsapp.realtime";
 import { startWhatsAppRealtimeFanout } from "src/modules/whatsapp/whatsapp.realtime-fanout";
-import { listWhatsAppRealtimeSince } from "src/modules/whatsapp/whatsapp.realtime-outbox";
+import {
+  latestWhatsAppRealtimeId,
+  listWhatsAppRealtimeSince,
+  shouldResyncWhatsAppRealtime,
+} from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { getWhatsAppRealtimePublisher } from "src/modules/whatsapp/whatsapp.realtime-publisher";
 import { corsHeadersForOrigin, isCorsOriginAllowed } from "src/lib/http/cors-origin";
 
@@ -105,8 +109,27 @@ export default async function whatsappRealtimeRoutes(fastify: FastifyInstance) {
       };
 
       if (afterId > 0) {
-        const missed = await listWhatsAppRealtimeSince(fastify.prisma, afterId, 100);
-        for (const event of missed) write(formatSseFrame(event));
+        const limit = 100;
+        const missed = await listWhatsAppRealtimeSince(fastify.prisma, afterId, limit + 1);
+        const latestId = await latestWhatsAppRealtimeId(fastify.prisma);
+        if (
+          shouldResyncWhatsAppRealtime({
+            returnedCount: missed.length,
+            limit,
+            afterId,
+            latestId,
+          })
+        ) {
+          write(
+            formatSseFrame({
+              eventId: String(Math.max(latestId, afterId)),
+              type: "whatsapp.realtime.resync",
+              occurredAt: new Date().toISOString(),
+            }),
+          );
+        } else {
+          for (const event of missed) write(formatSseFrame(event));
+        }
       }
 
       write(": ping\n\n");

@@ -98,3 +98,18 @@ export function whatsappSendRateLimit() {
     },
   };
 }
+
+/**
+ * Whapi posts one HTTP request per message or status, so a busy minute is several
+ * requests per conversation. 3,000/minute stays above office bursts and still
+ * bounds anonymous traffic. The webhook secret is checked in the handler.
+ * This limit replaces the global bucket for this route only.
+ */
+export function whatsappWebhookRateLimit() {
+  return {
+    rateLimit: {
+      max: 3_000,
+      timeWindow: 60_000,
+    },
+  };
+}

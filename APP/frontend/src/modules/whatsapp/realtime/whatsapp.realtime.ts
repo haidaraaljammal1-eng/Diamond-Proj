@@ -6,6 +6,8 @@ export const WHATSAPP_REALTIME_TYPES = [
   "whatsapp.message.outbound_created",
   "whatsapp.message.send_state_changed",
   "whatsapp.message.provider_status_changed",
+  "whatsapp.message.updated",
+  "whatsapp.realtime.resync",
   "whatsapp.connection.updated",
 ] as const;
 

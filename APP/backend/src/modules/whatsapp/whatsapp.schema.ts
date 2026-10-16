@@ -261,6 +261,8 @@ export const WhatsAppMessageSchema = z.object({
   receivedAt: z.date(),
   providerStatus: WhatsAppMessageProviderStatusSchema.nullable(),
   sendState: WhatsAppMessageSendStateSchema.nullable(),
+  edited: z.boolean(),
+  revoked: z.boolean(),
 });
 
 export const WhatsAppSendTextBodySchema = z

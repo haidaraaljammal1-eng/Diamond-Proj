@@ -234,6 +234,8 @@ export interface WhatsAppMessageDto {
   receivedAt: string;
   providerStatus: WhatsAppMessageProviderStatus | null;
   sendState: WhatsAppMessageSendState | null;
+  edited?: boolean;
+  revoked?: boolean;
 }
 
 export interface WhatsAppTemplateDto {
