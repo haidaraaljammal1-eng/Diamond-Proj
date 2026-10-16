@@ -85,11 +85,30 @@ export function applyUnreadZero(
   return { ...conversation, unreadCount: 0 };
 }
 
+function sameConversationPresentation(
+  detail: WhatsAppConversationDetailDto,
+  listRow: WhatsAppConversationListItemDto,
+): boolean {
+  return (
+    detail.customerWaId === listRow.customerWaId &&
+    detail.customerDisplayName === listRow.customerDisplayName &&
+    detail.customerLinked === listRow.customerLinked &&
+    detail.lastMessagePreview === listRow.lastMessagePreview &&
+    detail.lastMessageType === listRow.lastMessageType &&
+    detail.lastMessageAt === listRow.lastMessageAt &&
+    detail.unreadCount === listRow.unreadCount &&
+    detail.lastInboundAt === listRow.lastInboundAt &&
+    detail.connection.displayPhoneNumber === listRow.connection.displayPhoneNumber &&
+    detail.connection.verifiedName === listRow.connection.verifiedName
+  );
+}
+
 /** Merge fresher list-row presentation fields into an authoritative detail DTO. */
 export function mergeConversationListIntoDetail(
   detail: WhatsAppConversationDetailDto,
   listRow: WhatsAppConversationListItemDto,
 ): WhatsAppConversationDetailDto {
+  if (sameConversationPresentation(detail, listRow)) return detail;
   return {
     ...detail,
     customerWaId: listRow.customerWaId,

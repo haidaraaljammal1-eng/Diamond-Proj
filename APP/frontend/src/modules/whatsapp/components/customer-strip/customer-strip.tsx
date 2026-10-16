@@ -7,11 +7,11 @@ import { Dialog } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { usePermissions } from "@/modules/auth";
 import {
-  getWhatsAppCustomerMatch,
   linkWhatsAppCustomer,
   searchDiamondCustomers,
   unlinkWhatsAppCustomer,
 } from "../../api/whatsapp.api";
+import { whatsappCustomerMatch } from "../../utils/whatsapp-customer-match";
 import type {
   WhatsAppConversationDetailDto,
   WhatsAppConversationListItemDto,
@@ -37,6 +37,7 @@ export function WhatsAppCustomerStrip({
   const canLink = hasPermission(WHATSAPP_LINK_CUSTOMER_PERMISSION);
   const canReadCustomers = hasPermission(CUSTOMERS_READ_PERMISSION);
   const detail = "customerLink" in conversation ? conversation : null;
+  const matchKey = detail ? `${conversation.id}:${detail.customerLink.linked ? "linked" : "open"}` : "";
   const [match, setMatch] = useState<WhatsAppCustomerMatchDto | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -44,7 +45,7 @@ export function WhatsAppCustomerStrip({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!detail || detail.customerLink.linked) {
+    if (!matchKey || matchKey.endsWith(":linked")) {
       setMatch(null);
       return;
     }
@@ -68,10 +69,19 @@ export function WhatsAppCustomerStrip({
       setMatch({ state: "NO_MATCH", customer: null });
       return;
     }
-    void getWhatsAppCustomerMatch(conversation.id)
-      .then(setMatch)
-      .catch(() => setMatch(null));
-  }, [conversation.id, detail, inbox.simulationActive]);
+    let cancelled = false;
+    void whatsappCustomerMatch
+      .load(conversation.id)
+      .then((next) => {
+        if (!cancelled) setMatch(next);
+      })
+      .catch(() => {
+        if (!cancelled) setMatch(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [matchKey, conversation.id, inbox.simulationActive, inbox.customerMatchRevision]);
 
   async function link(customerId: number) {
     try {
@@ -81,6 +91,7 @@ export function WhatsAppCustomerStrip({
         return;
       }
       await linkWhatsAppCustomer(conversation.id, customerId);
+      whatsappCustomerMatch.invalidate(conversation.id);
       inbox.selectConversation(conversation.id);
       setOpen(false);
     } catch (err) {
@@ -95,6 +106,7 @@ export function WhatsAppCustomerStrip({
         return;
       }
       await unlinkWhatsAppCustomer(conversation.id);
+      whatsappCustomerMatch.invalidate(conversation.id);
       inbox.selectConversation(conversation.id);
     } catch (err) {
       setError(resolveWhatsAppErrorMessage(t, err));

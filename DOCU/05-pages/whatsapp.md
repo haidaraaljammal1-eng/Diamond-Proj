@@ -34,7 +34,7 @@ This is **not** an Inbox rebuild. The list, search, All/Unread, bubbles, media c
 - `GET /whatsapp/messages/:id/media` — authenticated media proxy (`whatsapp.read`)
 - `POST /whatsapp/conversations/:id/media-messages` — image/document/audio/video (`whatsapp.send`, open 24h window)
 - `POST /whatsapp/connection/webhook/activate` — subscribe WABA (`whatsapp.manage_connection`)
-- `GET /whatsapp/conversations/:id/customer-match` — safe phone suggestion (`whatsapp.read`)
+- `GET /whatsapp/conversations/:id/customer-match` — safe phone suggestion (`whatsapp.read`). The Inbox loads this once for an open, unlinked conversation. Realtime preview updates do not call it again. A 429 is not retried until Refresh, unlink, or another conversation. Refresh clears that cache.
 - `POST` / `DELETE /whatsapp/conversations/:id/customer-link` — explicit link (`whatsapp.link_customer`)
 
 `GET /whatsapp/connection` accepts `whatsapp.read` **or** `whatsapp.manage_connection` so Inbox readers can see connection/webhook banners. Mutations stay `whatsapp.manage_connection`. Send stays `whatsapp.send`. No credentials are returned. The client never sends a recipient, `wa_id`, or `phoneNumberId`.
@@ -81,7 +81,7 @@ Staff types text → domain hook → Zustand → `sendWhatsAppTextMessage()` →
 
 `GET /whatsapp/realtime` (`whatsapp.read`) is an authenticated SSE notification stream. The Inbox uses a fetch + `Authorization` header client (native `EventSource` cannot send that header). Tokens are never placed in the query string.
 
-SSE tells the browser that something changed. The Zustand store then applies a targeted REST refresh or a local id merge. If SSE is down, Inbox load, open, send, and Refresh still work.
+SSE tells the browser that something changed. The Zustand store then applies a targeted REST refresh or a local id merge. If SSE is down, Inbox load, open, send, and Refresh still work. Webhook stage logs record elapsed milliseconds and event kind only. The browser records `whatsapp-realtime-event` and `whatsapp-realtime-applied` performance marks when a notification arrives and when the Inbox state is updated. Those marks do not include message text, phone numbers, or credentials.
 
 Reconnect uses bounded exponential backoff and pauses while the browser is offline. 401/403 do not retry forever. After a successful reconnect, the client reconciles connection + conversation list + selected messages because durable replay is only a 15-minute outbox window (`Last-Event-ID`).
 

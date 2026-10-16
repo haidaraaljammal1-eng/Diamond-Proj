@@ -37,8 +37,9 @@ import {
   toChronologicalPage,
   upsertConversationForRealtime,
 } from "../utils/whatsapp-view-model";
-import type { WhatsAppRealtimeEvent } from "../realtime/whatsapp.realtime";
-import type { WhatsAppRealtimeTransportStatus } from "../realtime/whatsapp.realtime";
+import { whatsappCustomerMatch } from "../utils/whatsapp-customer-match";
+import { traceWhatsAppRealtime } from "../utils/whatsapp-realtime-trace";
+import type { WhatsAppRealtimeEvent, WhatsAppRealtimeTransportStatus } from "../realtime/whatsapp.realtime";
 
 interface WhatsAppState {
   connection: WhatsAppConnectionDto | null;
@@ -60,6 +61,7 @@ interface WhatsAppState {
   sending: boolean;
   sendError: ApiRequestError | null;
   realtimeStatus: WhatsAppRealtimeTransportStatus;
+  customerMatchRevision: number;
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   reconcileRealtime: () => Promise<void>;
@@ -155,13 +157,16 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
   sending: false,
   sendError: null,
   realtimeStatus: "idle",
+  customerMatchRevision: 0,
 
   async load() {
     await Promise.all([loadConnection(set), loadConversations(get, set, { replace: true })]);
   },
 
   async refresh() {
+    whatsappCustomerMatch.invalidate();
     const selectedId = get().selectedConversationId;
+    set({ customerMatchRevision: get().customerMatchRevision + 1 });
     await Promise.all([loadConnection(set), loadConversations(get, set, { replace: true })]);
     if (selectedId) get().selectConversation(selectedId);
   },
@@ -189,6 +194,7 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
   },
 
   async applyRealtimeEvent(event) {
+    traceWhatsAppRealtime("event", event.type);
     if (event.type === "whatsapp.realtime.resync") {
       await get().reconcileRealtime();
       return;
@@ -673,6 +679,7 @@ async function reconcileConversationFromServer(
         messagesError: null,
         messagesStatus: "ready",
       });
+      traceWhatsAppRealtime("applied", event.type);
       return;
     }
 
@@ -693,6 +700,7 @@ async function reconcileConversationFromServer(
           ? mergeConversationListIntoDetail(detail, listRow)
           : reconcileSelectedConversation(nextConversations, get().selectedConversation),
     });
+    traceWhatsAppRealtime("applied", event.type);
   } catch {
     if (!isConversationSyncCurrent(conversationId, generation)) return;
   }
@@ -727,5 +735,6 @@ export function resetWhatsAppStoreForTests(): void {
     sending: false,
     sendError: null,
     realtimeStatus: "idle",
+    customerMatchRevision: 0,
   });
 }

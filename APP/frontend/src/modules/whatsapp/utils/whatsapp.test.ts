@@ -673,6 +673,12 @@ describe("manual outbound send UX", () => {
     const mergedFields = mergeConversationListIntoDetail(detail, { ...listRow, unreadCount: 0 });
     assert.equal(mergedFields.unreadCount, 0);
     assert.equal(mergedFields.messagingEligibility.reason, "READY");
+    const stable = mergeConversationListIntoDetail(mergedFields, {
+      ...listRow,
+      unreadCount: 0,
+      connection: { ...listRow.connection },
+    });
+    assert.equal(stable, mergedFields);
   });
 
   it("does not apply Meta service window to WHAPI free-text send", () => {
@@ -787,6 +793,10 @@ describe("final Inbox UX", () => {
     const strip = readFileSync(join(moduleDir, "components/customer-strip/customer-strip.tsx"), "utf8");
     assert.match(strip, /possibleMatch/);
     assert.match(strip, /AMBIGUOUS/);
+    assert.match(strip, /matchKey/);
+    assert.match(strip, /whatsappCustomerMatch/);
+    assert.match(strip, /customerMatchRevision/);
+    assert.doesNotMatch(strip, /\[conversation\.id, detail,/);
     assert.doesNotMatch(strip, /auto-link/i);
     assert.match(strip, /searchDiamondCustomers/);
   });

@@ -220,4 +220,38 @@ describe("whatsapp realtime fetch client", () => {
     assert.equal(client.getLastEventId(), "77");
     off();
   });
+
+  it("delivers consecutive message frames once each and in order", async () => {
+    resetWhatsAppRealtimeClientForTests();
+    const encoder = new TextEncoder();
+    const fetchImpl: typeof fetch = async () =>
+      ({
+        ok: true,
+        status: 200,
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                `${eventFrame("81", "whatsapp.message.received")}${eventFrame("82", "whatsapp.message.received", { messageId: "m2" })}`,
+              ),
+            );
+          },
+        }),
+      }) as Response;
+    const client = new WhatsAppRealtimeClient({
+      fetchImpl,
+      apiUrl: "http://api.test",
+      getAccessToken: async () => "test-access",
+      isOnline: () => true,
+    });
+    const seen: string[] = [];
+    const off = client.addHandler({
+      onEvent: (event) => seen.push(event.eventId),
+      onStatus: () => undefined,
+      onReconnect: () => undefined,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.deepEqual(seen, ["81", "82"]);
+    off();
+  });
 });

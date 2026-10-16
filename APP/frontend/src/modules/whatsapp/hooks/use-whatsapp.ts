@@ -74,6 +74,7 @@ export interface UseWhatsAppResult {
   simulationEnabled: boolean;
   simulationTemplates: WhatsAppTemplateDto[];
   realtimeStatus: WhatsAppRealtimeTransportStatus;
+  customerMatchRevision: number;
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   applySearch: (search: string) => void;
@@ -142,6 +143,7 @@ export function useWhatsApp(): UseWhatsAppResult {
   const sending = useWhatsAppStore((state) => state.sending);
   const sendError = useWhatsAppStore((state) => state.sendError);
   const realtimeStatus = useWhatsAppStore((state) => state.realtimeStatus);
+  const customerMatchRevision = useWhatsAppStore((state) => state.customerMatchRevision);
   const sendText = useWhatsAppStore((state) => state.sendText);
   const sendTemplate = useWhatsAppStore((state) => state.sendTemplate);
   const sendMedia = useWhatsAppStore((state) => state.sendMedia);
@@ -295,6 +297,7 @@ export function useWhatsApp(): UseWhatsAppResult {
       simulationEnabled,
       simulationTemplates: simulationActive ? simTemplates : [],
       realtimeStatus,
+      customerMatchRevision,
       load,
       refresh,
       applySearch: (search: string) => {
@@ -390,6 +393,7 @@ export function useWhatsApp(): UseWhatsAppResult {
       hasLinkCustomerPermission,
       simulationEnabled,
       realtimeStatus,
+      customerMatchRevision,
       load,
       refresh,
       setSearch,
