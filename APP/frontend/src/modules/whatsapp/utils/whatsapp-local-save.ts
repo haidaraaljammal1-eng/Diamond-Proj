@@ -1,12 +1,14 @@
 import { fetchWhatsAppMediaBlob } from "../api/whatsapp.api";
 import type { WhatsAppMessageDto } from "../types/whatsapp.types";
+import { detectLocalSaveCapability, type LocalSaveCapability } from "./whatsapp-local-save-capability";
 
 const DB_NAME = "diamond-whatsapp-local-media";
 const DB_STORE = "settings";
 const HANDLE_KEY = "directory";
 const ENABLED_KEY = "enabled";
 
-export type LocalSaveCapability = "directory" | "manual" | "iphone";
+export { detectLocalSaveCapability };
+export type { LocalSaveCapability };
 export type LocalSaveStatus = "off" | "configured" | "permission" | "manual" | "iphone";
 
 export interface LocalSaveFailure {
@@ -33,15 +35,12 @@ export function localSaveFailures(): LocalSaveFailure[] {
   return failures;
 }
 
-export function detectLocalSaveCapability(): LocalSaveCapability {
-  if (typeof navigator === "undefined") return "manual";
-  const ua = navigator.userAgent;
-  if (/iPhone|iPad|iPod/i.test(ua)) return "iphone";
-  if ("showDirectoryPicker" in window) return "directory";
-  return "manual";
+function browserStorageAvailable(): boolean {
+  return typeof indexedDB !== "undefined";
 }
 
 function openDb(): Promise<IDBDatabase> {
+  if (!browserStorageAvailable()) return Promise.reject(new Error("indexedDB unavailable"));
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
     request.onupgradeneeded = () => {
@@ -73,6 +72,7 @@ async function idbSet(key: string, value: unknown): Promise<void> {
 }
 
 export async function localSaveEnabled(): Promise<boolean> {
+  if (!browserStorageAvailable()) return false;
   return (await idbGet<boolean>(ENABLED_KEY)) === true;
 }
 
@@ -91,6 +91,7 @@ async function storedDirectory(): Promise<DirectoryPermissionHandle | null> {
 }
 
 export async function chooseLocalSaveDirectory(): Promise<boolean> {
+  if (typeof window === "undefined" || !browserStorageAvailable()) return false;
   const picker = (window as Window & {
     showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
   }).showDirectoryPicker;

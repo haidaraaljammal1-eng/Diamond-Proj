@@ -13,6 +13,7 @@ import {
   retryLocalSave,
   setLocalSaveEnabled,
   subscribeLocalSave,
+  type LocalSaveCapability,
   type LocalSaveFailure,
   type LocalSaveStatus,
 } from "../../utils/whatsapp-local-save";
@@ -24,7 +25,11 @@ export function WhatsAppLocalSaveSettings({ messages }: { messages: WhatsAppMess
   const [enabled, setEnabled] = useState(false);
   const [status, setStatus] = useState<LocalSaveStatus>("off");
   const [failures, setFailures] = useState<LocalSaveFailure[]>([]);
-  const capability = detectLocalSaveCapability();
+  const [capability, setCapability] = useState<LocalSaveCapability>("manual");
+
+  useEffect(() => {
+    setCapability(detectLocalSaveCapability());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
