@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
+import { Dialog } from "@/shared/components/ui/dialog";
 import { Icon } from "@/shared/components/ui/icon";
 import { fetchWhatsAppMediaObjectUrl } from "../../api/whatsapp.api";
 import type { WhatsAppMessageDto, WhatsAppMessageType } from "../../types/whatsapp.types";
@@ -23,6 +24,13 @@ const PLACEHOLDER_ICONS: Record<Exclude<WhatsAppMessageType, "TEXT" | "TEMPLATE"
   UNKNOWN: "mdi:message-alert-outline",
 };
 
+function formatBytes(bytes: number | null | undefined): string | null {
+  if (bytes == null || bytes < 0) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function ProtectedMedia({
   message,
   kind,
@@ -34,11 +42,16 @@ function ProtectedMedia({
   const simulation = useWhatsApp().simulationActive;
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [preview, setPreview] = useState(false);
+  const voice = kind === "AUDIO" && message.voiceNote === true;
 
   useEffect(() => {
-    if (simulation || !message.hasProtectedMedia) return;
+    if (simulation || !message.hasProtectedMedia || message.mediaExpired) return;
     let objectUrl: string | null = null;
     let cancelled = false;
+    setFailed(false);
+    setUrl(null);
     void fetchWhatsAppMediaObjectUrl(message.id)
       .then((next) => {
         if (cancelled) {
@@ -55,33 +68,85 @@ function ProtectedMedia({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [message.id, message.hasProtectedMedia, simulation]);
+  }, [attempt, message.id, message.hasProtectedMedia, message.mediaExpired, simulation]);
 
   if (simulation) {
     return (
       <div className={styles.simMedia} data-testid="whatsapp-sim-media">
         <Icon name={PLACEHOLDER_ICONS[kind]} size={18} />
-        <span>{t(`messageType.${kind}`)}</span>
+        <span>{voice ? t("media.voice") : t(`messageType.${kind}`)}</span>
       </div>
     );
   }
+  if (message.mediaExpired) {
+    return (
+      <p className={styles.placeBody} data-testid="whatsapp-media-expired">
+        {t("message.mediaExpired")}
+      </p>
+    );
+  }
   if (failed || (!message.hasProtectedMedia && !url)) {
-    return <p className={styles.placeBody}>{t("message.mediaUnavailable")}</p>;
+    return (
+      <div>
+        <p className={styles.placeBody}>{failed ? t("message.mediaFailed") : t("message.mediaUnavailable")}</p>
+        {failed ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
+            {t("media.retry")}
+          </Button>
+        ) : null}
+      </div>
+    );
   }
   if (!url) return <p className={styles.placeBody}>{t("message.mediaLoading")}</p>;
-  if (kind === "IMAGE" || kind === "STICKER") {
-    return <img className={styles.mediaImg} src={url} alt={message.caption || t(`messageType.${kind}`)} />;
-  }
-  if (kind === "AUDIO") {
-    return <audio className={styles.player} controls preload="none" src={url} />;
-  }
-  if (kind === "VIDEO") {
-    return <video className={styles.player} controls preload="metadata" src={url} />;
-  }
-  return (
+  const download = (
     <a className={styles.download} href={url} download={message.mediaFilename || "file"}>
       {t("media.download")}
     </a>
+  );
+  if (kind === "IMAGE" || kind === "STICKER") {
+    return (
+      <>
+        <button type="button" className={styles.previewButton} onClick={() => setPreview(true)}>
+          <img className={styles.mediaImg} src={url} alt={message.caption || t(`messageType.${kind}`)} />
+        </button>
+        {download}
+        <Dialog
+          open={preview}
+          onClose={() => setPreview(false)}
+          title={message.mediaFilename || t("media.preview")}
+          closeLabel={t("templates.close")}
+          size="xl"
+        >
+          <img className={styles.lightbox} src={url} alt={message.caption || t(`messageType.${kind}`)} />
+        </Dialog>
+      </>
+    );
+  }
+  if (kind === "AUDIO") {
+    return (
+      <div data-testid={voice ? "whatsapp-voice-player" : "whatsapp-audio-player"}>
+        {voice ? <p className={styles.placeBody}>{t("media.voice")}</p> : null}
+        <audio className={styles.player} controls preload="metadata" src={url} />
+        {download}
+      </div>
+    );
+  }
+  if (kind === "VIDEO") {
+    return (
+      <div>
+        <video className={styles.player} controls preload="metadata" src={url} />
+        {download}
+      </div>
+    );
+  }
+  const size = formatBytes(message.mediaSizeBytes);
+  return (
+    <div>
+      <p className={styles.placeBody}>
+        {[message.mediaMimeType, size].filter(Boolean).join(" · ")}
+      </p>
+      {download}
+    </div>
   );
 }
 
@@ -128,7 +193,9 @@ export function WhatsAppMessageBubble({ message }: { message: WhatsAppMessageDto
           <Icon name={PLACEHOLDER_ICONS[message.messageType]} size={18} />
           <div className={styles.mediaBody}>
             <p className={styles.placeTitle}>
-              {message.mediaFilename || t(`messageType.${message.messageType}`)}
+              {message.voiceNote
+                ? t("media.voice")
+                : message.mediaFilename || t(`messageType.${message.messageType}`)}
             </p>
             <ProtectedMedia message={message} kind={message.messageType} />
             {message.caption ? (

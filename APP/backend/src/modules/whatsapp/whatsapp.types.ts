@@ -188,6 +188,10 @@ export interface WhatsAppSendOutboundMediaInput {
   mimeType: string;
   filename: string;
   caption?: string;
+  /** Whapi `POST /messages/voice`. Bytes must already be OGG/Opus. */
+  voice?: boolean;
+  /** Whapi `POST /messages/sticker`. */
+  sticker?: boolean;
 }
 
 /**

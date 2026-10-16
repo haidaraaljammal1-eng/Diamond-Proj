@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
@@ -10,6 +10,7 @@ import type {
   WhatsAppConversationListItemDto,
   WhatsAppMessageDto,
 } from "../../types/whatsapp.types";
+import { observeIncomingMedia } from "../../utils/whatsapp-local-save";
 import { conversationEligibility, conversationTitle, formatCustomerWaId, toValidDate } from "../../utils/whatsapp-view-model";
 import { WhatsAppComposer } from "../composer/composer";
 import { WhatsAppConnectionStatusLine } from "../connection-banner/connection-banner";
@@ -46,6 +47,11 @@ export function WhatsAppChatPane({
   const stickToBottom = useRef(true);
   const pendingScrollRestore = useRef<number | null>(null);
   const conversationId = conversation?.id ?? null;
+
+  useEffect(() => {
+    if (!conversationId) return;
+    observeIncomingMedia(conversationId, messages);
+  }, [conversationId, messages]);
 
   useLayoutEffect(() => {
     stickToBottom.current = true;

@@ -194,6 +194,8 @@ const EnvSchema = z
     WHAPI_WEBHOOK_CALLBACK_KEY: z.string().optional().default(""),
     WHAPI_CONFIGURE_WEBHOOK: envBool(false),
     WHAPI_TEST_RECIPIENT: z.string().optional().default(""),
+    /** Private directory for shared WhatsApp files. Empty uses <repo>/var/whatsapp-media. */
+    WHATSAPP_MEDIA_ROOT: z.string().optional().default(""),
     PUBLIC_BACKEND_URL: z.string().optional().default(""),
 
     EMAIL_ENABLED: envBool(false),

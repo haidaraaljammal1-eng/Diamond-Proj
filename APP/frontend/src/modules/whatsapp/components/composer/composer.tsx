@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
@@ -23,7 +23,14 @@ export function WhatsAppComposer() {
   const [templateOpen, setTemplateOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [kind, setKind] = useState<"IMAGE" | "DOCUMENT" | "AUDIO" | "VIDEO">("IMAGE");
+  const [kind, setKind] = useState<"IMAGE" | "DOCUMENT" | "AUDIO" | "VIDEO" | "VOICE">("IMAGE");
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [recordError, setRecordError] = useState<string | null>(null);
+  const [voiceUrl, setVoiceUrl] = useState<string | null>(null);
+  const recorder = useRef<MediaRecorder | null>(null);
+  const recordTimer = useRef<number | null>(null);
+  const recordChunks = useRef<Blob[]>([]);
   const idempotencyKey = useRef(newIdempotencyKey());
   const fileInput = useRef<HTMLInputElement>(null);
   const eligibility = conversationEligibility(inbox.selectedConversation);
@@ -36,6 +43,14 @@ export function WhatsAppComposer() {
     trimmed.length <= WHATSAPP_TEXT_BODY_MAX;
   const canSendTemplate = Boolean(enabled && inbox.canSendTemplate);
   const canSendMedia = Boolean(enabled && inbox.canSendMedia);
+  const canRecord = typeof MediaRecorder !== "undefined" && typeof navigator.mediaDevices?.getUserMedia === "function";
+
+  useEffect(() => {
+    return () => {
+      if (voiceUrl) URL.revokeObjectURL(voiceUrl);
+      recorder.current?.stream.getTracks().forEach((track) => track.stop());
+    };
+  }, [voiceUrl]);
 
   function hint(): string {
     if (!inbox.hasSendPermission && !inbox.simulationActive) return t("composer.noPermission");
@@ -52,6 +67,59 @@ export function WhatsAppComposer() {
     return t(`composer.reason.${eligibility.reason}`);
   }
 
+  function clearVoicePreview() {
+    if (voiceUrl) URL.revokeObjectURL(voiceUrl);
+    setVoiceUrl(null);
+    if (kind === "VOICE") setFile(null);
+  }
+
+  function stopRecording(discard: boolean) {
+    const active = recorder.current;
+    recorder.current = null;
+    if (recordTimer.current != null) window.clearInterval(recordTimer.current);
+    recordTimer.current = null;
+    setRecording(false);
+    if (!active) return;
+    if (discard) recordChunks.current = [];
+    active.onstop = () => {
+      active.stream.getTracks().forEach((track) => track.stop());
+      if (discard) return;
+      const blob = new Blob(recordChunks.current, { type: active.mimeType || "audio/webm" });
+      const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
+      const nextUrl = URL.createObjectURL(blob);
+      setVoiceUrl(nextUrl);
+      setKind("VOICE");
+      setFile(new File([blob], `voice.${extension}`, { type: blob.type || "audio/webm" }));
+    };
+    if (active.state !== "inactive") active.stop();
+  }
+
+  async function startRecording() {
+    setRecordError(null);
+    if (!canRecord) {
+      setRecordError(t("media.micMissing"));
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferred = ["audio/ogg;codecs=opus", "audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((item) =>
+        MediaRecorder.isTypeSupported(item),
+      );
+      const next = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
+      recordChunks.current = [];
+      next.ondataavailable = (event) => {
+        if (event.data.size > 0) recordChunks.current.push(event.data);
+      };
+      next.start();
+      recorder.current = next;
+      setRecordSeconds(0);
+      setRecording(true);
+      recordTimer.current = window.setInterval(() => setRecordSeconds((value) => value + 1), 1000);
+    } catch {
+      setRecordError(t("media.micDenied"));
+    }
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (file && canSendMedia) {
@@ -64,6 +132,7 @@ export function WhatsAppComposer() {
       if (ok) {
         setText("");
         setFile(null);
+        clearVoicePreview();
         idempotencyKey.current = newIdempotencyKey();
       }
       return;
@@ -88,7 +157,32 @@ export function WhatsAppComposer() {
           {sendError}
         </p>
       ) : null}
-      {file ? (
+      {recordError ? (
+        <p className={styles.sendError} role="alert">
+          {recordError}
+        </p>
+      ) : null}
+      {recording ? (
+        <div className={styles.file} data-testid="whatsapp-recording">
+          {t("media.recording")} {String(Math.floor(recordSeconds / 60)).padStart(2, "0")}:
+          {String(recordSeconds % 60).padStart(2, "0")}
+          <Button type="button" variant="secondary" size="sm" onClick={() => stopRecording(false)}>
+            {t("media.stop")}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => stopRecording(true)}>
+            {t("media.cancel")}
+          </Button>
+        </div>
+      ) : null}
+      {voiceUrl && file && kind === "VOICE" ? (
+        <div className={styles.file} data-testid="whatsapp-voice-preview">
+          <audio controls src={voiceUrl} />
+          <Button type="button" variant="ghost" size="sm" onClick={clearVoicePreview}>
+            {t("media.cancel")}
+          </Button>
+        </div>
+      ) : null}
+      {file && kind !== "VOICE" ? (
         <p className={styles.file} data-testid="whatsapp-selected-file">
           {file.name} · {(file.size / 1024).toFixed(0)} KB
           <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)}>
@@ -107,6 +201,17 @@ export function WhatsAppComposer() {
           onClick={() => setAttachOpen((open) => !open)}
         >
           <Icon name="mdi:paperclip" size={16} />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={!canSendMedia || recording}
+          data-testid="whatsapp-record"
+          aria-label={t("media.record")}
+          onClick={() => void startRecording()}
+        >
+          <Icon name="mdi:microphone" size={16} />
         </Button>
         <textarea
           className={styles.input}
@@ -148,6 +253,7 @@ export function WhatsAppComposer() {
               variant="ghost"
               size="sm"
               onClick={() => {
+                clearVoicePreview();
                 setKind(item);
                 fileInput.current?.click();
               }}

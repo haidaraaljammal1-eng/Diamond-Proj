@@ -6,6 +6,7 @@ import {
   isWhapiDirectChatId,
   isWhapiGroupChatId,
 } from "src/modules/whatsapp/whapi.chat-id";
+import { readWhapiInboundMedia } from "src/modules/whatsapp/whapi.media-fields";
 import { mapWhatsAppMessageType } from "src/modules/whatsapp/whatsapp.message-type";
 import type { WhatsAppMessageProviderStatus, WhatsAppWebhookEventType } from "@prisma/client";
 
@@ -29,6 +30,10 @@ export interface ParsedWhapiWebhook {
   textBody: string | null;
   mediaFilename: string | null;
   caption: string | null;
+  providerMediaId: string | null;
+  mediaMimeType: string | null;
+  mediaSizeBytes: number | null;
+  voiceNote: boolean;
   status: WhatsAppMessageProviderStatus | null;
   occurredAt: Date | null;
   ignoreReason: string | null;
@@ -69,9 +74,7 @@ function parseMessageRecord(message: Record<string, unknown>): Omit<
     mappedType !== "text"
       ? asString(message.caption) ?? asString(textObj?.body) ?? asString(message.body)
       : null;
-  const document = asRecord(message.document);
-  const mediaFilename =
-    asString(document?.filename) ?? asString(message.filename) ?? asString(message.file_name);
+  const media = readWhapiInboundMedia(message);
   return {
     providerMessageId,
     chatId,
@@ -82,8 +85,12 @@ function parseMessageRecord(message: Record<string, unknown>): Omit<
     source: asString(message.source),
     messageType: mapWhatsAppMessageType(mappedType),
     textBody,
-    mediaFilename,
-    caption,
+    mediaFilename: media.mediaFilename,
+    caption: media.caption ?? caption,
+    providerMediaId: media.providerMediaId,
+    mediaMimeType: media.mediaMimeType,
+    mediaSizeBytes: media.mediaSizeBytes,
+    voiceNote: media.voiceNote,
     occurredAt: unixSeconds(message.timestamp) ?? unixSeconds(message.time),
   };
 }
@@ -166,6 +173,10 @@ function parseStatusItem(
     textBody: null,
     mediaFilename: null,
     caption: null,
+    providerMediaId: null,
+    mediaMimeType: null,
+    mediaSizeBytes: null,
+    voiceNote: false,
     status,
     occurredAt: unixSeconds(statusRow.timestamp),
     ignoreReason: status ? null : WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,
@@ -223,6 +234,10 @@ function unknownEvent(channelId: string | null, envelopeHash: string): ParsedWha
     textBody: null,
     mediaFilename: null,
     caption: null,
+    providerMediaId: null,
+    mediaMimeType: null,
+    mediaSizeBytes: null,
+    voiceNote: false,
     status: null,
     occurredAt: null,
     ignoreReason: WhatsAppErrorReason.WEBHOOK_UNSUPPORTED_EVENT,

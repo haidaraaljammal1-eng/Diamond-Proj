@@ -3058,7 +3058,9 @@
     "message": {
       "unsupported": "Unsupported message",
       "mediaUnavailable": "Media is not available",
+      "mediaExpired": "This file expired after 7 days. The message is still here.",
       "mediaLoading": "Loading media",
+      "mediaFailed": "The file could not be loaded.",
       "revoked": "This message was deleted",
       "edited": "Edited"
     },
@@ -3176,6 +3178,7 @@
       "WHATSAPP_MEDIA_UNAVAILABLE": "This media is no longer available.",
       "WHATSAPP_MEDIA_INVALID_TYPE": "This file type is not allowed.",
       "WHATSAPP_MEDIA_TOO_LARGE": "This file is too large.",
+      "WHATSAPP_VOICE_UNSUPPORTED": "This recording cannot be sent as a WhatsApp voice note.",
       "WHATSAPP_TEMPLATE_NOT_APPROVED": "This template is not approved for sending.",
       "WHATSAPP_TEMPLATE_NOT_FOUND": "This template was not found.",
       "WHATSAPP_TEMPLATE_PARAMETERS_INVALID": "Enter all required template variables.",
@@ -3206,7 +3209,30 @@
     "media": {
       "attach": "Attach",
       "download": "Download",
-      "remove": "Remove"
+      "remove": "Remove",
+      "retry": "Try again",
+      "preview": "Preview",
+      "voice": "Voice note",
+      "record": "Record voice note",
+      "stop": "Stop",
+      "cancel": "Cancel",
+      "sendVoice": "Send voice note",
+      "micDenied": "Microphone permission is required to record a voice note.",
+      "micMissing": "This browser cannot record a voice note. You can still attach an audio file.",
+      "recording": "Recording"
+    },
+    "localSave": {
+      "label": "Save WhatsApp Media Automatically",
+      "on": "On",
+      "off": "Off",
+      "choose": "Choose folder",
+      "configured": "Folder ready on this device",
+      "permission": "Permission required",
+      "manual": "This browser cannot choose a folder. Use Download on each file.",
+      "iphone": "iPhone saves through the browser download or Share sheet, then Files. Automatic folder saving is not available.",
+      "closed": "Saving runs only while this page is open.",
+      "failed": "Could not save {name}",
+      "retry": "Save again"
     },
     "manage": {
       "button": "Manage WhatsApp",

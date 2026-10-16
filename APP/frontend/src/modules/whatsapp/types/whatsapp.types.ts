@@ -218,6 +218,8 @@ export interface WhatsAppMessageDto {
   mediaMimeType: string | null;
   mediaSizeBytes: number | null;
   hasProtectedMedia: boolean;
+  mediaExpired?: boolean;
+  voiceNote?: boolean;
   templateName: string | null;
   templateLanguage: string | null;
   templatePreview: string | null;

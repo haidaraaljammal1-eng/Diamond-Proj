@@ -38,6 +38,13 @@ export function sniffWhatsAppMedia(buffer: Buffer): string | null {
     }
     return "video/mp4";
   }
+  if (
+    buffer.length >= 12 &&
+    startsWithAscii(buffer, "RIFF") &&
+    startsWithAscii(buffer, "WEBP", 8)
+  ) {
+    return "image/webp";
+  }
   return shared;
 }
 

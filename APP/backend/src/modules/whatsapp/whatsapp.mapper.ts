@@ -1,6 +1,11 @@
 import type { Prisma, WhatsAppConnection, User } from "@prisma/client";
 import { WHATSAPP_PROTECTED_MEDIA_TYPES } from "src/modules/whatsapp/whatsapp.constants";
 import { readWhapiRevisionFlags } from "src/modules/whatsapp/whatsapp.message-revision";
+import {
+  mediaStoreExpired,
+  readMediaStore,
+  readVoiceNoteFlag,
+} from "src/modules/whatsapp/whatsapp.media-store";
 import { createWhatsAppProvider } from "src/modules/whatsapp/whatsapp.provider";
 import type { WhatsAppProviderCapabilities } from "src/modules/whatsapp/whatsapp.capabilities";
 import type {
@@ -186,6 +191,8 @@ export function toMessageDto(row: {
   const protectedType = WHATSAPP_PROTECTED_MEDIA_TYPES.includes(
     row.messageType as (typeof WHATSAPP_PROTECTED_MEDIA_TYPES)[number],
   );
+  const stored = readMediaStore(row.displayPayload);
+  const mediaExpired = protectedType && mediaStoreExpired(stored, new Date());
   return {
     id: row.id,
     direction: row.direction,
@@ -196,7 +203,11 @@ export function toMessageDto(row: {
     mediaMimeType: row.mediaMimeType ?? null,
     mediaSizeBytes: row.mediaSizeBytes ?? null,
     hasProtectedMedia:
-      protectedType && (Boolean(row.providerMediaId) || hasStoredMediaUrl(row.displayPayload)),
+      protectedType &&
+      !mediaExpired &&
+      (Boolean(stored?.key) || Boolean(row.providerMediaId) || hasStoredMediaUrl(row.displayPayload)),
+    mediaExpired,
+    voiceNote: readVoiceNoteFlag(row.displayPayload),
     templateName: row.templateName ?? null,
     templateLanguage: row.templateLanguage ?? null,
     templatePreview: row.templatePreview ?? null,

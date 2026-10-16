@@ -28,12 +28,16 @@ import {
   buildTemplateSendComponents,
   renderTemplatePreview,
 } from "src/modules/whatsapp/whatsapp.templates";
+import { archiveWhatsAppMediaBytes } from "src/modules/whatsapp/whatsapp.media-archive";
 import {
   hashMediaBytes,
   normalizeMediaCaption,
   sanitizeMediaFilename,
+  sniffWhatsAppMedia,
   validateOutboundMedia,
 } from "src/modules/whatsapp/whatsapp.media";
+import { prepareWhatsAppVoice } from "src/modules/whatsapp/whapi.voice";
+import { WHAPI_MEDIA_MAX_BYTES } from "src/modules/whatsapp/whapi.config";
 import { resolveProviderRecipient } from "src/modules/whatsapp/whatsapp.recipient-addressing";
 import { ULTRAMSG_DOCUMENT_FILENAME_MAX, ULTRAMSG_MEDIA_MAX_BYTES } from "src/modules/whatsapp/ultramsg.config";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
@@ -844,14 +848,36 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
     idempotencyKey: string | undefined;
     audit: AuditWrite;
   }) {
-    const validated = validateOutboundMedia({
-      bytes: params.bytes,
-      declaredMime: params.declaredMime,
-      requestedKind: params.requestedKind,
-      providerMaxBytes: createWhatsAppProvider().capabilities().supportsDirectOutboundMedia
-        ? ULTRAMSG_MEDIA_MAX_BYTES
-        : undefined,
-    });
+    const voiceRequested = params.requestedKind === "VOICE";
+    const stickerRequested = params.requestedKind === "STICKER";
+    let outboundBytes = params.bytes;
+    let deliveryVoice = false;
+    let deliverySticker = false;
+    let validated: { kind: "IMAGE" | "DOCUMENT" | "AUDIO" | "VIDEO"; mimeType: string };
+    if (voiceRequested) {
+      const prepared = await prepareWhatsAppVoice(params.bytes, params.declaredMime);
+      outboundBytes = prepared.bytes;
+      validated = { kind: "AUDIO", mimeType: prepared.mimeType };
+      deliveryVoice = true;
+    } else if (stickerRequested) {
+      const sniffed = sniffWhatsAppMedia(params.bytes);
+      const declared = params.declaredMime.split(";")[0]?.trim().toLowerCase() ?? "";
+      if (sniffed !== "image/webp" || (declared && declared !== "image/webp")) {
+        throw whatsappError.mediaInvalidType();
+      }
+      if (params.bytes.length > WHAPI_MEDIA_MAX_BYTES.IMAGE) throw whatsappError.mediaTooLarge();
+      validated = { kind: "IMAGE", mimeType: "image/webp" };
+      deliverySticker = true;
+    } else {
+      validated = validateOutboundMedia({
+        bytes: params.bytes,
+        declaredMime: params.declaredMime,
+        requestedKind: params.requestedKind,
+        providerMaxBytes: createWhatsAppProvider().capabilities().supportsDirectOutboundMedia
+          ? ULTRAMSG_MEDIA_MAX_BYTES
+          : undefined,
+      });
+    }
     const caption = normalizeMediaCaption(validated.kind, params.caption);
     const filename = sanitizeMediaFilename(
       params.filename,
@@ -859,13 +885,13 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
         ? ULTRAMSG_DOCUMENT_FILENAME_MAX
         : 180,
     );
-    const contentHash = hashMediaBytes(params.bytes);
+    const contentHash = hashMediaBytes(outboundBytes);
     const idempotencyKey = requireIdempotencyKey(params.idempotencyKey);
     const keyHash = hashIdempotencyKey(idempotencyKey);
     const fingerprint = fingerprintIdempotentPayload({
       actorUserId: params.actorUserId,
       conversationId: params.conversationId,
-      kind: validated.kind,
+      kind: deliveryVoice ? "VOICE" : deliverySticker ? "STICKER" : validated.kind,
       contentHash,
       caption,
     });
@@ -912,11 +938,12 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
             conversationId: conversation.id,
             connectionId: conversation.connectionId,
             direction: "OUTBOUND",
-            messageType: validated.kind,
-            caption,
+            messageType: deliverySticker ? "STICKER" : validated.kind,
+            caption: deliveryVoice ? null : caption,
             mediaFilename: filename,
             mediaMimeType: validated.mimeType,
-            mediaSizeBytes: params.bytes.length,
+            mediaSizeBytes: outboundBytes.length,
+            displayPayload: deliveryVoice ? { whapi: { voice: true } } : undefined,
             providerMessageId: null,
             providerOccurredAt: null,
             receivedAt: submittedAt,
@@ -1032,10 +1059,12 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       phoneNumberId: reserved.phoneNumberId,
       toChatId: reserved.customerWaId,
       kind: validated.kind,
-      bytes: params.bytes,
+      bytes: outboundBytes,
       mimeType: validated.mimeType,
       filename,
       caption: caption ?? undefined,
+      voice: deliveryVoice,
+      sticker: deliverySticker,
     });
     if (!sent.ok) {
       const state: WhatsAppMessageSendState = sent.code === "SEND_UNKNOWN" ? "UNKNOWN" : "FAILED";
@@ -1049,6 +1078,9 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       return loadSendResult(reserved.messageId, params.conversationId);
     }
     await completeAttempt(reserved.messageId, "ACCEPTED", sent.value.providerMessageId, null);
+    await archiveWhatsAppMediaBytes(prisma, reserved.messageId, outboundBytes, deliveryVoice).catch((err) => {
+      fastify.log.warn({ err, messageId: reserved.messageId }, "whatsapp outbound media archive skipped");
+    });
     const statusEvents = await reconcileOutboundStatusEvents(prisma, {
       connectionId: reserved.connectionId,
       providerMessageId: sent.value.providerMessageId,

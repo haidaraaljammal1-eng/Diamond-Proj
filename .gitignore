@@ -64,3 +64,4 @@ DOCUMENT-ENGINE/**/fixtures/private/
 DOCUMENT-ENGINE/**/captures/
 DOCUMENT-ENGINE/**/real_data/
 DOCUMENT-ENGINE/**/diagnostics/output/
+var/whatsapp-media/

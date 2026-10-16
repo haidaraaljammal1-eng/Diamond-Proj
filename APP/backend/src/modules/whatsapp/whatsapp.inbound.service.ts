@@ -27,6 +27,7 @@ export interface InboundMessageInput {
   caption?: string | null;
   mediaFilename?: string | null;
   mediaMimeType?: string | null;
+  mediaSizeBytes?: number | null;
   displayPayload?: Record<string, unknown> | null;
   providerOccurredAt: Date | null;
   receivedAt: Date;
@@ -149,6 +150,7 @@ export async function materializeInboundMessage(
           caption: input.caption ?? null,
           mediaFilename: input.mediaFilename ?? null,
           mediaMimeType: input.mediaMimeType ?? null,
+          mediaSizeBytes: input.mediaSizeBytes ?? null,
           displayPayload: input.displayPayload
             ? (input.displayPayload as Prisma.InputJsonValue)
             : undefined,

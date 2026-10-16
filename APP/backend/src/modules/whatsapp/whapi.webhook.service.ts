@@ -7,6 +7,7 @@ import { WHATSAPP_CURRENT_STATUSES } from "src/modules/whatsapp/whatsapp.constan
 import { WhatsAppErrorReason } from "src/modules/whatsapp/whatsapp.errors";
 import { decryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
 import { whapiWebhookAuthorized } from "src/modules/whatsapp/whapi.webhook-material";
+import { archiveWhatsAppProviderMedia } from "src/modules/whatsapp/whatsapp.media-archive";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
 import { choosePendingEchoCandidate } from "src/modules/whatsapp/whatsapp.echo-match";
 import { materializeOutboundEchoMessage } from "src/modules/whatsapp/whatsapp.outbound-echo.service";
@@ -35,6 +36,13 @@ function parseJson(raw: Buffer): unknown | undefined {
   } catch {
     return undefined;
   }
+}
+
+function inboundDisplayPayload(parsed: ParsedWhapiWebhook): Record<string, unknown> | null {
+  const payload: Record<string, unknown> = {};
+  if (parsed.source) payload.source = parsed.source;
+  if (parsed.voiceNote) payload.whapi = { voice: true };
+  return Object.keys(payload).length > 0 ? payload : null;
 }
 
 function storedWebhookPlaintext(stored: string | null): string | null {
@@ -178,7 +186,7 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
     if (!eventRow) return;
     if (eventRow.status === "PROCESSED") return;
     try {
-      await materializeInboundMessage(prisma, {
+      const stored = await materializeInboundMessage(prisma, {
         connectionId,
         customerWaId: parsed.customerWaId,
         providerChatId: parsed.chatId,
@@ -186,15 +194,21 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
         providerMessageId: parsed.providerMessageId,
         messageType: parsed.messageType,
         textBody: parsed.textBody,
-        providerMediaId: null,
+        providerMediaId: parsed.providerMediaId,
         caption: parsed.caption,
         mediaFilename: parsed.mediaFilename,
-        mediaMimeType: null,
-        displayPayload: parsed.source ? { source: parsed.source } : null,
+        mediaMimeType: parsed.mediaMimeType,
+        mediaSizeBytes: parsed.mediaSizeBytes,
+        displayPayload: inboundDisplayPayload(parsed),
         providerOccurredAt: parsed.occurredAt,
         receivedAt,
         webhookEventId: eventRow.id,
       });
+      if (parsed.providerMediaId) {
+        void archiveWhatsAppProviderMedia(prisma, stored.messageId).catch((err) => {
+          fastify.log.warn({ err, messageId: stored.messageId }, "whatsapp media archive skipped");
+        });
+      }
       await prisma.whatsAppWebhookEvent.update({
         where: { id: eventRow.id },
         data: { status: "PROCESSED", processedAt: new Date(), failureCode: null },
@@ -282,7 +296,7 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
 
     const eventRow = await ensureReceivedEvent(parsed, json, receivedAt, connectionId);
     if (!eventRow || eventRow.status === "PROCESSED") return;
-    await materializeOutboundEchoMessage(prisma, {
+    const echoed = await materializeOutboundEchoMessage(prisma, {
       connectionId,
       customerWaId: parsed.customerWaId,
       providerChatId: parsed.chatId,
@@ -291,11 +305,19 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
       textBody: parsed.textBody,
       caption: parsed.caption,
       mediaFilename: parsed.mediaFilename,
+      providerMediaId: parsed.providerMediaId,
+      mediaMimeType: parsed.mediaMimeType,
+      voiceNote: parsed.voiceNote,
       providerOccurredAt: parsed.occurredAt,
       receivedAt,
       webhookEventId: eventRow.id,
       source: parsed.source,
     });
+    if (parsed.providerMediaId) {
+      void archiveWhatsAppProviderMedia(prisma, echoed.messageId).catch((err) => {
+        fastify.log.warn({ err, messageId: echoed.messageId }, "whatsapp media archive skipped");
+      });
+    }
     await reconcileEchoStatuses(connectionId, parsed.providerMessageId);
     await applyDeferredMessageRevisions(prisma, connectionId, parsed.providerMessageId);
     await touchConnection(connectionId, receivedAt);

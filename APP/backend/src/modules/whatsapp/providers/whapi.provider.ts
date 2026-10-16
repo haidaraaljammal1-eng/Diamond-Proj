@@ -6,6 +6,7 @@ import {
   whapiRuntimeConfig,
   whapiWebhookSecretHeaderName,
 } from "src/modules/whatsapp/whapi.config";
+import { whapiMediaIdFromLocator, whapiMediaLocator } from "src/modules/whatsapp/whapi.media-fields";
 import { mapWhapiHealthStatus } from "src/modules/whatsapp/whapi.status";
 import { WHAPI_CAPABILITIES } from "src/modules/whatsapp/whatsapp.capabilities";
 import {
@@ -391,14 +392,19 @@ export class WhapiWhatsAppProvider implements WhatsAppProvider {
       media: dataUri,
       mime_type: input.mimeType,
     };
-    if (input.kind === "DOCUMENT") {
+    if (!input.voice && !input.sticker && input.kind === "DOCUMENT") {
       body.filename = input.filename.slice(0, WHAPI_DOCUMENT_FILENAME_MAX);
     }
-    if (input.kind !== "AUDIO" && input.caption) {
+    if (!input.voice && !input.sticker && input.kind !== "AUDIO" && input.caption) {
       body.caption = input.caption.slice(0, 1024);
     }
+    const path = input.voice
+      ? "/messages/voice"
+      : input.sticker
+        ? "/messages/sticker"
+        : mediaPath(input.kind);
     try {
-      const { status, json } = await this.client(input.accessToken).postJson(mediaPath(input.kind), body);
+      const { status, json } = await this.client(input.accessToken).postJson(path, body);
       if (status < 200 || status >= 300) return { ok: false, code: mapWhapiHttpFailure(status, json) };
       const accepted = parseSendAccepted(json);
       if (!accepted) return { ok: false, code: "SEND_REJECTED" };
@@ -456,11 +462,36 @@ export class WhapiWhatsAppProvider implements WhatsAppProvider {
   async sendTemplateMessage(): Promise<WhatsAppProviderResult<WhatsAppSendTextAccepted>> {
     return { ok: false, code: "NOT_CONFIGURED" };
   }
-  async getMediaMetadata(): Promise<WhatsAppProviderResult<WhatsAppMediaMetadata>> {
-    return { ok: false, code: "NOT_CONFIGURED" };
+  async getMediaMetadata(
+    _accessToken: string,
+    mediaId: string,
+  ): Promise<WhatsAppProviderResult<WhatsAppMediaMetadata>> {
+    const id = whapiMediaIdFromLocator(mediaId);
+    if (!id) return { ok: false, code: "VALIDATION_FAILED" };
+    return {
+      ok: true,
+      value: { mediaId: id, mimeType: null, fileSize: null, sha256: null, url: whapiMediaLocator(id) },
+    };
   }
-  async downloadMedia(): Promise<WhatsAppProviderResult<WhatsAppMediaBytes>> {
-    return { ok: false, code: "NOT_CONFIGURED" };
+  async downloadMedia(
+    accessToken: string,
+    url: string,
+  ): Promise<WhatsAppProviderResult<WhatsAppMediaBytes>> {
+    const id = whapiMediaIdFromLocator(url);
+    if (!id) return { ok: false, code: "VALIDATION_FAILED" };
+    try {
+      const binary = await this.client(accessToken).getBinary(`/media/${encodeURIComponent(id)}`, 30_000);
+      if (binary.status === 404) return { ok: false, code: "VALIDATION_FAILED" };
+      if (binary.status < 200 || binary.status >= 300) {
+        return { ok: false, code: mapWhapiHttpFailure(binary.status, null) };
+      }
+      if (binary.body.length === 0 || binary.body.length > WHAPI_MEDIA_MAX_BYTES.VIDEO) {
+        return { ok: false, code: "VALIDATION_FAILED" };
+      }
+      return { ok: true, value: { body: binary.body, contentType: binary.contentType } };
+    } catch (error) {
+      return { ok: false, code: error instanceof WhapiHttpError ? error.code : "SEND_UNKNOWN" };
+    }
   }
   async uploadMedia(): Promise<WhatsAppProviderResult<{ mediaId: string }>> {
     return { ok: false, code: "NOT_CONFIGURED" };

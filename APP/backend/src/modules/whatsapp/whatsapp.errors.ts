@@ -44,6 +44,7 @@ export const WhatsAppErrorReason = {
   MEDIA_UNAVAILABLE: "WHATSAPP_MEDIA_UNAVAILABLE",
   MEDIA_INVALID_TYPE: "WHATSAPP_MEDIA_INVALID_TYPE",
   MEDIA_TOO_LARGE: "WHATSAPP_MEDIA_TOO_LARGE",
+  VOICE_UNSUPPORTED: "WHATSAPP_VOICE_UNSUPPORTED",
   TEMPLATE_NOT_APPROVED: "WHATSAPP_TEMPLATE_NOT_APPROVED",
   TEMPLATE_NOT_FOUND: "WHATSAPP_TEMPLATE_NOT_FOUND",
   TEMPLATE_PARAMETERS_INVALID: "WHATSAPP_TEMPLATE_PARAMETERS_INVALID",
@@ -203,6 +204,12 @@ export const whatsappError = {
     err(ErrorCode.NOT_FOUND, "WhatsApp media is not available", R.MEDIA_UNAVAILABLE),
   mediaInvalidType: () =>
     err(ErrorCode.VALIDATION_ERROR, "WhatsApp media type is not allowed", R.MEDIA_INVALID_TYPE),
+  voiceUnsupported: () =>
+    err(
+      ErrorCode.VALIDATION_ERROR,
+      "This browser recording cannot be sent as a WhatsApp voice note",
+      R.VOICE_UNSUPPORTED,
+    ),
   mediaTooLarge: () =>
     new AppError({
       code: ErrorCode.VALIDATION_ERROR,

@@ -21,10 +21,20 @@ export interface OutboundEchoInput {
   textBody: string | null;
   caption?: string | null;
   mediaFilename?: string | null;
+  providerMediaId?: string | null;
+  mediaMimeType?: string | null;
+  voiceNote?: boolean;
   providerOccurredAt: Date | null;
   receivedAt: Date;
   webhookEventId: string;
   source?: string | null;
+}
+
+function echoDisplayPayload(input: OutboundEchoInput): Prisma.InputJsonValue {
+  const payload: { source?: string; whapi?: { voice: true } } = {};
+  if (input.source) payload.source = input.source;
+  if (input.voiceNote) payload.whapi = { voice: true };
+  return payload;
 }
 
 export async function materializeOutboundEchoMessage(
@@ -79,7 +89,9 @@ export async function materializeOutboundEchoMessage(
           textBody,
           caption: input.caption ?? null,
           mediaFilename: input.mediaFilename ?? null,
-          displayPayload: input.source ? ({ source: input.source } as Prisma.InputJsonValue) : undefined,
+          providerMediaId: input.providerMediaId ?? null,
+          mediaMimeType: input.mediaMimeType ?? null,
+          displayPayload: echoDisplayPayload(input) as Prisma.InputJsonValue,
           providerOccurredAt: input.providerOccurredAt,
           receivedAt: input.receivedAt,
           sendState: "ACCEPTED",

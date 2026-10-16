@@ -164,7 +164,7 @@ export async function sendWhatsAppMediaMessage(
   return payload.data;
 }
 
-export async function fetchWhatsAppMediaObjectUrl(messageId: string): Promise<string> {
+export async function fetchWhatsAppMediaBlob(messageId: string): Promise<Blob> {
   const token = await accessToken();
   const response = await fetch(`${env.apiUrl}${WHATSAPP_PATH}/messages/${messageId}/media`, {
     credentials: "include",
@@ -179,7 +179,11 @@ export async function fetchWhatsAppMediaObjectUrl(messageId: string): Promise<st
       response.status,
     );
   }
-  const blob = await response.blob();
+  return response.blob();
+}
+
+export async function fetchWhatsAppMediaObjectUrl(messageId: string): Promise<string> {
+  const blob = await fetchWhatsAppMediaBlob(messageId);
   return URL.createObjectURL(blob);
 }
 

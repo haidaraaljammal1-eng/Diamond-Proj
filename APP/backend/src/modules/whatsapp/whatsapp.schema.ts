@@ -235,6 +235,8 @@ export const WhatsAppMessageSchema = z.object({
   mediaMimeType: z.string().nullable(),
   mediaSizeBytes: z.number().int().nullable(),
   hasProtectedMedia: z.boolean(),
+  mediaExpired: z.boolean(),
+  voiceNote: z.boolean(),
   templateName: z.string().nullable(),
   templateLanguage: z.string().nullable(),
   templatePreview: z.string().nullable(),
