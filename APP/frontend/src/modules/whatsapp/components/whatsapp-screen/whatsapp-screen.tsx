@@ -12,13 +12,12 @@ import { WhatsAppConnectionBanner } from "../connection-banner/connection-banner
 import { WhatsAppConnectionSettings } from "../connection-settings/connection-settings";
 import { WhatsAppConversationList } from "../conversation-list/conversation-list";
 import { WhatsAppLocalSaveToolbar } from "../local-save-settings/local-save-settings";
-import { WhatsAppSimulationControls } from "../../simulation/whatsapp-simulation-controls";
 import styles from "./whatsapp-screen.module.css";
 
 export function WhatsAppScreen() {
   const t = useTranslations("WhatsApp");
   useWhatsAppRealtimeSubscription();
-  const inbox = useWhatsApp();
+  const inbox = useWhatsApp({ disableSimulation: true });
   const [manageOpen, setManageOpen] = useState(false);
 
   const header = (
@@ -28,32 +27,7 @@ export function WhatsAppScreen() {
       actions={
         inbox.isAllowed ? (
           <div className={styles.headerActions}>
-            {!inbox.simulationActive ? <WhatsAppLocalSaveToolbar /> : null}
-            <WhatsAppSimulationControls />
-            {inbox.isAllowed && !inbox.simulationActive && inbox.realtimeStatus !== "idle" ? (
-              <span
-                className={styles.realtime}
-                data-testid="whatsapp-realtime-status"
-                data-status={inbox.realtimeStatus}
-              >
-                {inbox.realtimeStatus === "live"
-                  ? t("realtime.live")
-                  : inbox.realtimeStatus === "reconnecting"
-                    ? t("realtime.reconnecting")
-                    : t("realtime.offline")}
-              </span>
-            ) : null}
-            {!inbox.simulationActive ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={() => void inbox.refresh()}
-                disabled={inbox.isRefreshing}
-              >
-                {t("refresh")}
-              </Button>
-            ) : null}
+            <WhatsAppLocalSaveToolbar />
             {inbox.hasManageConnectionPermission ? (
               <Button
                 type="button"

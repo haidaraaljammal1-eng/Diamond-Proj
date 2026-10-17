@@ -9,13 +9,13 @@ describe("WhatsAppLocalSaveToolbar hydration", () => {
     assert.equal(initialLocalSaveToolbarVisible(), false);
   });
 
-  it("does not call detectLocalSaveCapability during the initial render path", () => {
+  it("restores save-path label from persisted folder state after mount", () => {
     const source = readFileSync(join(import.meta.dirname, "local-save-settings.tsx"), "utf8");
-    const renderBody = source.split("export function WhatsAppLocalSaveToolbar")[1] ?? "";
-    assert.doesNotMatch(
-      renderBody.split("useEffect")[0] ?? "",
-      /detectLocalSaveCapability\(\)/,
-      "capability must be detected after hydration, not on first render",
-    );
+    assert.match(source, /useState\(initialLocalSaveToolbarVisible\)/);
+    assert.match(source, /localSaveStatus/);
+    assert.match(source, /subscribeLocalSave/);
+    assert.match(source, /pathReady/);
+    const capabilityEffect = source.split("useEffect(() => {")[1]?.split("}, [])")[0] ?? "";
+    assert.match(capabilityEffect, /detectLocalSaveCapability\(\)/);
   });
 });

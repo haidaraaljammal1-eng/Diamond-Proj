@@ -26,10 +26,12 @@ import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error"
 import { useWhatsApp } from "../../hooks/use-whatsapp";
 import styles from "./customer-strip.module.css";
 
-export function WhatsAppCustomerStrip({
+export function WhatsAppCustomerControls({
   conversation,
+  layout = "strip",
 }: {
   conversation: WhatsAppConversationDetailDto | WhatsAppConversationListItemDto;
+  layout?: "strip" | "header";
 }) {
   const t = useTranslations("WhatsApp");
   const { hasPermission } = usePermissions();
@@ -116,8 +118,13 @@ export function WhatsAppCustomerStrip({
   const linked = detail?.customerLink.linked;
   const customer = detail?.customerLink.customer;
 
+  const rootClass = layout === "header" ? styles.headerControls : styles.strip;
+
   return (
-    <div className={styles.strip} data-testid="whatsapp-customer-strip">
+    <div
+      className={rootClass}
+      data-testid={layout === "header" ? "whatsapp-customer-header" : "whatsapp-customer-strip"}
+    >
       {linked ? (
         <>
           <p className={styles.label}>{t("customer.linked")}</p>

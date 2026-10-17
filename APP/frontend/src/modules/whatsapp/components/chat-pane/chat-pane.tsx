@@ -12,7 +12,7 @@ import type {
 import { observeIncomingMedia } from "../../utils/whatsapp-local-save";
 import { conversationTitle, formatCustomerWaId } from "../../utils/whatsapp-view-model";
 import { WhatsAppComposer } from "../composer/composer";
-import { WhatsAppCustomerStrip } from "../customer-strip/customer-strip";
+import { WhatsAppCustomerControls } from "../customer-strip/customer-strip";
 import { WhatsAppMessageBubble } from "../message-bubble/message-bubble";
 import styles from "./chat-pane.module.css";
 
@@ -45,8 +45,8 @@ export function WhatsAppChatPane({
 
   useEffect(() => {
     if (!conversationId) return;
-    observeIncomingMedia(conversationId, messages);
-  }, [conversationId, messages]);
+    observeIncomingMedia(conversationId, messages, conversation?.customerWaId ?? null);
+  }, [conversationId, messages, conversation?.customerWaId]);
 
   useLayoutEffect(() => {
     stickToBottom.current = true;
@@ -104,6 +104,7 @@ export function WhatsAppChatPane({
             </p>
           ) : null}
         </div>
+        <WhatsAppCustomerControls conversation={conversation} layout="header" />
         <Button
           type="button"
           variant="ghost"
@@ -114,7 +115,6 @@ export function WhatsAppChatPane({
           {t("chat.back")}
         </Button>
       </header>
-      <WhatsAppCustomerStrip conversation={conversation} />
 
       {markReadError ? (
         <p className={styles.inlineError} role="status">

@@ -10,6 +10,17 @@
   border-bottom: 1px solid var(--diamond-hair);
 }
 
+.headerControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: min(48vw, 420px);
+  font-size: 11px;
+  color: var(--diamond-muted);
+}
+
 .label,
 .name,
 .meta {

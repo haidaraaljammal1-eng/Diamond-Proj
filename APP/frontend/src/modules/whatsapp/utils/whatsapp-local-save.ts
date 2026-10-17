@@ -1,6 +1,11 @@
 import { fetchWhatsAppMediaBlob } from "../api/whatsapp.api";
 import type { WhatsAppMessageDto } from "../types/whatsapp.types";
 import {
+  buildInboundLocalMediaFilename,
+  UNIDENTIFIED_SENDER_FOLDER,
+  waIdToSaveFolderName,
+} from "./whatsapp-local-save-filename";
+import {
   detectLocalSaveCapability,
   initialLocalSaveToolbarVisible,
   isPickerAbort,
@@ -147,36 +152,46 @@ async function rememberSaved(messageId: string): Promise<void> {
   await idbSet(SAVED_IDS_KEY, [...ids, messageId].slice(-MAX_SAVED_IDS));
 }
 
-function safeName(filename: string, messageId: string): string {
-  const cleaned = filename.replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120) || "file";
-  const dot = cleaned.lastIndexOf(".");
-  const base = dot > 0 ? cleaned.slice(0, dot) : cleaned;
-  const ext = dot > 0 ? cleaned.slice(dot) : "";
-  return `${base}-${messageId.slice(0, 8)}${ext}`;
-}
-
 async function writeBlob(handle: DirectoryPermissionHandle, name: string, blob: Blob): Promise<void> {
-  const fileHandle = await handle.getFileHandle(name, { create: true });
+  const safe = name.replace(/[\\/]+/g, "_").split("/").pop() ?? "file";
+  const fileHandle = await handle.getFileHandle(safe, { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(blob);
   await writable.close();
 }
 
-export async function saveIncomingMedia(message: WhatsAppMessageDto): Promise<boolean> {
+async function senderDirectory(
+  root: DirectoryPermissionHandle,
+  customerWaId: string | null | undefined,
+): Promise<DirectoryPermissionHandle> {
+  const folder = waIdToSaveFolderName(customerWaId) ?? UNIDENTIFIED_SENDER_FOLDER;
+  const segment = folder.replace(/[\\/]+/g, "");
+  if (!segment || segment === "." || segment === "..") return root;
+  return root.getDirectoryHandle(segment, { create: true });
+}
+
+export async function saveIncomingMedia(
+  message: WhatsAppMessageDto,
+  customerWaId: string | null | undefined,
+): Promise<boolean> {
   if (!(await autoSaveReady())) return false;
   const handle = await storedDirectory();
   if (!handle) return false;
-  const filename = safeName(message.mediaFilename || message.messageType.toLowerCase(), message.id);
   try {
     const blob = await fetchWhatsAppMediaBlob(message.id);
-    await writeBlob(handle, filename, blob);
+    const filename = await buildInboundLocalMediaFilename(message, blob);
+    const target = await senderDirectory(handle, customerWaId);
+    await writeBlob(target, filename, blob);
     await rememberSaved(message.id);
     failures = failures.filter((item) => item.messageId !== message.id);
     notify();
     return true;
   } catch {
     if (!failures.some((item) => item.messageId === message.id)) {
-      failures = [...failures, { messageId: message.id, filename }];
+      failures = [
+        ...failures,
+        { messageId: message.id, filename: message.mediaFilename ?? message.messageType },
+      ];
     }
     notify();
     return false;
@@ -184,7 +199,10 @@ export async function saveIncomingMedia(message: WhatsAppMessageDto): Promise<bo
 }
 
 /** Bounded catch-up for eligible media in the open conversation (7-day server window). */
-export async function reconcileUnsavedMedia(messages: WhatsAppMessageDto[]): Promise<void> {
+export async function reconcileUnsavedMedia(
+  messages: WhatsAppMessageDto[],
+  customerWaId: string | null | undefined,
+): Promise<void> {
   if (backlogInFlight) return;
   if (!(await autoSaveReady())) return;
   const eligible = messages.filter(
@@ -200,7 +218,7 @@ export async function reconcileUnsavedMedia(messages: WhatsAppMessageDto[]): Pro
     for (const message of eligible) {
       if (processed >= BACKLOG_BATCH) break;
       if (saved.has(message.id)) continue;
-      const ok = await saveIncomingMedia(message);
+      const ok = await saveIncomingMedia(message, customerWaId);
       if (ok) {
         saved.add(message.id);
         processed += 1;
@@ -212,21 +230,28 @@ export async function reconcileUnsavedMedia(messages: WhatsAppMessageDto[]): Pro
 }
 
 /** Saves new inbound media after the conversation view is primed. */
-export function observeIncomingMedia(conversationId: string, messages: WhatsAppMessageDto[]): void {
+export function observeIncomingMedia(
+  conversationId: string,
+  messages: WhatsAppMessageDto[],
+  customerWaId: string | null | undefined,
+): void {
   let seen = primed.get(conversationId);
   if (!seen) {
     primed.set(conversationId, new Set(messages.map((message) => message.id)));
-    void reconcileUnsavedMedia(messages);
+    void reconcileUnsavedMedia(messages, customerWaId);
     return;
   }
   for (const message of messages) {
     if (seen.has(message.id)) continue;
     seen.add(message.id);
     if (message.direction !== "INBOUND" || !message.hasProtectedMedia || message.mediaExpired) continue;
-    void saveIncomingMedia(message);
+    void saveIncomingMedia(message, customerWaId);
   }
 }
 
-export async function retryLocalSave(message: WhatsAppMessageDto): Promise<void> {
-  await saveIncomingMedia(message);
+export async function retryLocalSave(
+  message: WhatsAppMessageDto,
+  customerWaId: string | null | undefined,
+): Promise<void> {
+  await saveIncomingMedia(message, customerWaId);
 }

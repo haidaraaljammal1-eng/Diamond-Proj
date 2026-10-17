@@ -56,7 +56,7 @@ A reader without `whatsapp.send` sees a disabled composer: “You do not have pe
 - All / Unread is backend-side (`unread=true`)
 - `unreadCount` is office staff unread. Outbound office messages do not increment it
 - Opening a conversation loads messages then marks read internally; while that chat stays open, new inbound rows trigger a debounced mark-read (no 15-minute unread lag)
-- **Choose media folder** in the page header picks the per-device save directory. Automatic saving runs while the page is open when the browser supports directory access; iPhone/manual browsers keep per-file Download
+- **Choose media folder** / **Save path selected** in the page header picks the per-device root directory (hydration-safe). Incoming media saves under a subfolder per sender `customerWaId` (digits only), with dated filenames and MIME/sniff-based extensions (`.jpg`, `.ogg`, `.pdf`, …). Existing extensionless files in the root are left untouched; staff may move them into the matching phone folder manually. iPhone/manual browsers keep per-file Download
 - Under Unread, the open chat stays open even if the row leaves the filtered list
 - Older messages: “Load older messages”, prepend, dedupe by id, keep scroll
 - Composer: open 24h window → text + attachment (image/document/audio/video) + optional template. Closed window → free-form disabled, **Use Template** for approved templates
@@ -82,7 +82,7 @@ Staff types text → domain hook → Zustand → `sendWhatsAppTextMessage()` →
 
 `GET /whatsapp/realtime` (`whatsapp.read`) is an authenticated SSE notification stream. The Inbox uses a fetch + `Authorization` header client (native `EventSource` cannot send that header). Tokens are never placed in the query string.
 
-SSE tells the browser that something changed. The Zustand store then applies a targeted REST refresh or a local id merge. If SSE is down, Inbox load, open, send, and Refresh still work. Webhook stage logs record elapsed milliseconds and event kind only. The browser records `whatsapp-realtime-event` and `whatsapp-realtime-applied` performance marks when a notification arrives and when the Inbox state is updated. Those marks do not include message text, phone numbers, or credentials.
+SSE tells the browser that something changed. The Zustand store then applies a targeted REST refresh or a local id merge. If SSE is down, Inbox load, open, and send still work; the header Refresh control is not shown (realtime reconciliation + retry on errors remains). Webhook stage logs record elapsed milliseconds and event kind only. The browser records `whatsapp-realtime-event` and `whatsapp-realtime-applied` performance marks when a notification arrives and when the Inbox state is updated. Those marks do not include message text, phone numbers, or credentials.
 
 Reconnect uses bounded exponential backoff and pauses while the browser is offline. 401/403 do not retry forever. After a successful reconnect, the client reconciles connection + conversation list + selected messages because durable replay is only a 15-minute outbox window (`Last-Event-ID`).
 

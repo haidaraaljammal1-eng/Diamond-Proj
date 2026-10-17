@@ -30,7 +30,7 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 248px) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   border: 1px solid var(--diamond-hair);

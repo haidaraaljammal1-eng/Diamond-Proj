@@ -372,6 +372,10 @@ describe("prohibited WhatsApp UI", () => {
     assert.match(realtimeHook, /acquireWhatsAppRealtime/);
     const screen = readFileSync(join(moduleDir, "components/whatsapp-screen/whatsapp-screen.tsx"), "utf8");
     assert.match(screen, /useWhatsAppRealtimeSubscription/);
+    assert.match(screen, /disableSimulation: true/);
+    assert.doesNotMatch(screen, /WhatsAppSimulationControls/);
+    assert.doesNotMatch(screen, /realtime\.live/);
+    assert.doesNotMatch(screen, /t\("refresh"\)/);
     assert.doesNotMatch(store, /markWhatsAppConversationRead/);
     assert.doesNotMatch(store, /listWhatsAppConversations/);
     assert.doesNotMatch(store, /sendWhatsAppTextMessage/);
@@ -594,6 +598,8 @@ describe("manual outbound send UX", () => {
     assert.match(screen, /WhatsAppLocalSaveToolbar/);
     assert.doesNotMatch(screen, /WhatsAppLocalSaveSettings/);
     const chatPane = readFileSync(join(moduleDir, "components/chat-pane/chat-pane.tsx"), "utf8");
+    assert.match(chatPane, /WhatsAppCustomerControls/);
+    assert.doesNotMatch(chatPane, /WhatsAppCustomerStrip/);
     assert.doesNotMatch(chatPane, /WhatsAppConnectionStatusLine/);
     const bubble = readFileSync(join(moduleDir, "components/message-bubble/message-bubble.tsx"), "utf8");
     assert.match(bubble, /showDownload/);

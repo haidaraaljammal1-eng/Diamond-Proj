@@ -102,7 +102,7 @@ export interface UseWhatsAppResult {
   simulationUnlinkCustomer?: () => void;
 }
 
-export function useWhatsApp(): UseWhatsAppResult {
+export function useWhatsApp(options?: { disableSimulation?: boolean }): UseWhatsAppResult {
   const { hasPermission } = usePermissions();
   const isAllowed = useDiamondPageAccess("whatsapp");
   const v2 = isFunctionalRbacV2UiEnabled();
@@ -116,8 +116,9 @@ export function useWhatsApp(): UseWhatsAppResult {
     ? isAllowed
     : hasPermission(WHATSAPP_LINK_CUSTOMER_PERMISSION);
   const simulationEnabled = isDemoSimulationEnabled();
-  const simulationActive =
+  const simulationActiveRaw =
     simulationEnabled && useWhatsAppSimulationStore((state) => state.active);
+  const simulationActive = options?.disableSimulation ? false : simulationActiveRaw;
   const simulatedInbox = useWhatsAppSimulationStore((state) => state.inbox);
   const simulatedSelectedId = useWhatsAppSimulationStore((state) => state.selectedConversationId);
   const simulatedPages = useWhatsAppSimulationStore((state) => state.messagePageByConversation);
