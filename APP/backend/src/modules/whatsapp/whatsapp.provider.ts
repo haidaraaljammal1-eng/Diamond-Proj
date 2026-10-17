@@ -1,7 +1,7 @@
 import { env } from "src/config/env";
 import { isWhatsAppMetaConfigured, whatsappMetaConfig } from "src/modules/whatsapp/whatsapp.config";
 import { isUltraMsgConfigured } from "src/modules/whatsapp/ultramsg.config";
-import { isWhapiConfigured } from "src/modules/whatsapp/whapi.config";
+import { isWhapiConfigured, normalizeWhapiApiUrl, WHAPI_DEFAULT_API_URL } from "src/modules/whatsapp/whapi.config";
 import { MetaCloudWhatsAppProvider } from "src/modules/whatsapp/providers/meta-cloud-api.provider";
 import { createUltraMsgWhatsAppProvider } from "src/modules/whatsapp/providers/ultramsg.provider";
 import { createWhapiWhatsAppProvider } from "src/modules/whatsapp/providers/whapi.provider";
@@ -29,7 +29,9 @@ export function createWhatsAppProvider(): WhatsAppProvider {
     return testOverride;
   }
   if (env.WHATSAPP_PROVIDER === "WHAPI") {
-    if (isWhapiConfigured()) return createWhapiWhatsAppProvider();
+    // Connection rows hold the live token; env WHAPI_TOKEN is optional (bootstrap/dev only).
+    const apiUrl = normalizeWhapiApiUrl(env.WHAPI_API_URL.trim() || WHAPI_DEFAULT_API_URL);
+    if (apiUrl) return createWhapiWhatsAppProvider();
     return new WhatsAppUnconfiguredProvider();
   }
   if (env.WHATSAPP_PROVIDER === "ULTRAMSG") {

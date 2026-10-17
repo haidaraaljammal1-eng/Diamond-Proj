@@ -822,6 +822,9 @@ describe("final Inbox UX", () => {
     assert.match(settings, /startWhatsAppConnectionAttempt/);
     assert.match(settings, /WHATSAPP_EMBEDDED_SIGNUP_NOT_CONFIGURED/);
     assert.match(settings, /activateWhatsAppWebhook/);
+    assert.match(settings, /configureWhapiConnection/);
+    assert.match(settings, /manage\.providerWhapi/);
+    assert.match(settings, /type: "password"/);
     assert.match(settings, /changeAccountConfirm/);
     assert.match(settings, /whatsapp-qr-dialog/);
     assert.doesNotMatch(settings, /localStorage/);

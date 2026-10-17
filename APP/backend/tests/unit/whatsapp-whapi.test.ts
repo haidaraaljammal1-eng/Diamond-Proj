@@ -325,4 +325,17 @@ describe("Whapi provider factory", () => {
     assert.equal(provider.name, "whapi");
     setWhatsAppProviderForTests(undefined);
   });
+
+  it("selects Whapi without a preconfigured env token when WHATSAPP_PROVIDER=WHAPI", () => {
+    const priorProvider = process.env.WHATSAPP_PROVIDER;
+    const priorToken = process.env.WHAPI_TOKEN;
+    process.env.WHATSAPP_PROVIDER = "WHAPI";
+    process.env.WHAPI_TOKEN = "";
+    setWhatsAppProviderForTests(undefined);
+    const provider = createWhatsAppProvider();
+    assert.equal(provider.name, "whapi");
+    assert.equal(provider.configured, true);
+    process.env.WHATSAPP_PROVIDER = priorProvider;
+    process.env.WHAPI_TOKEN = priorToken;
+  });
 });
