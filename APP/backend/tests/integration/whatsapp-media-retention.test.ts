@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { encryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
 import { whapiWebhookSecretHeaderName } from "src/modules/whatsapp/whapi.config";
+import { encodeWhapiWebhookMaterial } from "src/modules/whatsapp/whapi.webhook-material";
 import { cleanupExpiredWhatsAppMedia } from "src/modules/whatsapp/whatsapp.media-retention";
 import {
   WHATSAPP_MEDIA_RETENTION_MS,
@@ -58,7 +59,9 @@ if (!RUN) {
           providerInstanceId: CHANNEL,
           providerSessionStatus: "AUTHENTICATED",
           credentialCiphertext: encryptWhatsAppCredential("whapi-token"),
-          webhookCallbackCiphertext: encryptWhatsAppCredential(CALLBACK),
+          webhookCallbackCiphertext: encryptWhatsAppCredential(
+            encodeWhapiWebhookMaterial({ callbackKey: CALLBACK, webhookSecret: SECRET }),
+          ),
         },
       });
       const conversation = await prisma.whatsAppConversation.create({

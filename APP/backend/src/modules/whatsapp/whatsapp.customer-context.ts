@@ -17,8 +17,8 @@ export type WhatsAppCustomerContractRow = {
   id: string;
   contractNumber: string;
   status: ContractStatus;
-  endAt: Date;
-  vehicle: { vehicleName: string; plateNumber: string };
+  endAt: Date | null;
+  vehicle: { vehicleName: string | null; plateNumber: string | null };
   company: { code: string; displayName: string };
 };
 
@@ -33,7 +33,9 @@ export function pickActiveWhatsAppCustomerContract<T extends WhatsAppCustomerCon
     const rankA = STATUS_PRIORITY[a.status] ?? 99;
     const rankB = STATUS_PRIORITY[b.status] ?? 99;
     if (rankA !== rankB) return rankA - rankB;
-    return b.endAt.getTime() - a.endAt.getTime();
+    const endA = a.endAt?.getTime() ?? 0;
+    const endB = b.endAt?.getTime() ?? 0;
+    return endB - endA;
   })[0]!;
 }
 

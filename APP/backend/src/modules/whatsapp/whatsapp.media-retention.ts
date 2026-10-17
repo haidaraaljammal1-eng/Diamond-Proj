@@ -29,13 +29,15 @@ export async function cleanupExpiredWhatsAppMedia(
   now: Date = new Date(),
   root: string = whatsappMediaRoot(),
 ): Promise<{ expired: number }> {
+  // Compare ISO-8601 text from JSON (always UTC Z) to avoid driver timestamp TZ drift.
+  const nowIso = now.toISOString();
   const rows = await prisma.$queryRaw<Array<{ id: string; payload: Prisma.JsonValue }>>`
     SELECT id, "displayPayload" AS payload
     FROM whatsapp_messages
     WHERE COALESCE("displayPayload" #>> '{mediaStore,expired}', 'false') <> 'true'
       AND "displayPayload" #>> '{mediaStore,key}' IS NOT NULL
       AND "displayPayload" #>> '{mediaStore,key}' <> ''
-      AND ("displayPayload" #>> '{mediaStore,expiresAt}')::timestamptz <= ${now}::timestamptz
+      AND ("displayPayload" #>> '{mediaStore,expiresAt}') <= ${nowIso}
     ORDER BY id
     LIMIT ${CLEANUP_BATCH}
   `;

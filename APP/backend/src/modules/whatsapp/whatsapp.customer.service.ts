@@ -164,8 +164,9 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
       id: string;
       contractNumber: string;
       status: ContractStatus;
-      endAt: Date;
-      vehicle: { vehicleName: string; plateNumber: string };
+      endAt: Date | null;
+      startAt: Date | null;
+      vehicle: { vehicleName: string | null; plateNumber: string | null };
       company: { code: string; displayName: string };
     },
   ) {
@@ -173,9 +174,9 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
       id: row.id,
       contractNumber: row.contractNumber,
       status: row.status,
-      expectedReturnAt: row.endAt,
-      vehicleName: row.vehicle.vehicleName,
-      plateNumber: row.vehicle.plateNumber,
+      expectedReturnAt: row.endAt ?? row.startAt ?? new Date(0),
+      vehicleName: row.vehicle.vehicleName ?? "",
+      plateNumber: row.vehicle.plateNumber ?? "",
       companyCode: row.company.code,
       companyDisplayName: row.company.displayName,
     };
@@ -226,6 +227,7 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
         contractNumber: true,
         status: true,
         endAt: true,
+        startAt: true,
         createdAt: true,
         vehicle: { select: { vehicleName: true, plateNumber: true } },
         company: { select: { code: true, displayName: true } },
