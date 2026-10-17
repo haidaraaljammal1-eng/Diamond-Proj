@@ -55,6 +55,8 @@ test("fixture A: two ordinary transactions fit on one page", async () => {
   assert.ok(buf.length > 4_000);
   const text = await extractPdfText(buf);
   assert.ok(text, "PyMuPDF text extraction is required");
+  assert.ok(text.includes("2026-10-01 → 2026-10-31"), "period range with forward arrow");
+  assert.ok(text.includes("التقرير"), "Arabic reporting-period label (PyMuPDF may reshape فترة)");
   assert.ok(text.includes("DE-2026-000201"), "contract in PDF text");
   assert.ok(text.includes("DE-2026-000192"), "second contract in PDF text");
   assert.ok(text.includes("3805") || text.includes("3,805"));

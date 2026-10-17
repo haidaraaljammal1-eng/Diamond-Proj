@@ -26,6 +26,8 @@ import styles from "./edit-maintenance-dialog.module.css";
 
 export interface EditMaintenanceDialogProps {
   order: MaintenanceOrderDetailDto | null;
+  /** When true, focus the cost field after the dialog opens. */
+  focusCost?: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -59,6 +61,7 @@ function toFormValues(order: MaintenanceOrderDetailDto): EditMaintenanceFormValu
 
 export function EditMaintenanceDialog({
   order,
+  focusCost = false,
   onClose,
   onSuccess,
 }: EditMaintenanceDialogProps) {
@@ -81,6 +84,14 @@ export function EditMaintenanceDialog({
       form.reset(toFormValues(order));
     }
   }, [order, clearUpdateError, form]);
+
+  useEffect(() => {
+    if (!order || !focusCost) return;
+    const id = window.requestAnimationFrame(() => {
+      document.getElementById("edit-cost")?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [order, focusCost]);
 
   const typeOptions: SelectOption<(typeof TYPE_KEYS)[number]>[] = TYPE_KEYS.map(
     (key) => ({

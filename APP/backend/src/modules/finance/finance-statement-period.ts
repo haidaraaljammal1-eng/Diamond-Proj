@@ -112,6 +112,11 @@ export function resolveFinanceStatementPeriod(
   return { ...period, offsetMinutes };
 }
 
+/** Chronological start → end for PDF/UI (plain text; PDF bidi handles mixed Arabic + dates). */
+export function formatStatementPeriodDisplayRange(from: string, to: string): string {
+  return `${from} → ${to}`;
+}
+
 /** Inclusive business dates for filename labels (YYYY-MM-DD). */
 export function statementPeriodFilenameRange(
   period: Period,

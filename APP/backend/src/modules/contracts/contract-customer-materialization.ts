@@ -236,7 +236,7 @@ function materializedFromSnapshot(snapshot: unknown): MaterializableCustomer | n
  */
 export async function resolvePublicFormCustomerId(
   tx: Tx,
-  contractId: string,
+  _contractId: string,
   materialized: MaterializableCustomer,
   existingCustomerId: number | null,
 ): Promise<number> {

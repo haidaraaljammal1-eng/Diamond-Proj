@@ -277,6 +277,35 @@
     "invalidRentalDays": "Enter a valid rental duration in whole days (at least 1).",
     "invalidDurationValue": "Enter a valid rental duration (at least 1)."
   },
+  "FunctionalRbac": {
+    "rolesSubtitle": "Functional access matrix — page groups as rows, roles as columns. Matches backend RBAC V2 capabilities.",
+    "modeBanner": {
+      "mismatch": "RBAC V2 UI is on but the backend is not in matching mode. Matrix edits may be read-only until both sides use the same mode."
+    },
+    "routeGuard": {
+      "loading": "Loading access…",
+      "deniedTitle": "You do not have access to this page",
+      "deniedDescription": "Your role does not include the capabilities required for this page. Ask an administrator if you need access."
+    },
+    "matrix": {
+      "fullAccessBadge": "Full access",
+      "fullAccessCount": "All capabilities"
+    },
+    "pages": {
+      "dashboard": "Dashboard",
+      "vehicles": "Vehicles",
+      "gps": "GPS Tracking",
+      "maintenance": "Maintenance Center",
+      "archive": "Archive",
+      "violations": "Violations & Salik",
+      "finance": "Finance",
+      "invoices": "Invoices",
+      "contracts": "Contracts",
+      "whatsapp": "WhatsApp",
+      "users": "Staff",
+      "roles": "Roles & permissions"
+    }
+  },
   "Roles": {
     "crumbs": "Administration · Access control",
     "title": "Roles & Permissions",
@@ -1814,6 +1843,8 @@
       "OFFICIAL_CONTRACT_REVIEW_LOCKED": "This contract can no longer be changed.",
       "OFFICIAL_SIGNATURE_SLOT_UNAVAILABLE": "This signature is not available at this stage.",
       "PUBLIC_RENTAL_FORM_INCOMPLETE": "Complete your personal details to continue.",
+      "PUBLIC_RENTAL_IDENTITY_DOCUMENT_STALE": "Your documents were updated. Review your details and try again.",
+      "CUSTOMER_IDENTITY_AMBIGUOUS": "Your details could not be matched to a single customer record. Please contact the office.",
       "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE": "The contract cannot be accepted until the form and license are complete.",
       "PAYMENT_PROVIDER_NOT_CONFIGURED": "Online card payment is currently unavailable.",
       "PAYMENT_NOT_ALLOWED": "Payment is not available at this step.",
@@ -2086,7 +2117,8 @@
       "title": "Complete Maintenance",
       "description": "Completing maintenance for {name} ({plate}) returns the vehicle to available fleet status.",
       "descriptionGeneric": "Completing maintenance returns the vehicle to available fleet status.",
-      "confirm": "Complete and return to fleet"
+      "confirm": "Complete and return to fleet",
+      "costRequired": "Please enter the maintenance cost"
     },
     "cancel": {
       "title": "Cancel scheduled maintenance",
@@ -2175,6 +2207,7 @@
       "MAINTENANCE_SCHEDULED_AT_REQUIRED": "A scheduled date and time is required.",
       "MAINTENANCE_SCHEDULED_AT_MUST_BE_FUTURE": "The scheduled time must be in the future.",
       "MAINTENANCE_COMPLETED_IMMUTABLE": "Completed maintenance cannot be edited.",
+      "MAINTENANCE_COST_REQUIRED": "Please enter the maintenance cost",
       "MAINTENANCE_NOT_FOUND": "This maintenance order was not found.",
       "VEHICLE_NOT_FOUND": "This vehicle was not found.",
       "CONFLICT": "This action could not be completed because the record changed."
@@ -2889,6 +2922,7 @@
       "RENEWAL_PAYMENT": "Renewal Payment",
       "RECONCILIATION_PAYMENT": "Return Reconciliation",
       "POST_CLOSE_RECEIVABLE_PAYMENT": "Post-Close Charge",
+      "ROAD_LIABILITY_PAYMENT": "Road Liability Collection",
       "MAINTENANCE_EXPENSE": "Maintenance",
       "MANUAL_EXPENSE": "Manual Expense"
     },
@@ -2897,6 +2931,7 @@
       "RENEWAL_PAYMENT": "Renewal Payment",
       "RECONCILIATION_PAYMENT": "Return Reconciliation",
       "POST_CLOSE_RECEIVABLE_PAYMENT": "Post-Close Charge",
+      "ROAD_LIABILITY_PAYMENT": "Road Liability Collection",
       "MAINTENANCE_EXPENSE": "Maintenance",
       "MANUAL_EXPENSE": "Manual Expense",
       "MANUAL_EXPENSE_REVERSAL": "Manual Expense"

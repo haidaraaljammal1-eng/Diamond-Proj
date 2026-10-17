@@ -24,7 +24,7 @@ There is deliberately **no `MaintenanceOrder.companyId`**. The operating company
 is derived from the order's Vehicle, because `Vehicle.companyId` is write-once —
 see [Operating company](#operating-company) below.
 
-On `POST /maintenance/:id/complete`, when `cost` is set, Finance records one `MAINTENANCE_EXPENSE` ledger entry (`dedupeKey = maintenance:<id>`). Maintenance cost is a company expense only — never a customer receivable. See [finance-backend.md](./finance-backend.md).
+On `POST /maintenance/:id/complete`, when `cost` is non-null (including `0`), Finance records one `MAINTENANCE_EXPENSE` ledger entry (`dedupeKey = maintenance:<id>`). Completion is blocked while `cost` is `null`. Maintenance cost is a company expense only — never a customer receivable. See [finance-backend.md](./finance-backend.md).
 
 `OVERDUE` is **not** persisted. API exposes `overdue: boolean` when:
 
@@ -55,6 +55,7 @@ There is a single optional `cost` field (whole AED, nullable). No estimated/expe
 
 - Create (`POST /maintenance`): `cost` optional; omit or leave empty → stored as `null`.
 - Update (`PATCH /maintenance/:id`): `cost` editable on active orders (`SCHEDULED`, `IN_SERVICE`, `READY_FOR_PICKUP`).
+- Complete (`POST /maintenance/:id/complete`): rejects when `cost` is `null` (`MAINTENANCE_COST_REQUIRED`). Explicit `0` is allowed.
 - Completed orders are historical: `PATCH` is rejected once `status = COMPLETED` (or `CANCELLED`).
 - List/detail include `cost` when set. Summary exposes `totalCost` (sum of non-null costs; nulls ignored).
 

@@ -277,6 +277,35 @@
     "invalidRentalDays": "أدخل عدد أيام إيجار صالحاً (يوماً كاملاً، 1 على الأقل).",
     "invalidDurationValue": "أدخل مدة إيجار صالحة (1 على الأقل)."
   },
+  "FunctionalRbac": {
+    "rolesSubtitle": "مصفوفة الوصول الوظيفي — مجموعات الصفحات أسطر والأدوار أعمدة، وفق صلاحيات RBAC V2 في الـBackend.",
+    "modeBanner": {
+      "mismatch": "واجهة RBAC V2 مفعّلة لكن الـBackend ليس على نفس الوضع. قد تكون تعديلات المصفوفة للقراءة فقط حتى يتطابق الوضعان."
+    },
+    "routeGuard": {
+      "loading": "جارٍ تحميل صلاحيات الوصول…",
+      "deniedTitle": "لا تملك صلاحية فتح هذه الصفحة",
+      "deniedDescription": "دورك لا يتضمن الصلاحيات الوظيفية المطلوبة لهذه الصفحة. اطلب من المسؤول منحك الوصول إن لزم."
+    },
+    "matrix": {
+      "fullAccessBadge": "وصول كامل",
+      "fullAccessCount": "كل الصلاحيات الوظيفية"
+    },
+    "pages": {
+      "dashboard": "لوحة التحكم",
+      "vehicles": "المركبات",
+      "gps": "تتبع GPS",
+      "maintenance": "مركز الصيانة",
+      "archive": "الأرشيف",
+      "violations": "المخالفات وسالك",
+      "finance": "المالية",
+      "invoices": "الفواتير",
+      "contracts": "العقود",
+      "whatsapp": "واتساب",
+      "users": "الموظفون",
+      "roles": "الأدوار والصلاحيات"
+    }
+  },
   "Roles": {
     "crumbs": "الإدارة · التحكم في الوصول",
     "title": "الأدوار والصلاحيات",
@@ -1814,6 +1843,8 @@
       "OFFICIAL_CONTRACT_REVIEW_LOCKED": "لم يعد بالإمكان تعديل هذا العقد.",
       "OFFICIAL_SIGNATURE_SLOT_UNAVAILABLE": "هذا التوقيع غير متاح في هذه المرحلة.",
       "PUBLIC_RENTAL_FORM_INCOMPLETE": "أكمل بياناتك الشخصية للمتابعة.",
+      "PUBLIC_RENTAL_IDENTITY_DOCUMENT_STALE": "تم تحديث الوثائق. راجع البيانات ثم أعد المحاولة.",
+      "CUSTOMER_IDENTITY_AMBIGUOUS": "تعذر ربط بياناتك بسجل عميل موجود. تواصل مع المكتب للمساعدة.",
       "PUBLIC_RENTAL_NOT_READY_FOR_ACCEPTANCE": "لا يمكن الموافقة على العقد قبل اكتمال البيانات والتحقق من الرخصة.",
       "PAYMENT_PROVIDER_NOT_CONFIGURED": "الدفع الإلكتروني غير متاح حاليًا.",
       "PAYMENT_NOT_ALLOWED": "الدفع غير متاح في هذه المرحلة.",
@@ -2086,7 +2117,8 @@
       "title": "إنهاء الصيانة",
       "description": "إنهاء صيانة {name} ({plate}) يعيد السيارة إلى الأسطول المتاح.",
       "descriptionGeneric": "إنهاء الصيانة يعيد السيارة إلى حالة الأسطول المتاحة.",
-      "confirm": "إنهاء وإرجاع للأسطول"
+      "confirm": "إنهاء وإرجاع للأسطول",
+      "costRequired": "من فضلك أدخل تكلفة الصيانة"
     },
     "cancel": {
       "title": "إلغاء الصيانة المجدولة",
@@ -2175,6 +2207,7 @@
       "MAINTENANCE_SCHEDULED_AT_REQUIRED": "تاريخ ووقت الجدولة مطلوبان.",
       "MAINTENANCE_SCHEDULED_AT_MUST_BE_FUTURE": "يجب أن يكون موعد الجدولة في المستقبل.",
       "MAINTENANCE_COMPLETED_IMMUTABLE": "لا يمكن تعديل الصيانة المكتملة.",
+      "MAINTENANCE_COST_REQUIRED": "من فضلك أدخل تكلفة الصيانة",
       "MAINTENANCE_NOT_FOUND": "لم يتم العثور على أمر الصيانة.",
       "VEHICLE_NOT_FOUND": "لم يتم العثور على السيارة.",
       "CONFLICT": "تعذر تنفيذ الإجراء لأن السجل تغيّر."
@@ -2889,6 +2922,7 @@
       "RENEWAL_PAYMENT": "دفعة تجديد",
       "RECONCILIATION_PAYMENT": "تسوية الإرجاع",
       "POST_CLOSE_RECEIVABLE_PAYMENT": "مطالبة بعد الإغلاق",
+      "ROAD_LIABILITY_PAYMENT": "تحصيل التزام مروري",
       "MAINTENANCE_EXPENSE": "صيانة",
       "MANUAL_EXPENSE": "مصروف يدوي"
     },
@@ -2897,6 +2931,7 @@
       "RENEWAL_PAYMENT": "دفعة تجديد",
       "RECONCILIATION_PAYMENT": "تسوية الإرجاع",
       "POST_CLOSE_RECEIVABLE_PAYMENT": "مطالبة بعد الإغلاق",
+      "ROAD_LIABILITY_PAYMENT": "تحصيل التزام مروري",
       "MAINTENANCE_EXPENSE": "صيانة",
       "MANUAL_EXPENSE": "مصروف يدوي",
       "MANUAL_EXPENSE_REVERSAL": "مصروف يدوي"

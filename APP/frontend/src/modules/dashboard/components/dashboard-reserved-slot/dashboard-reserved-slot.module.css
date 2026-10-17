@@ -1,36 +1,46 @@
 .card {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
-  max-height: min(70vh, 520px);
+  align-self: start;
+  width: 100%;
+  overflow: hidden;
 }
 
-.shell {
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.frameTop,
+.frameBottom {
   position: relative;
-  flex: 1;
-  min-height: 200px;
+  width: 100%;
   overflow: hidden;
-  border-radius: inherit;
+}
+
+.frameTop {
+  aspect-ratio: 1024 / 325;
+}
+
+.frameBottom {
+  aspect-ratio: 1024 / 488;
 }
 
 .image {
   object-fit: cover;
-  /* Panoramic asset: keep cabin/showroom focal band centered on wide layouts. */
-  object-position: 44% center;
+  object-position: center;
 }
 
 @media (max-width: 1080px) {
-  .shell {
-    min-height: min(46vw, 320px);
-  }
-
-  .image {
-    object-position: 48% center;
+  .stack {
+    gap: 8px;
   }
 }
 
 @media (max-width: 560px) {
-  .image {
-    object-position: 38% center;
+  .stack {
+    gap: 6px;
   }
 }

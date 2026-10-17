@@ -10,6 +10,7 @@ export const MaintenanceErrorReason = {
   SCHEDULED_AT_REQUIRED: "MAINTENANCE_SCHEDULED_AT_REQUIRED",
   SCHEDULED_AT_MUST_BE_FUTURE: "MAINTENANCE_SCHEDULED_AT_MUST_BE_FUTURE",
   MAINTENANCE_COMPLETED_IMMUTABLE: "MAINTENANCE_COMPLETED_IMMUTABLE",
+  MAINTENANCE_COST_REQUIRED: "MAINTENANCE_COST_REQUIRED",
   VEHICLE_ACTIVE_MAINTENANCE_BLOCKS_STATUS: "VEHICLE_ACTIVE_MAINTENANCE_BLOCKS_STATUS",
 } as const;
 
@@ -98,6 +99,14 @@ export function maintenanceCompletedImmutableError(): AppError {
     code: ErrorCode.CONFLICT,
     message: "Completed maintenance orders cannot be edited",
     context: { reason: R.MAINTENANCE_COMPLETED_IMMUTABLE },
+  });
+}
+
+export function maintenanceCostRequiredError(): AppError {
+  return new AppError({
+    code: ErrorCode.VALIDATION_ERROR,
+    message: "Maintenance cost is required before completion",
+    context: { reason: R.MAINTENANCE_COST_REQUIRED },
   });
 }
 

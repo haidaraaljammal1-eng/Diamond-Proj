@@ -5,9 +5,15 @@
 import PDFDocument from "pdfkit";
 import type { FinanceStatementDayGroup, FinanceStatementLine, FinanceStatementSnapshot } from "src/modules/finance/finance-statement.service";
 import { invoiceLogoAssetPath } from "src/modules/invoices/invoice-logo";
+import { formatStatementPeriodDisplayRange } from "src/modules/finance/finance-statement-period";
 import { formatDate } from "src/modules/reports/report-format";
 import { registerReportFonts, REPORT_FONT_BOLD, REPORT_FONT_REGULAR } from "src/modules/reports/report-fonts";
-import { renderRtlText, wrapText, type BaseDirection } from "src/modules/reports/report-rtl";
+import {
+  measureLine,
+  renderRtlText,
+  wrapText,
+  type BaseDirection,
+} from "src/modules/reports/report-rtl";
 
 const MARGIN = 32;
 const FOOTER_H = 18;
@@ -178,6 +184,46 @@ function lineHeightFor(doc: Doc, fontSize: number): number {
   return doc.currentLineHeight() + CELL_LINE_GAP;
 }
 
+/** Arabic: RTL label right-aligned with LTR date range to the left; EN: single LTR line. */
+function renderStatementPeriodLine(
+  doc: Doc,
+  periodLabel: string,
+  from: string,
+  to: string,
+  x: number,
+  y: number,
+  width: number,
+  locale: FinanceStatementSnapshot["locale"],
+): number {
+  const range = formatStatementPeriodDisplayRange(from, to);
+  const lineGap = 2;
+  const lineHeight = doc.currentLineHeight() + lineGap;
+
+  if (locale === "ar") {
+    const label = `${periodLabel}: `;
+    const labelW = measureLine(doc, label, "rtl");
+    const rangeW = measureLine(doc, range, "ltr");
+    const total = labelW + rangeW;
+    const blockStart = x + Math.max(0, width - total);
+    renderRtlText(doc, range, blockStart, y, rangeW, {
+      baseDir: "ltr",
+      align: "start",
+      noWrap: true,
+      lineGap: 0,
+    });
+    renderRtlText(doc, label, blockStart + rangeW, y, labelW, {
+      baseDir: "rtl",
+      align: "start",
+      noWrap: true,
+      lineGap: 0,
+    });
+    return y + lineHeight;
+  }
+
+  const line = `${periodLabel}: ${range}`;
+  return renderRtlText(doc, line, x, y, width, { baseDir: "ltr", align: "start" });
+}
+
 function measureCenteredCell(
   doc: Doc,
   text: string,
@@ -280,13 +326,15 @@ export function renderFinanceStatementPdf(snapshot: FinanceStatementSnapshot): P
         y += bandH + 6;
 
         doc.font(REPORT_FONT_REGULAR).fontSize(7.5).fillColor(MUTED);
-        y = renderRtlText(
+        y = renderStatementPeriodLine(
           doc,
-          `${L.period}: ${snapshot.periodLabel.from} → ${snapshot.periodLabel.to}`,
+          L.period,
+          snapshot.periodLabel.from,
+          snapshot.periodLabel.to,
           MARGIN,
           y,
           contentWidth,
-          { baseDir, align: "start" },
+          snapshot.locale,
         );
         y += 2;
         y = renderRtlText(

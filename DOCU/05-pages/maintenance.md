@@ -62,7 +62,7 @@ List rows include the Vehicle projection from a single Prisma `include` on `GET 
 - OVERDUE is a derived `overdue` flag / list filter, not a persisted status.
 - History is completed `MaintenanceOrder` rows (`GET /maintenance?status=completed`). No separate history entity.
 - Completed records are view-only (no Edit / lifecycle).
-- Cost is a single optional AED field; it can be empty at create and patched later.
+- Cost is a single optional AED field during active maintenance (create or PATCH while the order is open). It is **required before completion** (`POST /complete`); explicit zero is valid.
 - Vehicle selector submits `vehicleId` and shows plate prominently.
 - Confirm complete/cancel with the shared `Dialog`. No `alert()` / `confirm()`.
 

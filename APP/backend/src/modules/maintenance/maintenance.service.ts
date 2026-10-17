@@ -14,6 +14,7 @@ import {
   activeMaintenanceExistsError,
   invalidMaintenanceTransitionError,
   maintenanceCompletedImmutableError,
+  maintenanceCostRequiredError,
   maintenanceNotFoundError,
   scheduledAtMustBeFutureError,
   scheduledAtRequiredError,
@@ -404,6 +405,14 @@ export function createMaintenanceService(fastify: FastifyInstance) {
     async complete(id: number) {
       const now = new Date();
       const row = await withTransaction(prisma, async (tx) => {
+        const initial = await tx.maintenanceOrder.findUnique({
+          where: { id },
+          select: { id: true, vehicleId: true },
+        });
+        if (!initial) throw maintenanceNotFoundError();
+
+        await acquireAdvisoryLock(tx, MAINTENANCE_VEHICLE_LOCK_NS, initial.vehicleId);
+
         const existing = await tx.maintenanceOrder.findUnique({
           where: { id },
           include: ORDER_INCLUDE,
@@ -415,8 +424,10 @@ export function createMaintenanceService(fastify: FastifyInstance) {
         if (existing.vehicle.operationalStatus !== "SERVICE") {
           throw vehicleNotAvailableForMaintenanceError(existing.vehicle.operationalStatus);
         }
+        if (existing.cost == null) {
+          throw maintenanceCostRequiredError();
+        }
 
-        await acquireAdvisoryLock(tx, MAINTENANCE_VEHICLE_LOCK_NS, existing.vehicleId);
         await assertNoActiveMaintenance(tx, existing.vehicleId, id);
 
         const updated = await tx.maintenanceOrder.update({

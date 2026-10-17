@@ -48,6 +48,7 @@ export const LEDGER_DISPLAY_SOURCES: LedgerDisplaySource[] = [
   "RENEWAL_PAYMENT",
   "RECONCILIATION_PAYMENT",
   "POST_CLOSE_RECEIVABLE_PAYMENT",
+  "ROAD_LIABILITY_PAYMENT",
   "MAINTENANCE_EXPENSE",
   "MANUAL_EXPENSE",
 ];
@@ -62,6 +63,7 @@ export function ledgerSourceFromKind(kind: string): LedgerDisplaySource | null {
   if (kind === "RENEWAL_PAYMENT") return "RENEWAL_PAYMENT";
   if (kind === "RECONCILIATION_PAYMENT") return "RECONCILIATION_PAYMENT";
   if (kind === "POST_CLOSE_RECEIVABLE_PAYMENT") return "POST_CLOSE_RECEIVABLE_PAYMENT";
+  if (kind === "ROAD_LIABILITY_PAYMENT") return "ROAD_LIABILITY_PAYMENT";
   return null;
 }
 

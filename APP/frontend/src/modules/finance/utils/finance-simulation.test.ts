@@ -29,6 +29,7 @@ const t = (key: string) => {
     "ledgerSource.RENEWAL_PAYMENT": "Renewal Payment",
     "ledgerSource.RECONCILIATION_PAYMENT": "Return Reconciliation",
     "ledgerSource.POST_CLOSE_RECEIVABLE_PAYMENT": "Post-Close Charge",
+    "ledgerSource.ROAD_LIABILITY_PAYMENT": "Road Liability Collection",
     "ledgerSource.MAINTENANCE_EXPENSE": "Maintenance",
     "ledgerSource.MANUAL_EXPENSE": "Manual Expense",
   };
