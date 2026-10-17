@@ -218,7 +218,6 @@ export async function configureWhapiOfficeConnection(
   });
 
   publishWhatsAppRealtime(promoted.events);
-  void whapiDeferredSyncPlan(promoted.created.id);
   input.audit({
     action: promoted.previousId ? WHATSAPP_AUDIT.CONNECTION_CHANGED : WHATSAPP_AUDIT.CONNECTION_LINKED,
     entityType: "WhatsAppConnection",

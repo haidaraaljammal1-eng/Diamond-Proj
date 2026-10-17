@@ -3292,7 +3292,14 @@
       "whapiHint": "قناة واحدة للمكتب. حفظ قناة مختلفة يؤرشف صندوق الوارد السابق دون حذف سجلاته.",
       "showQr": "عرض رمز QR",
       "qrHint": "امسح رمز QR لربط واتساب.",
-      "qrLoading": "جارٍ تحميل رمز QR…"
+      "qrLoading": "جارٍ تحميل رمز QR…",
+      "historySync": "مزامنة السجل",
+      "historySyncRunning": "جارٍ مزامنة سجل المحادثات…",
+      "historySyncPartial": "قد لا يتضمن Whapi أرشيف الهاتف بالكامل. يستورد Diamond ما يعرضه القناة فقط.",
+      "historySyncDone": "اكتملت مزامنة السجل",
+      "historySyncFailed": "فشلت مزامنة السجل",
+      "historySyncCancel": "إلغاء المزامنة",
+      "historySyncStats": "{imported} رسالة مستوردة · {chats} محادثة"
     },
     "customer": {
       "linked": "عميل مرتبط",

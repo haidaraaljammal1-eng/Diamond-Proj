@@ -14,13 +14,17 @@ import {
   WhatsAppQrSchema,
   WhatsAppSelectBodySchema,
   WhatsAppWhapiConfigureBodySchema,
+  WhatsAppHistorySyncStatusSchema,
+  WhatsAppHistorySyncStartBodySchema,
 } from "src/modules/whatsapp/whatsapp.schema";
+import { createWhatsAppHistorySyncService } from "src/modules/whatsapp/whatsapp.history-sync.service";
 
 const T = ["WhatsApp"];
 
 export default async function whatsappConnectionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const whatsapp = createWhatsAppConnectionService(fastify);
+  const historySync = createWhatsAppHistorySyncService(fastify);
 
   app.get(
     "/",
@@ -205,6 +209,73 @@ export default async function whatsappConnectionRoutes(fastify: FastifyInstance)
       const data = await whatsapp.disconnect(identity.id, (partial) =>
         request.setAudit(partial),
       );
+      return { data };
+    },
+  );
+
+  app.get(
+    "/history-sync",
+    {
+      schema: {
+        summary: "Whapi history import status for the current office connection",
+        operationId: "getWhatsAppHistorySyncStatus",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_READ, PERMISSIONS.WHATSAPP_MANAGE_CONNECTION],
+        response: {
+          200: dataResponse(WhatsAppHistorySyncStatusSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async () => ({ data: await historySync.getStatus() }),
+  );
+
+  app.post(
+    "/history-sync/start",
+    {
+      config: sensitiveMutationRateLimit(),
+      schema: {
+        summary: "Queue or run Whapi 1:1 history import for the current connection",
+        operationId: "startWhatsAppHistorySync",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_MANAGE_CONNECTION],
+        body: WhatsAppHistorySyncStartBodySchema,
+        response: {
+          200: dataResponse(WhatsAppHistorySyncStatusSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const identity = requireAuth(request);
+      request.setAudit({
+        action: "WHATSAPP_HISTORY_SYNC_STARTED",
+        entityType: "WhatsAppConnection",
+        metadata: { execute: request.body.execute ?? true },
+      });
+      const data = await historySync.start(identity.id, request.body.execute ?? true);
+      return { data };
+    },
+  );
+
+  app.post(
+    "/history-sync/cancel",
+    {
+      config: sensitiveMutationRateLimit(),
+      schema: {
+        summary: "Request cancellation of an in-flight Whapi history import",
+        operationId: "cancelWhatsAppHistorySync",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_MANAGE_CONNECTION],
+        response: {
+          200: dataResponse(WhatsAppHistorySyncStatusSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const identity = requireAuth(request);
+      const data = await historySync.cancel(identity.id);
       return { data };
     },
   );

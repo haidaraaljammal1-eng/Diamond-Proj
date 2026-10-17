@@ -105,6 +105,7 @@ model User {
   whatsAppConversationsCustomerLinked  WhatsAppConversation[]        @relation("WhatsAppConversationCustomerLinkedBy")
   whatsAppMessagesSent                 WhatsAppMessage[]             @relation("WhatsAppMessageSentBy")
   whatsAppOutboundAttempts             WhatsAppOutboundAttempt[]     @relation("WhatsAppOutboundAttemptActor")
+  whatsAppHistorySyncRunsQueued        WhatsAppHistorySyncRun[]      @relation("WhatsAppHistorySyncQueuedBy")
 
   @@index([status])
   @@map("users")

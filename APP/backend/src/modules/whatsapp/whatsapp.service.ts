@@ -49,6 +49,7 @@ import {
   whapiRuntimeConfig,
 } from "src/modules/whatsapp/whapi.config";
 import { configureWhapiOfficeConnection } from "src/modules/whatsapp/whapi.office-connection";
+import { enqueueWhapiHistorySyncAfterConnect } from "src/modules/whatsapp/whatsapp.history-sync.service";
 import {
   decodeWhapiWebhookMaterial,
   encodeWhapiWebhookMaterial,
@@ -1049,13 +1050,25 @@ export function createWhatsAppConnectionService(fastify: FastifyInstance) {
   }
 
   async function configureWhapi(userId: number, body: WhatsAppWhapiConfigureBody, audit: AuditWrite) {
-    return configureWhapiOfficeConnection(prisma, {
+    const data = await configureWhapiOfficeConnection(prisma, {
       userId,
       token: body.token,
       channelId: body.channelId,
       audit,
       provider: createWhatsAppProvider(),
     });
+    const active = await prisma.whatsAppConnection.findFirst({
+      where: { status: { in: CURRENT_STATUSES }, provider: "WHAPI" },
+      select: { id: true },
+    });
+    if (active) {
+      await enqueueWhapiHistorySyncAfterConnect(
+        { prisma, log: fastify.log },
+        active.id,
+        userId,
+      );
+    }
+    return data;
   }
 
   return {

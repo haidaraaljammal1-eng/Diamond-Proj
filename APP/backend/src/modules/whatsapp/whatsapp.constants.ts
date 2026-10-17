@@ -2,7 +2,14 @@ export const WHATSAPP_PROVIDER = "META_CLOUD_API" as const;
 
 export const WHATSAPP_CONNECTION_LOCK_NS = "whatsapp_connection";
 export const WHATSAPP_CONVERSATION_LOCK_NS = "whatsapp_conversation";
+export const WHATSAPP_HISTORY_SYNC_LOCK_NS = "whatsapp_history_sync";
 export const WHATSAPP_OFFICE_LOCK_ID = "office";
+
+/** P3-A Whapi history backfill batching (conservative for VPS + provider pacing). */
+export const WHATSAPP_HISTORY_SYNC_CHATS_PAGE = 50;
+export const WHATSAPP_HISTORY_SYNC_MESSAGES_PAGE = 100;
+export const WHATSAPP_HISTORY_SYNC_MESSAGES_PER_TICK = 40;
+export const WHATSAPP_HISTORY_SYNC_INTER_REQUEST_MS = 250;
 
 /** Connection-attempt TTL. Short-lived CSRF/OAuth state (10 minutes). */
 export const WHATSAPP_CONNECTION_ATTEMPT_TTL_SECONDS = 600;

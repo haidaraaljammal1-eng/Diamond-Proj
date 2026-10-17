@@ -3292,7 +3292,14 @@
       "whapiHint": "One office channel. Saving a different channel archives the previous inbox without deleting it.",
       "showQr": "Show QR Code",
       "qrHint": "Scan the QR code to connect WhatsApp.",
-      "qrLoading": "Loading QR code…"
+      "qrLoading": "Loading QR code…",
+      "historySync": "Sync history",
+      "historySyncRunning": "Syncing chat history…",
+      "historySyncPartial": "Whapi may not include the full phone archive. Diamond imports what the channel exposes.",
+      "historySyncDone": "History sync completed",
+      "historySyncFailed": "History sync failed",
+      "historySyncCancel": "Cancel sync",
+      "historySyncStats": "{imported} messages imported · {chats} chats"
     },
     "customer": {
       "linked": "Linked Customer",

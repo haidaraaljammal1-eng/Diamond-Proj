@@ -31,7 +31,12 @@ export interface InboundMessageInput {
   displayPayload?: Record<string, unknown> | null;
   providerOccurredAt: Date | null;
   receivedAt: Date;
-  webhookEventId: string;
+  webhookEventId?: string | null;
+}
+
+export interface InboundMaterializeOptions {
+  /** Backfill only: no unread, no SSE, optional webhook row. */
+  historical?: boolean;
 }
 
 export type InboundMaterializeResult =
@@ -71,7 +76,9 @@ export function setWhatsAppInboundCommitFailureForTests(error: Error | undefined
 export async function materializeInboundMessage(
   prisma: PrismaClient,
   input: InboundMessageInput,
+  options?: InboundMaterializeOptions,
 ): Promise<InboundMaterializeResult> {
+  const historical = options?.historical === true;
   if (inboundFailureForTests && process.env.NODE_ENV !== "production") {
     throw inboundFailureForTests;
   }
@@ -176,7 +183,7 @@ export async function materializeInboundMessage(
     });
 
     if (inserted.count === 0) {
-      await markWebhookProcessed(tx, input.webhookEventId);
+      if (input.webhookEventId) await markWebhookProcessed(tx, input.webhookEventId);
       return {
         created: false as const,
         conversationId: conversation.id,
@@ -211,7 +218,8 @@ export async function materializeInboundMessage(
     await tx.whatsAppConversation.update({
       where: { id: conversation.id },
       data: {
-        ...(inboundCountsAsUnread({
+        ...(!historical &&
+        inboundCountsAsUnread({
           incoming: {
             occurredAt: input.providerOccurredAt,
             createdAt: message.createdAt,
@@ -248,9 +256,19 @@ export async function materializeInboundMessage(
       },
     });
 
-    await markWebhookProcessed(tx, input.webhookEventId);
+    if (input.webhookEventId) await markWebhookProcessed(tx, input.webhookEventId);
 
     const events: WhatsAppRealtimeEvent[] = [];
+    if (historical) {
+      return {
+        created: true as const,
+        conversationId: conversation.id,
+        messageId: message.id,
+        messageType,
+        conversationCreated,
+        events: [],
+      };
+    }
     if (conversationCreated) {
       const createdEvent = await writeWhatsAppRealtimeEvent(tx, {
         type: "whatsapp.conversation.created",
@@ -283,7 +301,7 @@ export async function materializeInboundMessage(
     };
   });
 
-  publishWhatsAppRealtime(result.events);
+  if (!historical) publishWhatsAppRealtime(result.events);
   if (result.created) {
     return {
       created: true,

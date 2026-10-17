@@ -11,13 +11,20 @@ import {
   authorizeWhatsAppConnectionAttempt,
   bootstrapWhatsAppConnection,
   configureWhapiConnection,
+  cancelWhatsAppHistorySync,
   disconnectWhatsAppConnection,
   getWhatsAppConnection,
   getWhatsAppConnectionQr,
+  getWhatsAppHistorySyncStatus,
+  startWhatsAppHistorySync,
   selectWhatsAppConnection,
   startWhatsAppConnectionAttempt,
 } from "../../api/whatsapp.api";
-import type { WhatsAppConnectionDto, WhatsAppGrantedChoiceDto } from "../../types/whatsapp.types";
+import type {
+  WhatsAppConnectionDto,
+  WhatsAppGrantedChoiceDto,
+  WhatsAppHistorySyncStatusDto,
+} from "../../types/whatsapp.types";
 import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error";
 import { connectionBanner, connectionCapabilities } from "../../utils/whatsapp-view-model";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
@@ -85,6 +92,7 @@ export function WhatsAppConnectionSettings({
   const [whapiFormKey, setWhapiFormKey] = useState(0);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrImage, setQrImage] = useState<string | null>(null);
+  const [historySync, setHistorySync] = useState<WhatsAppHistorySyncStatusDto | null>(null);
   const linked = connection && connection.status !== "DISCONNECTED";
   const banner = connectionBanner(connection);
   const caps = connectionCapabilities(connection);
@@ -132,6 +140,48 @@ export function WhatsAppConnectionSettings({
       setQrImage(null);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !linked || caps.provider !== "WHAPI" || inbox.simulationActive) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const status = await getWhatsAppHistorySyncStatus();
+        if (!cancelled) setHistorySync(status);
+      } catch {
+        /* status is optional UX */
+      }
+    }
+    void load();
+    const timer = window.setInterval(() => void load(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [open, linked, caps.provider, inbox.simulationActive]);
+
+  async function runHistorySync() {
+    setBusy(true);
+    setError(null);
+    try {
+      const status = await startWhatsAppHistorySync(true);
+      setHistorySync(status);
+    } catch (err) {
+      setError(resolveWhatsAppErrorMessage(t, err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function stopHistorySync() {
+    setBusy(true);
+    try {
+      const status = await cancelWhatsAppHistorySync();
+      setHistorySync(status);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveWhapi(values: WhapiConfigureValues) {
     setBusy(true);
@@ -303,6 +353,44 @@ export function WhatsAppConnectionSettings({
             submitDisabled={busy}
             onSubmit={saveWhapi}
           />
+          {linked && !inbox.simulationActive ? (
+            <div className={styles.historySync} data-testid="whatsapp-history-sync-panel">
+              <p>{t("manage.historySyncPartial")}</p>
+              {historySync?.status === "RUNNING" || historySync?.status === "QUEUED" ? (
+                <p>{t("manage.historySyncRunning")}</p>
+              ) : null}
+              {historySync && historySync.status !== "IDLE" ? (
+                <p>
+                  {t("manage.historySyncStats", {
+                    imported: historySync.messagesImported,
+                    chats: historySync.chatsCompleted,
+                  })}
+                </p>
+              ) : null}
+              {historySync?.status === "COMPLETED" ? <p>{t("manage.historySyncDone")}</p> : null}
+              {historySync?.status === "FAILED" ? <p>{t("manage.historySyncFailed")}</p> : null}
+              <div className={styles.actions}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy || historySync?.status === "RUNNING"}
+                  onClick={() => void runHistorySync()}
+                >
+                  {t("manage.historySync")}
+                </Button>
+                {historySync?.status === "RUNNING" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => void stopHistorySync()}
+                  >
+                    {t("manage.historySyncCancel")}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           </>
         ) : null}
         {caps.supportsEmbeddedSignup && choices.length > 0 ? (

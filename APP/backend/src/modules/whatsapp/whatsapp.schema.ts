@@ -366,6 +366,31 @@ export const WhatsAppCustomerLinkBodySchema = z
   })
   .strict();
 
+export const WhatsAppHistorySyncStatusSchema = z.object({
+  runId: z.string().uuid().nullable(),
+  connectionId: z.string().uuid().nullable(),
+  status: z.enum(["IDLE", "QUEUED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]),
+  phase: z.enum(["CHATS", "MESSAGES", "DONE"]).nullable(),
+  chatsDiscovered: z.number().int(),
+  chatsCompleted: z.number().int(),
+  chatsQueued: z.number().int(),
+  chatQueueIndex: z.number().int(),
+  messagesImported: z.number().int(),
+  messagesSkipped: z.number().int(),
+  cancelRequested: z.boolean(),
+  lastErrorCode: z.string().nullable(),
+  partialHistoryNotice: z.literal(true),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+});
+
+export const WhatsAppHistorySyncStartBodySchema = z
+  .object({
+    execute: z.boolean().optional().default(true),
+  })
+  .strict();
+
 export type WhatsAppConversationListItemDto = z.infer<typeof WhatsAppConversationListItemSchema>;
 export type WhatsAppConversationDetailDto = z.infer<typeof WhatsAppConversationDetailSchema>;
 export type WhatsAppMessageDto = z.infer<typeof WhatsAppMessageSchema>;
@@ -375,3 +400,4 @@ export type WhatsAppTemplateDto = z.infer<typeof WhatsAppTemplateSchema>;
 export type WhatsAppSendTemplateBody = z.infer<typeof WhatsAppSendTemplateBodySchema>;
 export type WhatsAppCustomerMatchDto = z.infer<typeof WhatsAppCustomerMatchSchema>;
 export type WhatsAppCustomerContextDto = z.infer<typeof WhatsAppCustomerContextSchema>;
+export type WhatsAppHistorySyncStatusDto = z.infer<typeof WhatsAppHistorySyncStatusSchema>;

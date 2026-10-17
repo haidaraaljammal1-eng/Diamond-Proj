@@ -15,6 +15,7 @@ import type {
   WhatsAppPageMeta,
   WhatsAppSendResult,
   WhatsAppTemplateDto,
+  WhatsAppHistorySyncStatusDto,
 } from "../types/whatsapp.types";
 import { WHATSAPP_MESSAGE_PAGE_SIZE } from "../types/whatsapp.types";
 import { buildWhatsAppConversationQuery, parseWhatsAppPageMeta } from "../utils/whatsapp-query";
@@ -303,6 +304,29 @@ export async function configureWhapiConnection(input: {
 export async function bootstrapWhatsAppConnection(): Promise<WhatsAppConnectionDto> {
   const response = await apiRequest<WhatsAppConnectionDto>(
     `${WHATSAPP_PATH}/connection/bootstrap`,
+    { method: "POST" },
+  );
+  return response.data;
+}
+
+export async function getWhatsAppHistorySyncStatus(): Promise<WhatsAppHistorySyncStatusDto> {
+  const response = await apiRequest<WhatsAppHistorySyncStatusDto>(
+    `${WHATSAPP_PATH}/connection/history-sync`,
+  );
+  return response.data;
+}
+
+export async function startWhatsAppHistorySync(execute = true): Promise<WhatsAppHistorySyncStatusDto> {
+  const response = await apiRequest<WhatsAppHistorySyncStatusDto>(
+    `${WHATSAPP_PATH}/connection/history-sync/start`,
+    { method: "POST", body: { execute } },
+  );
+  return response.data;
+}
+
+export async function cancelWhatsAppHistorySync(): Promise<WhatsAppHistorySyncStatusDto> {
+  const response = await apiRequest<WhatsAppHistorySyncStatusDto>(
+    `${WHATSAPP_PATH}/connection/history-sync/cancel`,
     { method: "POST" },
   );
   return response.data;

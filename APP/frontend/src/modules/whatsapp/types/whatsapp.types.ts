@@ -1,3 +1,22 @@
+export type WhatsAppHistorySyncStatusDto = {
+  runId: string | null;
+  connectionId: string | null;
+  status: "IDLE" | "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+  phase: "CHATS" | "MESSAGES" | "DONE" | null;
+  chatsDiscovered: number;
+  chatsCompleted: number;
+  chatsQueued: number;
+  chatQueueIndex: number;
+  messagesImported: number;
+  messagesSkipped: number;
+  cancelRequested: boolean;
+  lastErrorCode: string | null;
+  partialHistoryNotice: true;
+  startedAt: string | null;
+  completedAt: string | null;
+  updatedAt: string | null;
+};
+
 export const WHATSAPP_PAGE_SIZE = 20;
 export const WHATSAPP_MESSAGE_PAGE_SIZE = 20;
 /** Official Cloud API text body maximum. Backend remains authoritative. */

@@ -206,6 +206,10 @@ const EnvSchema = z
     WHAPI_TEST_RECIPIENT: z.string().optional().default(""),
     /** Private directory for shared WhatsApp files. Empty uses <repo>/var/whatsapp-media. */
     WHATSAPP_MEDIA_ROOT: z.string().optional().default(""),
+    /** Enqueue a QUEUED history run after Whapi office connect (no provider calls until started). */
+    WHATSAPP_HISTORY_SYNC_ENQUEUE_ON_CONNECT: envBool(true),
+    /** When true, RUNNING imports execute automatically (off until live QA). */
+    WHATSAPP_HISTORY_SYNC_AUTO_EXECUTE: envBool(false),
     /** Absolute ffmpeg binary. Empty uses ffmpeg on PATH. Started only for a voice conversion. */
     WHATSAPP_FFMPEG_PATH: z.string().optional().default(""),
     PUBLIC_BACKEND_URL: z.string().optional().default(""),

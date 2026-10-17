@@ -24,3 +24,10 @@
 .error {
   color: #df5b52;
 }
+
+.historySync {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}

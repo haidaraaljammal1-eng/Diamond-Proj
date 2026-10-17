@@ -26,13 +26,15 @@ export interface OutboundEchoInput {
   voiceNote?: boolean;
   providerOccurredAt: Date | null;
   receivedAt: Date;
-  webhookEventId: string;
+  webhookEventId?: string | null;
   source?: string | null;
+  /** Backfill only: no SSE and no delivery state on phone-originated rows. */
+  historical?: boolean;
 }
 
 function echoDisplayPayload(input: OutboundEchoInput): Prisma.InputJsonValue {
   const payload: { source?: string; whapi?: { voice: true } } = {};
-  if (input.source) payload.source = input.source;
+  payload.source = input.source ?? (input.historical ? "history_import" : undefined);
   if (input.voiceNote) payload.whapi = { voice: true };
   return payload;
 }
@@ -94,9 +96,9 @@ export async function materializeOutboundEchoMessage(
           displayPayload: echoDisplayPayload(input) as Prisma.InputJsonValue,
           providerOccurredAt: input.providerOccurredAt,
           receivedAt: input.receivedAt,
-          sendState: "ACCEPTED",
-          providerStatus: "SENT",
-          webhookEventId: input.webhookEventId,
+          sendState: input.historical ? null : "ACCEPTED",
+          providerStatus: input.historical ? null : "SENT",
+          webhookEventId: input.webhookEventId ?? null,
         },
       ],
       skipDuplicates: true,
@@ -108,10 +110,12 @@ export async function materializeOutboundEchoMessage(
     });
 
     if (inserted.count === 0) {
-      await tx.whatsAppWebhookEvent.update({
-        where: { id: input.webhookEventId },
-        data: { status: "PROCESSED", processedAt: new Date(), failureCode: null },
-      });
+      if (input.webhookEventId) {
+        await tx.whatsAppWebhookEvent.update({
+          where: { id: input.webhookEventId },
+          data: { status: "PROCESSED", processedAt: new Date(), failureCode: null },
+        });
+      }
       return {
         created: false,
         messageId: message.id,
@@ -154,10 +158,21 @@ export async function materializeOutboundEchoMessage(
       });
     }
 
-    await tx.whatsAppWebhookEvent.update({
-      where: { id: input.webhookEventId },
-      data: { status: "PROCESSED", processedAt: new Date(), failureCode: null },
-    });
+    if (input.webhookEventId) {
+      await tx.whatsAppWebhookEvent.update({
+        where: { id: input.webhookEventId },
+        data: { status: "PROCESSED", processedAt: new Date(), failureCode: null },
+      });
+    }
+
+    if (input.historical) {
+      return {
+        created: true,
+        messageId: message.id,
+        conversationId: conversation.id,
+        events: [] as WhatsAppRealtimeEvent[],
+      };
+    }
 
     const createdEvent = await writeWhatsAppRealtimeEvent(tx, {
       type: "whatsapp.message.outbound_created",
@@ -174,7 +189,7 @@ export async function materializeOutboundEchoMessage(
     };
   });
 
-  publishWhatsAppRealtime(result.events);
+  if (!input.historical) publishWhatsAppRealtime(result.events);
   return {
     created: result.created,
     messageId: result.messageId,
