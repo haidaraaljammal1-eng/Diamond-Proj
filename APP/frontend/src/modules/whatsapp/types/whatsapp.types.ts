@@ -4,7 +4,7 @@ export type WhatsAppHistorySyncStatusDto = {
   suggestedSyncMode: "FULL" | "INCREMENTAL";
   lastSuccessfulSyncAt: string | null;
   status: "IDLE" | "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
-  phase: "CHATS" | "MESSAGES" | "DONE" | null;
+  phase: "CHATS" | "GROUPS" | "MESSAGES" | "DONE" | null;
   chatsDiscovered: number;
   chatsCompleted: number;
   chatsQueued: number;
@@ -202,8 +202,11 @@ export interface WhatsAppConversationConnectionDto {
   verifiedName: string | null;
 }
 
+export type WhatsAppConversationKind = "DIRECT" | "GROUP";
+
 export interface WhatsAppConversationListItemDto {
   id: string;
+  kind: WhatsAppConversationKind;
   customerWaId: string;
   customerDisplayName: string | null;
   displayTitle: string;
@@ -265,6 +268,14 @@ export interface WhatsAppMessageDto {
   sendState: WhatsAppMessageSendState | null;
   edited?: boolean;
   revoked?: boolean;
+  groupSenderDisplayName?: string | null;
+  groupQuotedPreview?: string | null;
+}
+
+export interface WhatsAppGroupContextDto {
+  groupName: string | null;
+  participantCount: number;
+  participants: { providerId: string; displayName: string | null }[];
 }
 
 export interface WhatsAppTemplateDto {

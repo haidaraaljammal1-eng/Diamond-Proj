@@ -38,6 +38,7 @@ import {
 } from "src/modules/whatsapp/whatsapp.media";
 import { prepareWhatsAppVoice } from "src/modules/whatsapp/whapi.voice";
 import { WHAPI_MEDIA_MAX_BYTES } from "src/modules/whatsapp/whapi.config";
+import { assertDirectConversation } from "src/modules/whatsapp/whatsapp.conversation-guards";
 import { resolveProviderRecipient } from "src/modules/whatsapp/whatsapp.recipient-addressing";
 import { ULTRAMSG_DOCUMENT_FILENAME_MAX, ULTRAMSG_MEDIA_MAX_BYTES } from "src/modules/whatsapp/ultramsg.config";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
@@ -50,6 +51,7 @@ const CURRENT_STATUSES: WhatsAppConnectionStatus[] = [...WHATSAPP_CURRENT_STATUS
 
 const CONVERSATION_DETAIL_SELECT = {
   id: true,
+  kind: true,
   customerWaId: true,
   customerDisplayName: true,
   lastMessagePreview: true,
@@ -253,6 +255,7 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
   async function sendText(params: {
     conversationId: string;
     text: string;
+    replyToMessageId?: string;
     actorUserId: number;
     idempotencyKey: string | undefined;
     audit: AuditWrite;
@@ -477,11 +480,21 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       return loadSendResult(reserved.messageId, params.conversationId);
     }
 
+    let quotedProviderMessageId: string | undefined;
+    if (params.replyToMessageId) {
+      const replyRow = await prisma.whatsAppMessage.findFirst({
+        where: { id: params.replyToMessageId, conversationId: params.conversationId },
+        select: { providerMessageId: true },
+      });
+      quotedProviderMessageId = replyRow?.providerMessageId?.trim() || undefined;
+    }
+
     const sent = await provider.sendTextMessage({
       accessToken,
       phoneNumberId: reserved.phoneNumberId,
       toWaId: reserved.customerWaId,
       text,
+      quotedProviderMessageId,
     });
 
     if (!sent.ok) {
@@ -628,6 +641,7 @@ export function createWhatsAppSendService(fastify: FastifyInstance) {
       select: CONVERSATION_DETAIL_SELECT,
     });
     if (!conversation) throw whatsappError.conversationNotFound();
+    assertDirectConversation(conversation);
     const eligibility = eligibilityFrom(conversation, current);
     throwIfCannotSend(eligibility, "template");
     if (!current?.phoneNumberId || !current.credentialCiphertext || !current.wabaId) {

@@ -6,7 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
 import { conversationEligibility } from "../../utils/whatsapp-view-model";
-import { WHATSAPP_TEXT_BODY_MAX } from "../../types/whatsapp.types";
+import { WHATSAPP_TEXT_BODY_MAX, type WhatsAppMessageDto } from "../../types/whatsapp.types";
 import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error";
 import { WhatsAppTemplateDialog } from "../template-dialog/template-dialog";
 import styles from "./composer.module.css";
@@ -15,7 +15,13 @@ function newIdempotencyKey(): string {
   return crypto.randomUUID();
 }
 
-export function WhatsAppComposer() {
+export function WhatsAppComposer({
+  replyTo = null,
+  onClearReply,
+}: {
+  replyTo?: WhatsAppMessageDto | null;
+  onClearReply?: () => void;
+}) {
   const t = useTranslations("WhatsApp");
   const inbox = useWhatsApp();
   const [text, setText] = useState("");
@@ -141,15 +147,21 @@ export function WhatsAppComposer() {
     }
     if (!canSubmitText) return;
     setSubmitting(true);
-    const ok = await inbox.sendText(trimmed, idempotencyKey.current);
+    const ok = await inbox.sendText(trimmed, idempotencyKey.current, replyTo?.id);
     setSubmitting(false);
     if (ok) {
       setText("");
+      onClearReply?.();
       idempotencyKey.current = newIdempotencyKey();
     }
   }
 
   const sendError = resolveWhatsAppErrorMessage(t, inbox.sendError);
+
+  const replyPreview =
+    replyTo?.textBody?.trim() ||
+    replyTo?.caption?.trim() ||
+    (replyTo ? t(`messageType.${replyTo.messageType}`) : "");
 
   return (
     <form
@@ -158,6 +170,15 @@ export function WhatsAppComposer() {
       data-testid="whatsapp-composer"
       onSubmit={onSubmit}
     >
+      {replyTo ? (
+        <div className={styles.replyBar} data-testid="whatsapp-composer-reply">
+          <span className={styles.replyLabel}>{t("group.replyingTo")}</span>
+          <span className={styles.replyText} dir="auto">{replyPreview}</span>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onClearReply?.()}>
+            {t("group.clearReply")}
+          </Button>
+        </div>
+      ) : null}
       {hint() ? <p className={styles.hint}>{hint()}</p> : null}
       {sendError ? (
         <p className={styles.sendError} role="alert">

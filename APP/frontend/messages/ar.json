@@ -3068,6 +3068,18 @@
       "loadOlder": "تحميل الرسائل الأقدم",
       "loading": "جاري تحميل الرسائل"
     },
+    "group": {
+      "badge": "مجموعة",
+      "details": "معلومات المجموعة",
+      "close": "إغلاق",
+      "loading": "جاري تحميل تفاصيل المجموعة…",
+      "unnamed": "مجموعة بدون اسم",
+      "participantCount": "{count, plural, one {مشارك واحد} other {# مشاركين}}",
+      "unknownMember": "عضو",
+      "reply": "رد",
+      "replyingTo": "الرد على",
+      "clearReply": "إلغاء الرد"
+    },
     "composer": {
       "placeholder": "رسالة",
       "inputLabel": "رسالة",

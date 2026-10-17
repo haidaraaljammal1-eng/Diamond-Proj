@@ -74,7 +74,12 @@ interface WhatsAppState {
   selectConversation: (id: string) => void;
   clearSelection: () => void;
   loadOlderMessages: () => Promise<void>;
-  sendText: (conversationId: string, text: string, idempotencyKey: string) => Promise<boolean>;
+  sendText: (
+    conversationId: string,
+    text: string,
+    idempotencyKey: string,
+    replyToMessageId?: string,
+  ) => Promise<boolean>;
   sendTemplate: (
     conversationId: string,
     input: {
@@ -318,11 +323,16 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
     }
   },
 
-  async sendText(conversationId, text, idempotencyKey) {
+  async sendText(conversationId, text, idempotencyKey, replyToMessageId) {
     if (get().sending) return false;
     set({ sending: true, sendError: null });
     try {
-      const result = await sendWhatsAppTextMessage(conversationId, text, idempotencyKey);
+      const result = await sendWhatsAppTextMessage(
+        conversationId,
+        text,
+        idempotencyKey,
+        replyToMessageId,
+      );
       if (get().selectedConversationId !== conversationId) {
         set({ sending: false });
         return true;

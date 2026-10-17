@@ -16,6 +16,7 @@ import type {
   WhatsAppSendResult,
   WhatsAppTemplateDto,
   WhatsAppHistorySyncStatusDto,
+  WhatsAppGroupContextDto,
 } from "../types/whatsapp.types";
 import { WHATSAPP_MESSAGE_PAGE_SIZE } from "../types/whatsapp.types";
 import { buildWhatsAppConversationQuery, parseWhatsAppPageMeta } from "../utils/whatsapp-query";
@@ -91,14 +92,23 @@ export async function sendWhatsAppTextMessage(
   conversationId: string,
   text: string,
   idempotencyKey: string,
+  replyToMessageId?: string,
 ): Promise<WhatsAppSendResult> {
   const response = await apiRequest<WhatsAppSendResult>(
     `${WHATSAPP_PATH}/conversations/${conversationId}/messages`,
     {
       method: "POST",
-      body: { text },
+      body: replyToMessageId ? { text, replyToMessageId } : { text },
       headers: { "Idempotency-Key": idempotencyKey },
     },
+  );
+  return response.data;
+}
+
+/** `GET /whatsapp/conversations/:id/group` (`whatsapp.read`). */
+export async function getWhatsAppGroupContext(conversationId: string): Promise<WhatsAppGroupContextDto> {
+  const response = await apiRequest<WhatsAppGroupContextDto>(
+    `${WHATSAPP_PATH}/conversations/${conversationId}/group`,
   );
   return response.data;
 }

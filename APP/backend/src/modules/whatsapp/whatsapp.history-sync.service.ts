@@ -52,11 +52,22 @@ import { materializeOutboundEchoMessage } from "src/modules/whatsapp/whatsapp.ou
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
 import { enqueueWhatsAppContactSyncAfterHistory } from "src/modules/whatsapp/whatsapp.contact-sync.service";
+import {
+  groupIdFromWhapiRow,
+  groupNameFromWhapiRow,
+} from "src/modules/whatsapp/whapi.groups.client";
+import {
+  ensureGroupConversation,
+  participantsFromWhapiGroupRow,
+  upsertGroupProfile,
+} from "src/modules/whatsapp/whatsapp.group-conversation";
+import { mergeGroupMessagePayload } from "src/modules/whatsapp/whatsapp.group-display";
 import type { WhatsAppHistorySyncStatusDto } from "src/modules/whatsapp/whatsapp.schema";
 
 export type HistorySyncChatQueueEntry = {
   chatId: string;
   displayName: string | null;
+  kind?: "DIRECT" | "GROUP";
 };
 
 export type HistorySyncSkippedChatEntry = {
@@ -113,7 +124,9 @@ function parseChatQueue(value: Prisma.JsonValue): HistorySyncChatQueueEntry[] {
         typeof record.displayName === "string" && record.displayName.trim()
           ? record.displayName.trim()
           : null;
-      out.push({ chatId, displayName });
+      const kind =
+        record.kind === "GROUP" || record.kind === "DIRECT" ? record.kind : undefined;
+      out.push({ chatId, displayName, kind });
     }
   }
   return out;
@@ -359,8 +372,15 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
     importSource: "history_import" | "incremental_sync",
   ): Promise<"imported" | "skipped"> {
     if (!parsed) return "skipped";
-    const displayPayload: Record<string, unknown> = { source: importSource };
+    let displayPayload: Record<string, unknown> = { source: importSource };
     if (parsed.voiceNote) displayPayload.whapi = { voice: true };
+    if (parsed.isGroup) {
+      displayPayload = mergeGroupMessagePayload(displayPayload, {
+        senderDisplayName: parsed.senderDisplayName,
+        senderProviderId: parsed.senderProviderId,
+        quotedProviderMessageId: parsed.quotedProviderMessageId,
+      }) as Record<string, unknown>;
+    }
 
     if (parsed.fromMe) {
       const result = await materializeOutboundEchoMessage(prisma, {
@@ -498,8 +518,40 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
           if (!chatId || isWhapiGroupChatId(chatId) || !isWhapiDirectChatId(chatId)) continue;
           if (existing.has(chatId)) continue;
           existing.add(chatId);
-          queue.push({ chatId, displayName: displayNameFromWhapiChatRow(row) });
+          queue.push({
+            chatId,
+            displayName: displayNameFromWhapiChatRow(row),
+            kind: "DIRECT",
+          });
           chatsDiscovered += 1;
+        }
+        chatsOffset += page.items.length;
+        if (!page.hasMore || page.items.length === 0) {
+          phase = "GROUPS";
+          chatsOffset = 0;
+        }
+      } else if (phase === "GROUPS") {
+        const page = await client.listGroups(WHATSAPP_HISTORY_SYNC_CHATS_PAGE, chatsOffset);
+        const existing = new Set(queue.map((entry) => entry.chatId));
+        for (const row of page.items) {
+          const groupId = groupIdFromWhapiRow(row);
+          if (!groupId || !isWhapiGroupChatId(groupId)) continue;
+          const name = groupNameFromWhapiRow(row);
+          if (!existing.has(groupId)) {
+            existing.add(groupId);
+            queue.push({ chatId: groupId, displayName: name, kind: "GROUP" });
+            chatsDiscovered += 1;
+          }
+          const participants = participantsFromWhapiGroupRow(row);
+          await upsertGroupProfile(prisma, {
+            connectionId: run.connectionId,
+            providerGroupId: groupId,
+            groupName: name,
+            participantCount: participants.length,
+            hasIcon: true,
+            participants,
+          });
+          await ensureGroupConversation(prisma, run.connectionId, groupId, name);
         }
         chatsOffset += page.items.length;
         if (!page.hasMore || page.items.length === 0) {

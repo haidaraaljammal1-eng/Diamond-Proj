@@ -230,7 +230,7 @@ describe("Whapi send (mocked HTTP)", () => {
 });
 
 describe("Whapi webhook parse", () => {
-  it("parses inbound text and ignores groups", () => {
+  it("parses inbound text and group chats", () => {
     const inbound = parseWhapiWebhook(
       {
         channel_id: "chan-1",
@@ -256,12 +256,24 @@ describe("Whapi webhook parse", () => {
     const group = parseWhapiWebhook(
       {
         channel_id: "chan-1",
-        messages: [{ id: "g1", from_me: false, type: "text", chat_id: "120363@g.us", text: { body: "x" } }],
+        messages: [
+          {
+            id: "g1",
+            from_me: false,
+            type: "text",
+            chat_id: "120363@g.us",
+            from_name: "Member",
+            text: { body: "x" },
+          },
+        ],
         event: { type: "messages", event: "post" },
       },
       "env2",
     );
-    assert.equal(group.ignoreReason, WhatsAppErrorReason.GROUP_NOT_SUPPORTED);
+    assert.equal(group.ignoreReason, null);
+    assert.equal(group.isGroup, true);
+    assert.equal(group.customerWaId, "120363@g.us");
+    assert.equal(group.senderProviderId, null);
   });
 
   it("handles outbound echo and @lid safely", () => {

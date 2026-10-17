@@ -1,0 +1,42 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: min(100%, 320px);
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.muted {
+  margin: 0;
+  color: var(--diamond-muted-ink, #6b5c45);
+  font-size: 0.9rem;
+}
+
+.error {
+  margin: 0;
+  color: var(--diamond-danger, #9b2c2c);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memberName {
+  font-size: 0.95rem;
+}

@@ -10,7 +10,12 @@ import type {
   WhatsAppMessageDto,
 } from "../../types/whatsapp.types";
 import { observeIncomingMedia } from "../../utils/whatsapp-local-save";
-import { conversationTitle, formatCustomerWaId } from "../../utils/whatsapp-view-model";
+import {
+  conversationTitle,
+  formatCustomerWaId,
+  isGroupConversation,
+} from "../../utils/whatsapp-view-model";
+import { WhatsAppGroupDetailsPanel } from "../group-details-panel/group-details-panel";
 import { WhatsAppContactAvatar } from "../contact-avatar/contact-avatar";
 import { WhatsAppComposer } from "../composer/composer";
 import { WhatsAppCustomerControls } from "../customer-strip/customer-strip";
@@ -45,6 +50,8 @@ export function WhatsAppChatPane({
   const pendingScrollRestore = useRef<number | null>(null);
   const conversationId = conversation?.id ?? null;
   const [contextOpen, setContextOpen] = useState(false);
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<WhatsAppMessageDto | null>(null);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -55,6 +62,8 @@ export function WhatsAppChatPane({
     stickToBottom.current = true;
     pendingScrollRestore.current = null;
     setContextOpen(false);
+    setGroupOpen(false);
+    setReplyTo(null);
   }, [conversationId]);
 
   useLayoutEffect(() => {
@@ -90,7 +99,8 @@ export function WhatsAppChatPane({
     conversation.customerWaId,
     conversation.displayTitle,
   );
-  const customerNumber = formatCustomerWaId(conversation.customerWaId);
+  const isGroup = isGroupConversation(conversation);
+  const customerNumber = isGroup ? null : formatCustomerWaId(conversation.customerWaId);
 
   async function loadOlder() {
     pendingScrollRestore.current = scroller.current?.scrollHeight ?? 0;
@@ -110,7 +120,14 @@ export function WhatsAppChatPane({
         <div className={styles.heading}>
           <div className={styles.titleRow}>
             <p className={styles.name}>{title}</p>
-            {"customerLink" in conversation && conversation.customerLink.linked ? (
+            {isGroup ? (
+              <WhatsAppGroupDetailsPanel
+                conversationId={conversation.id}
+                open={groupOpen}
+                onToggle={() => setGroupOpen((value) => !value)}
+              />
+            ) : null}
+            {!isGroup && "customerLink" in conversation && conversation.customerLink.linked ? (
               <WhatsAppCustomerContextPanel
                 conversation={conversation}
                 open={contextOpen}
@@ -175,11 +192,16 @@ export function WhatsAppChatPane({
         ) : null}
 
         {messages.map((message) => (
-          <WhatsAppMessageBubble key={message.id} message={message} />
+          <WhatsAppMessageBubble
+            key={message.id}
+            message={message}
+            showGroupSender={isGroup}
+            onReply={isGroup && message.direction === "INBOUND" ? () => setReplyTo(message) : undefined}
+          />
         ))}
       </div>
 
-      <WhatsAppComposer />
+      <WhatsAppComposer replyTo={replyTo} onClearReply={() => setReplyTo(null)} />
     </section>
   );
 }

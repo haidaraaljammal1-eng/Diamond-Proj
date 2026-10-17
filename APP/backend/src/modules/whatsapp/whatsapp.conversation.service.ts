@@ -25,13 +25,16 @@ import { sendProviderReadReceiptsBestEffort } from "src/modules/whatsapp/whatsap
 import type {
   ListWhatsAppConversationsQuery,
   ListWhatsAppMessagesQuery,
+  WhatsAppGroupContext,
 } from "src/modules/whatsapp/whatsapp.schema";
+import { sanitizeGroupParticipants } from "src/modules/whatsapp/whatsapp.group-display";
 
 type AuditWrite = (partial: Partial<AuditContext>) => void;
 
 const CONVERSATION_LIST_SELECT = {
   id: true,
   connectionId: true,
+  kind: true,
   customerWaId: true,
   providerChatId: true,
   customerDisplayName: true,
@@ -90,7 +93,16 @@ async function loadAvatarFlags(
   rows: ConversationPresentationRow[],
 ): Promise<Map<string, boolean>> {
   const byConnection = new Map<string, Set<string>>();
+  const groupIds = new Map<string, Set<string>>();
   for (const row of rows) {
+    if (row.kind === "GROUP") {
+      const contactId = providerContactIdForConversation(row);
+      if (!contactId) continue;
+      const set = groupIds.get(row.connectionId) ?? new Set<string>();
+      set.add(contactId);
+      groupIds.set(row.connectionId, set);
+      continue;
+    }
     const contactId = providerContactIdForConversation(row);
     if (!contactId) continue;
     const set = byConnection.get(row.connectionId) ?? new Set<string>();
@@ -109,6 +121,15 @@ async function loadAvatarFlags(
     });
     for (const profile of profiles) {
       flags.set(profile.providerContactId, true);
+    }
+  }
+  for (const [connectionId, ids] of groupIds) {
+    const profiles = await prisma.whatsAppGroupProfile.findMany({
+      where: { connectionId, providerGroupId: { in: [...ids] }, hasIcon: true },
+      select: { providerGroupId: true },
+    });
+    for (const profile of profiles) {
+      flags.set(profile.providerGroupId, true);
     }
   }
   return flags;
@@ -239,6 +260,26 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
     return { data: result.data.map(toMessageDto), meta: result.meta };
   }
 
+  async function getGroupContext(conversationId: string): Promise<WhatsAppGroupContext> {
+    const row = await prisma.whatsAppConversation.findUnique({
+      where: { id: conversationId },
+      select: { kind: true, connectionId: true, customerDisplayName: true, providerChatId: true, customerWaId: true },
+    });
+    if (!row || row.kind !== "GROUP") throw whatsappError.conversationNotFound();
+    const groupId = row.providerChatId?.trim() || row.customerWaId.trim();
+    if (!groupId) throw whatsappError.conversationNotFound();
+    const profile = await prisma.whatsAppGroupProfile.findUnique({
+      where: { connectionId_providerGroupId: { connectionId: row.connectionId, providerGroupId: groupId } },
+      select: { groupName: true, participantCount: true, participants: true },
+    });
+    const participants = sanitizeGroupParticipants(profile?.participants ?? []);
+    return {
+      groupName: profile?.groupName ?? row.customerDisplayName,
+      participantCount: profile?.participantCount ?? participants.length,
+      participants,
+    };
+  }
+
   async function markRead(conversationId: string, userId: number, audit: AuditWrite, auth?: AuthUser | null) {
     const result = await withTransaction(prisma, async (tx) => {
       const existing = await tx.whatsAppConversation.findUnique({
@@ -290,7 +331,7 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
     );
   }
 
-  return { list, getById, listMessages, markRead };
+  return { list, getById, listMessages, markRead, getGroupContext };
 }
 
 export type WhatsAppConversationService = ReturnType<typeof createWhatsAppConversationService>;

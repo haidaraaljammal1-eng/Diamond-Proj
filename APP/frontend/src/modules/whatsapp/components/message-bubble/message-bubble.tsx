@@ -182,12 +182,23 @@ function ProtectedMedia({
   );
 }
 
-export function WhatsAppMessageBubble({ message }: { message: WhatsAppMessageDto }) {
+export function WhatsAppMessageBubble({
+  message,
+  showGroupSender = false,
+  onReply,
+}: {
+  message: WhatsAppMessageDto;
+  showGroupSender?: boolean;
+  onReply?: () => void;
+}) {
   const t = useTranslations("WhatsApp");
   const format = useFormatter();
   const outbound = message.direction === "OUTBOUND";
   const when = toValidDate(messageTimestamp(message));
   const className = [styles.bubble, outbound ? styles.out : styles.in].join(" ");
+  const senderName =
+    showGroupSender && !outbound ? message.groupSenderDisplayName?.trim() : null;
+  const quoted = message.groupQuotedPreview?.trim();
 
   return (
     <article
@@ -198,6 +209,24 @@ export function WhatsAppMessageBubble({ message }: { message: WhatsAppMessageDto
       data-send-state={message.sendState ?? undefined}
       data-revoked={message.revoked ? "true" : undefined}
     >
+      {senderName ? <p className={styles.sender}>{senderName}</p> : null}
+      {quoted ? (
+        <p className={styles.quote} dir="auto" data-testid="whatsapp-message-quote">
+          {quoted}
+        </p>
+      ) : null}
+      {onReply ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={styles.reply}
+          onClick={onReply}
+          data-testid="whatsapp-message-reply"
+        >
+          {t("group.reply")}
+        </Button>
+      ) : null}
       {message.revoked ? (
         <p className={styles.text} dir="auto" data-testid="whatsapp-message-revoked">
           {t("message.revoked")}

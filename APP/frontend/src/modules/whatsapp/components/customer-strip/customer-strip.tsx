@@ -25,6 +25,7 @@ import {
 } from "../../whatsapp.permissions";
 import { resolveWhatsAppErrorMessage } from "../../utils/resolve-whatsapp-error";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
+import { isGroupConversation } from "../../utils/whatsapp-view-model";
 import styles from "./customer-strip.module.css";
 
 export function WhatsAppCustomerControls({
@@ -124,6 +125,8 @@ export function WhatsAppCustomerControls({
   const customer = detail?.customerLink.customer;
 
   const rootClass = layout === "header" ? styles.headerControls : styles.strip;
+
+  if (isGroupConversation(conversation)) return null;
 
   return (
     <div

@@ -14,6 +14,7 @@ import {
 } from "src/modules/whatsapp/whatsapp.history-sync.service";
 import { WHAPI_HISTORY_CHAT_SKIP } from "src/modules/whatsapp/whapi.history.messages-list";
 import type { WhapiHistoryClient } from "src/modules/whatsapp/whapi.history.client";
+import { whapiHistoryNoGroups } from "../helpers/whapi-history-no-groups";
 import { upsertChatSyncCheckpoint } from "src/modules/whatsapp/whatsapp.history-sync.checkpoints";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
 
@@ -59,6 +60,7 @@ if (!RUN) {
     test("records skipped chat on HTTP 400 list outcome", async () => {
       const msgOk = randomUUID();
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           if (offset > 0) return { items: [], pageSize: count, hasMore: false };
           return {
@@ -142,6 +144,7 @@ if (!RUN) {
       );
 
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           if (offset > 0) return { items: [], pageSize: count, hasMore: false };
           return { items: [{ id: chatOk, name: "Inc" }], pageSize: count, hasMore: false };
@@ -194,6 +197,7 @@ if (!RUN) {
       const sync = createWhatsAppHistorySyncService(app);
       const msgId = randomUUID();
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           if (offset > 0) return { items: [], pageSize: count, hasMore: false };
           return { items: [{ id: chatOk, name: "Inc" }], pageSize: count, hasMore: false };

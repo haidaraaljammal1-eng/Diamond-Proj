@@ -2,6 +2,8 @@ import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { WhapiClient } from "src/modules/whatsapp/providers/whapi.client";
 import { createWhapiContactsClient, type WhapiContactsClient } from "src/modules/whatsapp/whapi.contacts.client";
+import { createWhapiGroupsClient } from "src/modules/whatsapp/whapi.groups.client";
+import { isWhapiGroupChatId } from "src/modules/whatsapp/whapi.chat-id";
 import { parseWhapiContactRow } from "src/modules/whatsapp/whapi.contacts.parse";
 import { whapiRuntimeConfig } from "src/modules/whatsapp/whapi.config";
 import type { WhatsAppConnectionStatus } from "@prisma/client";
@@ -169,13 +171,36 @@ export function createWhatsAppContactSyncService(deps: FastifyInstance | Contact
   ): Promise<{ contentType: string; body: Buffer } | null> {
     const convo = await prisma.whatsAppConversation.findFirst({
       where: { id: conversationId, connectionId },
-      select: { providerChatId: true, customerWaId: true },
+      select: { kind: true, providerChatId: true, customerWaId: true },
     });
     if (!convo) return null;
     const chatId =
       convo.providerChatId ??
       outboundWhapiChatId({ providerChatId: convo.providerChatId, customerWaId: convo.customerWaId });
     if (!chatId) return null;
+
+    if (convo.kind === "GROUP" || isWhapiGroupChatId(chatId)) {
+      const groupProfile = await prisma.whatsAppGroupProfile.findUnique({
+        where: { connectionId_providerGroupId: { connectionId, providerGroupId: chatId } },
+      });
+      if (!groupProfile?.hasIcon) return null;
+      const connection = await prisma.whatsAppConnection.findUnique({
+        where: { id: connectionId },
+        select: { credentialCiphertext: true, providerApiUrl: true, provider: true, status: true },
+      });
+      if (!connection?.credentialCiphertext || connection.provider !== "WHAPI") return null;
+      const token = decryptWhatsAppCredential(connection.credentialCiphertext);
+      const { apiUrl } = whapiRuntimeConfig();
+      const groups = createWhapiGroupsClient(
+        new WhapiClient({ apiUrl: connection.providerApiUrl ?? apiUrl, token }),
+      );
+      const result = await groups.getGroupIcon(chatId);
+      if (result.status < 200 || result.status >= 300 || result.body.length === 0) return null;
+      return {
+        contentType: result.contentType ?? "image/jpeg",
+        body: result.body,
+      };
+    }
 
     const profile = await prisma.whatsAppContactProfile.findUnique({
       where: { connectionId_providerContactId: { connectionId, providerContactId: chatId } },

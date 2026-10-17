@@ -28,9 +28,11 @@ function conversation(
   preview: string | null,
   type: WhatsAppConversationListItemDto["lastMessageType"],
   lastAt: string,
+  kind: WhatsAppConversationListItemDto["kind"] = "DIRECT",
 ): WhatsAppConversationListItemDto {
   return {
     id: `${WHATSAPP_SIMULATION_ID_PREFIX}${id}`,
+    kind,
     customerWaId: waId,
     customerDisplayName: name,
     displayTitle: name?.trim() || waId,
@@ -113,8 +115,18 @@ export function buildWhatsAppSimulationInbox(): WhatsAppSimulationInbox {
   const voice = conversation("voice", "15550001006", null, 12, null, "AUDIO", iso(9));
   const unknown = conversation("unknown", "15550001007", "Demo Unknown Type", 0, null, "UNKNOWN", iso(400));
   const burst = conversation("burst", "15550001008", "Demo Burst Inbox", 120, "Checking availability again", "TEXT", iso(2));
+  const fleet = conversation(
+    "fleet",
+    "120363000000000099@g.us",
+    "Demo Fleet Group",
+    2,
+    "Van is washed and ready.",
+    "TEXT",
+    iso(6),
+    "GROUP",
+  );
 
-  const conversations = [burst, north, voice, long, harbor, ledger, thread, unknown];
+  const conversations = [burst, north, voice, long, harbor, fleet, ledger, thread, unknown];
 
   const messages: Record<string, WhatsAppMessageDto[]> = {
     [north.id]: [
@@ -168,6 +180,13 @@ export function buildWhatsAppSimulationInbox(): WhatsAppSimulationInbox {
     ],
     [voice.id]: [typed("v1", "AUDIO", 9)],
     [unknown.id]: [typed("u1", "UNKNOWN", 400)],
+    [fleet.id]: [
+      {
+        ...text("g1", "INBOUND", "Van is washed and ready.", 6),
+        groupSenderDisplayName: "Demo Dispatcher",
+      },
+      text("g2", "OUTBOUND", "Thanks — assigning now.", 5, "READ"),
+    ],
     [burst.id]: Array.from({ length: 24 }, (_, index) =>
       text(
         `b${index + 1}`,

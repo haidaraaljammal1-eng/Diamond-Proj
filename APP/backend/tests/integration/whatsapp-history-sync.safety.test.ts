@@ -12,6 +12,7 @@ import {
   createWhatsAppHistorySyncService,
 } from "src/modules/whatsapp/whatsapp.history-sync.service";
 import type { WhapiHistoryClient } from "src/modules/whatsapp/whapi.history.client";
+import { whapiHistoryNoGroups } from "../helpers/whapi-history-no-groups";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
 
 const RUN =
@@ -89,6 +90,7 @@ if (!RUN) {
     test("cancel during pagination stops with partial progress", async () => {
       const msgIds = [randomUUID(), randomUUID(), randomUUID()];
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           if (offset > 0) return { items: [], pageSize: count, hasMore: false };
           return { items: [{ id: chatId, name: "Cancel User" }], pageSize: count, hasMore: false };
@@ -141,6 +143,7 @@ if (!RUN) {
       const msgId = randomUUID();
       let listCalls = 0;
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           if (offset > 0) return { items: [], pageSize: count, hasMore: false };
           return { items: [{ id: chatId, name: "Concurrent" }], pageSize: count, hasMore: false };
@@ -218,6 +221,7 @@ if (!RUN) {
       assert.equal(before.lastMessagePreview, "newer live preview");
 
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           if (offset > 0) return { items: [], pageSize: count, hasMore: false };
           return { items: [{ id: chatId, name: "Preview User" }], pageSize: count, hasMore: false };
@@ -270,6 +274,7 @@ if (!RUN) {
       const msgA = randomUUID();
       const msgB = randomUUID();
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           if (offset > 0) return { items: [], pageSize: count, hasMore: false };
           return { items: [{ id: chatId, name: "Resume" }], pageSize: count, hasMore: false };

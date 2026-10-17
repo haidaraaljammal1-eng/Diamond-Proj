@@ -28,6 +28,7 @@ import {
   WhatsAppSendMessageResponseSchema,
   WhatsAppSendTemplateBodySchema,
   WhatsAppSendTextBodySchema,
+  WhatsAppGroupContextSchema,
 } from "src/modules/whatsapp/whatsapp.schema";
 
 const T = ["WhatsApp"];
@@ -112,6 +113,24 @@ export default async function whatsappConversationRoutes(fastify: FastifyInstanc
   );
 
   app.get(
+    "/:id/group",
+    {
+      schema: {
+        summary: "Read-only WhatsApp group participants and metadata",
+        operationId: "getWhatsAppGroupContext",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_READ],
+        params: UuidIdParam,
+        response: {
+          200: dataResponse(WhatsAppGroupContextSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => ({ data: await conversations.getGroupContext(request.params.id) }),
+  );
+
+  app.get(
     "/:id/messages",
     {
       schema: {
@@ -179,6 +198,7 @@ export default async function whatsappConversationRoutes(fastify: FastifyInstanc
       const data = await send.sendText({
         conversationId: request.params.id,
         text: request.body.text,
+        replyToMessageId: request.body.replyToMessageId,
         actorUserId: identity.id,
         idempotencyKey: typeof key === "string" ? key : undefined,
         audit: (partial) => request.setAudit(partial),

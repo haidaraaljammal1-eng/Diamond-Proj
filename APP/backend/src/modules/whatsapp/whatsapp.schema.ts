@@ -169,8 +169,11 @@ export const WhatsAppConversationConnectionSchema = z.object({
   verifiedName: z.string().nullable(),
 });
 
+export const WhatsAppConversationKindSchema = z.enum(["DIRECT", "GROUP"]);
+
 export const WhatsAppConversationListItemSchema = z.object({
   id: z.string().uuid(),
+  kind: WhatsAppConversationKindSchema,
   customerWaId: z.string(),
   customerDisplayName: z.string().nullable(),
   displayTitle: z.string(),
@@ -276,13 +279,27 @@ export const WhatsAppMessageSchema = z.object({
   sendState: WhatsAppMessageSendStateSchema.nullable(),
   edited: z.boolean(),
   revoked: z.boolean(),
+  groupSenderDisplayName: z.string().nullable(),
+  groupQuotedPreview: z.string().nullable(),
 });
 
 export const WhatsAppSendTextBodySchema = z
   .object({
     text: z.string().min(1).max(WHATSAPP_TEXT_BODY_MAX),
+    replyToMessageId: z.string().uuid().optional(),
   })
   .strict();
+
+export const WhatsAppGroupContextSchema = z.object({
+  groupName: z.string().nullable(),
+  participantCount: z.number().int().nonnegative(),
+  participants: z.array(
+    z.object({
+      providerId: z.string(),
+      displayName: z.string().nullable(),
+    }),
+  ),
+});
 
 export const WhatsAppSendMessageResponseSchema = z.object({
   message: WhatsAppMessageSchema,
@@ -372,7 +389,7 @@ export const WhatsAppHistorySyncStatusSchema = z.object({
   runId: z.string().uuid().nullable(),
   connectionId: z.string().uuid().nullable(),
   status: z.enum(["IDLE", "QUEUED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]),
-  phase: z.enum(["CHATS", "MESSAGES", "DONE"]).nullable(),
+  phase: z.enum(["CHATS", "GROUPS", "MESSAGES", "DONE"]).nullable(),
   chatsDiscovered: z.number().int(),
   chatsCompleted: z.number().int(),
   chatsQueued: z.number().int(),
@@ -414,4 +431,5 @@ export type WhatsAppTemplateDto = z.infer<typeof WhatsAppTemplateSchema>;
 export type WhatsAppSendTemplateBody = z.infer<typeof WhatsAppSendTemplateBodySchema>;
 export type WhatsAppCustomerMatchDto = z.infer<typeof WhatsAppCustomerMatchSchema>;
 export type WhatsAppCustomerContextDto = z.infer<typeof WhatsAppCustomerContextSchema>;
+export type WhatsAppGroupContext = z.infer<typeof WhatsAppGroupContextSchema>;
 export type WhatsAppHistorySyncStatusDto = z.infer<typeof WhatsAppHistorySyncStatusSchema>;

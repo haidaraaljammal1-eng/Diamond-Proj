@@ -12,6 +12,7 @@ import {
 import { reconcileWhatsAppHistorySyncOnBoot } from "src/modules/whatsapp/whatsapp.history-sync.lifecycle";
 import { whapiHistoryHttpError } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
 import type { WhapiHistoryClient } from "src/modules/whatsapp/whapi.history.client";
+import { whapiHistoryNoGroups } from "../helpers/whapi-history-no-groups";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
 
 const RUN =
@@ -67,6 +68,7 @@ if (!RUN) {
     test("boot reconcile re-queues RUNNING when auto execute is off", async () => {
       let whapiCalled = false;
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats() {
           whapiCalled = true;
           return { items: [], pageSize: 50, hasMore: false };
@@ -120,6 +122,7 @@ if (!RUN) {
       assert.equal(convoBefore.unreadCount, 1);
 
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(_count, offset) {
           if (offset > 0) return { items: [], pageSize: 50, hasMore: false };
           return { items: [{ id: chatId, name: "Race User" }], pageSize: 50, hasMore: false };
@@ -171,6 +174,7 @@ if (!RUN) {
       const msgId = randomUUID();
       let chatAttempts = 0;
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats(count, offset) {
           chatAttempts += 1;
           if (chatAttempts < 2) throw whapiHistoryHttpError("chats", 429);
@@ -233,6 +237,7 @@ if (!RUN) {
       });
       const msgId = randomUUID();
       setWhapiHistoryClientForTests({
+        listGroups: whapiHistoryNoGroups,
         async listChats() {
           throw new Error("must not call Whapi for inactive connection");
         },

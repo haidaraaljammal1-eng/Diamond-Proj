@@ -6,6 +6,7 @@ import { WHATSAPP_CONVERSATION_LOCK_NS } from "src/modules/whatsapp/whatsapp.con
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
 import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
+import { isWhapiGroupChatId } from "src/modules/whatsapp/whapi.chat-id";
 import {
   buildMessagePreview,
   inboundCountsAsUnread,
@@ -83,6 +84,8 @@ export async function materializeInboundMessage(
     throw inboundFailureForTests;
   }
 
+  const isGroup =
+    isWhapiGroupChatId(input.providerChatId) || isWhapiGroupChatId(input.customerWaId);
   const messageType = mapWhatsAppMessageType(input.messageType);
   const textBody = messageType === "TEXT" ? input.textBody : null;
   const preview = buildMessagePreview(messageType, textBody, {
@@ -119,9 +122,12 @@ export async function materializeInboundMessage(
         conversation = await tx.whatsAppConversation.create({
           data: {
             connectionId: input.connectionId,
+            kind: isGroup ? "GROUP" : "DIRECT",
             customerWaId: input.customerWaId,
             providerChatId: input.providerChatId ?? null,
-            customerDisplayName: nextCustomerDisplayName(null, input.customerDisplayName),
+            customerDisplayName: isGroup
+              ? input.customerDisplayName?.trim() || null
+              : nextCustomerDisplayName(null, input.customerDisplayName),
             unreadCount: 0,
           },
         });
@@ -237,10 +243,14 @@ export async function materializeInboundMessage(
         })
           ? { unreadCount: { increment: 1 } }
           : {}),
-        customerDisplayName: nextCustomerDisplayName(
-          conversation.customerDisplayName,
-          input.customerDisplayName,
-        ),
+        ...(isGroup
+          ? {}
+          : {
+              customerDisplayName: nextCustomerDisplayName(
+                conversation.customerDisplayName,
+                input.customerDisplayName,
+              ),
+            }),
         ...(inboundAt &&
         (!conversation.lastInboundAt || inboundAt > conversation.lastInboundAt)
           ? { lastInboundAt: inboundAt }

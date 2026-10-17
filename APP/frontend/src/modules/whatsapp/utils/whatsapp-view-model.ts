@@ -52,6 +52,12 @@ export function formatCustomerWaId(waId: string): string {
   return waId;
 }
 
+export function isGroupConversation(
+  conversation: WhatsAppConversationListItemDto | WhatsAppConversationDetailDto | null | undefined,
+): boolean {
+  return conversation?.kind === "GROUP";
+}
+
 export function unreadBadgeLabel(count: number): string | null {
   if (count <= 0) return null;
   return count > 99 ? "99+" : String(count);

@@ -412,6 +412,7 @@ export const useWhatsAppSimulationStore = create<WhatsAppSimulationState>((set, 
     const id = `${WHATSAPP_SIMULATION_ID_PREFIX}live-${crypto.randomUUID()}`;
     const row: WhatsAppConversationListItemDto = {
       id,
+      kind: "DIRECT",
       customerWaId: "15550999001",
       customerDisplayName: "Simulated New Chat",
       displayTitle: "Simulated New Chat",

@@ -1,4 +1,5 @@
 import { WhapiClient } from "src/modules/whatsapp/providers/whapi.client";
+import { createWhapiGroupsClient } from "src/modules/whatsapp/whapi.groups.client";
 import { classifyWhapiMessagesListHttpStatus } from "src/modules/whatsapp/whapi.history.messages-list";
 import { whapiHistoryHttpError } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
 
@@ -24,6 +25,7 @@ export interface WhapiHistoryMessagesPage extends WhapiHistoryListResult<Record<
 
 export interface WhapiHistoryClient {
   listChats(count: number, offset: number): Promise<WhapiHistoryListResult<Record<string, unknown>>>;
+  listGroups(count: number, offset: number): Promise<WhapiHistoryListResult<Record<string, unknown>>>;
   listMessages(
     chatId: string,
     count: number,
@@ -44,6 +46,7 @@ function extractArray(json: unknown, keys: string[]): unknown[] {
 }
 
 export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClient {
+  const groups = createWhapiGroupsClient(client);
   return {
     async listChats(count, offset) {
       const path = `/chats?count=${count}&offset=${offset}`;
@@ -56,6 +59,10 @@ export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClien
       );
       const hasMore = items.length >= count;
       return { items, pageSize: count, hasMore };
+    },
+    async listGroups(count, offset) {
+      const page = await groups.listGroups(count, offset);
+      return { items: page.items, pageSize: page.pageSize, hasMore: page.hasMore };
     },
     async listMessages(chatId, count, offset, sort) {
       const encoded = encodeURIComponent(chatId);

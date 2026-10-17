@@ -5,6 +5,7 @@ import type { WhatsAppConversationListItemDto } from "src/modules/whatsapp/whats
 export type ConversationPresentationRow = {
   id: string;
   connectionId: string;
+  kind?: "DIRECT" | "GROUP";
   customerWaId: string;
   providerChatId: string | null;
   customerDisplayName: string | null;

@@ -10,6 +10,7 @@ import {
   createWhatsAppHistorySyncService,
 } from "src/modules/whatsapp/whatsapp.history-sync.service";
 import type { WhapiHistoryClient } from "src/modules/whatsapp/whapi.history.client";
+import { whapiHistoryNoGroups } from "../helpers/whapi-history-no-groups";
 
 const RUN =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -30,6 +31,7 @@ if (!RUN) {
     const msgOutbound = randomUUID();
 
     const fakeClient: WhapiHistoryClient = {
+      listGroups: whapiHistoryNoGroups,
       async listChats(count, offset) {
         if (offset > 0) return { items: [], pageSize: count, hasMore: false };
         return {

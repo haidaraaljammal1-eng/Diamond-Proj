@@ -23,6 +23,31 @@
   box-shadow: 0 4px 14px rgba(201, 161, 92, 0.12);
 }
 
+.sender {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--diamond-gold);
+}
+
+.quote {
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  border-inline-start: 3px solid rgba(201, 161, 92, 0.55);
+  background: rgba(201, 161, 92, 0.08);
+  font-size: 11px;
+  color: var(--diamond-muted);
+  border-radius: 4px;
+}
+
+.reply {
+  margin: 0 0 4px;
+  padding: 0;
+  min-height: 0;
+  height: auto;
+  font-size: 11px;
+}
+
 .text {
   margin: 0;
   white-space: pre-wrap;

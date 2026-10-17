@@ -3,13 +3,24 @@ import { describe, it } from "node:test";
 import { parseWhapiHistoryMessage } from "src/modules/whatsapp/whapi.history.parse";
 
 describe("whapi history parse", () => {
-  it("skips group chats", () => {
+  it("parses group history text with sender metadata", () => {
     const parsed = parseWhapiHistoryMessage(
-      { id: "m1", type: "text", from_me: false, chat_id: "1203@g.us" },
+      {
+        id: "m1",
+        type: "text",
+        from_me: false,
+        chat_id: "1203@g.us",
+        from_name: "Ali",
+        author: "971500000001@s.whatsapp.net",
+        text: { body: "hi group" },
+      },
       "1203@g.us",
-      null,
+      "Team",
     );
-    assert.equal(parsed, null);
+    assert.ok(parsed);
+    assert.equal(parsed!.isGroup, true);
+    assert.equal(parsed!.customerWaId, "1203@g.us");
+    assert.equal(parsed!.senderDisplayName, "Ali");
   });
 
   it("parses direct inbound text", () => {

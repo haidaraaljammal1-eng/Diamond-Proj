@@ -1,5 +1,5 @@
 import {
-  customerWaIdFromWhapiChatId,
+  conversationWaIdFromWhapiChatId,
   isWhapiDirectChatId,
   isWhapiGroupChatId,
 } from "src/modules/whatsapp/whapi.chat-id";
@@ -38,6 +38,10 @@ export interface ParsedWhapiHistoryMessage {
   voiceNote: boolean;
   providerOccurredAt: Date | null;
   displayName: string | null;
+  isGroup: boolean;
+  senderDisplayName: string | null;
+  senderProviderId: string | null;
+  quotedProviderMessageId: string | null;
 }
 
 export function parseWhapiHistoryMessage(
@@ -46,8 +50,9 @@ export function parseWhapiHistoryMessage(
   fallbackDisplayName: string | null,
 ): ParsedWhapiHistoryMessage | null {
   const chatId = asString(row.chat_id) ?? asString(row.chatId) ?? fallbackChatId;
-  if (!isWhapiDirectChatId(chatId) || isWhapiGroupChatId(chatId)) return null;
-  const customerWaId = customerWaIdFromWhapiChatId(chatId);
+  const isGroup = isWhapiGroupChatId(chatId);
+  if (!isGroup && !isWhapiDirectChatId(chatId)) return null;
+  const customerWaId = conversationWaIdFromWhapiChatId(chatId);
   const providerMessageId = asString(row.id);
   if (!customerWaId || !providerMessageId) return null;
 
@@ -77,6 +82,19 @@ export function parseWhapiHistoryMessage(
     mediaSizeBytes: media.mediaSizeBytes,
     voiceNote: media.voiceNote,
     providerOccurredAt: unixSeconds(row.timestamp) ?? unixSeconds(row.time),
-    displayName: asString(row.from_name) ?? asString(row.pushname) ?? fallbackDisplayName,
+    displayName: isGroup
+      ? fallbackDisplayName
+      : asString(row.from_name) ?? asString(row.pushname) ?? fallbackDisplayName,
+    isGroup,
+    senderDisplayName: isGroup
+      ? asString(row.from_name) ?? asString(row.pushname) ?? asString(row.author)
+      : null,
+    senderProviderId: isGroup
+      ? asString(row.author) ?? asString(row.from) ?? asString(row.from_id)
+      : null,
+    quotedProviderMessageId:
+      asString(row.quoted_id) ??
+      asString(asRecord(row.quoted)?.id) ??
+      asString(asRecord(row.context)?.quoted_id),
   };
 }

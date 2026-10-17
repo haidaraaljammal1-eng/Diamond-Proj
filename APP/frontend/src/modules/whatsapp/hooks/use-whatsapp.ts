@@ -83,7 +83,7 @@ export interface UseWhatsAppResult {
   selectConversation: (id: string) => void;
   clearSelection: () => void;
   loadOlderMessages: () => Promise<void>;
-  sendText: (text: string, idempotencyKey: string) => Promise<boolean>;
+  sendText: (text: string, idempotencyKey: string, replyToMessageId?: string) => Promise<boolean>;
   sendTemplate: (
     input: {
       name: string;
@@ -340,12 +340,12 @@ export function useWhatsApp(options?: { disableSimulation?: boolean }): UseWhats
         }
         await loadOlderMessages();
       },
-      sendText: async (text: string, idempotencyKey: string) => {
+      sendText: async (text: string, idempotencyKey: string, replyToMessageId?: string) => {
         if (!displaySelectedId) return false;
         if (simulationActive) {
           return sendSim(displaySelectedId, text);
         }
-        return sendText(displaySelectedId, text, idempotencyKey);
+        return sendText(displaySelectedId, text, idempotencyKey, replyToMessageId);
       },
       sendTemplate: async (input, idempotencyKey) => {
         if (!displaySelectedId) return false;

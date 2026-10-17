@@ -16,6 +16,7 @@ import {
   pickActiveWhatsAppCustomerContract,
   pickLatestWhatsAppCustomerContract,
 } from "src/modules/whatsapp/whatsapp.customer-context";
+import { assertDirectConversation } from "src/modules/whatsapp/whatsapp.conversation-guards";
 import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
 import { toConversationDetail } from "src/modules/whatsapp/whatsapp.mapper";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
@@ -32,9 +33,10 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
   async function match(conversationId: string, auth: AuthUser) {
     const conversation = await prisma.whatsAppConversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, customerWaId: true },
+      select: { id: true, customerWaId: true, kind: true },
     });
     if (!conversation) throw whatsappError.conversationNotFound();
+    assertDirectConversation(conversation);
     const waDigits = phoneDigitsForMatch(conversation.customerWaId);
     if (!waDigits) {
       return { state: "NO_SAFE_MATCH" as const, customer: null };
@@ -86,9 +88,10 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
     }
     const conversation = await prisma.whatsAppConversation.findUnique({
       where: { id: conversationId },
-      select: { id: true },
+      select: { id: true, kind: true },
     });
     if (!conversation) throw whatsappError.conversationNotFound();
+    assertDirectConversation(conversation);
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
       select: { id: true },
@@ -125,9 +128,10 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
   async function unlink(conversationId: string, auth: AuthUser, audit: AuditWrite) {
     const conversation = await prisma.whatsAppConversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, customerId: true },
+      select: { id: true, customerId: true, kind: true },
     });
     if (!conversation) throw whatsappError.conversationNotFound();
+    assertDirectConversation(conversation);
     const previousCustomerId = conversation.customerId;
     const events = await withTransaction(prisma, async (tx) => {
       await tx.whatsAppConversation.update({
@@ -185,9 +189,10 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
   async function customerContext(conversationId: string, auth: AuthUser) {
     const conversation = await prisma.whatsAppConversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, customerId: true },
+      select: { id: true, customerId: true, kind: true },
     });
     if (!conversation) throw whatsappError.conversationNotFound();
+    assertDirectConversation(conversation);
     if (!conversation.customerId) {
       return { linked: false as const, customer: null, contracts: null };
     }

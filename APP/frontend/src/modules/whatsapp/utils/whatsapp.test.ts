@@ -212,6 +212,7 @@ describe("unread mark-read", () => {
   it("zeros unread after a confirmed read without dropping the selected object", () => {
     const read = applyUnreadZero({
       id: "c1",
+      kind: "DIRECT" as const,
       customerWaId: "15550001001",
       customerDisplayName: "Demo",
       displayTitle: "Demo",
@@ -270,7 +271,7 @@ describe("simulation isolation", () => {
     assert.equal(isUiDemoSimulationEnabled("whatsapp", "true", "production"), false);
     const fixture = buildWhatsAppSimulationInbox();
     assert.ok(fixture.conversations.length >= 5);
-    assert.ok(fixture.conversations.length <= 8);
+    assert.ok(fixture.conversations.length <= 9);
     assert.ok(fixture.conversations.every((item) => isWhatsAppSimulationId(item.id)));
     assert.ok(WHATSAPP_SIMULATION_ID_PREFIX.startsWith("sim-"));
     const real = [{ id: "real" }];
@@ -433,6 +434,7 @@ describe("manual outbound send UX", () => {
   it("applies realtime list and status patches without duplicating bubbles or regressing READ", () => {
     const row = {
       id: "c1",
+      kind: "DIRECT" as const,
       customerWaId: "15550001001",
       customerDisplayName: "Demo",
       displayTitle: "Demo",
@@ -512,6 +514,7 @@ describe("manual outbound send UX", () => {
   it("does not increment unread from an outbound list patch", () => {
     const patched = applyUnreadZero({
       id: "c1",
+      kind: "DIRECT" as const,
       customerWaId: "15550001001",
       customerDisplayName: "Demo",
       displayTitle: "Demo",
@@ -531,6 +534,7 @@ describe("manual outbound send UX", () => {
   it("treats eligibility as backend-authored and disables at window expiry", () => {
     const ready = {
       id: "c1",
+      kind: "DIRECT" as const,
       customerWaId: "15550001001",
       customerDisplayName: "Demo",
       displayTitle: "Demo",
@@ -667,6 +671,7 @@ describe("manual outbound send UX", () => {
   it("preserves detail eligibility when the list row refreshes", () => {
     const listRow = {
       id: "c-whapi",
+      kind: "DIRECT" as const,
       customerWaId: "963984179466",
       customerDisplayName: "Inbound",
       displayTitle: "Inbound",

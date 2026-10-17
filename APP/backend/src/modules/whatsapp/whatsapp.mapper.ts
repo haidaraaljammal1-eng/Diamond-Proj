@@ -16,6 +16,7 @@ import type {
 } from "src/modules/whatsapp/whatsapp.schema";
 import type { ConversationPresentationRow } from "src/modules/whatsapp/whatsapp.conversation-presentation";
 import { toConversationPresentation } from "src/modules/whatsapp/whatsapp.conversation-presentation";
+import { readGroupMessagePayload } from "src/modules/whatsapp/whatsapp.group-display";
 import type { WhatsAppMessagingEligibility } from "src/modules/whatsapp/whatsapp.eligibility";
 import type { WhatsAppGrantedPhone, WhatsAppGrantedWaba } from "src/modules/whatsapp/whatsapp.types";
 
@@ -107,6 +108,7 @@ export function toConversationListItem(
   const presentation = toConversationPresentation(row, avatarByContactId);
   return {
     id: row.id,
+    kind: row.kind ?? "DIRECT",
     customerWaId: row.customerWaId,
     customerDisplayName: row.customerDisplayName,
     displayTitle: presentation.displayTitle,
@@ -197,6 +199,7 @@ export function toMessageDto(row: {
   );
   const stored = readMediaStore(row.displayPayload);
   const mediaExpired = protectedType && mediaStoreExpired(stored, new Date());
+  const groupPayload = readGroupMessagePayload(row.displayPayload);
   return {
     id: row.id,
     direction: row.direction,
@@ -223,6 +226,8 @@ export function toMessageDto(row: {
     receivedAt: row.receivedAt,
     providerStatus: row.providerStatus,
     sendState: row.sendState ?? null,
+    groupSenderDisplayName: groupPayload?.senderDisplayName ?? null,
+    groupQuotedPreview: groupPayload?.quotedPreview ?? null,
     ...readWhapiRevisionFlags(row.displayPayload),
   };
 }

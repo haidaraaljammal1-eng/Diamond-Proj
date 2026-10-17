@@ -3068,6 +3068,18 @@
       "loadOlder": "Load older messages",
       "loading": "Loading messages"
     },
+    "group": {
+      "badge": "Group",
+      "details": "Group info",
+      "close": "Close",
+      "loading": "Loading group details…",
+      "unnamed": "Unnamed group",
+      "participantCount": "{count, plural, one {# participant} other {# participants}}",
+      "unknownMember": "Member",
+      "reply": "Reply",
+      "replyingTo": "Replying to",
+      "clearReply": "Cancel reply"
+    },
     "composer": {
       "placeholder": "Message",
       "inputLabel": "Message",

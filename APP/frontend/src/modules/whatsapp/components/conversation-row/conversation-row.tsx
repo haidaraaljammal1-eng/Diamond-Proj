@@ -6,6 +6,7 @@ import type { WhatsAppConversationListItemDto } from "../../types/whatsapp.types
 import {
   conversationTitle,
   formatCustomerWaId,
+  isGroupConversation,
   lastMessagePreviewKind,
   toValidDate,
   unreadBadgeLabel,
@@ -35,6 +36,7 @@ export function WhatsAppConversationRow({
     preview.kind === "text" ? preview.text : t(`messageType.${preview.kind}`);
   const when = toValidDate(conversation.lastMessageAt);
   const unread = unreadBadgeLabel(conversation.unreadCount);
+  const isGroup = isGroupConversation(conversation);
   function onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -60,7 +62,14 @@ export function WhatsAppConversationRow({
       />
       <span className={styles.body}>
         <span className={styles.top}>
-          <span className={styles.name}>{title}</span>
+          <span className={styles.name}>
+            {title}
+            {isGroup ? (
+              <span className={styles.groupBadge} data-testid="whatsapp-group-badge">
+                {t("group.badge")}
+              </span>
+            ) : null}
+          </span>
           {when ? (
             <time className={styles.time} dateTime={when.toISOString()}>
               {format.relativeTime(when, now)}
@@ -68,9 +77,11 @@ export function WhatsAppConversationRow({
           ) : null}
         </span>
         <span className={styles.preview}>{previewText}</span>
-        <span className={styles.wa} dir="ltr">
-          {formatCustomerWaId(conversation.customerWaId)}
-        </span>
+        {!isGroup ? (
+          <span className={styles.wa} dir="ltr">
+            {formatCustomerWaId(conversation.customerWaId)}
+          </span>
+        ) : null}
       </span>
       {unread ? (
         <span className={styles.unread} data-testid="whatsapp-unread-badge">

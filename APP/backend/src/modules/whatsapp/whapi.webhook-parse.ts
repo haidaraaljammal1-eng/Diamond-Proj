@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { WhatsAppErrorReason } from "src/modules/whatsapp/whatsapp.errors";
 import { mapWhapiDeliveryStatus } from "src/modules/whatsapp/whapi.ack";
 import {
+  conversationWaIdFromWhapiChatId,
   customerWaIdFromWhapiChatId,
   isWhapiDirectChatId,
   isWhapiGroupChatId,
@@ -25,6 +26,8 @@ export interface ParsedWhapiWebhook {
   displayName: string | null;
   fromMe: boolean;
   isGroup: boolean;
+  senderProviderId: string | null;
+  quotedProviderMessageId: string | null;
   source: string | null;
   messageType: string | null;
   textBody: string | null;
@@ -75,13 +78,21 @@ function parseMessageRecord(message: Record<string, unknown>): Omit<
       ? asString(message.caption) ?? asString(textObj?.body) ?? asString(message.body)
       : null;
   const media = readWhapiInboundMedia(message);
+  const quotedProviderMessageId =
+    asString(message.quoted_id) ??
+    asString(asRecord(message.quoted)?.id) ??
+    asString(asRecord(message.context)?.quoted_id);
   return {
     providerMessageId,
     chatId,
-    customerWaId: customerWaIdFromWhapiChatId(chatId),
+    customerWaId: conversationWaIdFromWhapiChatId(chatId),
     displayName: asString(message.from_name) ?? asString(message.pushname),
     fromMe,
     isGroup,
+    senderProviderId: isGroup
+      ? asString(message.author) ?? asString(message.from) ?? asString(message.from_id)
+      : null,
+    quotedProviderMessageId,
     source: asString(message.source),
     messageType: mapWhatsAppMessageType(mappedType),
     textBody,
@@ -168,6 +179,8 @@ function parseStatusItem(
     displayName: null,
     fromMe: false,
     isGroup: false,
+    senderProviderId: null,
+    quotedProviderMessageId: null,
     source: null,
     messageType: null,
     textBody: null,
@@ -191,8 +204,10 @@ function parseMessageItem(
 ): ParsedWhapiWebhook {
   const parsedMessage = parseMessageRecord(message);
   let ignoreReason: string | null = null;
-  if (parsedMessage.isGroup) ignoreReason = WhatsAppErrorReason.GROUP_NOT_SUPPORTED;
-  else if (!isWhapiDirectChatId(parsedMessage.chatId)) {
+  if (
+    !parsedMessage.isGroup &&
+    !isWhapiDirectChatId(parsedMessage.chatId)
+  ) {
     ignoreReason = WhatsAppErrorReason.INBOUND_CUSTOMER_MISSING;
   } else if (!parsedMessage.customerWaId || !parsedMessage.providerMessageId) {
     ignoreReason = WhatsAppErrorReason.INBOUND_CUSTOMER_MISSING;
@@ -229,6 +244,8 @@ function unknownEvent(channelId: string | null, envelopeHash: string): ParsedWha
     displayName: null,
     fromMe: false,
     isGroup: false,
+    senderProviderId: null,
+    quotedProviderMessageId: null,
     source: null,
     messageType: null,
     textBody: null,

@@ -180,7 +180,7 @@ if (!RUN) {
       assert.equal(updated?.providerStatus, "DELIVERED");
     });
 
-    test("group message is ignored", async () => {
+    test("group message materializes as GROUP conversation", async () => {
       const res = await postWebhook(app, {
         channel_id: CHANNEL,
         messages: [
@@ -189,6 +189,7 @@ if (!RUN) {
             from_me: false,
             type: "text",
             chat_id: "120363@g.us",
+            from_name: "Group Member",
             text: { body: "group" },
           },
         ],
@@ -196,7 +197,10 @@ if (!RUN) {
       });
       assert.equal(res.statusCode, 200);
       const msg = await prisma.whatsAppMessage.findFirst({ where: { providerMessageId: "m-grp" } });
-      assert.equal(msg, null);
+      assert.ok(msg);
+      const convo = await prisma.whatsAppConversation.findUniqueOrThrow({ where: { id: msg!.conversationId } });
+      assert.equal(convo.kind, "GROUP");
+      assert.equal(convo.customerWaId, "120363@g.us");
     });
 
     test("materializes every message in one webhook batch", async () => {

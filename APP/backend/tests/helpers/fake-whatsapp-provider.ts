@@ -63,8 +63,13 @@ export function createFakeWhatsAppProvider(options?: {
   let sendFailure: WhatsAppProviderResult<{ providerMessageId: string }> | undefined;
   let sendUnknown = false;
   let sendMessageId: string | undefined;
-  let lastSend: { accessToken: string; phoneNumberId: string; toWaId: string; text: string } | null =
-    null;
+  let lastSend: {
+    accessToken: string;
+    phoneNumberId: string;
+    toWaId: string;
+    text: string;
+    quotedProviderMessageId?: string;
+  } | null = null;
   let templates: WhatsAppProviderTemplate[] = [];
   let subscribeSuccess = false;
   let subscribed = false;

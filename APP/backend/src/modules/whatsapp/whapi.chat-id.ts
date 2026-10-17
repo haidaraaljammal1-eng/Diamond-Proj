@@ -33,6 +33,14 @@ export function whapiPhoneChatIdFromDigits(digits: string): string | null {
  * Diamond customerWaId: digits when safely derivable from phone chat id.
  * For `@lid` and other opaque ids, use the full chat id (never guess a phone).
  */
+/** Conversation identity key: phone digits, opaque `@lid`, or full group `@g.us` id. */
+export function conversationWaIdFromWhapiChatId(chatId: string | null | undefined): string | null {
+  const stored = chatId?.trim() ?? "";
+  if (!stored) return null;
+  if (isWhapiGroupChatId(stored)) return stored;
+  return customerWaIdFromWhapiChatId(stored);
+}
+
 export function customerWaIdFromWhapiChatId(chatId: string | null | undefined): string | null {
   const stored = chatId?.trim() ?? "";
   if (!stored || isWhapiGroupChatId(stored)) return null;
@@ -53,7 +61,8 @@ export function outboundWhapiChatId(input: {
   customerWaId: string;
 }): string | null {
   const stored = input.providerChatId?.trim() ?? "";
-  if (isWhapiGroupChatId(stored)) return null;
+  if (isWhapiGroupChatId(stored)) return stored;
+  if (isWhapiGroupChatId(input.customerWaId)) return input.customerWaId.trim();
   if (isWhapiPhoneChatId(stored) || isWhapiLidChatId(stored)) return stored;
   if (isWhapiPhoneChatId(input.customerWaId)) return input.customerWaId.trim();
   if (isWhapiLidChatId(input.customerWaId)) return input.customerWaId.trim();

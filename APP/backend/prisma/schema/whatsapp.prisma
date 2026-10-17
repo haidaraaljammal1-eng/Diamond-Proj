@@ -155,6 +155,7 @@ model WhatsAppConnection {
   chatSyncCheckpoints WhatsAppConnectionChatSyncCheckpoint[]
   contactProfiles     WhatsAppContactProfile[]
   contactSyncState    WhatsAppContactSyncState?
+  groupProfiles       WhatsAppGroupProfile[]
 
   @@index([status])
   @@index([wabaId, phoneNumberId])
@@ -200,6 +201,11 @@ model WhatsAppWebhookEvent {
   @@map("whatsapp_webhook_events")
 }
 
+enum WhatsAppConversationKind {
+  DIRECT
+  GROUP
+}
+
 /// Diamond staff conversation. Identity is connection + provider wa_id.
 /// Office-level unread (not per-user, not Meta read receipts).
 model WhatsAppConversation {
@@ -207,7 +213,9 @@ model WhatsAppConversation {
   connectionId String
   connection   WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
 
-  /// Exact Meta wa_id, or UltraMsg digits derived from `@c.us`. Never a Diamond Customer.
+  kind WhatsAppConversationKind @default(DIRECT)
+
+  /// Exact Meta wa_id, UltraMsg `@c.us` digits, or Whapi group id (`@g.us`). Never a Diamond Customer.
   customerWaId        String
   /// Provider-neutral 1:1 chat id. UltraMsg stores exact `number@c.us`. Null on historical Meta rows.
   providerChatId      String?
@@ -370,6 +378,7 @@ enum WhatsAppHistorySyncStatus {
 
 enum WhatsAppHistorySyncPhase {
   CHATS
+  GROUPS
   MESSAGES
   DONE
 }
@@ -420,6 +429,26 @@ model WhatsAppContactSyncState {
   updatedAt      DateTime           @updatedAt
 
   @@map("whatsapp_contact_sync_states")
+}
+
+/// P3-D Whapi group metadata per connection (participants are display-only, never Customer links).
+model WhatsAppGroupProfile {
+  id              String             @id @default(uuid())
+  connectionId    String
+  connection      WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  providerGroupId String
+  groupName       String?
+  participantCount Int               @default(0)
+  hasIcon         Boolean            @default(false)
+  /// Sanitized participant labels only (no PII logging elsewhere).
+  participants    Json?
+  lastSyncedAt    DateTime           @default(now())
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([connectionId, providerGroupId])
+  @@index([connectionId])
+  @@map("whatsapp_group_profiles")
 }
 
 model WhatsAppHistorySyncRun {

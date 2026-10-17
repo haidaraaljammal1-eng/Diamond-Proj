@@ -24,6 +24,7 @@ import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-
 import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
 import { sanitizeWebhookPayload } from "src/modules/whatsapp/whatsapp.webhook-sanitize";
 import { sha256Hex } from "src/modules/whatsapp/whatsapp.webhook-signature";
+import { mergeGroupMessagePayload } from "src/modules/whatsapp/whatsapp.group-display";
 import { parseWhapiWebhookBatch, type ParsedWhapiWebhook } from "src/modules/whatsapp/whapi.webhook-parse";
 import { whapiChannelIdsMatch, WHAPI_WEBHOOK_MAX_BYTES } from "src/modules/whatsapp/whapi.config";
 import type { WhatsAppWebhookHttpResult } from "src/modules/whatsapp/whatsapp.webhook.service";
@@ -54,6 +55,13 @@ function inboundDisplayPayload(parsed: ParsedWhapiWebhook): Record<string, unkno
   const payload: Record<string, unknown> = {};
   if (parsed.source) payload.source = parsed.source;
   if (parsed.voiceNote) payload.whapi = { voice: true };
+  if (parsed.isGroup) {
+    return mergeGroupMessagePayload(payload, {
+      senderDisplayName: parsed.displayName,
+      senderProviderId: parsed.senderProviderId,
+      quotedProviderMessageId: parsed.quotedProviderMessageId,
+    }) as Record<string, unknown>;
+  }
   return Object.keys(payload).length > 0 ? payload : null;
 }
 

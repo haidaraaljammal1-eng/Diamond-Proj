@@ -64,6 +64,7 @@ export interface WhatsAppSendTextInput {
   phoneNumberId: string;
   toWaId: string;
   text: string;
+  quotedProviderMessageId?: string;
 }
 
 export interface WhatsAppSendTextAccepted {

@@ -366,10 +366,11 @@ export class WhapiWhatsAppProvider implements WhatsAppProvider {
     const to = input.toWaId.trim();
     if (!to) return { ok: false, code: "VALIDATION_FAILED" };
     try {
-      const { status, json } = await this.client(input.accessToken).postJson("/messages/text", {
-        to,
-        body: input.text,
-      });
+      const body: Record<string, unknown> = { to, body: input.text };
+      if (input.quotedProviderMessageId?.trim()) {
+        body.quoted = input.quotedProviderMessageId.trim();
+      }
+      const { status, json } = await this.client(input.accessToken).postJson("/messages/text", body);
       if (status < 200 || status >= 300) return { ok: false, code: mapWhapiHttpFailure(status, json) };
       const accepted = parseSendAccepted(json);
       if (!accepted) return { ok: false, code: "SEND_REJECTED" };
