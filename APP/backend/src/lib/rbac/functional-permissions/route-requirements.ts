@@ -201,6 +201,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   listWhatsAppTemplates: all(FN.whatsapp.full),
   listWhatsAppConversations: all(FN.whatsapp.full),
   getWhatsAppConversation: all(FN.whatsapp.full),
+  getWhatsAppConversationAvatar: all(FN.whatsapp.full),
   listWhatsAppMessages: all(FN.whatsapp.full),
   markWhatsAppConversationRead: all(FN.whatsapp.full),
   sendWhatsAppTextMessage: all(FN.whatsapp.full),

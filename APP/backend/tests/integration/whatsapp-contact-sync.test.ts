@@ -2,6 +2,7 @@ import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { resetWhatsAppTables } from "../helpers/whatsapp-reset";
 import { encryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
 import {
@@ -135,7 +136,11 @@ if (!RUN) {
 
     test("does not overwrite display name when customer is linked", async () => {
       const customer = await prisma.customer.create({
-        data: { name: "Linked Customer", mobile: "971509998877", externalId: "ext-1" },
+        data: {
+          name: "Linked Customer",
+          mobile: "971509998877",
+          externalId: `p3c-contact-sync-${randomUUID()}`,
+        },
       });
       const convo = await prisma.whatsAppConversation.findFirstOrThrow({
         where: { connectionId: connectionA },
