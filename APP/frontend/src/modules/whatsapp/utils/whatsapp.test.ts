@@ -587,6 +587,16 @@ describe("manual outbound send UX", () => {
     assert.match(store, /Promise\.all/);
     assert.match(store, /appendMessageById/);
     assert.doesNotMatch(store, /providerStatus: "SENT"/);
+    assert.match(composer, /requestSubmit/);
+    assert.match(composer, /isComposing/);
+    assert.match(store, /scheduleMarkSelectedConversationRead/);
+    const screen = readFileSync(join(moduleDir, "components/whatsapp-screen/whatsapp-screen.tsx"), "utf8");
+    assert.match(screen, /WhatsAppLocalSaveToolbar/);
+    assert.doesNotMatch(screen, /WhatsAppLocalSaveSettings/);
+    const chatPane = readFileSync(join(moduleDir, "components/chat-pane/chat-pane.tsx"), "utf8");
+    assert.doesNotMatch(chatPane, /WhatsAppConnectionStatusLine/);
+    const bubble = readFileSync(join(moduleDir, "components/message-bubble/message-bubble.tsx"), "utf8");
+    assert.match(bubble, /showDownload/);
   });
 
   it("orders messages by provider time regardless of arrival order", () => {

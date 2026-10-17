@@ -98,11 +98,12 @@ function ProtectedMedia({
     );
   }
   if (!url) return <p className={styles.placeBody}>{t("message.mediaLoading")}</p>;
-  const download = (
+  const showDownload = !(kind === "AUDIO" && voice);
+  const download = showDownload ? (
     <a className={styles.download} href={url} download={message.mediaFilename || "file"}>
       {t("media.download")}
     </a>
-  );
+  ) : null;
   if (kind === "IMAGE" || kind === "STICKER") {
     return (
       <>
@@ -125,7 +126,6 @@ function ProtectedMedia({
   if (kind === "AUDIO") {
     return (
       <div data-testid={voice ? "whatsapp-voice-player" : "whatsapp-audio-player"}>
-        {voice ? <p className={styles.placeBody}>{t("media.voice")}</p> : null}
         <audio className={styles.player} controls preload="metadata" src={url} />
         {download}
       </div>

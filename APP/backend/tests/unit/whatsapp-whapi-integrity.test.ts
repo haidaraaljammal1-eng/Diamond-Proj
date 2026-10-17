@@ -269,6 +269,19 @@ describe("conversation chronology", () => {
         currentLast: null,
         lastReadAt: null,
       }),
+      true,
+    );
+    assert.equal(
+      inboundCountsAsUnread({
+        incoming: {
+          occurredAt: new Date("2026-10-15T12:00:00.000Z"),
+          createdAt: receivedAt,
+          id: "history-read",
+          receivedAt,
+        },
+        currentLast: null,
+        lastReadAt: new Date("2026-10-16T12:10:00.000Z"),
+      }),
       false,
     );
     assert.equal(

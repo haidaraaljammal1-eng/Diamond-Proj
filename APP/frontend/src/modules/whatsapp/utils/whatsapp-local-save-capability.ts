@@ -1,5 +1,15 @@
 export type LocalSaveCapability = "directory" | "manual" | "iphone";
 
+export function isPickerAbort(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      (error as { name: string }).name === "AbortError")
+  );
+}
+
 /**
  * Server rendering has no `window`. A partial `navigator` must not be treated
  * as a browser. Directory saving stays available after the client mounts.

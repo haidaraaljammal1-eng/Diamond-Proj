@@ -1,11 +1,16 @@
 import { fetchWhatsAppMediaBlob } from "../api/whatsapp.api";
 import type { WhatsAppMessageDto } from "../types/whatsapp.types";
-import { detectLocalSaveCapability, type LocalSaveCapability } from "./whatsapp-local-save-capability";
+import { detectLocalSaveCapability, isPickerAbort, type LocalSaveCapability } from "./whatsapp-local-save-capability";
+
+export { isPickerAbort };
 
 const DB_NAME = "diamond-whatsapp-local-media";
 const DB_STORE = "settings";
 const HANDLE_KEY = "directory";
 const ENABLED_KEY = "enabled";
+const SAVED_IDS_KEY = "savedMessageIds";
+const MAX_SAVED_IDS = 2000;
+const BACKLOG_BATCH = 4;
 
 export { detectLocalSaveCapability };
 export type { LocalSaveCapability };
@@ -21,6 +26,7 @@ type Listener = () => void;
 const primed = new Map<string, Set<string>>();
 let failures: LocalSaveFailure[] = [];
 const listeners = new Set<Listener>();
+let backlogInFlight = false;
 
 function notify(): void {
   for (const listener of listeners) listener();
@@ -96,26 +102,44 @@ export async function chooseLocalSaveDirectory(): Promise<boolean> {
     showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
   }).showDirectoryPicker;
   if (!picker) return false;
-  const handle = (await picker()) as DirectoryPermissionHandle;
-  const permission = await handle.requestPermission?.({ mode: "readwrite" });
-  if (permission && permission !== "granted") return false;
-  await idbSet(HANDLE_KEY, handle);
-  await idbSet(ENABLED_KEY, true);
-  notify();
-  return true;
+  try {
+    const handle = (await picker()) as DirectoryPermissionHandle;
+    const permission = await handle.requestPermission?.({ mode: "readwrite" });
+    if (permission && permission !== "granted") return false;
+    await idbSet(HANDLE_KEY, handle);
+    await idbSet(ENABLED_KEY, true);
+    notify();
+    return true;
+  } catch (error) {
+    if (isPickerAbort(error)) return false;
+    return false;
+  }
 }
 
 export async function localSaveStatus(): Promise<LocalSaveStatus> {
   const capability = detectLocalSaveCapability();
   if (capability === "iphone") return "iphone";
   if (capability === "manual") return "manual";
-  const enabled = await localSaveEnabled();
-  if (!enabled) return "off";
   const handle = await storedDirectory();
-  if (!handle) return "permission";
+  if (!handle) return "off";
   const permission = await handle.queryPermission?.({ mode: "readwrite" });
   if (permission && permission !== "granted") return "permission";
   return "configured";
+}
+
+async function autoSaveReady(): Promise<boolean> {
+  if (detectLocalSaveCapability() !== "directory") return false;
+  if (!(await localSaveEnabled())) return false;
+  const handle = await storedDirectory();
+  if (!handle) return false;
+  const permission = await handle.queryPermission?.({ mode: "readwrite" });
+  return !permission || permission === "granted";
+}
+
+async function rememberSaved(messageId: string): Promise<void> {
+  const ids = (await idbGet<string[]>(SAVED_IDS_KEY)) ?? [];
+  if (ids.includes(messageId)) return;
+  await idbSet(SAVED_IDS_KEY, [...ids, messageId].slice(-MAX_SAVED_IDS));
 }
 
 function safeName(filename: string, messageId: string): string {
@@ -134,16 +158,14 @@ async function writeBlob(handle: DirectoryPermissionHandle, name: string, blob: 
 }
 
 export async function saveIncomingMedia(message: WhatsAppMessageDto): Promise<boolean> {
-  if (detectLocalSaveCapability() !== "directory") return false;
-  if (!(await localSaveEnabled())) return false;
+  if (!(await autoSaveReady())) return false;
   const handle = await storedDirectory();
   if (!handle) return false;
-  const permission = await handle.queryPermission?.({ mode: "readwrite" });
-  if (permission && permission !== "granted") return false;
   const filename = safeName(message.mediaFilename || message.messageType.toLowerCase(), message.id);
   try {
     const blob = await fetchWhatsAppMediaBlob(message.id);
     await writeBlob(handle, filename, blob);
+    await rememberSaved(message.id);
     failures = failures.filter((item) => item.messageId !== message.id);
     notify();
     return true;
@@ -156,11 +178,40 @@ export async function saveIncomingMedia(message: WhatsAppMessageDto): Promise<bo
   }
 }
 
-/** Remembers messages already on screen, then saves only media that arrives later. */
+/** Bounded catch-up for eligible media in the open conversation (7-day server window). */
+export async function reconcileUnsavedMedia(messages: WhatsAppMessageDto[]): Promise<void> {
+  if (backlogInFlight) return;
+  if (!(await autoSaveReady())) return;
+  const eligible = messages.filter(
+    (message) =>
+      message.direction === "INBOUND" && message.hasProtectedMedia && !message.mediaExpired,
+  );
+  if (eligible.length === 0) return;
+
+  backlogInFlight = true;
+  try {
+    const saved = new Set((await idbGet<string[]>(SAVED_IDS_KEY)) ?? []);
+    let processed = 0;
+    for (const message of eligible) {
+      if (processed >= BACKLOG_BATCH) break;
+      if (saved.has(message.id)) continue;
+      const ok = await saveIncomingMedia(message);
+      if (ok) {
+        saved.add(message.id);
+        processed += 1;
+      }
+    }
+  } finally {
+    backlogInFlight = false;
+  }
+}
+
+/** Saves new inbound media after the conversation view is primed. */
 export function observeIncomingMedia(conversationId: string, messages: WhatsAppMessageDto[]): void {
   let seen = primed.get(conversationId);
   if (!seen) {
     primed.set(conversationId, new Set(messages.map((message) => message.id)));
+    void reconcileUnsavedMedia(messages);
     return;
   }
   for (const message of messages) {

@@ -108,6 +108,8 @@ const conversationSyncGeneration = new Map<string, number>();
 const messagesLoadGeneration = new Map<string, number>();
 const reconcilePending = new Map<string, boolean>();
 const reconcileInFlight = new Map<string, Promise<void>>();
+let markReadDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let markReadInFlight: string | null = null;
 
 const REALTIME_CONTENT_EVENTS = new Set<WhatsAppRealtimeEvent["type"]>([
   "whatsapp.message.received",
@@ -483,6 +485,53 @@ async function loadConversations(
   if (listInFlight === run) listInFlight = null;
 }
 
+function scheduleMarkSelectedConversationRead(
+  conversationId: string,
+  get: () => WhatsAppState,
+  set: (partial: Partial<WhatsAppState>) => void,
+): void {
+  if (get().selectedConversationId !== conversationId) return;
+  if (markReadDebounceTimer) clearTimeout(markReadDebounceTimer);
+  markReadDebounceTimer = setTimeout(() => {
+    markReadDebounceTimer = null;
+    void markSelectedConversationReadIfNeeded(conversationId, get, set);
+  }, 200);
+}
+
+async function markSelectedConversationReadIfNeeded(
+  conversationId: string,
+  get: () => WhatsAppState,
+  set: (partial: Partial<WhatsAppState>) => void,
+): Promise<void> {
+  if (get().selectedConversationId !== conversationId) return;
+  const listRow = get().conversations.find((item) => item.id === conversationId);
+  const selected = get().selectedConversation;
+  const unread =
+    listRow?.unreadCount ??
+    (selected?.id === conversationId ? selected.unreadCount : 0);
+  if (unread <= 0) return;
+  if (markReadInFlight === conversationId) return;
+  markReadInFlight = conversationId;
+  try {
+    const updated = await markWhatsAppConversationRead(conversationId);
+    if (get().selectedConversationId !== conversationId) return;
+    const nextConversations = get().conversations.map((item) =>
+      item.id === conversationId ? applyUnreadZero(item) : item,
+    );
+    set({
+      conversations: nextConversations,
+      selectedConversation: reconcileSelectedConversation(nextConversations, updated),
+      markReadError: null,
+    });
+  } catch (error) {
+    if (get().selectedConversationId === conversationId) {
+      set({ markReadError: normalizeApiError(error) });
+    }
+  } finally {
+    if (markReadInFlight === conversationId) markReadInFlight = null;
+  }
+}
+
 async function selectConversation(
   id: string,
   get: () => WhatsAppState,
@@ -680,6 +729,7 @@ async function reconcileConversationFromServer(
         messagesStatus: "ready",
       });
       traceWhatsAppRealtime("applied", event.type);
+      scheduleMarkSelectedConversationRead(conversationId, get, set);
       return;
     }
 
@@ -701,6 +751,7 @@ async function reconcileConversationFromServer(
           : reconcileSelectedConversation(nextConversations, get().selectedConversation),
     });
     traceWhatsAppRealtime("applied", event.type);
+    scheduleMarkSelectedConversationRead(conversationId, get, set);
   } catch {
     if (!isConversationSyncCurrent(conversationId, generation)) return;
   }

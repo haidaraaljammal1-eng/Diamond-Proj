@@ -1,19 +1,17 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
 import type {
-  WhatsAppConnectionDto,
   WhatsAppConversationDetailDto,
   WhatsAppConversationListItemDto,
   WhatsAppMessageDto,
 } from "../../types/whatsapp.types";
 import { observeIncomingMedia } from "../../utils/whatsapp-local-save";
-import { conversationEligibility, conversationTitle, formatCustomerWaId, toValidDate } from "../../utils/whatsapp-view-model";
+import { conversationTitle, formatCustomerWaId } from "../../utils/whatsapp-view-model";
 import { WhatsAppComposer } from "../composer/composer";
-import { WhatsAppConnectionStatusLine } from "../connection-banner/connection-banner";
 import { WhatsAppCustomerStrip } from "../customer-strip/customer-strip";
 import { WhatsAppMessageBubble } from "../message-bubble/message-bubble";
 import styles from "./chat-pane.module.css";
@@ -21,7 +19,6 @@ import styles from "./chat-pane.module.css";
 export function WhatsAppChatPane({
   conversation,
   messages,
-  connection,
   loading,
   error,
   hasOlder,
@@ -32,7 +29,6 @@ export function WhatsAppChatPane({
 }: {
   conversation: WhatsAppConversationDetailDto | WhatsAppConversationListItemDto | null;
   messages: WhatsAppMessageDto[];
-  connection: WhatsAppConnectionDto | null;
   loading: boolean;
   error: string | null;
   hasOlder: boolean;
@@ -42,7 +38,6 @@ export function WhatsAppChatPane({
   onRetry: () => void;
 }) {
   const t = useTranslations("WhatsApp");
-  const format = useFormatter();
   const scroller = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const pendingScrollRestore = useRef<number | null>(null);
@@ -87,10 +82,7 @@ export function WhatsAppChatPane({
   }
 
   const title = conversationTitle(conversation.customerDisplayName, conversation.customerWaId);
-  const office =
-    conversation.connection.verifiedName || conversation.connection.displayPhoneNumber;
-  const eligibility = conversationEligibility(conversation);
-  const windowUntil = toValidDate(eligibility?.windowExpiresAt);
+  const customerNumber = formatCustomerWaId(conversation.customerWaId);
 
   async function loadOlder() {
     pendingScrollRestore.current = scroller.current?.scrollHeight ?? 0;
@@ -106,27 +98,11 @@ export function WhatsAppChatPane({
         </span>
         <div className={styles.heading}>
           <p className={styles.name}>{title}</p>
-          <p className={styles.sub}>
-            <span dir="ltr">{formatCustomerWaId(conversation.customerWaId)}</span>
-            {office ? (
-              <>
-                <span aria-hidden="true"> · </span>
-                <span>{office}</span>
-              </>
-            ) : null}
-            <span aria-hidden="true"> · </span>
-            <WhatsAppConnectionStatusLine connection={connection} />
-            {eligibility?.canSendText && windowUntil ? (
-              <>
-                <span aria-hidden="true"> · </span>
-                <span>
-                  {t("window.openUntil", {
-                    time: format.dateTime(windowUntil, { hour: "numeric", minute: "2-digit" }),
-                  })}
-                </span>
-              </>
-            ) : null}
-          </p>
+          {customerNumber ? (
+            <p className={styles.sub}>
+              <span dir="ltr">{customerNumber}</span>
+            </p>
+          ) : null}
         </div>
         <Button
           type="button"

@@ -33,6 +33,8 @@ export function WhatsAppComposer() {
   const recordChunks = useRef<Blob[]>([]);
   const idempotencyKey = useRef(newIdempotencyKey());
   const fileInput = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const composingRef = useRef(false);
   const eligibility = conversationEligibility(inbox.selectedConversation);
   const trimmed = text.replace(/^[\s\uFEFF\u200B]+|[\s\uFEFF\u200B]+$/g, "");
   const enabled = inbox.hasSendPermission && !submitting && !inbox.sending;
@@ -52,11 +54,11 @@ export function WhatsAppComposer() {
     };
   }, [voiceUrl]);
 
-  function hint(): string {
+  function hint(): string | null {
     if (!inbox.hasSendPermission && !inbox.simulationActive) return t("composer.noPermission");
     if (!inbox.selectedConversationId) return t("composer.selectConversation");
     if (!eligibility) return t("composer.loadingDetail");
-    if (inbox.canSend) return t("composer.readyHint");
+    if (inbox.canSend) return null;
     if (eligibility.reason === "QR_REQUIRED") return t("composer.reason.QR_REQUIRED");
     if (eligibility.reason === "PROVIDER_NOT_AUTHENTICATED") {
       return t("composer.reason.PROVIDER_NOT_AUTHENTICATED");
@@ -150,8 +152,13 @@ export function WhatsAppComposer() {
   const sendError = resolveWhatsAppErrorMessage(t, inbox.sendError);
 
   return (
-    <form className={styles.composer} data-testid="whatsapp-composer" onSubmit={onSubmit}>
-      <p className={styles.hint}>{hint()}</p>
+    <form
+      ref={formRef}
+      className={styles.composer}
+      data-testid="whatsapp-composer"
+      onSubmit={onSubmit}
+    >
+      {hint() ? <p className={styles.hint}>{hint()}</p> : null}
       {sendError ? (
         <p className={styles.sendError} role="alert">
           {sendError}
@@ -222,6 +229,20 @@ export function WhatsAppComposer() {
           aria-label={t("composer.inputLabel")}
           rows={1}
           onChange={(event) => setText(event.target.value)}
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            composingRef.current = false;
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || composingRef.current) {
+              return;
+            }
+            event.preventDefault();
+            if (file ? !canSendMedia : !canSubmitText) return;
+            formRef.current?.requestSubmit();
+          }}
         />
         {canSendTemplate ? (
           <Button

@@ -55,7 +55,8 @@ A reader without `whatsapp.send` sees a disabled composer: “You do not have pe
 - Search is backend-side (name, wa_id, preview)
 - All / Unread is backend-side (`unread=true`)
 - `unreadCount` is office staff unread. Outbound office messages do not increment it
-- Opening a conversation loads messages then marks read internally
+- Opening a conversation loads messages then marks read internally; while that chat stays open, new inbound rows trigger a debounced mark-read (no 15-minute unread lag)
+- **Choose media folder** in the page header picks the per-device save directory. Automatic saving runs while the page is open when the browser supports directory access; iPhone/manual browsers keep per-file Download
 - Under Unread, the open chat stays open even if the row leaves the filtered list
 - Older messages: “Load older messages”, prepend, dedupe by id, keep scroll
 - Composer: open 24h window → text + attachment (image/document/audio/video) + optional template. Closed window → free-form disabled, **Use Template** for approved templates

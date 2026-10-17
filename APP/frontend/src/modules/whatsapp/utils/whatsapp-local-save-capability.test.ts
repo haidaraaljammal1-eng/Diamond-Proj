@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { detectLocalSaveCapability } from "./whatsapp-local-save-capability.ts";
+import { isPickerAbort } from "./whatsapp-local-save-capability.ts";
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
@@ -50,6 +51,12 @@ describe("local save capability", { concurrency: false }, () => {
       value: {},
     });
     assert.equal(detectLocalSaveCapability(), "iphone");
+  });
+
+  it("treats directory picker AbortError as cancellation", () => {
+    assert.equal(isPickerAbort(new DOMException("cancelled", "AbortError")), true);
+    assert.equal(isPickerAbort({ name: "AbortError" }), true);
+    assert.equal(isPickerAbort(new Error("denied")), false);
   });
 
   it("uses manual download when the browser cannot choose a folder", () => {

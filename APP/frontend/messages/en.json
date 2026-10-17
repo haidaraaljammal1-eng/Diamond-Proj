@@ -3025,7 +3025,6 @@
   "WhatsApp": {
     "crumbs": "Operations · WhatsApp",
     "title": "WhatsApp",
-    "subtitle": "Office conversations from the connected WhatsApp Business number.",
     "refresh": "Refresh",
     "retry": "Retry",
     "denied": {
@@ -3260,7 +3259,7 @@
       "label": "Save WhatsApp Media Automatically",
       "on": "On",
       "off": "Off",
-      "choose": "Choose folder",
+      "choose": "Choose media folder",
       "configured": "Folder ready on this device",
       "permission": "Permission required",
       "manual": "This browser cannot choose a folder. Use Download on each file.",

@@ -11,7 +11,7 @@ import { WhatsAppChatPane } from "../chat-pane/chat-pane";
 import { WhatsAppConnectionBanner } from "../connection-banner/connection-banner";
 import { WhatsAppConnectionSettings } from "../connection-settings/connection-settings";
 import { WhatsAppConversationList } from "../conversation-list/conversation-list";
-import { WhatsAppLocalSaveSettings } from "../local-save-settings/local-save-settings";
+import { WhatsAppLocalSaveToolbar } from "../local-save-settings/local-save-settings";
 import { WhatsAppSimulationControls } from "../../simulation/whatsapp-simulation-controls";
 import styles from "./whatsapp-screen.module.css";
 
@@ -25,10 +25,10 @@ export function WhatsAppScreen() {
     <PageHeader
       crumbs={t("crumbs")}
       title={t("title")}
-      subtitle={t("subtitle")}
       actions={
         inbox.isAllowed ? (
           <div className={styles.headerActions}>
+            {!inbox.simulationActive ? <WhatsAppLocalSaveToolbar /> : null}
             <WhatsAppSimulationControls />
             {inbox.isAllowed && !inbox.simulationActive && inbox.realtimeStatus !== "idle" ? (
               <span
@@ -94,7 +94,6 @@ export function WhatsAppScreen() {
         connection={inbox.connection}
         loading={inbox.isConnectionLoading}
       />
-      {!inbox.simulationActive ? <WhatsAppLocalSaveSettings messages={inbox.messages} /> : null}
       <div className={styles.workspace}>
         <WhatsAppConversationList
           conversations={inbox.conversations}
@@ -113,7 +112,6 @@ export function WhatsAppScreen() {
         <WhatsAppChatPane
           conversation={inbox.selectedConversation}
           messages={inbox.messages}
-          connection={inbox.connection}
           loading={inbox.isMessagesLoading}
           error={resolveWhatsAppErrorMessage(t, inbox.messagesError)}
           hasOlder={inbox.hasOlderMessages}
