@@ -32,8 +32,10 @@ export async function cleanupExpiredWhatsAppMedia(
   const rows = await prisma.$queryRaw<Array<{ id: string; payload: Prisma.JsonValue }>>`
     SELECT id, "displayPayload" AS payload
     FROM whatsapp_messages
-    WHERE "displayPayload" #>> '{mediaStore,key}' IS NOT NULL
+    WHERE COALESCE("displayPayload" #>> '{mediaStore,expired}', 'false') <> 'true'
+      AND "displayPayload" #>> '{mediaStore,key}' IS NOT NULL
       AND "displayPayload" #>> '{mediaStore,key}' <> ''
+      AND ("displayPayload" #>> '{mediaStore,expiresAt}')::timestamptz <= ${now}::timestamptz
     ORDER BY id
     LIMIT ${CLEANUP_BATCH}
   `;

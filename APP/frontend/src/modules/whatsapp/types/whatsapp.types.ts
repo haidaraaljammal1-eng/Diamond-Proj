@@ -259,6 +259,27 @@ export interface WhatsAppCustomerMatchDto {
   customer: WhatsAppLinkedCustomerDto | null;
 }
 
+export interface WhatsAppCustomerContextContractDto {
+  id: string;
+  contractNumber: string;
+  status: string;
+  expectedReturnAt: string;
+  vehicleName: string;
+  plateNumber: string;
+  companyCode: string;
+  companyDisplayName: string;
+}
+
+export interface WhatsAppCustomerContextDto {
+  linked: boolean;
+  customer: WhatsAppLinkedCustomerDto | null;
+  contracts: {
+    canRead: boolean;
+    active: WhatsAppCustomerContextContractDto | null;
+    latest: WhatsAppCustomerContextContractDto | null;
+  } | null;
+}
+
 export interface WhatsAppQrDto {
   imageDataUrl: string | null;
   qrCode: string | null;

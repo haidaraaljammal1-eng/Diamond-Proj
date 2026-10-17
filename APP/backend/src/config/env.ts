@@ -75,6 +75,16 @@ const EnvSchema = z
     SCHEDULER_ENABLED: envBool(true),
     SCHEDULER_POLL_MS: z.coerce.number().int().positive().default(30_000),
 
+    // Shared WhatsApp media file cleanup (168h retention). Runs inside the API
+    // process: on startup + every 24h when SCHEDULER_ENABLED=false; otherwise the
+    // background scheduler drives the same cycle on its poll interval.
+    WHATSAPP_MEDIA_CLEANUP_ENABLED: envBool(true),
+    WHATSAPP_MEDIA_CLEANUP_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(24 * 60 * 60 * 1000),
+
     RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(100),
     RATE_LIMIT_GLOBAL_WINDOW: z.coerce.number().int().positive().default(60000),
     RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(5),

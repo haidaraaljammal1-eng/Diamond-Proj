@@ -103,6 +103,7 @@ if (!RUN) {
         PERMISSIONS.WHATSAPP_LINK_CUSTOMER,
         PERMISSIONS.CUSTOMERS_READ,
         PERMISSIONS.CUSTOMERS_VIEW_ALL_BRANCHES,
+        PERMISSIONS.CONTRACTS_READ,
       ]);
       await seedPaymentUser(prisma, manager.email, manager.password, `wa_fnm_${run}`, [
         PERMISSIONS.WHATSAPP_READ,
@@ -535,6 +536,15 @@ if (!RUN) {
       });
       assert.equal(linked.statusCode, 200, linked.body);
       assert.equal(linked.json().data.customerLink.linked, true);
+      const context = await app.inject({
+        method: "GET",
+        url: `/whatsapp/conversations/${convo.id}/customer-context`,
+        headers: auth(linkerToken),
+      });
+      assert.equal(context.statusCode, 200, context.body);
+      assert.equal(context.json().data.linked, true);
+      assert.equal(context.json().data.customer?.id, one.id);
+      assert.equal(context.json().data.contracts?.canRead, true);
       const unchanged = await prisma.customer.findUniqueOrThrow({ where: { id: one.id } });
       assert.equal(unchanged.name, nameBefore);
       assert.equal(unchanged.mobile, FIXTURE_WA_ID);

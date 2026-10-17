@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
@@ -13,6 +13,7 @@ import { observeIncomingMedia } from "../../utils/whatsapp-local-save";
 import { conversationTitle, formatCustomerWaId } from "../../utils/whatsapp-view-model";
 import { WhatsAppComposer } from "../composer/composer";
 import { WhatsAppCustomerControls } from "../customer-strip/customer-strip";
+import { WhatsAppCustomerContextPanel } from "../customer-context-panel/customer-context-panel";
 import { WhatsAppMessageBubble } from "../message-bubble/message-bubble";
 import styles from "./chat-pane.module.css";
 
@@ -42,6 +43,7 @@ export function WhatsAppChatPane({
   const stickToBottom = useRef(true);
   const pendingScrollRestore = useRef<number | null>(null);
   const conversationId = conversation?.id ?? null;
+  const [contextOpen, setContextOpen] = useState(false);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -51,6 +53,7 @@ export function WhatsAppChatPane({
   useLayoutEffect(() => {
     stickToBottom.current = true;
     pendingScrollRestore.current = null;
+    setContextOpen(false);
   }, [conversationId]);
 
   useLayoutEffect(() => {
@@ -97,7 +100,16 @@ export function WhatsAppChatPane({
           {title.trim().charAt(0) || "#"}
         </span>
         <div className={styles.heading}>
-          <p className={styles.name}>{title}</p>
+          <div className={styles.titleRow}>
+            <p className={styles.name}>{title}</p>
+            {"customerLink" in conversation && conversation.customerLink.linked ? (
+              <WhatsAppCustomerContextPanel
+                conversation={conversation}
+                open={contextOpen}
+                onToggle={() => setContextOpen((value) => !value)}
+              />
+            ) : null}
+          </div>
           {customerNumber ? (
             <p className={styles.sub}>
               <span dir="ltr">{customerNumber}</span>

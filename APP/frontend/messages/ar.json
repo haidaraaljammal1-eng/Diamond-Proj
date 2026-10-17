@@ -3302,9 +3302,25 @@
       "noSafeMatch": "لا توجد مطابقة آمنة",
       "none": "غير مرتبط بعميل دايموند",
       "link": "ربط عميل",
+      "linkSuggested": "ربط {name}",
+      "linkConfirmTitle": "ربط هذا العميل؟",
+      "linkConfirmBody": "يربط محادثة واتساب بعميل دايموند المحدد. لا يغيّر بيانات العميل.",
       "unlink": "إلغاء ربط العميل",
       "search": "ابحث عن العملاء",
-      "needCustomerRead": "البحث عن العملاء يتطلب صلاحية قراءة العملاء."
+      "needCustomerRead": "البحث عن العملاء يتطلب صلاحية قراءة العملاء.",
+      "context": {
+        "toggle": "معلومات العميل",
+        "loading": "جارٍ تحميل سياق العميل…",
+        "customerHidden": "تفاصيل العميل مخفية عن حسابك.",
+        "contractsHidden": "تفاصيل العقود تتطلب صلاحية contracts.read.",
+        "accountId": "معرّف الحساب",
+        "viewCustomerContracts": "عرض عقود العميل",
+        "activeRental": "إيجار نشط",
+        "latestContract": "أحدث عقد",
+        "noContracts": "لا توجد عقود إيجار لهذا العميل.",
+        "expectedReturn": "العودة المتوقعة",
+        "viewContract": "فتح العقد"
+      }
     }
   },
   "Invoices": {

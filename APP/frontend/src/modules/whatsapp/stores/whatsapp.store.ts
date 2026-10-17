@@ -38,6 +38,7 @@ import {
   upsertConversationForRealtime,
 } from "../utils/whatsapp-view-model";
 import { whatsappCustomerMatch } from "../utils/whatsapp-customer-match";
+import { whatsappCustomerContext } from "../utils/whatsapp-customer-context";
 import { traceWhatsAppRealtime } from "../utils/whatsapp-realtime-trace";
 import type { WhatsAppRealtimeEvent, WhatsAppRealtimeTransportStatus } from "../realtime/whatsapp.realtime";
 
@@ -167,6 +168,7 @@ export const useWhatsAppStore = create<WhatsAppState>((set, get) => ({
 
   async refresh() {
     whatsappCustomerMatch.invalidate();
+    whatsappCustomerContext.invalidate();
     const selectedId = get().selectedConversationId;
     set({ customerMatchRevision: get().customerMatchRevision + 1 });
     await Promise.all([loadConnection(set), loadConversations(get, set, { replace: true })]);

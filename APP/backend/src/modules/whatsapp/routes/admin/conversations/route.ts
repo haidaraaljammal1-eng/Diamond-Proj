@@ -16,6 +16,7 @@ import {
   WhatsAppConversationListItemSchema,
   WhatsAppCustomerLinkBodySchema,
   WhatsAppCustomerMatchSchema,
+  WhatsAppCustomerContextSchema,
   WhatsAppIdempotencyHeadersSchema,
   WhatsAppMessageSchema,
   WhatsAppSendMessageResponseSchema,
@@ -238,6 +239,26 @@ export default async function whatsappConversationRoutes(fastify: FastifyInstanc
       },
     },
     async (request) => ({ data: await customers.match(request.params.id, requireAuth(request)) }),
+  );
+
+  app.get(
+    "/:id/customer-context",
+    {
+      schema: {
+        summary: "Read-only linked Diamond Customer and rental context for a WhatsApp conversation",
+        operationId: "getWhatsAppCustomerContext",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_READ],
+        params: UuidIdParam,
+        response: {
+          200: dataResponse(WhatsAppCustomerContextSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => ({
+      data: await customers.customerContext(request.params.id, requireAuth(request)),
+    }),
   );
 
   app.post(

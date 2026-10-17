@@ -192,6 +192,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   selectWhatsAppConnection: all(FN.whatsapp.full),
   disconnectWhatsAppConnection: all(FN.whatsapp.full),
   activateWhatsAppWebhook: all(FN.whatsapp.full),
+  configureWhapiConnection: all(FN.whatsapp.full),
   streamWhatsAppRealtime: all(FN.whatsapp.full),
   getWhatsAppMessageMedia: all(FN.whatsapp.full),
   listWhatsAppTemplates: all(FN.whatsapp.full),
@@ -203,6 +204,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   sendWhatsAppTemplateMessage: all(FN.whatsapp.full),
   sendWhatsAppMediaMessage: all(FN.whatsapp.full),
   getWhatsAppCustomerMatch: all(FN.whatsapp.full),
+  getWhatsAppCustomerContext: all(FN.whatsapp.full),
   linkWhatsAppConversationCustomer: all(FN.whatsapp.full),
   unlinkWhatsAppConversationCustomer: all(FN.whatsapp.full),
 

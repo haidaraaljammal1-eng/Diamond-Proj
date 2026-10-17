@@ -816,6 +816,14 @@ describe("final Inbox UX", () => {
     assert.doesNotMatch(strip, /\[conversation\.id, detail,/);
     assert.doesNotMatch(strip, /auto-link/i);
     assert.match(strip, /searchDiamondCustomers/);
+    assert.match(strip, /linkSuggested/);
+    assert.match(strip, /whatsappCustomerContext/);
+    const contextPanel = readFileSync(
+      join(moduleDir, "components/customer-context-panel/customer-context-panel.tsx"),
+      "utf8",
+    );
+    assert.match(contextPanel, /whatsappCustomerContext/);
+    assert.doesNotMatch(contextPanel, /useWhatsApp\(\)/);
   });
 
   it("gates Manage WhatsApp and uses official Embedded Signup bootstrap only", () => {
@@ -843,6 +851,7 @@ describe("final Inbox UX", () => {
     assert.match(api, /template-messages/);
     assert.match(api, /media-messages/);
     assert.match(api, /customer-match/);
+    assert.match(api, /customer-context/);
     assert.match(api, /webhook\/activate/);
     assert.doesNotMatch(api, /toWaId/);
     assert.doesNotMatch(api, /credentialCiphertext/);

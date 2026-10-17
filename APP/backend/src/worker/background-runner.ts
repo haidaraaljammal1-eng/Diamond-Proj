@@ -8,7 +8,7 @@ import { createRoadLiabilityOutboxConsumer } from "src/modules/road-liabilities/
 import { createInvoiceOutboxConsumer } from "src/modules/invoices/invoice-outbox-consumer";
 import { createReportExecService } from "src/modules/reports/report-exec.service";
 import { createGpsProviderSyncService } from "src/modules/gps/gps-provider-sync.service";
-import { cleanupExpiredWhatsAppMedia } from "src/modules/whatsapp/whatsapp.media-retention";
+import { runWhatsAppMediaCleanupCycle } from "src/modules/whatsapp/whatsapp.media-cleanup";
 
 /**
  * The background cycles of the system, driven either by the in-process
@@ -111,8 +111,8 @@ export function createBackgroundRunner(app: FastifyInstance) {
       app.log.error({ err }, "gps-provider-sync: cycle failed");
     }
     try {
-      const media = await cleanupExpiredWhatsAppMedia(app.prisma);
-      if (media.expired > 0) {
+      const media = await runWhatsAppMediaCleanupCycle(app.prisma, app.log);
+      if (!media.skipped && media.expired > 0) {
         app.log.info(media, "whatsapp-media: expired files removed");
       }
     } catch (err) {

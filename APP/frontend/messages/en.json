@@ -3302,9 +3302,25 @@
       "noSafeMatch": "No Safe Match",
       "none": "Not linked to a Diamond Customer",
       "link": "Link Customer",
+      "linkSuggested": "Link {name}",
+      "linkConfirmTitle": "Link this customer?",
+      "linkConfirmBody": "This links the WhatsApp conversation to the selected Diamond customer. It does not change customer records.",
       "unlink": "Unlink Customer",
       "search": "Search customers",
-      "needCustomerRead": "Customer search requires customer read permission."
+      "needCustomerRead": "Customer search requires customer read permission.",
+      "context": {
+        "toggle": "Customer info",
+        "loading": "Loading customer context…",
+        "customerHidden": "Customer details are hidden for your account.",
+        "contractsHidden": "Contract details require contracts.read.",
+        "accountId": "Account ID",
+        "viewCustomerContracts": "View customer contracts",
+        "activeRental": "Active rental",
+        "latestContract": "Latest contract",
+        "noContracts": "No rental contracts for this customer.",
+        "expectedReturn": "Expected return",
+        "viewContract": "Open contract"
+      }
     }
   },
   "Invoices": {

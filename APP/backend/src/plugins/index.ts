@@ -16,6 +16,7 @@ import { auditPlugin } from "src/plugins/audit";
 import { swaggerPlugin } from "src/plugins/dev/swagger";
 import { autoloadPlugin } from "src/plugins/autoload";
 import { schedulerPlugin } from "src/plugins/scheduler";
+import { whatsappMediaCleanupPlugin } from "src/plugins/whatsapp-media-cleanup";
 import { devPreflightPlugin } from "src/plugins/dev-preflight";
 
 /**
@@ -50,4 +51,5 @@ export const registerPlugins = fp(async (fastify) => {
   // onListen hook sees every decorator; starts only when the server listens
   // (never under test inject) — see scheduler.ts.
   await fastify.register(schedulerPlugin);
+  await fastify.register(whatsappMediaCleanupPlugin);
 });

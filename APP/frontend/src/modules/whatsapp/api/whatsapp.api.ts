@@ -6,6 +6,7 @@ import type {
   WhatsAppConversationDetailDto,
   WhatsAppConversationListItemDto,
   WhatsAppCustomerMatchDto,
+  WhatsAppCustomerContextDto,
   WhatsAppGrantedChoiceDto,
   WhatsAppLinkedCustomerDto,
   WhatsAppListQuery,
@@ -192,6 +193,15 @@ export async function getWhatsAppCustomerMatch(
 ): Promise<WhatsAppCustomerMatchDto> {
   const response = await apiRequest<WhatsAppCustomerMatchDto>(
     `${WHATSAPP_PATH}/conversations/${conversationId}/customer-match`,
+  );
+  return response.data;
+}
+
+export async function getWhatsAppCustomerContext(
+  conversationId: string,
+): Promise<WhatsAppCustomerContextDto> {
+  const response = await apiRequest<WhatsAppCustomerContextDto>(
+    `${WHATSAPP_PATH}/conversations/${conversationId}/customer-context`,
   );
   return response.data;
 }

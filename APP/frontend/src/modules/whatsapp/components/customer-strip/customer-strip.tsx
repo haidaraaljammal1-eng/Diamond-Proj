@@ -12,6 +12,7 @@ import {
   unlinkWhatsAppCustomer,
 } from "../../api/whatsapp.api";
 import { whatsappCustomerMatch } from "../../utils/whatsapp-customer-match";
+import { whatsappCustomerContext } from "../../utils/whatsapp-customer-context";
 import type {
   WhatsAppConversationDetailDto,
   WhatsAppConversationListItemDto,
@@ -45,6 +46,7 @@ export function WhatsAppCustomerControls({
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<WhatsAppLinkedCustomerDto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [confirmLinkId, setConfirmLinkId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!matchKey || matchKey.endsWith(":linked")) {
@@ -94,8 +96,10 @@ export function WhatsAppCustomerControls({
       }
       await linkWhatsAppCustomer(conversation.id, customerId);
       whatsappCustomerMatch.invalidate(conversation.id);
+      whatsappCustomerContext.invalidate(conversation.id);
       inbox.selectConversation(conversation.id);
       setOpen(false);
+      setConfirmLinkId(null);
     } catch (err) {
       setError(resolveWhatsAppErrorMessage(t, err));
     }
@@ -109,6 +113,7 @@ export function WhatsAppCustomerControls({
       }
       await unlinkWhatsAppCustomer(conversation.id);
       whatsappCustomerMatch.invalidate(conversation.id);
+      whatsappCustomerContext.invalidate(conversation.id);
       inbox.selectConversation(conversation.id);
     } catch (err) {
       setError(resolveWhatsAppErrorMessage(t, err));
@@ -138,11 +143,25 @@ export function WhatsAppCustomerControls({
         </>
       ) : (
         <>
-          {match?.state === "ONE_MATCH" ? (
-            <p className={styles.label}>
-              {t("customer.possibleMatch")}
-              {match.customer ? `: ${match.customer.name}` : ""}
-            </p>
+          {match?.state === "ONE_MATCH" && match.customer ? (
+            <>
+              <p className={styles.label}>
+                {t("customer.possibleMatch")}: {match.customer.name}
+              </p>
+              {canLink ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  data-testid="whatsapp-link-suggested-customer"
+                  onClick={() => setConfirmLinkId(match.customer!.id)}
+                >
+                  {t("customer.linkSuggested", { name: match.customer.name })}
+                </Button>
+              ) : null}
+            </>
+          ) : match?.state === "ONE_MATCH" ? (
+            <p className={styles.label}>{t("customer.possibleMatch")}</p>
           ) : match?.state === "AMBIGUOUS" ? (
             <p className={styles.label}>{t("customer.ambiguous")}</p>
           ) : match?.state === "NO_SAFE_MATCH" ? (
@@ -164,6 +183,27 @@ export function WhatsAppCustomerControls({
         </>
       )}
       {error ? <p className={styles.error}>{error}</p> : null}
+      <Dialog
+        open={confirmLinkId != null}
+        onClose={() => setConfirmLinkId(null)}
+        title={t("customer.linkConfirmTitle")}
+        closeLabel={t("templates.close")}
+      >
+        <p>{t("customer.linkConfirmBody")}</p>
+        <div className={styles.confirmActions}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmLinkId(null)}>
+            {t("media.cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => confirmLinkId != null && void link(confirmLinkId)}
+          >
+            {t("customer.link")}
+          </Button>
+        </div>
+      </Dialog>
       <Dialog
         open={open}
         onClose={() => setOpen(false)}

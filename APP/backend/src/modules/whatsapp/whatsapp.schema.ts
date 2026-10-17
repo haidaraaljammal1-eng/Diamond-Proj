@@ -328,6 +328,38 @@ export const WhatsAppCustomerMatchSchema = z.object({
   customer: WhatsAppLinkedCustomerSchema,
 });
 
+const WhatsAppCustomerContextContractSchema = z.object({
+  id: z.string().uuid(),
+  contractNumber: z.string(),
+  status: z.enum([
+    "AWAITING",
+    "FORM",
+    "SIGNED",
+    "PAID",
+    "ACTIVE",
+    "RETOUT",
+    "REVIEW",
+    "CLOSED",
+  ]),
+  expectedReturnAt: z.coerce.date(),
+  vehicleName: z.string(),
+  plateNumber: z.string(),
+  companyCode: z.string(),
+  companyDisplayName: z.string(),
+});
+
+export const WhatsAppCustomerContextSchema = z.object({
+  linked: z.boolean(),
+  customer: WhatsAppLinkedCustomerSchema,
+  contracts: z
+    .object({
+      canRead: z.boolean(),
+      active: WhatsAppCustomerContextContractSchema.nullable(),
+      latest: WhatsAppCustomerContextContractSchema.nullable(),
+    })
+    .nullable(),
+});
+
 export const WhatsAppCustomerLinkBodySchema = z
   .object({
     customerId: z.number().int().positive(),
@@ -342,3 +374,4 @@ export type ListWhatsAppMessagesQuery = z.infer<typeof ListWhatsAppMessagesQuery
 export type WhatsAppTemplateDto = z.infer<typeof WhatsAppTemplateSchema>;
 export type WhatsAppSendTemplateBody = z.infer<typeof WhatsAppSendTemplateBodySchema>;
 export type WhatsAppCustomerMatchDto = z.infer<typeof WhatsAppCustomerMatchSchema>;
+export type WhatsAppCustomerContextDto = z.infer<typeof WhatsAppCustomerContextSchema>;

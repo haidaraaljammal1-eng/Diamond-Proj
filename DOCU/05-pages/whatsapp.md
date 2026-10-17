@@ -35,6 +35,7 @@ This is **not** an Inbox rebuild. The list, search, All/Unread, bubbles, media c
 - `POST /whatsapp/conversations/:id/media-messages` — image/document/audio/video (`whatsapp.send`, open 24h window)
 - `POST /whatsapp/connection/webhook/activate` — subscribe WABA (`whatsapp.manage_connection`)
 - `GET /whatsapp/conversations/:id/customer-match` — safe phone suggestion (`whatsapp.read`). The Inbox loads this once for an open, unlinked conversation. Realtime preview updates do not call it again. A 429 is not retried until Refresh, unlink, or another conversation. Refresh clears that cache.
+- `GET /whatsapp/conversations/:id/customer-context` — linked customer + bounded rental summary (`whatsapp.read`, plus `customers.read` / `contracts.read` for fields). Loaded on demand when the header panel opens; not refetched on every SSE message.
 - `POST` / `DELETE /whatsapp/conversations/:id/customer-link` — explicit link (`whatsapp.link_customer`)
 
 `GET /whatsapp/connection` accepts `whatsapp.read` **or** `whatsapp.manage_connection` so Inbox readers can see connection/webhook banners. Mutations stay `whatsapp.manage_connection`. Send stays `whatsapp.send`. No credentials are returned. The client never sends a recipient, `wa_id`, or `phoneNumberId`.

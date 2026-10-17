@@ -1,3 +1,4 @@
+import type { ContractStatus } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { PERMISSIONS } from "src/constants/permissions";
 import { AppError } from "src/lib/errors/app-error";
@@ -11,6 +12,10 @@ import {
   classifyExactPhoneMatches,
   phoneDigitsForMatch,
 } from "src/modules/whatsapp/whatsapp.customer-match";
+import {
+  pickActiveWhatsAppCustomerContract,
+  pickLatestWhatsAppCustomerContract,
+} from "src/modules/whatsapp/whatsapp.customer-context";
 import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
 import { toConversationDetail } from "src/modules/whatsapp/whatsapp.mapper";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
@@ -154,5 +159,92 @@ export function createWhatsAppCustomerService(fastify: FastifyInstance) {
     return conversations.getById(conversationId, auth);
   }
 
-  return { match, link, unlink };
+  function toContractSummary(
+    row: {
+      id: string;
+      contractNumber: string;
+      status: ContractStatus;
+      endAt: Date;
+      vehicle: { vehicleName: string; plateNumber: string };
+      company: { code: string; displayName: string };
+    },
+  ) {
+    return {
+      id: row.id,
+      contractNumber: row.contractNumber,
+      status: row.status,
+      expectedReturnAt: row.endAt,
+      vehicleName: row.vehicle.vehicleName,
+      plateNumber: row.vehicle.plateNumber,
+      companyCode: row.company.code,
+      companyDisplayName: row.company.displayName,
+    };
+  }
+
+  async function customerContext(conversationId: string, auth: AuthUser) {
+    const conversation = await prisma.whatsAppConversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true, customerId: true },
+    });
+    if (!conversation) throw whatsappError.conversationNotFound();
+    if (!conversation.customerId) {
+      return { linked: false as const, customer: null, contracts: null };
+    }
+    const canReadCustomers = hasPermission(auth, PERMISSIONS.CUSTOMERS_READ);
+    let customer: {
+      id: number;
+      name: string;
+      mobile: string | null;
+      externalId: string | null;
+    } | null = null;
+    if (canReadCustomers) {
+      try {
+        await assertCustomerVisible(prisma, conversation.customerId, auth);
+        const row = await prisma.customer.findUnique({
+          where: { id: conversation.customerId },
+          select: { id: true, name: true, mobile: true, externalId: true },
+        });
+        if (row) customer = row;
+      } catch {
+        customer = null;
+      }
+    }
+    const canReadContracts = hasPermission(auth, PERMISSIONS.CONTRACTS_READ);
+    if (!canReadContracts) {
+      return {
+        linked: true as const,
+        customer,
+        contracts: { canRead: false, active: null, latest: null },
+      };
+    }
+    const contractRows = await prisma.contract.findMany({
+      where: { customerId: conversation.customerId },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+      select: {
+        id: true,
+        contractNumber: true,
+        status: true,
+        endAt: true,
+        createdAt: true,
+        vehicle: { select: { vehicleName: true, plateNumber: true } },
+        company: { select: { code: true, displayName: true } },
+      },
+    });
+    const activeRow = pickActiveWhatsAppCustomerContract(contractRows);
+    const latestRow = activeRow
+      ? null
+      : pickLatestWhatsAppCustomerContract(contractRows);
+    return {
+      linked: true as const,
+      customer,
+      contracts: {
+        canRead: true,
+        active: activeRow ? toContractSummary(activeRow) : null,
+        latest: latestRow ? toContractSummary(latestRow) : null,
+      },
+    };
+  }
+
+  return { match, link, unlink, customerContext };
 }
