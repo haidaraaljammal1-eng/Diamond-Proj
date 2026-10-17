@@ -10,6 +10,9 @@ export const WHATSAPP_HISTORY_SYNC_CHATS_PAGE = 50;
 export const WHATSAPP_HISTORY_SYNC_MESSAGES_PAGE = 100;
 export const WHATSAPP_HISTORY_SYNC_MESSAGES_PER_TICK = 40;
 export const WHATSAPP_HISTORY_SYNC_INTER_REQUEST_MS = 250;
+/** Consecutive retriable Whapi failures per run before marking FAILED. */
+export const WHATSAPP_HISTORY_SYNC_MAX_PROVIDER_RETRIES = 5;
+export const WHATSAPP_HISTORY_SYNC_PROVIDER_BACKOFF_BASE_MS = 750;
 
 /** Connection-attempt TTL. Short-lived CSRF/OAuth state (10 minutes). */
 export const WHATSAPP_CONNECTION_ATTEMPT_TTL_SECONDS = 600;

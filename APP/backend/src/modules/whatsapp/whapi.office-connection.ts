@@ -24,6 +24,7 @@ import {
   whapiRuntimeConfig,
 } from "src/modules/whatsapp/whapi.config";
 import { encodeWhapiWebhookMaterial } from "src/modules/whatsapp/whapi.webhook-material";
+import { cancelActiveHistorySyncRuns } from "src/modules/whatsapp/whatsapp.history-sync.lifecycle";
 
 type AuditWrite = (partial: Partial<AuditContext>) => void;
 
@@ -165,6 +166,11 @@ export async function configureWhapiOfficeConnection(
     }
 
     if (current) {
+      await cancelActiveHistorySyncRuns(
+        tx,
+        current.id,
+        "WHATSAPP_HISTORY_SYNC_CONNECTION_REPLACED",
+      );
       await tx.whatsAppConnection.update({
         where: { id: current.id },
         data: {

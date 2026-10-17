@@ -25,9 +25,12 @@ import {
   WHATSAPP_CURRENT_STATUSES,
   WHATSAPP_HISTORY_SYNC_CHATS_PAGE,
   WHATSAPP_HISTORY_SYNC_INTER_REQUEST_MS,
+  WHATSAPP_HISTORY_SYNC_MAX_PROVIDER_RETRIES,
   WHATSAPP_HISTORY_SYNC_MESSAGES_PAGE,
   WHATSAPP_HISTORY_SYNC_MESSAGES_PER_TICK,
+  WHATSAPP_HISTORY_SYNC_PROVIDER_BACKOFF_BASE_MS,
 } from "src/modules/whatsapp/whatsapp.constants";
+import { isRetriableWhapiHistoryError } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
 import { decryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
 import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
@@ -72,6 +75,15 @@ function sleep(ms: number): Promise<void> {
 }
 
 let historyClientOverride: WhapiHistoryClient | null = null;
+const providerRetryStreak = new Map<string, number>();
+
+function clearProviderRetryStreak(runId: string): void {
+  providerRetryStreak.delete(runId);
+}
+
+function backoffMs(attempt: number): number {
+  return WHATSAPP_HISTORY_SYNC_PROVIDER_BACKOFF_BASE_MS * 2 ** Math.max(0, attempt - 1);
+}
 
 /** Test-only injection for Whapi list APIs. */
 export function setWhapiHistoryClientForTests(client: WhapiHistoryClient | null): void {
@@ -287,14 +299,36 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
   /**
    * Processes one bounded batch. Returns true when more work may remain.
    */
+  async function isConnectionActiveForRun(connectionId: string): Promise<boolean> {
+    const connection = await prisma.whatsAppConnection.findUnique({
+      where: { id: connectionId },
+      select: { status: true },
+    });
+    const currentStatuses: WhatsAppConnectionStatus[] = [...WHATSAPP_CURRENT_STATUSES];
+    return Boolean(connection && currentStatuses.includes(connection.status));
+  }
+
   async function processHistorySyncBatch(runId: string): Promise<boolean> {
     const run = await prisma.whatsAppHistorySyncRun.findUnique({ where: { id: runId } });
     if (!run || run.status !== "RUNNING") return false;
+    if (!(await isConnectionActiveForRun(run.connectionId))) {
+      await prisma.whatsAppHistorySyncRun.update({
+        where: { id: runId },
+        data: {
+          status: "CANCELLED",
+          lastErrorCode: "WHATSAPP_HISTORY_SYNC_CONNECTION_INACTIVE",
+          completedAt: new Date(),
+        },
+      });
+      clearProviderRetryStreak(runId);
+      return false;
+    }
     if (run.cancelRequested) {
       await prisma.whatsAppHistorySyncRun.update({
         where: { id: runId },
         data: { status: "CANCELLED", completedAt: new Date() },
       });
+      clearProviderRetryStreak(runId);
       return false;
     }
 
@@ -401,9 +435,11 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
           return event ? [event] : [];
         });
         publishWhatsAppRealtime(events);
+        clearProviderRetryStreak(runId);
         return false;
       }
 
+      clearProviderRetryStreak(runId);
       await prisma.whatsAppHistorySyncRun.update({
         where: { id: runId },
         data: {
@@ -420,11 +456,21 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
       });
       return true;
     } catch (err) {
+      if (isRetriableWhapiHistoryError(err)) {
+        const streak = (providerRetryStreak.get(runId) ?? 0) + 1;
+        providerRetryStreak.set(runId, streak);
+        if (streak < WHATSAPP_HISTORY_SYNC_MAX_PROVIDER_RETRIES) {
+          log.warn({ err, runId, streak }, "whatsapp history sync: retriable provider error");
+          await sleep(backoffMs(streak));
+          return true;
+        }
+      }
       const code =
         err instanceof Error && err.message.startsWith("whapi_")
           ? "WHATSAPP_HISTORY_SYNC_PROVIDER_ERROR"
           : "WHATSAPP_HISTORY_SYNC_FAILED";
       log.warn({ err, runId }, "whatsapp history sync: batch failed");
+      clearProviderRetryStreak(runId);
       await prisma.whatsAppHistorySyncRun.update({
         where: { id: runId },
         data: {
@@ -458,21 +504,11 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
     return run.id;
   }
 
-  async function resumeRunningOnBoot() {
-    if (!env.WHATSAPP_HISTORY_SYNC_AUTO_EXECUTE) return;
-    const runs = await prisma.whatsAppHistorySyncRun.findMany({
-      where: { status: "RUNNING" },
-      select: { id: true },
-    });
-    for (const run of runs) scheduleRun(run.id);
-  }
-
   return {
     getStatus,
     start,
     cancel,
     enqueueAfterConnection,
-    resumeRunningOnBoot,
     processHistorySyncBatch,
     scheduleRun,
   };

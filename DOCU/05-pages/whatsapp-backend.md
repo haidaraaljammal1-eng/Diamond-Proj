@@ -373,4 +373,6 @@ Message text and metadata stay on `WhatsAppMessage`. The bytes live under `WHATS
 
 Read-only Whapi `GET /chats` and `GET /messages/list/{ChatID}` backfill **1:1** chats for the active `connectionId` only. Groups stay excluded. Imports use `(connectionId, providerMessageId)` idempotency, skip unread and per-message SSE, store media metadata without bulk download, and finish with one `whatsapp.realtime.resync`. State lives in `whatsapp_history_sync_runs` with resumable offsets. Routes: `GET/POST /whatsapp/connection/history-sync` (`whatsapp.manage_connection` to start/cancel). Does not change channel settings, webhooks, or `FullHistory`.
 
+On API listen, `whatsapp-history-sync` plugin reconciles runs: inactive connections → `CANCELLED`; when `WHATSAPP_HISTORY_SYNC_AUTO_EXECUTE=false`, interrupted `RUNNING` → `QUEUED` with `WHATSAPP_HISTORY_SYNC_INTERRUPTED` (no Whapi calls). Channel replacement cancels active runs on the disconnected connection. Retriable Whapi `429`/`5xx` use bounded backoff per run.
+
 Each staff browser can opt in to save new inbound files into a folder chosen on that device. The folder handle stays in IndexedDB and is never sent to the API. iPhone and browsers without directory access keep the manual Download action. Saving runs only while the WhatsApp page is open. The 15-minute unread exclusion from P0 is unchanged.

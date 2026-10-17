@@ -17,6 +17,7 @@ import { swaggerPlugin } from "src/plugins/dev/swagger";
 import { autoloadPlugin } from "src/plugins/autoload";
 import { schedulerPlugin } from "src/plugins/scheduler";
 import { whatsappMediaCleanupPlugin } from "src/plugins/whatsapp-media-cleanup";
+import { whatsappHistorySyncPlugin } from "src/plugins/whatsapp-history-sync";
 import { devPreflightPlugin } from "src/plugins/dev-preflight";
 
 /**
@@ -52,4 +53,5 @@ export const registerPlugins = fp(async (fastify) => {
   // (never under test inject) — see scheduler.ts.
   await fastify.register(schedulerPlugin);
   await fastify.register(whatsappMediaCleanupPlugin);
+  await fastify.register(whatsappHistorySyncPlugin);
 });
