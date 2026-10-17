@@ -1,4 +1,6 @@
 import { WhapiClient } from "src/modules/whatsapp/providers/whapi.client";
+import { classifyWhapiMessagesListHttpStatus } from "src/modules/whatsapp/whapi.history.messages-list";
+import { whapiHistoryHttpError } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -16,6 +18,10 @@ export interface WhapiHistoryListResult<T> {
   hasMore: boolean;
 }
 
+export interface WhapiHistoryMessagesPage extends WhapiHistoryListResult<Record<string, unknown>> {
+  skipChat?: { reasonCode: string; httpStatus: number };
+}
+
 export interface WhapiHistoryClient {
   listChats(count: number, offset: number): Promise<WhapiHistoryListResult<Record<string, unknown>>>;
   listMessages(
@@ -23,7 +29,7 @@ export interface WhapiHistoryClient {
     count: number,
     offset: number,
     sort: "asc" | "desc",
-  ): Promise<WhapiHistoryListResult<Record<string, unknown>>>;
+  ): Promise<WhapiHistoryMessagesPage>;
 }
 
 function extractArray(json: unknown, keys: string[]): unknown[] {
@@ -43,7 +49,7 @@ export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClien
       const path = `/chats?count=${count}&offset=${offset}`;
       const { status, json } = await client.getJson(path);
       if (status < 200 || status >= 300) {
-        throw new Error(`whapi_chats_http_${status}`);
+        throw whapiHistoryHttpError("chats", status);
       }
       const items = extractArray(json, ["chats", "data"]).filter(
         (row): row is Record<string, unknown> => asRecord(row) !== null,
@@ -55,11 +61,23 @@ export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClien
       const encoded = encodeURIComponent(chatId);
       const path = `/messages/list/${encoded}?count=${count}&offset=${offset}&sort=${sort}`;
       const { status, json } = await client.getJson(path);
-      if (status === 404 || status === 400) {
-        return { items: [], pageSize: count, hasMore: false };
+      const classification = classifyWhapiMessagesListHttpStatus(status, chatId);
+      if (classification.kind === "auth_error") {
+        throw whapiHistoryHttpError("messages", status);
       }
-      if (status < 200 || status >= 300) {
-        throw new Error(`whapi_messages_http_${status}`);
+      if (classification.kind === "skip_chat") {
+        return {
+          items: [],
+          pageSize: count,
+          hasMore: false,
+          skipChat: { reasonCode: classification.reasonCode, httpStatus: status },
+        };
+      }
+      if (classification.kind === "provider_error") {
+        throw whapiHistoryHttpError("messages", status);
+      }
+      if (classification.kind === "empty") {
+        return { items: [], pageSize: count, hasMore: false };
       }
       const items = extractArray(json, ["messages", "data"]).filter(
         (row): row is Record<string, unknown> => asRecord(row) !== null,

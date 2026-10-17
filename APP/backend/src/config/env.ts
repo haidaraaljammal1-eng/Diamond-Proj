@@ -210,6 +210,8 @@ const EnvSchema = z
     WHATSAPP_HISTORY_SYNC_ENQUEUE_ON_CONNECT: envBool(true),
     /** When true, RUNNING imports execute automatically (off until live QA). */
     WHATSAPP_HISTORY_SYNC_AUTO_EXECUTE: envBool(false),
+    /** Enqueue INCREMENTAL catch-up after connect when checkpoints exist (off until ops approval). */
+    WHATSAPP_HISTORY_SYNC_AUTO_INCREMENTAL_ON_CONNECT: envBool(false),
     /** Absolute ffmpeg binary. Empty uses ffmpeg on PATH. Started only for a voice conversion. */
     WHATSAPP_FFMPEG_PATH: z.string().optional().default(""),
     PUBLIC_BACKEND_URL: z.string().optional().default(""),

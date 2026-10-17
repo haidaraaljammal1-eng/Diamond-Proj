@@ -377,6 +377,15 @@ export const WhatsAppHistorySyncStatusSchema = z.object({
   chatQueueIndex: z.number().int(),
   messagesImported: z.number().int(),
   messagesSkipped: z.number().int(),
+  chatsSkipped: z.number().int(),
+  completedWithSkips: z.boolean(),
+  mode: z.enum(["FULL", "INCREMENTAL"]),
+  skippedChatsSummary: z.array(
+    z.object({
+      chatIdSuffix: z.string(),
+      reasonCode: z.string(),
+    }),
+  ),
   cancelRequested: z.boolean(),
   lastErrorCode: z.string().nullable(),
   partialHistoryNotice: z.literal(true),
@@ -388,6 +397,7 @@ export const WhatsAppHistorySyncStatusSchema = z.object({
 export const WhatsAppHistorySyncStartBodySchema = z
   .object({
     execute: z.boolean().optional().default(true),
+    mode: z.enum(["FULL", "INCREMENTAL"]).optional().default("FULL"),
   })
   .strict();
 

@@ -251,9 +251,16 @@ export default async function whatsappConnectionRoutes(fastify: FastifyInstance)
       request.setAudit({
         action: "WHATSAPP_HISTORY_SYNC_STARTED",
         entityType: "WhatsAppConnection",
-        metadata: { execute: request.body.execute ?? true },
+        metadata: {
+          execute: request.body.execute ?? true,
+          mode: request.body.mode ?? "FULL",
+        },
       });
-      const data = await historySync.start(identity.id, request.body.execute ?? true);
+      const data = await historySync.start(
+        identity.id,
+        request.body.execute ?? true,
+        request.body.mode ?? "FULL",
+      );
       return { data };
     },
   );

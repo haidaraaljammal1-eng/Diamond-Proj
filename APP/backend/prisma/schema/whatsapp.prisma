@@ -151,7 +151,8 @@ model WhatsAppConnection {
   conversations    WhatsAppConversation[]
   messages         WhatsAppMessage[]
   outboundAttempts WhatsAppOutboundAttempt[]
-  historySyncRuns  WhatsAppHistorySyncRun[]
+  historySyncRuns       WhatsAppHistorySyncRun[]
+  chatSyncCheckpoints WhatsAppConnectionChatSyncCheckpoint[]
 
   @@index([status])
   @@index([wabaId, phoneNumberId])
@@ -371,12 +372,33 @@ enum WhatsAppHistorySyncPhase {
   DONE
 }
 
+enum WhatsAppHistorySyncMode {
+  FULL
+  INCREMENTAL
+}
+
+/// Per-connection per-chat high-water mark for P3-B incremental catch-up.
+model WhatsAppConnectionChatSyncCheckpoint {
+  id                 String             @id @default(uuid())
+  connectionId       String
+  connection         WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  providerChatId     String
+  lastSyncedOccurredAt DateTime?
+  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime           @default(now())
+
+  @@unique([connectionId, providerChatId])
+  @@index([connectionId])
+  @@map("whatsapp_connection_chat_sync_checkpoints")
+}
+
 model WhatsAppHistorySyncRun {
   id           String                    @id @default(uuid())
   connectionId String
   connection   WhatsAppConnection        @relation(fields: [connectionId], references: [id], onDelete: Restrict)
   status       WhatsAppHistorySyncStatus @default(QUEUED)
   phase        WhatsAppHistorySyncPhase  @default(CHATS)
+  mode         WhatsAppHistorySyncMode   @default(FULL)
 
   chatsOffset      Int @default(0)
   chatQueueIndex   Int @default(0)
@@ -387,6 +409,10 @@ model WhatsAppHistorySyncRun {
   chatsCompleted   Int   @default(0)
   messagesImported Int   @default(0)
   messagesSkipped  Int   @default(0)
+  chatsSkipped     Int   @default(0)
+  /// [{ chatId, reasonCode, httpStatus? }]
+  skippedChats     Json  @default("[]")
+  completedWithSkips Boolean @default(false)
   cancelRequested  Boolean @default(false)
   lastErrorCode    String?
 

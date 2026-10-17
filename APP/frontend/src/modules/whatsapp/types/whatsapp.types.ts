@@ -9,6 +9,10 @@ export type WhatsAppHistorySyncStatusDto = {
   chatQueueIndex: number;
   messagesImported: number;
   messagesSkipped: number;
+  chatsSkipped: number;
+  completedWithSkips: boolean;
+  mode: "FULL" | "INCREMENTAL";
+  skippedChatsSummary: { chatIdSuffix: string; reasonCode: string }[];
   cancelRequested: boolean;
   lastErrorCode: string | null;
   partialHistoryNotice: true;

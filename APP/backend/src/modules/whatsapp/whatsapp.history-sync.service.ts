@@ -3,6 +3,7 @@ import type {
   Prisma,
   PrismaClient,
   WhatsAppConnectionStatus,
+  WhatsAppHistorySyncMode,
   WhatsAppHistorySyncRun,
   WhatsAppHistorySyncStatus,
 } from "@prisma/client";
@@ -28,9 +29,22 @@ import {
   WHATSAPP_HISTORY_SYNC_MAX_PROVIDER_RETRIES,
   WHATSAPP_HISTORY_SYNC_MESSAGES_PAGE,
   WHATSAPP_HISTORY_SYNC_MESSAGES_PER_TICK,
+  WHATSAPP_HISTORY_SYNC_INCREMENTAL_OVERLAP_MS,
   WHATSAPP_HISTORY_SYNC_PROVIDER_BACKOFF_BASE_MS,
 } from "src/modules/whatsapp/whatsapp.constants";
-import { isRetriableWhapiHistoryError } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
+import {
+  getChatSyncCheckpoint,
+  upsertChatSyncCheckpoint,
+  connectionHasChatSyncCheckpoints,
+} from "src/modules/whatsapp/whatsapp.history-sync.checkpoints";
+import {
+  isRetriableWhapiHistoryError,
+  isWhapiHistoryAuthError,
+} from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
+import {
+  releaseHistorySyncRunLock,
+  tryAcquireHistorySyncRunLock,
+} from "src/modules/whatsapp/whatsapp.history-sync.run-lock";
 import { decryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
 import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
 import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound.service";
@@ -43,6 +57,44 @@ export type HistorySyncChatQueueEntry = {
   chatId: string;
   displayName: string | null;
 };
+
+export type HistorySyncSkippedChatEntry = {
+  chatId: string;
+  reasonCode: string;
+  httpStatus?: number;
+};
+
+function parseSkippedChats(value: Prisma.JsonValue): HistorySyncSkippedChatEntry[] {
+  if (!Array.isArray(value)) return [];
+  const out: HistorySyncSkippedChatEntry[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const record = row as Record<string, unknown>;
+    const chatId = typeof record.chatId === "string" ? record.chatId.trim() : "";
+    const reasonCode = typeof record.reasonCode === "string" ? record.reasonCode.trim() : "";
+    if (!chatId || !reasonCode) continue;
+    const httpStatus =
+      typeof record.httpStatus === "number" && Number.isFinite(record.httpStatus)
+        ? record.httpStatus
+        : undefined;
+    out.push({ chatId, reasonCode, httpStatus });
+  }
+  return out;
+}
+
+function serializeSkippedChats(entries: HistorySyncSkippedChatEntry[]): Prisma.InputJsonValue {
+  return entries as Prisma.InputJsonValue;
+}
+
+function appendSkippedChat(
+  entries: HistorySyncSkippedChatEntry[],
+  entry: HistorySyncSkippedChatEntry,
+): HistorySyncSkippedChatEntry[] {
+  if (entries.some((row) => row.chatId === entry.chatId && row.reasonCode === entry.reasonCode)) {
+    return entries;
+  }
+  return [...entries, entry];
+}
 
 function parseChatQueue(value: Prisma.JsonValue): HistorySyncChatQueueEntry[] {
   if (!Array.isArray(value)) return [];
@@ -146,6 +198,13 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
       chatQueueIndex: run?.chatQueueIndex ?? 0,
       messagesImported: run?.messagesImported ?? 0,
       messagesSkipped: run?.messagesSkipped ?? 0,
+      chatsSkipped: run?.chatsSkipped ?? 0,
+      completedWithSkips: run?.completedWithSkips ?? false,
+      mode: run?.mode ?? "FULL",
+      skippedChatsSummary: parseSkippedChats(run?.skippedChats ?? []).slice(-20).map((row) => ({
+        chatIdSuffix: row.chatId.length > 12 ? row.chatId.slice(-12) : row.chatId,
+        reasonCode: row.reasonCode,
+      })),
       cancelRequested: run?.cancelRequested ?? false,
       lastErrorCode: run?.lastErrorCode ?? null,
       partialHistoryNotice: true,
@@ -164,7 +223,17 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
     return toStatusDto(run);
   }
 
-  async function enqueueForConnection(connectionId: string, queuedByUserId: number | null) {
+  async function resolveEnqueueMode(connectionId: string): Promise<WhatsAppHistorySyncMode> {
+    if (!env.WHATSAPP_HISTORY_SYNC_AUTO_INCREMENTAL_ON_CONNECT) return "FULL";
+    const has = await connectionHasChatSyncCheckpoints(prisma, connectionId);
+    return has ? "INCREMENTAL" : "FULL";
+  }
+
+  async function enqueueForConnection(
+    connectionId: string,
+    queuedByUserId: number | null,
+    mode: WhatsAppHistorySyncMode = "FULL",
+  ) {
     const active = await prisma.whatsAppHistorySyncRun.findFirst({
       where: {
         connectionId,
@@ -178,12 +247,17 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
         connectionId,
         status: "QUEUED",
         phase: "CHATS",
+        mode,
         queuedByUserId,
       },
     });
   }
 
-  async function start(userId: number, execute: boolean) {
+  async function start(
+    userId: number,
+    execute: boolean,
+    mode: WhatsAppHistorySyncMode = "FULL",
+  ) {
     if (env.WHATSAPP_PROVIDER !== "WHAPI") throw whatsappError.providerNotConfigured();
     const connectionId = await getCurrentConnectionId();
     let run = await prisma.whatsAppHistorySyncRun.findFirst({
@@ -191,7 +265,7 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
       orderBy: { createdAt: "desc" },
     });
     if (!run) {
-      run = await enqueueForConnection(connectionId, userId);
+      run = await enqueueForConnection(connectionId, userId, mode);
     }
     if (run.status === "RUNNING") {
       return toStatusDto(run);
@@ -247,9 +321,10 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
     connectionId: string,
     parsed: ParsedWhapiHistoryMessage | null,
     receivedAt: Date,
+    importSource: "history_import" | "incremental_sync",
   ): Promise<"imported" | "skipped"> {
     if (!parsed) return "skipped";
-    const displayPayload: Record<string, unknown> = { source: "history_import" };
+    const displayPayload: Record<string, unknown> = { source: importSource };
     if (parsed.voiceNote) displayPayload.whapi = { voice: true };
 
     if (parsed.fromMe) {
@@ -268,7 +343,7 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
         providerOccurredAt: parsed.providerOccurredAt,
         receivedAt,
         historical: true,
-        source: "history_import",
+        source: importSource,
       });
       return result.created ? "imported" : "skipped";
     }
@@ -312,9 +387,15 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
   async function processHistorySyncBatch(runId: string): Promise<boolean> {
     if (batchInFlight.has(runId)) return true;
     batchInFlight.add(runId);
+    const acquired = await tryAcquireHistorySyncRunLock(prisma, runId);
+    if (!acquired) {
+      batchInFlight.delete(runId);
+      return true;
+    }
     try {
       return await processHistorySyncBatchInner(runId);
     } finally {
+      await releaseHistorySyncRunLock(prisma, runId);
       batchInFlight.delete(runId);
     }
   }
@@ -368,6 +449,10 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
     let chatsCompleted = run.chatsCompleted;
     let messagesImported = run.messagesImported;
     let messagesSkipped = run.messagesSkipped;
+    let chatsSkipped = run.chatsSkipped;
+    let skippedChats = parseSkippedChats(run.skippedChats);
+    const importSource: "history_import" | "incremental_sync" =
+      run.mode === "INCREMENTAL" ? "incremental_sync" : "history_import";
 
     try {
       if (phase === "CHATS") {
@@ -392,26 +477,75 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
           phase = "DONE";
         } else {
           const current = queue[chatQueueIndex]!;
+          const checkpointAt = await getChatSyncCheckpoint(
+            prisma,
+            run.connectionId,
+            current.chatId,
+          );
+          const incremental =
+            run.mode === "INCREMENTAL" && checkpointAt !== null;
+          const cutoff =
+            incremental && checkpointAt
+              ? new Date(checkpointAt.getTime() - WHATSAPP_HISTORY_SYNC_INCREMENTAL_OVERLAP_MS)
+              : null;
+          const sort: "asc" | "desc" = incremental ? "desc" : "asc";
+
           const page = await client.listMessages(
             current.chatId,
             WHATSAPP_HISTORY_SYNC_MESSAGES_PAGE,
             messagesOffset,
-            "asc",
+            sort,
           );
-          if (page.items.length === 0) {
+
+          if (page.skipChat) {
+            skippedChats = appendSkippedChat(skippedChats, {
+              chatId: current.chatId,
+              reasonCode: page.skipChat.reasonCode,
+              httpStatus: page.skipChat.httpStatus,
+            });
+            chatsSkipped += 1;
+            chatQueueIndex += 1;
+            messagesOffset = 0;
+            chatsCompleted += 1;
+          } else if (page.items.length === 0) {
             chatQueueIndex += 1;
             messagesOffset = 0;
             chatsCompleted += 1;
           } else {
             const batch = page.items.slice(0, WHATSAPP_HISTORY_SYNC_MESSAGES_PER_TICK);
+            let maxOccurred: Date | null = null;
+            let reachedCutoff = false;
             for (const row of batch) {
               const parsed = parseWhapiHistoryMessage(row, current.chatId, current.displayName);
-              const outcome = await materializeHistoryMessage(run.connectionId, parsed, receivedAt);
+              if (parsed?.providerOccurredAt) {
+                if (!maxOccurred || parsed.providerOccurredAt > maxOccurred) {
+                  maxOccurred = parsed.providerOccurredAt;
+                }
+              }
+              if (
+                cutoff &&
+                parsed?.providerOccurredAt &&
+                parsed.providerOccurredAt <= cutoff
+              ) {
+                reachedCutoff = true;
+                continue;
+              }
+              const outcome = await materializeHistoryMessage(
+                run.connectionId,
+                parsed,
+                receivedAt,
+                importSource,
+              );
               if (outcome === "imported") messagesImported += 1;
               else messagesSkipped += 1;
             }
+            if (maxOccurred) {
+              await upsertChatSyncCheckpoint(prisma, run.connectionId, current.chatId, maxOccurred);
+            }
             messagesOffset += batch.length;
-            if (!page.hasMore && batch.length === page.items.length) {
+            const finishedChat =
+              reachedCutoff || (!page.hasMore && batch.length === page.items.length);
+            if (finishedChat) {
               chatQueueIndex += 1;
               messagesOffset = 0;
               chatsCompleted += 1;
@@ -421,6 +555,7 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
       }
 
       if (phase === "DONE") {
+        const completedWithSkips = chatsSkipped > 0;
         const events = await withTransaction(prisma, async (tx) => {
           await tx.whatsAppHistorySyncRun.update({
             where: { id: runId },
@@ -428,6 +563,7 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
               status: "COMPLETED",
               phase: "DONE",
               completedAt: new Date(),
+              completedWithSkips,
               chatQueue: serializeChatQueue(queue),
               chatsOffset,
               chatQueueIndex,
@@ -436,6 +572,8 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
               chatsCompleted,
               messagesImported,
               messagesSkipped,
+              chatsSkipped,
+              skippedChats: serializeSkippedChats(skippedChats),
             },
           });
           const event = await writeWhatsAppRealtimeEvent(tx, {
@@ -463,10 +601,34 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
           chatsCompleted,
           messagesImported,
           messagesSkipped,
+          chatsSkipped,
+          skippedChats: serializeSkippedChats(skippedChats),
         },
       });
       return true;
     } catch (err) {
+      if (isWhapiHistoryAuthError(err)) {
+        clearProviderRetryStreak(runId);
+        await prisma.whatsAppHistorySyncRun.update({
+          where: { id: runId },
+          data: {
+            status: "FAILED",
+            lastErrorCode: "WHATSAPP_HISTORY_SYNC_PROVIDER_AUTH",
+            completedAt: new Date(),
+            chatQueue: serializeChatQueue(queue),
+            chatsOffset,
+            chatQueueIndex,
+            messagesOffset,
+            chatsDiscovered,
+            chatsCompleted,
+            messagesImported,
+            messagesSkipped,
+            chatsSkipped,
+            skippedChats: serializeSkippedChats(skippedChats),
+          },
+        });
+        return false;
+      }
       if (isRetriableWhapiHistoryError(err)) {
         const streak = (providerRetryStreak.get(runId) ?? 0) + 1;
         providerRetryStreak.set(runId, streak);
@@ -496,6 +658,8 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
           chatsCompleted,
           messagesImported,
           messagesSkipped,
+          chatsSkipped,
+          skippedChats: serializeSkippedChats(skippedChats),
         },
       });
       return false;
@@ -504,7 +668,8 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
 
   async function enqueueAfterConnection(connectionId: string, userId: number | null) {
     if (!env.WHATSAPP_HISTORY_SYNC_ENQUEUE_ON_CONNECT) return null;
-    const run = await enqueueForConnection(connectionId, userId);
+    const mode = await resolveEnqueueMode(connectionId);
+    const run = await enqueueForConnection(connectionId, userId, mode);
     if (env.WHATSAPP_HISTORY_SYNC_AUTO_EXECUTE) {
       const started = await prisma.whatsAppHistorySyncRun.update({
         where: { id: run.id },
