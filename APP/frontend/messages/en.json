@@ -3299,7 +3299,14 @@
       "historySyncDone": "History sync completed",
       "historySyncFailed": "History sync failed",
       "historySyncCancel": "Cancel sync",
-      "historySyncStats": "{imported} messages imported · {chats} chats"
+      "historySyncStats": "{imported} messages imported · {chats} chats · {skipped} chats skipped",
+      "historySyncModeHint": "Next sync uses {mode} mode (checkpoints decide automatically).",
+      "historySyncModeFull": "full",
+      "historySyncModeIncremental": "incremental",
+      "historySyncLastAt": "Last successful sync: {when}",
+      "historySyncCompletedWithSkips": "Import finished with some chats skipped (partial history).",
+      "historySyncForceFull": "Force full resync",
+      "historySyncForceFullConfirm": "Re-import all chats from scratch? This may take longer and re-scan every chat."
     },
     "customer": {
       "linked": "Linked Customer",

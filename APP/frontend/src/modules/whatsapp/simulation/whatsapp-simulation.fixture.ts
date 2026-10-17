@@ -33,6 +33,8 @@ function conversation(
     id: `${WHATSAPP_SIMULATION_ID_PREFIX}${id}`,
     customerWaId: waId,
     customerDisplayName: name,
+    displayTitle: name?.trim() || waId,
+    hasAvatar: false,
     lastMessagePreview: preview,
     lastMessageType: type,
     lastMessageAt: lastAt,

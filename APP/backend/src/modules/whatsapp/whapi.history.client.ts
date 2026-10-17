@@ -61,7 +61,7 @@ export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClien
       const encoded = encodeURIComponent(chatId);
       const path = `/messages/list/${encoded}?count=${count}&offset=${offset}&sort=${sort}`;
       const { status, json } = await client.getJson(path);
-      const classification = classifyWhapiMessagesListHttpStatus(status, chatId);
+      const classification = classifyWhapiMessagesListHttpStatus(status, chatId, json);
       if (classification.kind === "auth_error") {
         throw whapiHistoryHttpError("messages", status);
       }

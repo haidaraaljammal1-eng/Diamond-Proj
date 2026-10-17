@@ -173,6 +173,8 @@ export const WhatsAppConversationListItemSchema = z.object({
   id: z.string().uuid(),
   customerWaId: z.string(),
   customerDisplayName: z.string().nullable(),
+  displayTitle: z.string(),
+  hasAvatar: z.boolean(),
   lastMessagePreview: z.string().nullable(),
   lastMessageType: WhatsAppMessageTypeSchema.nullable(),
   lastMessageAt: z.date().nullable(),
@@ -392,12 +394,14 @@ export const WhatsAppHistorySyncStatusSchema = z.object({
   startedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
   updatedAt: z.string().nullable(),
+  suggestedSyncMode: z.enum(["FULL", "INCREMENTAL"]),
+  lastSuccessfulSyncAt: z.string().nullable(),
 });
 
 export const WhatsAppHistorySyncStartBodySchema = z
   .object({
     execute: z.boolean().optional().default(true),
-    mode: z.enum(["FULL", "INCREMENTAL"]).optional().default("FULL"),
+    mode: z.enum(["FULL", "INCREMENTAL"]).optional(),
   })
   .strict();
 

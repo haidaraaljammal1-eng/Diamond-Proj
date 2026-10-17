@@ -51,6 +51,7 @@ import { materializeInboundMessage } from "src/modules/whatsapp/whatsapp.inbound
 import { materializeOutboundEchoMessage } from "src/modules/whatsapp/whatsapp.outbound-echo.service";
 import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
 import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
+import { enqueueWhatsAppContactSyncAfterHistory } from "src/modules/whatsapp/whatsapp.contact-sync.service";
 import type { WhatsAppHistorySyncStatusDto } from "src/modules/whatsapp/whatsapp.schema";
 
 export type HistorySyncChatQueueEntry = {
@@ -184,12 +185,28 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
     return row.id;
   }
 
-  async function toStatusDto(run: WhatsAppHistorySyncRun | null): Promise<WhatsAppHistorySyncStatusDto> {
+  async function resolveStaffSyncMode(
+    connectionId: string,
+    explicit?: WhatsAppHistorySyncMode,
+  ): Promise<WhatsAppHistorySyncMode> {
+    if (explicit) return explicit;
+    const has = await connectionHasChatSyncCheckpoints(prisma, connectionId);
+    return has ? "INCREMENTAL" : "FULL";
+  }
+
+  function toStatusDto(
+    run: WhatsAppHistorySyncRun | null,
+    connectionId: string | null,
+    extras?: {
+      suggestedSyncMode: WhatsAppHistorySyncMode;
+      lastSuccessfulSyncAt: string | null;
+    },
+  ): WhatsAppHistorySyncStatusDto {
     const queue = run ? parseChatQueue(run.chatQueue) : [];
     const status: WhatsAppHistorySyncStatus | "IDLE" = run?.status ?? "IDLE";
     return {
       runId: run?.id ?? null,
-      connectionId: run?.connectionId ?? null,
+      connectionId: run?.connectionId ?? connectionId,
       status,
       phase: run?.phase ?? null,
       chatsDiscovered: run?.chatsDiscovered ?? 0,
@@ -211,6 +228,21 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
       startedAt: run?.startedAt?.toISOString() ?? null,
       completedAt: run?.completedAt?.toISOString() ?? null,
       updatedAt: run?.updatedAt?.toISOString() ?? null,
+      suggestedSyncMode: extras?.suggestedSyncMode ?? "FULL",
+      lastSuccessfulSyncAt: extras?.lastSuccessfulSyncAt ?? null,
+    };
+  }
+
+  async function statusExtras(connectionId: string) {
+    const suggestedSyncMode = await resolveStaffSyncMode(connectionId);
+    const lastCompleted = await prisma.whatsAppHistorySyncRun.findFirst({
+      where: { connectionId, status: "COMPLETED" },
+      orderBy: { completedAt: "desc" },
+      select: { completedAt: true },
+    });
+    return {
+      suggestedSyncMode,
+      lastSuccessfulSyncAt: lastCompleted?.completedAt?.toISOString() ?? null,
     };
   }
 
@@ -220,7 +252,7 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
       where: { connectionId },
       orderBy: { createdAt: "desc" },
     });
-    return toStatusDto(run);
+    return toStatusDto(run, connectionId, await statusExtras(connectionId));
   }
 
   async function resolveEnqueueMode(connectionId: string): Promise<WhatsAppHistorySyncMode> {
@@ -256,19 +288,21 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
   async function start(
     userId: number,
     execute: boolean,
-    mode: WhatsAppHistorySyncMode = "FULL",
+    mode?: WhatsAppHistorySyncMode,
   ) {
     if (env.WHATSAPP_PROVIDER !== "WHAPI") throw whatsappError.providerNotConfigured();
     const connectionId = await getCurrentConnectionId();
+    const resolvedMode = await resolveStaffSyncMode(connectionId, mode);
+    const extras = await statusExtras(connectionId);
     let run = await prisma.whatsAppHistorySyncRun.findFirst({
       where: { connectionId, status: { in: ["QUEUED", "RUNNING"] } },
       orderBy: { createdAt: "desc" },
     });
     if (!run) {
-      run = await enqueueForConnection(connectionId, userId, mode);
+      run = await enqueueForConnection(connectionId, userId, resolvedMode);
     }
     if (run.status === "RUNNING") {
-      return toStatusDto(run);
+      return toStatusDto(run, connectionId, extras);
     }
     if (execute) {
       run = await prisma.whatsAppHistorySyncRun.update({
@@ -282,21 +316,22 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
       });
       scheduleRun(run.id);
     }
-    return toStatusDto(run);
+    return toStatusDto(run, connectionId, extras);
   }
 
   async function cancel(userId: number) {
     const connectionId = await getCurrentConnectionId();
+    const extras = await statusExtras(connectionId);
     const run = await prisma.whatsAppHistorySyncRun.findFirst({
       where: { connectionId, status: { in: ["QUEUED", "RUNNING"] } },
       orderBy: { createdAt: "desc" },
     });
-    if (!run) return toStatusDto(null);
+    if (!run) return toStatusDto(null, connectionId, extras);
     const updated = await prisma.whatsAppHistorySyncRun.update({
       where: { id: run.id },
       data: { cancelRequested: true, queuedByUserId: run.queuedByUserId ?? userId },
     });
-    return toStatusDto(updated);
+    return toStatusDto(updated, connectionId, extras);
   }
 
   const scheduled = new Set<string>();
@@ -584,6 +619,7 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
           return event ? [event] : [];
         });
         publishWhatsAppRealtime(events);
+        enqueueWhatsAppContactSyncAfterHistory({ prisma, log }, run.connectionId);
         clearProviderRetryStreak(runId);
         return false;
       }

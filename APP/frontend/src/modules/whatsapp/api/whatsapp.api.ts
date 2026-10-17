@@ -316,12 +316,38 @@ export async function getWhatsAppHistorySyncStatus(): Promise<WhatsAppHistorySyn
   return response.data;
 }
 
-export async function startWhatsAppHistorySync(execute = true): Promise<WhatsAppHistorySyncStatusDto> {
+export async function startWhatsAppHistorySync(
+  execute = true,
+  mode?: "FULL" | "INCREMENTAL",
+): Promise<WhatsAppHistorySyncStatusDto> {
   const response = await apiRequest<WhatsAppHistorySyncStatusDto>(
     `${WHATSAPP_PATH}/connection/history-sync/start`,
-    { method: "POST", body: { execute } },
+    { method: "POST", body: mode ? { execute, mode } : { execute } },
   );
   return response.data;
+}
+
+export async function fetchWhatsAppConversationAvatarBlob(conversationId: string): Promise<Blob> {
+  const token = await accessToken();
+  const response = await fetch(`${env.apiUrl}${WHATSAPP_PATH}/conversations/${conversationId}/avatar`, {
+    credentials: "include",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    const { ApiRequestError } = await import("@/infrastructure/api/errors");
+    throw new ApiRequestError(
+      { code: `HTTP_${response.status}`, message: "Avatar unavailable" },
+      response.status,
+    );
+  }
+  return response.blob();
+}
+
+export async function fetchWhatsAppConversationAvatarObjectUrl(conversationId: string): Promise<string> {
+  const blob = await fetchWhatsAppConversationAvatarBlob(conversationId);
+  return URL.createObjectURL(blob);
 }
 
 export async function cancelWhatsAppHistorySync(): Promise<WhatsAppHistorySyncStatusDto> {

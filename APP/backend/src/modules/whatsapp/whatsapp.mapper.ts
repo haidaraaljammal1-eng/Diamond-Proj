@@ -14,6 +14,8 @@ import type {
   WhatsAppConversationListItemDto,
   WhatsAppMessageDto,
 } from "src/modules/whatsapp/whatsapp.schema";
+import type { ConversationPresentationRow } from "src/modules/whatsapp/whatsapp.conversation-presentation";
+import { toConversationPresentation } from "src/modules/whatsapp/whatsapp.conversation-presentation";
 import type { WhatsAppMessagingEligibility } from "src/modules/whatsapp/whatsapp.eligibility";
 import type { WhatsAppGrantedPhone, WhatsAppGrantedWaba } from "src/modules/whatsapp/whatsapp.types";
 
@@ -86,33 +88,29 @@ export function toSelectableChoices(
   }));
 }
 
-type ConversationRow = {
-  id: string;
-  customerWaId: string;
-  customerDisplayName: string | null;
-  lastMessagePreview: string | null;
-  lastMessageType: WhatsAppConversationListItemDto["lastMessageType"];
-  lastMessageAt: Date | null;
-  unreadCount: number;
-  lastInboundAt: Date | null;
+type ConversationRow = ConversationPresentationRow & {
   lastReadAt?: Date | null;
   createdAt?: Date;
-  customerId?: number | null;
   customerLinkedAt?: Date | null;
-  customer?: {
+  customer?: { name: string } | {
     id: number;
     name: string;
     mobile: string | null;
     externalId: string | null;
   } | null;
-  connection: { displayPhoneNumber: string | null; verifiedName: string | null };
 };
 
-export function toConversationListItem(row: ConversationRow): WhatsAppConversationListItemDto {
+export function toConversationListItem(
+  row: ConversationRow,
+  avatarByContactId: ReadonlyMap<string, boolean> = new Map(),
+): WhatsAppConversationListItemDto {
+  const presentation = toConversationPresentation(row, avatarByContactId);
   return {
     id: row.id,
     customerWaId: row.customerWaId,
     customerDisplayName: row.customerDisplayName,
+    displayTitle: presentation.displayTitle,
+    hasAvatar: presentation.hasAvatar,
     lastMessagePreview: row.lastMessagePreview,
     lastMessageType: row.lastMessageType,
     lastMessageAt: row.lastMessageAt,
@@ -130,22 +128,28 @@ export function toConversationDetail(
   row: ConversationRow & { lastReadAt: Date | null; createdAt: Date },
   eligibility: WhatsAppMessagingEligibility,
   customerVisible = false,
+  displayTitle?: string,
+  hasAvatar?: boolean,
 ): WhatsAppConversationDetailDto {
   const linked = Boolean(row.customerId);
+  const listItem = toConversationListItem(row);
   return {
-    ...toConversationListItem(row),
+    ...listItem,
+    displayTitle: displayTitle ?? listItem.displayTitle,
+    hasAvatar: hasAvatar ?? listItem.hasAvatar,
     lastReadAt: row.lastReadAt,
     createdAt: row.createdAt,
     customerLink: {
       linked,
-      customer: linked && customerVisible && row.customer
-        ? {
-            id: row.customer.id,
-            name: row.customer.name,
-            mobile: row.customer.mobile,
-            externalId: row.customer.externalId,
-          }
-        : null,
+      customer:
+        linked && customerVisible && row.customer && "id" in row.customer
+          ? {
+              id: row.customer.id,
+              name: row.customer.name,
+              mobile: row.customer.mobile,
+              externalId: row.customer.externalId,
+            }
+          : null,
       linkedAt: row.customerLinkedAt ?? null,
     },
     messagingEligibility: eligibility,

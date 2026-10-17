@@ -19,6 +19,16 @@ describe("whapi messages list classification", () => {
     }
   });
 
+  it("classifies explicit invalid request bodies separately from unsupported", () => {
+    const result = classifyWhapiMessagesListHttpStatus(400, "971501234567@s.whatsapp.net", {
+      error: "invalid chat id",
+    });
+    assert.equal(result.kind, "skip_chat");
+    if (result.kind === "skip_chat") {
+      assert.equal(result.reasonCode, WHAPI_HISTORY_CHAT_SKIP.MESSAGES_LIST_INVALID_REQUEST);
+    }
+  });
+
   it("classifies group chat 400 as unsupported chat id", () => {
     const result = classifyWhapiMessagesListHttpStatus(400, "1203@g.us");
     assert.equal(result.kind, "skip_chat");

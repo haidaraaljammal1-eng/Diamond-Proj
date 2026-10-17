@@ -11,6 +11,7 @@ import type {
 } from "../../types/whatsapp.types";
 import { observeIncomingMedia } from "../../utils/whatsapp-local-save";
 import { conversationTitle, formatCustomerWaId } from "../../utils/whatsapp-view-model";
+import { WhatsAppContactAvatar } from "../contact-avatar/contact-avatar";
 import { WhatsAppComposer } from "../composer/composer";
 import { WhatsAppCustomerControls } from "../customer-strip/customer-strip";
 import { WhatsAppCustomerContextPanel } from "../customer-context-panel/customer-context-panel";
@@ -84,7 +85,11 @@ export function WhatsAppChatPane({
     );
   }
 
-  const title = conversationTitle(conversation.customerDisplayName, conversation.customerWaId);
+  const title = conversationTitle(
+    conversation.customerDisplayName,
+    conversation.customerWaId,
+    conversation.displayTitle,
+  );
   const customerNumber = formatCustomerWaId(conversation.customerWaId);
 
   async function loadOlder() {
@@ -96,9 +101,12 @@ export function WhatsAppChatPane({
   return (
     <section className={styles.pane} data-testid="whatsapp-chat-pane">
       <header className={styles.header}>
-        <span className={styles.avatar} aria-hidden="true">
-          {title.trim().charAt(0) || "#"}
-        </span>
+        <WhatsAppContactAvatar
+          conversationId={conversation.id}
+          hasAvatar={conversation.hasAvatar}
+          fallbackLabel={title}
+          className={styles.avatar}
+        />
         <div className={styles.heading}>
           <div className={styles.titleRow}>
             <p className={styles.name}>{title}</p>

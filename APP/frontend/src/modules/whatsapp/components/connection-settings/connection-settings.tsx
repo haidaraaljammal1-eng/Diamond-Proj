@@ -93,6 +93,7 @@ export function WhatsAppConnectionSettings({
   const [qrOpen, setQrOpen] = useState(false);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [historySync, setHistorySync] = useState<WhatsAppHistorySyncStatusDto | null>(null);
+  const [confirmForceFullSync, setConfirmForceFullSync] = useState(false);
   const linked = connection && connection.status !== "DISCONNECTED";
   const banner = connectionBanner(connection);
   const caps = connectionCapabilities(connection);
@@ -160,16 +161,19 @@ export function WhatsAppConnectionSettings({
     };
   }, [open, linked, caps.provider, inbox.simulationActive]);
 
-  async function runHistorySync() {
+  async function runHistorySync(mode?: "FULL" | "INCREMENTAL") {
     setBusy(true);
     setError(null);
     try {
-      const status = await startWhatsAppHistorySync(true);
+      const resolved =
+        mode ?? historySync?.suggestedSyncMode ?? (historySync?.lastSuccessfulSyncAt ? "INCREMENTAL" : "FULL");
+      const status = await startWhatsAppHistorySync(true, resolved);
       setHistorySync(status);
     } catch (err) {
       setError(resolveWhatsAppErrorMessage(t, err));
     } finally {
       setBusy(false);
+      setConfirmForceFullSync(false);
     }
   }
 
@@ -359,13 +363,34 @@ export function WhatsAppConnectionSettings({
               {historySync?.status === "RUNNING" || historySync?.status === "QUEUED" ? (
                 <p>{t("manage.historySyncRunning")}</p>
               ) : null}
+              {historySync ? (
+                <p>
+                  {t("manage.historySyncModeHint", {
+                    mode:
+                      historySync.suggestedSyncMode === "INCREMENTAL"
+                        ? t("manage.historySyncModeIncremental")
+                        : t("manage.historySyncModeFull"),
+                  })}
+                </p>
+              ) : null}
+              {historySync?.lastSuccessfulSyncAt ? (
+                <p>
+                  {t("manage.historySyncLastAt", {
+                    when: new Date(historySync.lastSuccessfulSyncAt).toLocaleString(),
+                  })}
+                </p>
+              ) : null}
               {historySync && historySync.status !== "IDLE" ? (
                 <p>
                   {t("manage.historySyncStats", {
                     imported: historySync.messagesImported,
                     chats: historySync.chatsCompleted,
+                    skipped: historySync.chatsSkipped,
                   })}
                 </p>
+              ) : null}
+              {historySync?.completedWithSkips && historySync.status === "COMPLETED" ? (
+                <p>{t("manage.historySyncCompletedWithSkips")}</p>
               ) : null}
               {historySync?.status === "COMPLETED" ? <p>{t("manage.historySyncDone")}</p> : null}
               {historySync?.status === "FAILED" ? <p>{t("manage.historySyncFailed")}</p> : null}
@@ -377,6 +402,14 @@ export function WhatsAppConnectionSettings({
                   onClick={() => void runHistorySync()}
                 >
                   {t("manage.historySync")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={busy || historySync?.status === "RUNNING"}
+                  onClick={() => setConfirmForceFullSync(true)}
+                >
+                  {t("manage.historySyncForceFull")}
                 </Button>
                 {historySync?.status === "RUNNING" ? (
                   <Button
@@ -480,6 +513,17 @@ export function WhatsAppConnectionSettings({
               {t("manage.changeAccount")}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setConfirmChange(false)}>
+              {t("templates.back")}
+            </Button>
+          </div>
+        ) : null}
+        {confirmForceFullSync ? (
+          <div className={styles.confirm}>
+            <p>{t("manage.historySyncForceFullConfirm")}</p>
+            <Button type="button" variant="primary" onClick={() => void runHistorySync("FULL")}>
+              {t("manage.historySyncForceFull")}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setConfirmForceFullSync(false)}>
               {t("templates.back")}
             </Button>
           </div>

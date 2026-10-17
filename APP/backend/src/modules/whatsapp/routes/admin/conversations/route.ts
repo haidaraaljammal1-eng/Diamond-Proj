@@ -6,7 +6,13 @@ import { UuidIdParam } from "src/lib/http/common-schemas";
 import { commonErrorResponses, dataResponse, listResponse } from "src/lib/http/response";
 import { whatsappSendRateLimit } from "src/plugins/rate-limit";
 import { AppError } from "src/lib/errors/app-error";
+import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
 import { createWhatsAppConversationService } from "src/modules/whatsapp/whatsapp.conversation.service";
+import { createWhatsAppContactSyncService } from "src/modules/whatsapp/whatsapp.contact-sync.service";
+import {
+  readCachedConversationAvatar,
+  writeCachedConversationAvatar,
+} from "src/modules/whatsapp/whatsapp.avatar-cache";
 import { createWhatsAppCustomerService } from "src/modules/whatsapp/whatsapp.customer.service";
 import { createWhatsAppSendService } from "src/modules/whatsapp/whatsapp.send.service";
 import {
@@ -29,6 +35,7 @@ const T = ["WhatsApp"];
 export default async function whatsappConversationRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const conversations = createWhatsAppConversationService(fastify);
+  const contactSync = createWhatsAppContactSyncService(fastify);
   const send = createWhatsAppSendService(fastify);
   const customers = createWhatsAppCustomerService(fastify);
 
@@ -66,6 +73,42 @@ export default async function whatsappConversationRoutes(fastify: FastifyInstanc
       },
     },
     async (request) => ({ data: await conversations.getById(request.params.id, requireAuth(request)) }),
+  );
+
+  app.get(
+    "/:id/avatar",
+    {
+      schema: {
+        summary: "Lazy Whapi contact profile picture for a conversation (cached, no disk store)",
+        operationId: "getWhatsAppConversationAvatar",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_READ],
+        params: UuidIdParam,
+      },
+    },
+    async (request, reply) => {
+      const row = await fastify.prisma.whatsAppConversation.findFirst({
+        where: { id: request.params.id, connection: { status: { not: "DISCONNECTED" } } },
+        select: { id: true, connectionId: true },
+      });
+      if (!row) throw whatsappError.conversationNotFound();
+      const cached = readCachedConversationAvatar(row.connectionId, row.id);
+      if (cached) {
+        return reply
+          .header("Content-Type", cached.contentType)
+          .header("Cache-Control", "private, max-age=300")
+          .send(cached.body);
+      }
+      const fetched = await contactSync.fetchConversationAvatar(row.connectionId, row.id);
+      if (!fetched) {
+        return reply.status(404).send({ error: { code: "WHATSAPP_AVATAR_UNAVAILABLE" } });
+      }
+      writeCachedConversationAvatar(row.connectionId, row.id, fetched.body, fetched.contentType);
+      return reply
+        .header("Content-Type", fetched.contentType)
+        .header("Cache-Control", "private, max-age=300")
+        .send(fetched.body);
+    },
   );
 
   app.get(

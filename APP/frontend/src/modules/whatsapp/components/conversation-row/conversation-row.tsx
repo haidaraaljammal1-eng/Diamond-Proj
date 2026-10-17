@@ -10,6 +10,7 @@ import {
   toValidDate,
   unreadBadgeLabel,
 } from "../../utils/whatsapp-view-model";
+import { WhatsAppContactAvatar } from "../contact-avatar/contact-avatar";
 import styles from "./conversation-row.module.css";
 
 export function WhatsAppConversationRow({
@@ -24,14 +25,16 @@ export function WhatsAppConversationRow({
   const t = useTranslations("WhatsApp");
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
-  const title = conversationTitle(conversation.customerDisplayName, conversation.customerWaId);
+  const title = conversationTitle(
+    conversation.customerDisplayName,
+    conversation.customerWaId,
+    conversation.displayTitle,
+  );
   const preview = lastMessagePreviewKind(conversation.lastMessagePreview, conversation.lastMessageType);
   const previewText =
     preview.kind === "text" ? preview.text : t(`messageType.${preview.kind}`);
   const when = toValidDate(conversation.lastMessageAt);
   const unread = unreadBadgeLabel(conversation.unreadCount);
-  const initial = title.trim().charAt(0) || "#";
-
   function onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -49,9 +52,12 @@ export function WhatsAppConversationRow({
       data-testid="whatsapp-conversation-row"
       data-conversation-id={conversation.id}
     >
-      <span className={styles.avatar} aria-hidden="true">
-        {initial}
-      </span>
+      <WhatsAppContactAvatar
+        conversationId={conversation.id}
+        hasAvatar={conversation.hasAvatar}
+        fallbackLabel={title}
+        className={styles.avatar}
+      />
       <span className={styles.body}>
         <span className={styles.top}>
           <span className={styles.name}>{title}</span>

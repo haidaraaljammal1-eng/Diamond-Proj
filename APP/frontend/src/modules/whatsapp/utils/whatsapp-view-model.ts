@@ -39,7 +39,10 @@ export function connectionBanner(connection: WhatsAppConnectionDto | null): What
 export function conversationTitle(
   customerDisplayName: string | null | undefined,
   customerWaId: string,
+  displayTitle?: string | null,
 ): string {
+  const resolved = displayTitle?.trim();
+  if (resolved) return resolved;
   const name = customerDisplayName?.trim();
   return name && name.length > 0 ? name : customerWaId;
 }
@@ -92,6 +95,8 @@ function sameConversationPresentation(
   return (
     detail.customerWaId === listRow.customerWaId &&
     detail.customerDisplayName === listRow.customerDisplayName &&
+    detail.displayTitle === listRow.displayTitle &&
+    detail.hasAvatar === listRow.hasAvatar &&
     detail.customerLinked === listRow.customerLinked &&
     detail.lastMessagePreview === listRow.lastMessagePreview &&
     detail.lastMessageType === listRow.lastMessageType &&
@@ -113,6 +118,8 @@ export function mergeConversationListIntoDetail(
     ...detail,
     customerWaId: listRow.customerWaId,
     customerDisplayName: listRow.customerDisplayName,
+    displayTitle: listRow.displayTitle,
+    hasAvatar: listRow.hasAvatar,
     customerLinked: listRow.customerLinked,
     lastMessagePreview: listRow.lastMessagePreview,
     lastMessageType: listRow.lastMessageType,

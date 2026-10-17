@@ -11,6 +11,10 @@ import { evaluateMessagingEligibility } from "src/modules/whatsapp/whatsapp.elig
 import { createWhatsAppProvider } from "src/modules/whatsapp/whatsapp.provider";
 import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
 import {
+  providerContactIdForConversation,
+  type ConversationPresentationRow,
+} from "src/modules/whatsapp/whatsapp.conversation-presentation";
+import {
   toConversationDetail,
   toConversationListItem,
   toMessageDto,
@@ -27,7 +31,9 @@ type AuditWrite = (partial: Partial<AuditContext>) => void;
 
 const CONVERSATION_LIST_SELECT = {
   id: true,
+  connectionId: true,
   customerWaId: true,
+  providerChatId: true,
   customerDisplayName: true,
   lastMessagePreview: true,
   lastMessageType: true,
@@ -37,12 +43,12 @@ const CONVERSATION_LIST_SELECT = {
   lastReadAt: true,
   createdAt: true,
   customerId: true,
+  customer: { select: { name: true } },
   connection: { select: { displayPhoneNumber: true, verifiedName: true } },
 } as const;
 
 const CONVERSATION_DETAIL_SELECT = {
   ...CONVERSATION_LIST_SELECT,
-  connectionId: true,
   customerLinkedAt: true,
   customer: { select: { id: true, name: true, mobile: true, externalId: true } },
   connection: {
@@ -79,6 +85,35 @@ const MESSAGE_SELECT = {
 
 const CURRENT_STATUSES: WhatsAppConnectionStatus[] = [...WHATSAPP_CURRENT_STATUSES];
 
+async function loadAvatarFlags(
+  prisma: FastifyInstance["prisma"],
+  rows: ConversationPresentationRow[],
+): Promise<Map<string, boolean>> {
+  const byConnection = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const contactId = providerContactIdForConversation(row);
+    if (!contactId) continue;
+    const set = byConnection.get(row.connectionId) ?? new Set<string>();
+    set.add(contactId);
+    byConnection.set(row.connectionId, set);
+  }
+  const flags = new Map<string, boolean>();
+  for (const [connectionId, contactIds] of byConnection) {
+    const profiles = await prisma.whatsAppContactProfile.findMany({
+      where: {
+        connectionId,
+        providerContactId: { in: [...contactIds] },
+        hasProfilePicture: true,
+      },
+      select: { providerContactId: true },
+    });
+    for (const profile of profiles) {
+      flags.set(profile.providerContactId, true);
+    }
+  }
+  return flags;
+}
+
 export function createWhatsAppConversationService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
@@ -107,7 +142,11 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
           take,
         }),
     });
-    return { data: result.data.map(toConversationListItem), meta: result.meta };
+    const avatarByContactId = await loadAvatarFlags(prisma, result.data);
+    return {
+      data: result.data.map((row) => toConversationListItem(row, avatarByContactId)),
+      meta: result.meta,
+    };
   }
 
   async function messagingEligibility(conversation: {
@@ -163,10 +202,14 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
       select: CONVERSATION_DETAIL_SELECT,
     });
     if (!row) throw whatsappError.conversationNotFound();
+    const avatarByContactId = await loadAvatarFlags(prisma, [row]);
+    const listItem = toConversationListItem(row, avatarByContactId);
     return toConversationDetail(
       row,
       await messagingEligibility(row),
       await canExposeLinkedCustomer(auth, row.customerId),
+      listItem.displayTitle,
+      listItem.hasAvatar,
     );
   }
 
@@ -236,10 +279,14 @@ export function createWhatsAppConversationService(fastify: FastifyInstance) {
       entityId: conversationId,
       metadata: { conversationId },
     });
+    const avatarByContactId = await loadAvatarFlags(prisma, [result.updated]);
+    const listItem = toConversationListItem(result.updated, avatarByContactId);
     return toConversationDetail(
       result.updated,
       await messagingEligibility(result.updated),
       await canExposeLinkedCustomer(auth, result.updated.customerId),
+      listItem.displayTitle,
+      listItem.hasAvatar,
     );
   }
 

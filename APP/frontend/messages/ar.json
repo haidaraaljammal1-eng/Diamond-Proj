@@ -3299,7 +3299,14 @@
       "historySyncDone": "اكتملت مزامنة السجل",
       "historySyncFailed": "فشلت مزامنة السجل",
       "historySyncCancel": "إلغاء المزامنة",
-      "historySyncStats": "{imported} رسالة مستوردة · {chats} محادثة"
+      "historySyncStats": "{imported} رسالة مستوردة · {chats} محادثة · {skipped} محادثة متخطاة",
+      "historySyncModeHint": "المزامنة التالية ستستخدم وضع {mode} (يُحدد تلقائياً حسب نقاط التفتيش).",
+      "historySyncModeFull": "كامل",
+      "historySyncModeIncremental": "تزايدي",
+      "historySyncLastAt": "آخر مزامنة ناجحة: {when}",
+      "historySyncCompletedWithSkips": "اكتمل الاستيراد مع تخطي بعض المحادثات (سجل جزئي).",
+      "historySyncForceFull": "مزامنة كاملة إجبارية",
+      "historySyncForceFullConfirm": "إعادة استيراد كل المحادثات من البداية؟ قد يستغرق ذلك وقتاً أطول."
     },
     "customer": {
       "linked": "عميل مرتبط",

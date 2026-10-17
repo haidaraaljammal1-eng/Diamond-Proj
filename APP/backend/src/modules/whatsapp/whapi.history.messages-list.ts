@@ -38,15 +38,39 @@ function isBroadcastOrNewsletterChatId(chatId: string): boolean {
  * Classify Whapi `GET /messages/list/{chatId}` HTTP results.
  * Live QA: some listable `/chats` rows return 400 — treat as unsupported chat, not empty history.
  */
+function whapiErrorText(json: unknown): string {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return "";
+  const record = json as Record<string, unknown>;
+  const parts = [
+    record.error,
+    record.message,
+    record.reason,
+    record.detail,
+    (record.error as Record<string, unknown> | undefined)?.message,
+  ];
+  return parts
+    .map((value) => (typeof value === "string" ? value : ""))
+    .join(" ")
+    .toLowerCase();
+}
+
 export function classifyWhapiMessagesListHttpStatus(
   status: number,
   chatId: string,
+  json?: unknown,
 ): WhapiHistoryMessagesListClassification {
   if (status === 401 || status === 403) return { kind: "auth_error" };
   if (status === 404) {
     return { kind: "skip_chat", reasonCode: WHAPI_HISTORY_CHAT_SKIP.MESSAGES_LIST_NOT_FOUND };
   }
   if (status === 400) {
+    const errText = whapiErrorText(json);
+    if (/invalid|malformed|bad request|wrong/i.test(errText)) {
+      return {
+        kind: "skip_chat",
+        reasonCode: WHAPI_HISTORY_CHAT_SKIP.MESSAGES_LIST_INVALID_REQUEST,
+      };
+    }
     if (isWhapiGroupChatId(chatId) || isBroadcastOrNewsletterChatId(chatId)) {
       return { kind: "skip_chat", reasonCode: WHAPI_HISTORY_CHAT_SKIP.UNSUPPORTED_CHAT_ID };
     }

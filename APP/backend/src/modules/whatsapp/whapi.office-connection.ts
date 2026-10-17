@@ -25,6 +25,7 @@ import {
 } from "src/modules/whatsapp/whapi.config";
 import { encodeWhapiWebhookMaterial } from "src/modules/whatsapp/whapi.webhook-material";
 import { cancelActiveHistorySyncRuns } from "src/modules/whatsapp/whatsapp.history-sync.lifecycle";
+import { resetWhatsAppContactSyncState } from "src/modules/whatsapp/whatsapp.contact-sync.lifecycle";
 
 type AuditWrite = (partial: Partial<AuditContext>) => void;
 
@@ -171,6 +172,7 @@ export async function configureWhapiOfficeConnection(
         current.id,
         "WHATSAPP_HISTORY_SYNC_CONNECTION_REPLACED",
       );
+      await resetWhatsAppContactSyncState(tx, current.id);
       await tx.whatsAppConnection.update({
         where: { id: current.id },
         data: {

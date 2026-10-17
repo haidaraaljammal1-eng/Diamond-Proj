@@ -9,6 +9,8 @@ export async function resetWhatsAppTables(prisma: PrismaClient) {
   await prisma.whatsAppConnectionAttempt.deleteMany();
   await prisma.whatsAppHistorySyncRun.deleteMany();
   await prisma.whatsAppConnectionChatSyncCheckpoint.deleteMany();
+  await prisma.whatsAppContactProfile.deleteMany();
+  await prisma.whatsAppContactSyncState.deleteMany();
   await prisma.whatsAppConnection.deleteMany();
   await prisma.domainOutboxEvent.deleteMany({
     where: { eventType: { startsWith: "whatsapp." } },

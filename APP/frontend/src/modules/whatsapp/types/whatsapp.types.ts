@@ -1,6 +1,8 @@
 export type WhatsAppHistorySyncStatusDto = {
   runId: string | null;
   connectionId: string | null;
+  suggestedSyncMode: "FULL" | "INCREMENTAL";
+  lastSuccessfulSyncAt: string | null;
   status: "IDLE" | "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
   phase: "CHATS" | "MESSAGES" | "DONE" | null;
   chatsDiscovered: number;
@@ -204,6 +206,8 @@ export interface WhatsAppConversationListItemDto {
   id: string;
   customerWaId: string;
   customerDisplayName: string | null;
+  displayTitle: string;
+  hasAvatar: boolean;
   lastMessagePreview: string | null;
   lastMessageType: WhatsAppMessageType | null;
   lastMessageAt: string | null;

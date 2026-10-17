@@ -253,13 +253,13 @@ export default async function whatsappConnectionRoutes(fastify: FastifyInstance)
         entityType: "WhatsAppConnection",
         metadata: {
           execute: request.body.execute ?? true,
-          mode: request.body.mode ?? "FULL",
+          mode: request.body.mode ?? "auto",
         },
       });
       const data = await historySync.start(
         identity.id,
         request.body.execute ?? true,
-        request.body.mode ?? "FULL",
+        request.body.mode,
       );
       return { data };
     },
