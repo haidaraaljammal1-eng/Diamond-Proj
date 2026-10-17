@@ -76,6 +76,7 @@ function sleep(ms: number): Promise<void> {
 
 let historyClientOverride: WhapiHistoryClient | null = null;
 const providerRetryStreak = new Map<string, number>();
+const batchInFlight = new Set<string>();
 
 function clearProviderRetryStreak(runId: string): void {
   providerRetryStreak.delete(runId);
@@ -309,6 +310,16 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
   }
 
   async function processHistorySyncBatch(runId: string): Promise<boolean> {
+    if (batchInFlight.has(runId)) return true;
+    batchInFlight.add(runId);
+    try {
+      return await processHistorySyncBatchInner(runId);
+    } finally {
+      batchInFlight.delete(runId);
+    }
+  }
+
+  async function processHistorySyncBatchInner(runId: string): Promise<boolean> {
     const run = await prisma.whatsAppHistorySyncRun.findUnique({ where: { id: runId } });
     if (!run || run.status !== "RUNNING") return false;
     if (!(await isConnectionActiveForRun(run.connectionId))) {

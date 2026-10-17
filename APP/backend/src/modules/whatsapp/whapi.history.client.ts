@@ -55,7 +55,7 @@ export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClien
       const encoded = encodeURIComponent(chatId);
       const path = `/messages/list/${encoded}?count=${count}&offset=${offset}&sort=${sort}`;
       const { status, json } = await client.getJson(path);
-      if (status === 404) {
+      if (status === 404 || status === 400) {
         return { items: [], pageSize: count, hasMore: false };
       }
       if (status < 200 || status >= 300) {

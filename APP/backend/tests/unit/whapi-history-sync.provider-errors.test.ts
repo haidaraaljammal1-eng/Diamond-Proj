@@ -10,6 +10,7 @@ describe("whapi history provider errors", () => {
     assert.equal(isRetriableWhapiHistoryError(whapiHistoryHttpError("chats", 429)), true);
     assert.equal(isRetriableWhapiHistoryError(whapiHistoryHttpError("messages", 503)), true);
     assert.equal(isRetriableWhapiHistoryError(whapiHistoryHttpError("chats", 400)), false);
+    assert.equal(isRetriableWhapiHistoryError(whapiHistoryHttpError("messages", 400)), false);
     assert.equal(isRetriableWhapiHistoryError(new Error("other")), false);
   });
 });
