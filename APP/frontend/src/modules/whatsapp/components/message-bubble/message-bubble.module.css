@@ -134,3 +134,19 @@
   max-height: 70vh;
   margin: 0 auto;
 }
+
+.lightboxSave {
+  display: inline-flex;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--diamond-hair);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--diamond-champagne);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.lightboxSave:hover {
+  border-color: rgba(201, 161, 92, 0.45);
+}

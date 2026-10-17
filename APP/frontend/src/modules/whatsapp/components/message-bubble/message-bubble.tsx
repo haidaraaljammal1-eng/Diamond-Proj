@@ -8,7 +8,13 @@ import { Icon } from "@/shared/components/ui/icon";
 import { fetchWhatsAppMediaObjectUrl } from "../../api/whatsapp.api";
 import type { WhatsAppMessageDto, WhatsAppMessageType } from "../../types/whatsapp.types";
 import { messageTimestamp, outboundUiStatus, toValidDate } from "../../utils/whatsapp-view-model";
+import {
+  detectLocalSaveCapability,
+  localSaveStatus,
+  subscribeLocalSave,
+} from "../../utils/whatsapp-local-save";
 import { useWhatsApp } from "../../hooks/use-whatsapp";
+import { WhatsAppVoiceMessagePlayer } from "../voice-message-player/voice-message-player";
 import styles from "./message-bubble.module.css";
 
 const PLACEHOLDER_ICONS: Record<Exclude<WhatsAppMessageType, "TEXT" | "TEMPLATE">, string> = {
@@ -44,7 +50,10 @@ function ProtectedMedia({
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [preview, setPreview] = useState(false);
+  const [showManualSave, setShowManualSave] = useState(false);
   const voice = kind === "AUDIO" && message.voiceNote === true;
+  const inboundImage =
+    message.direction === "INBOUND" && (kind === "IMAGE" || kind === "STICKER");
 
   useEffect(() => {
     if (simulation || !message.hasProtectedMedia || message.mediaExpired) return;
@@ -69,6 +78,18 @@ function ProtectedMedia({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [attempt, message.id, message.hasProtectedMedia, message.mediaExpired, simulation]);
+
+  useEffect(() => {
+    if (!inboundImage) return;
+    const sync = () => {
+      void localSaveStatus().then((status) => {
+        const capability = detectLocalSaveCapability();
+        setShowManualSave(capability !== "directory" || status !== "configured");
+      });
+    };
+    sync();
+    return subscribeLocalSave(sync);
+  }, [inboundImage]);
 
   if (simulation) {
     return (
@@ -98,19 +119,20 @@ function ProtectedMedia({
     );
   }
   if (!url) return <p className={styles.placeBody}>{t("message.mediaLoading")}</p>;
-  const showDownload = !(kind === "AUDIO" && voice);
-  const download = showDownload ? (
+
+  const showInlineDownload = !inboundImage && !(kind === "AUDIO" && voice);
+  const download = showInlineDownload ? (
     <a className={styles.download} href={url} download={message.mediaFilename || "file"}>
       {t("media.download")}
     </a>
   ) : null;
+
   if (kind === "IMAGE" || kind === "STICKER") {
     return (
       <>
         <button type="button" className={styles.previewButton} onClick={() => setPreview(true)}>
           <img className={styles.mediaImg} src={url} alt={message.caption || t(`messageType.${kind}`)} />
         </button>
-        {download}
         <Dialog
           open={preview}
           onClose={() => setPreview(false)}
@@ -119,16 +141,26 @@ function ProtectedMedia({
           size="xl"
         >
           <img className={styles.lightbox} src={url} alt={message.caption || t(`messageType.${kind}`)} />
+          {showManualSave ? (
+            <a
+              className={styles.lightboxSave}
+              href={url}
+              download={message.mediaFilename || "image"}
+              data-testid="whatsapp-image-manual-save"
+            >
+              {t("media.saveImage")}
+            </a>
+          ) : null}
         </Dialog>
       </>
     );
   }
   if (kind === "AUDIO") {
     return (
-      <div data-testid={voice ? "whatsapp-voice-player" : "whatsapp-audio-player"}>
-        <audio className={styles.player} controls preload="metadata" src={url} />
-        {download}
-      </div>
+      <WhatsAppVoiceMessagePlayer
+        src={url}
+        testId={voice ? "whatsapp-voice-player" : "whatsapp-audio-player"}
+      />
     );
   }
   if (kind === "VIDEO") {

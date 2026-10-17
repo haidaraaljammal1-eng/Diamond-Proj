@@ -3253,7 +3253,11 @@
       "sendVoice": "Send voice note",
       "micDenied": "Microphone permission is required to record a voice note.",
       "micMissing": "This browser cannot record a voice note. You can still attach an audio file.",
-      "recording": "Recording"
+      "recording": "Recording",
+      "playVoice": "Play voice message",
+      "pauseVoice": "Pause voice message",
+      "seekVoice": "Seek voice message",
+      "saveImage": "Save image"
     },
     "localSave": {
       "label": "Save WhatsApp Media Automatically",

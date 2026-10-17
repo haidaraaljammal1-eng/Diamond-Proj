@@ -1,0 +1,98 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 320px);
+  min-width: 0;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 161, 92, 0.28);
+  background: linear-gradient(165deg, rgba(255, 253, 248, 0.96), rgba(242, 224, 180, 0.22));
+  box-shadow: 0 2px 8px rgba(38, 32, 21, 0.06);
+}
+
+.play {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 161, 92, 0.45);
+  background: rgba(201, 161, 92, 0.16);
+  color: var(--diamond-champagne);
+  cursor: pointer;
+}
+
+.play:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.play:focus-visible {
+  outline: 2px solid var(--diamond-gold-hi);
+  outline-offset: 2px;
+}
+
+.track {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wave {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(201, 161, 92, 0.18);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 0;
+  background: linear-gradient(90deg, var(--diamond-gold), var(--diamond-gold-hi));
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.seek {
+  position: absolute;
+  inset: -6px 0;
+  width: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--diamond-muted);
+  direction: ltr;
+}
+
+.status {
+  font-size: 10px;
+  color: var(--diamond-muted);
+}
+
+.error {
+  color: #df5b52;
+}
+
+.hiddenAudio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

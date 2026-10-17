@@ -602,7 +602,8 @@ describe("manual outbound send UX", () => {
     assert.doesNotMatch(chatPane, /WhatsAppCustomerStrip/);
     assert.doesNotMatch(chatPane, /WhatsAppConnectionStatusLine/);
     const bubble = readFileSync(join(moduleDir, "components/message-bubble/message-bubble.tsx"), "utf8");
-    assert.match(bubble, /showDownload/);
+    assert.match(bubble, /WhatsAppVoiceMessagePlayer/);
+    assert.match(bubble, /inboundImage/);
   });
 
   it("orders messages by provider time regardless of arrival order", () => {
