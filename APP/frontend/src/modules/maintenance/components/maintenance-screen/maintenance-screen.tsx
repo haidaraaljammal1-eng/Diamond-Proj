@@ -20,6 +20,7 @@ import {
 } from "../../hooks/use-maintenance";
 import type { MaintenanceOrderDetailDto } from "../../types/maintenance.types";
 import { emptyStateKind } from "../../utils/maintenance-filters";
+import { isMaintenanceCostMissing } from "../../utils/maintenance-cost";
 import { resolveMaintenanceErrorMessage } from "../../utils/resolve-maintenance-error";
 import { MaintenanceDetailDialog } from "../maintenance-detail/maintenance-detail-dialog";
 import { MaintenanceFilters } from "../maintenance-filters/maintenance-filters";
@@ -75,12 +76,27 @@ export function MaintenanceScreen() {
     useState<MaintenanceOrderDetailDto | null>(null);
   const [cancelTarget, setCancelTarget] =
     useState<MaintenanceOrderDetailDto | null>(null);
+  const [focusCostOnEdit, setFocusCostOnEdit] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const showNotice = useCallback((message: string) => {
     setNotice(message);
     window.setTimeout(() => setNotice(null), 3200);
   }, []);
+
+  const requestCompleteMaintenance = useCallback(
+    (order: MaintenanceOrderDetailDto) => {
+      if (isMaintenanceCostMissing(order.cost)) {
+        showNotice(t("complete.costRequired"));
+        setCompleteTarget(null);
+        setEditTarget(order);
+        setFocusCostOnEdit(true);
+        return;
+      }
+      setCompleteTarget(order);
+    },
+    [showNotice, t],
+  );
 
   useEffect(() => {
     if (deepLinkHandled.current || !isAllowed) return;
@@ -324,7 +340,7 @@ export function MaintenanceScreen() {
             canManage={canManage}
             onOpen={(order) => setDetailId(order.id)}
             onEdit={setEditTarget}
-            onComplete={setCompleteTarget}
+            onComplete={requestCompleteMaintenance}
             onCancel={setCancelTarget}
           />
           {meta && meta.totalPages > 1 && filters.status !== "all" ? (
@@ -428,7 +444,7 @@ export function MaintenanceScreen() {
         }}
         onComplete={(order) => {
           setDetailId(null);
-          setCompleteTarget(order);
+          requestCompleteMaintenance(order);
         }}
         onCancel={(order) => {
           setDetailId(null);
@@ -437,8 +453,15 @@ export function MaintenanceScreen() {
       />
       <EditMaintenanceDialog
         order={editTarget}
-        onClose={() => setEditTarget(null)}
-        onSuccess={() => showNotice(t("notice.updated"))}
+        focusCost={focusCostOnEdit}
+        onClose={() => {
+          setEditTarget(null);
+          setFocusCostOnEdit(false);
+        }}
+        onSuccess={() => {
+          setFocusCostOnEdit(false);
+          showNotice(t("notice.updated"));
+        }}
       />
       <CompleteMaintenanceDialog
         order={completeTarget}

@@ -301,7 +301,7 @@ export async function submitPublicRentalForm(
 ): Promise<PublicRentalContext> {
   const response = await apiRequest<PublicRentalContext>(
     `${CONTRACTS_PATH}/rental/${token}/form`,
-    { method: "POST", body: payload, publicRequest: true },
+    publicRentalRequestOptions({ method: "POST", body: payload }),
   );
   return response.data;
 }

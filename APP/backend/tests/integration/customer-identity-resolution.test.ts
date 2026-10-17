@@ -296,6 +296,84 @@ if (!RUN) {
       assert.notEqual(customerA, customerB);
     });
 
+    test("public form submit succeeds when passport and licence match different customers", async () => {
+      const { normalizeIdentifier } = await import("src/lib/security/normalize");
+      const passport = normalizeIdentifier(`pp-split-${run}`);
+      const license = normalizeIdentifier(`dl-split-${run}`);
+      await prisma.customer.create({
+        data: {
+          name: "Passport holder",
+          mobile: `+9715009${run.slice(-5)}8`,
+          passportNumber: passport,
+          drivingLicenseNumber: normalizeIdentifier(`dl-other-${run}`),
+          drivingLicenseExpiry: new Date("2031-06-01"),
+        },
+      });
+      await prisma.customer.create({
+        data: {
+          name: "Licence holder",
+          mobile: `+9715009${run.slice(-5)}9`,
+          passportNumber: normalizeIdentifier(`pp-other-${run}`),
+          drivingLicenseNumber: license,
+          drivingLicenseExpiry: new Date("2031-06-01"),
+        },
+      });
+
+      const passportApi = createFakePassportNumberApi();
+      passportApi.setPassport({ passportNumber: passport });
+      await passportApi.install();
+      await fakeOcr({ licenseNumber: license, expiryDate: "2031-06-01" });
+      const ctx = await offerToken();
+      const dl = multipart("dl.png", "image/png", PNG);
+      const pp = multipart("pp.png", "image/png", PNG);
+      assert.equal(
+        (
+          await app.inject({
+            method: "POST",
+            url: `/contracts/rental/${ctx.token}/driving-license`,
+            headers: dl.headers,
+            payload: dl.payload,
+          })
+        ).statusCode,
+        200,
+      );
+      assert.equal(
+        (
+          await app.inject({
+            method: "POST",
+            url: `/contracts/rental/${ctx.token}/passport`,
+            headers: pp.headers,
+            payload: pp.payload,
+          })
+        ).statusCode,
+        200,
+      );
+      await passportApi.clear();
+
+      const rentalCtx = await app.inject({ method: "GET", url: `/contracts/rental/${ctx.token}` });
+      const body = rentalCtx.json().data;
+      const form = await app.inject({
+        method: "POST",
+        url: `/contracts/rental/${ctx.token}/form`,
+        payload: {
+          name: "Haidara osama Aljammal",
+          mobile: "+971504554555",
+          nationality: "Philippines",
+          passportNumber,
+          drivingLicenseNumber: license,
+          drivingLicenseExpiryDate: "2028-01-30",
+          licenseDocumentId: body.licenseVerification.activeDocumentId,
+          passportDocumentId: body.identity.passport.activeDocumentId,
+        },
+      });
+      assert.equal(form.statusCode, 200, form.body);
+      const contract = await prisma.contract.findUnique({ where: { id: ctx.contractId } });
+      assert.ok(contract?.customerId);
+      const customer = await prisma.customer.findUnique({ where: { id: contract!.customerId! } });
+      assert.equal(customer?.passportNumber, passport);
+      assert.equal(customer?.drivingLicenseNumber, license);
+    });
+
     test("fails closed on conflicting strong identifiers", async () => {
       const { normalizeIdentifier } = await import("src/lib/security/normalize");
       const { withTransaction } = await import("src/lib/db/transaction");

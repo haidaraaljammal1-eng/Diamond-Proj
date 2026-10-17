@@ -26,6 +26,7 @@ import type {
 } from "../types/public-rental.types";
 import { isLinkGoneReason, uiStageFromFlowStep } from "../utils/flow-step";
 import { publicRentalErrorReason } from "../utils/resolve-public-rental-error";
+import { syncFormPayloadWithContext } from "../utils/sync-form-payload-with-context";
 
 /** In-memory public rental state. Never persist the rental or status token. */
 export type PublicRentalLoadStatus = "idle" | "loading" | "ready" | "error";
@@ -210,7 +211,9 @@ export const usePublicRentalStore = create<PublicRentalState>((set, get) => ({
     if (!token) return false;
     set({ formPending: true, error: null });
     try {
-      const context = await submitPublicRentalForm(token, payload);
+      const fresh = await getPublicRental(token);
+      const synced = syncFormPayloadWithContext(payload, fresh);
+      const context = await submitPublicRentalForm(token, synced);
       set({ context, formPending: false, status: "ready", error: null });
       return true;
     } catch (error) {

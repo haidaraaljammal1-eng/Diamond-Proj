@@ -1,10 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  formatStatementPeriodDisplayRange,
   resolveFinanceStatementBusinessToday,
   resolveFinanceStatementPeriod,
 } from "src/modules/finance/finance-statement-period";
 import { resolveBusinessDay } from "src/modules/reports/periods";
+
+test("formatStatementPeriodDisplayRange uses forward arrow between dates", () => {
+  const range = formatStatementPeriodDisplayRange("2026-10-14", "2026-10-18");
+  assert.equal(range, "2026-10-14 → 2026-10-18");
+});
 
 test("TODAY uses business calendar day [start, next day)", () => {
   const period = resolveFinanceStatementPeriod({ periodType: "TODAY", locale: "en" });

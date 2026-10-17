@@ -166,6 +166,7 @@ export function DateRangePicker({
       onOpenChange={handleOpenChange}
       disabled={disabled}
       className={[styles.root, className ?? ""].filter(Boolean).join(" ")}
+      panelClassName={styles.popoverPanel}
       maxHeight={twoMonths ? 520 : 460}
       trigger={({ ref, id, ...triggerProps }) => (
         <>
@@ -192,6 +193,7 @@ export function DateRangePicker({
         </>
       )}
     >
+      <div className={styles.panelShell}>
       <div
         className={[
           styles.panelBody,
@@ -286,6 +288,7 @@ export function DateRangePicker({
           </Button>
         </div>
       </footer>
+      </div>
     </Popover>
   );
 }

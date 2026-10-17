@@ -82,10 +82,11 @@ describe("Dashboard company scope", () => {
     assert.ok(store.includes("overview: null"), "company switch must drop stale overview");
   });
 
-  it("fills the reserved slot with the owner feature image", () => {
+  it("fills the reserved slot with stacked owner feature banners", () => {
     const slot = read("components/dashboard-reserved-slot/dashboard-reserved-slot.tsx");
     const slotStyles = read("components/dashboard-reserved-slot/dashboard-reserved-slot.module.css");
-    assert.ok(slot.includes("/dashboard/owner-feature-panel.png"));
+    assert.ok(slot.includes("/dashboard/owner-feature-panel-top.png"));
+    assert.ok(slot.includes("/dashboard/owner-feature-panel-bottom.png"));
     assert.ok(slotStyles.includes("object-fit: cover"));
   });
 

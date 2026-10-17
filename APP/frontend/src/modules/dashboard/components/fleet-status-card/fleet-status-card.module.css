@@ -1,13 +1,13 @@
 .card {
   display: flex;
   flex-direction: column;
+  align-self: start;
+  width: 100%;
 }
 
 .body {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  justify-content: center;
   gap: 10px;
   padding-top: 4px;
 }

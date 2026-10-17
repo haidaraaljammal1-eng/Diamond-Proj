@@ -18,6 +18,8 @@ if (!RUN) {
   );
 } else {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL!;
+  // Legacy permission seeds in this file; avoid functional-route requirements from local .env.
+  process.env.FUNCTIONAL_RBAC_V2_ENABLED = "false";
   let app: FastifyInstance;
   let prisma: PrismaClient;
   const run = Date.now().toString(36).toUpperCase();
@@ -125,6 +127,17 @@ if (!RUN) {
       headers: auth(adminToken),
       payload,
     });
+    return res;
+  }
+
+  async function patchMaintenanceCost(orderId: number, cost: number) {
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/maintenance/${orderId}`,
+      headers: auth(adminToken),
+      payload: { cost },
+    });
+    assert.equal(res.statusCode, 200, res.body);
     return res;
   }
 
@@ -388,6 +401,7 @@ if (!RUN) {
       url: `/maintenance/${orderId}/ready`,
       headers: auth(adminToken),
     });
+    await patchMaintenanceCost(orderId, 120);
 
     const completeRes = await app.inject({
       method: "POST",
@@ -637,6 +651,92 @@ if (!RUN) {
     assert.equal(completeRes.json().data.status, "completed");
   });
 
+  test("complete without cost is rejected and leaves order and vehicle unchanged", async () => {
+    const vehicle = await createVehicle({
+      vehicleName: "Cost Required Vehicle",
+      plateNumber: `M ${run} CR`,
+      modelYear: 2024,
+      color: "White",
+    });
+    const created = await createMaintenance({
+      vehicleId: vehicle.id,
+      issueDescription: "Awaiting invoice before close.",
+      maintenanceType: "mechanical",
+      startMode: "now",
+    });
+    assert.equal(created.statusCode, 201, created.body);
+    const orderId = created.json().data.id as number;
+    await app.inject({
+      method: "POST",
+      url: `/maintenance/${orderId}/ready`,
+      headers: auth(adminToken),
+    });
+
+    const completeRes = await app.inject({
+      method: "POST",
+      url: `/maintenance/${orderId}/complete`,
+      headers: auth(adminToken),
+    });
+    assert.equal(completeRes.statusCode, 422, completeRes.body);
+    assert.equal(
+      completeRes.json().error.context.reason,
+      "MAINTENANCE_COST_REQUIRED",
+    );
+
+    const orderRow = await prisma.maintenanceOrder.findUniqueOrThrow({
+      where: { id: orderId },
+    });
+    assert.equal(orderRow.status, "READY_FOR_PICKUP");
+    assert.equal(orderRow.completedAt, null);
+    assert.equal(orderRow.cost, null);
+
+    const vehicleRow = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: vehicle.id },
+    });
+    assert.equal(vehicleRow.operationalStatus, "SERVICE");
+
+    const ledgerCount = await prisma.financialLedgerEntry.count({
+      where: { maintenanceOrderId: orderId, kind: "MAINTENANCE_EXPENSE" },
+    });
+    assert.equal(ledgerCount, 0);
+
+    const outboxCount = await prisma.domainOutboxEvent.count({
+      where: { dedupeKey: `maintenance.completed:${orderId}` },
+    });
+    assert.equal(outboxCount, 0);
+  });
+
+  test("complete with zero cost succeeds", async () => {
+    const vehicle = await createVehicle({
+      vehicleName: "Zero Cost Vehicle",
+      plateNumber: `M ${run} ZC`,
+      modelYear: 2023,
+      color: "Gray",
+    });
+    const created = await createMaintenance({
+      vehicleId: vehicle.id,
+      issueDescription: "Warranty work at zero charge.",
+      maintenanceType: "other",
+      startMode: "now",
+      cost: 0,
+    });
+    const orderId = created.json().data.id as number;
+    await app.inject({
+      method: "POST",
+      url: `/maintenance/${orderId}/ready`,
+      headers: auth(adminToken),
+    });
+    const completeRes = await app.inject({
+      method: "POST",
+      url: `/maintenance/${orderId}/complete`,
+      headers: auth(adminToken),
+    });
+    assert.equal(completeRes.statusCode, 200, completeRes.body);
+    assert.equal(completeRes.json().data.cost, 0);
+    assert.equal(completeRes.json().data.status, "completed");
+    assert.equal(completeRes.json().data.vehicle.operationalStatus, "available");
+  });
+
   test("completed maintenance appears in history list with cost", async () => {
     const vehicle = await createVehicle({
       vehicleName: "History Vehicle",
@@ -715,6 +815,7 @@ if (!RUN) {
       url: `/maintenance/${orderId}/ready`,
       headers: auth(adminToken),
     });
+    await patchMaintenanceCost(orderId, 50);
     await app.inject({
       method: "POST",
       url: `/maintenance/${orderId}/complete`,
@@ -803,6 +904,7 @@ if (!RUN) {
       url: `/maintenance/${orderId}/ready`,
       headers: auth(adminToken),
     });
+    await patchMaintenanceCost(orderId, 75);
     const completeRes = await app.inject({
       method: "POST",
       url: `/maintenance/${orderId}/complete`,
@@ -1007,6 +1109,7 @@ if (!RUN) {
       url: `/maintenance/${order.id}/ready`,
       headers: auth(adminToken),
     });
+    await patchMaintenanceCost(order.id, 200);
     const completeRes = await app.inject({
       method: "POST",
       url: `/maintenance/${order.id}/complete`,

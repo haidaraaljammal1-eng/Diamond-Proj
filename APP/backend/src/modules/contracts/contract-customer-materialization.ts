@@ -170,6 +170,62 @@ export async function resolveCustomerIdFromIdentity(
   return customerId;
 }
 
+/**
+ * First public form save on a contract with no customer yet: reuse one unambiguous
+ * match; when passport and licence point at different historical customers, bind a
+ * new customer from the reviewed form instead of failing closed.
+ */
+export async function resolveCustomerIdFromIdentityForPublicForm(
+  tx: Tx,
+  materialized: MaterializableCustomer,
+): Promise<number> {
+  const strong = extractStrongIdentity(materialized);
+  if (!hasStrongIdentity(strong)) {
+    throw contractError.customerIdentityAmbiguous();
+  }
+
+  await acquireStrongIdentityMaterializationLocks(tx, materialized);
+
+  const candidateSets: number[][] = [];
+  if (strong.identityNumber) {
+    candidateSets.push(await findCustomersByStrongField(tx, "identityNumber", strong.identityNumber));
+  }
+  if (strong.passportNumber) {
+    candidateSets.push(await findCustomersByStrongField(tx, "passportNumber", strong.passportNumber));
+  }
+  if (strong.drivingLicenseNumber) {
+    candidateSets.push(
+      await findCustomersByStrongField(tx, "drivingLicenseNumber", strong.drivingLicenseNumber),
+    );
+  }
+
+  const nonEmpty = candidateSets.filter((set) => set.length > 0);
+  if (nonEmpty.length === 0) {
+    const created = await tx.customer.create({
+      data: customerCreateData(materialized),
+    });
+    return created.id;
+  }
+
+  const union = new Set(nonEmpty.flat());
+  if (union.size > 1) {
+    const created = await tx.customer.create({
+      data: customerCreateData(materialized),
+    });
+    return created.id;
+  }
+
+  const customerId = [...union][0];
+  if (customerId == null) {
+    throw contractError.customerIdentityAmbiguous();
+  }
+  await tx.customer.update({
+    where: { id: customerId },
+    data: customerEnrichData(materialized),
+  });
+  return customerId;
+}
+
 function customerCreateData(materialized: MaterializableCustomer): Prisma.CustomerCreateInput {
   const strong = extractStrongIdentity(materialized);
   return {
@@ -232,15 +288,18 @@ function materializedFromSnapshot(snapshot: unknown): MaterializableCustomer | n
 
 /**
  * Strong-identity resolution for public form submission and signing.
- * Reuses an existing Customer when unambiguous; fails closed on conflict.
+ * Reuses an existing Customer when unambiguous; first save creates on conflict.
  */
 export async function resolvePublicFormCustomerId(
   tx: Tx,
-  contractId: string,
+  _contractId: string,
   materialized: MaterializableCustomer,
   existingCustomerId: number | null,
 ): Promise<number> {
-  const resolvedId = await resolveCustomerIdFromIdentity(tx, materialized);
+  const resolvedId =
+    existingCustomerId == null
+      ? await resolveCustomerIdFromIdentityForPublicForm(tx, materialized)
+      : await resolveCustomerIdFromIdentity(tx, materialized);
 
   if (existingCustomerId != null && existingCustomerId !== resolvedId) {
     throw contractError.customerIdentityAmbiguous();
