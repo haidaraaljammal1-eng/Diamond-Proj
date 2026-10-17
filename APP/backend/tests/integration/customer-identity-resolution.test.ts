@@ -64,8 +64,12 @@ if (!RUN) {
     }
 
     async function seedIdentity(rentalToken: string, licenseNumber: string) {
+      const { normalizeIdentifier } = await import("src/lib/security/normalize");
       await fakeOcr({ licenseNumber, expiryDate: "2031-06-01" });
       const passportApi = createFakePassportNumberApi();
+      passportApi.setPassport({
+        passportNumber: normalizeIdentifier(`pp-${licenseNumber}-${rentalToken.slice(0, 8)}`),
+      });
       await passportApi.install();
       const dl = multipart("dl.png", "image/png", PNG);
       const pp = multipart("pp.png", "image/png", PNG);
