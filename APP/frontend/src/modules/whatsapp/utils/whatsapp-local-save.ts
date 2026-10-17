@@ -1,6 +1,11 @@
 import { fetchWhatsAppMediaBlob } from "../api/whatsapp.api";
 import type { WhatsAppMessageDto } from "../types/whatsapp.types";
-import { detectLocalSaveCapability, isPickerAbort, type LocalSaveCapability } from "./whatsapp-local-save-capability";
+import {
+  detectLocalSaveCapability,
+  initialLocalSaveToolbarVisible,
+  isPickerAbort,
+  type LocalSaveCapability,
+} from "./whatsapp-local-save-capability";
 
 export { isPickerAbort };
 
@@ -12,7 +17,7 @@ const SAVED_IDS_KEY = "savedMessageIds";
 const MAX_SAVED_IDS = 2000;
 const BACKLOG_BATCH = 4;
 
-export { detectLocalSaveCapability };
+export { detectLocalSaveCapability, initialLocalSaveToolbarVisible };
 export type { LocalSaveCapability };
 export type LocalSaveStatus = "off" | "configured" | "permission" | "manual" | "iphone";
 

@@ -1,5 +1,10 @@
 export type LocalSaveCapability = "directory" | "manual" | "iphone";
 
+/** Matches WhatsAppLocalSaveToolbar first paint on server and before hydration. */
+export function initialLocalSaveToolbarVisible(): boolean {
+  return false;
+}
+
 export function isPickerAbort(error: unknown): boolean {
   return (
     (error instanceof DOMException && error.name === "AbortError") ||

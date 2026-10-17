@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { detectLocalSaveCapability } from "./whatsapp-local-save-capability.ts";
-import { isPickerAbort } from "./whatsapp-local-save-capability.ts";
+import {
+  detectLocalSaveCapability,
+  initialLocalSaveToolbarVisible,
+  isPickerAbort,
+} from "./whatsapp-local-save-capability.ts";
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
@@ -20,6 +23,10 @@ afterEach(() => {
 });
 
 describe("local save capability", { concurrency: false }, () => {
+  it("hides the local-save toolbar on the server and before hydration", () => {
+    assert.equal(initialLocalSaveToolbarVisible(), false);
+  });
+
   it("does not read window while the page is rendering on the server", () => {
     Reflect.deleteProperty(globalThis, "window");
     Object.defineProperty(globalThis, "navigator", {
