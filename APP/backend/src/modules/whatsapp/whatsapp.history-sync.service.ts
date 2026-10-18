@@ -38,6 +38,7 @@ import {
   connectionHasChatSyncCheckpoints,
 } from "src/modules/whatsapp/whatsapp.history-sync.checkpoints";
 import {
+  historySyncFailureCode,
   isRetriableWhapiHistoryError,
   isWhapiHistoryAuthError,
 } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
@@ -726,11 +727,8 @@ export function createWhatsAppHistorySyncService(deps: FastifyInstance | History
           return true;
         }
       }
-      const code =
-        err instanceof Error && err.message.startsWith("whapi_")
-          ? "WHATSAPP_HISTORY_SYNC_PROVIDER_ERROR"
-          : "WHATSAPP_HISTORY_SYNC_FAILED";
-      log.warn({ err, runId }, "whatsapp history sync: batch failed");
+      const code = historySyncFailureCode(err);
+      log.warn({ err, runId, lastErrorCode: code }, "whatsapp history sync: batch failed");
       clearProviderRetryStreak(runId);
       await prisma.whatsAppHistorySyncRun.update({
         where: { id: runId },

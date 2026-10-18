@@ -1,4 +1,6 @@
 import { WhapiClient } from "src/modules/whatsapp/providers/whapi.client";
+import { WHAPI_HISTORY_GET_TIMEOUT_MS } from "src/modules/whatsapp/whapi.config";
+import { whapiHistoryHttpError } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -44,9 +46,9 @@ export function createWhapiGroupsClient(client: WhapiClient): WhapiGroupsClient 
   return {
     async listGroups(count, offset) {
       const path = `/groups?count=${count}&offset=${offset}`;
-      const { status, json } = await client.getJson(path);
+      const { status, json } = await client.getJson(path, WHAPI_HISTORY_GET_TIMEOUT_MS);
       if (status < 200 || status >= 300) {
-        throw new Error(`whapi_groups_http_${status}`);
+        throw whapiHistoryHttpError("groups", status);
       }
       const items = extractArray(json, ["groups", "data"]).filter(
         (row): row is Record<string, unknown> => asRecord(row) !== null,

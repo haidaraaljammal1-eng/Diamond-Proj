@@ -16,6 +16,8 @@ export const WHAPI_MEDIA_MAX_BYTES = {
 } as const;
 
 export const WHAPI_GET_TIMEOUT_MS = 8_000;
+/** Whapi history list APIs (chats/groups/messages) — allow slow channel scans. */
+export const WHAPI_HISTORY_GET_TIMEOUT_MS = 60_000;
 export const WHAPI_SEND_TIMEOUT_MS = 30_000;
 export const WHAPI_WEBHOOK_MAX_BYTES = 512_000;
 

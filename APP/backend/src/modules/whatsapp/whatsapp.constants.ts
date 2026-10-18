@@ -11,7 +11,7 @@ export const WHATSAPP_HISTORY_SYNC_MESSAGES_PAGE = 100;
 export const WHATSAPP_HISTORY_SYNC_MESSAGES_PER_TICK = 40;
 export const WHATSAPP_HISTORY_SYNC_INTER_REQUEST_MS = 250;
 /** Consecutive retriable Whapi failures per run before marking FAILED. */
-export const WHATSAPP_HISTORY_SYNC_MAX_PROVIDER_RETRIES = 5;
+export const WHATSAPP_HISTORY_SYNC_MAX_PROVIDER_RETRIES = 12;
 export const WHATSAPP_HISTORY_SYNC_PROVIDER_BACKOFF_BASE_MS = 750;
 /** Overlap window when catching up incremental messages (dedupe-safe). */
 export const WHATSAPP_HISTORY_SYNC_INCREMENTAL_OVERLAP_MS = 5 * 60 * 1000;

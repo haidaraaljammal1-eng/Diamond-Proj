@@ -1,4 +1,5 @@
 import { WhapiClient } from "src/modules/whatsapp/providers/whapi.client";
+import { WHAPI_HISTORY_GET_TIMEOUT_MS } from "src/modules/whatsapp/whapi.config";
 import { createWhapiGroupsClient } from "src/modules/whatsapp/whapi.groups.client";
 import { classifyWhapiMessagesListHttpStatus } from "src/modules/whatsapp/whapi.history.messages-list";
 import { whapiHistoryHttpError } from "src/modules/whatsapp/whatsapp.history-sync.provider-errors";
@@ -50,7 +51,7 @@ export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClien
   return {
     async listChats(count, offset) {
       const path = `/chats?count=${count}&offset=${offset}`;
-      const { status, json } = await client.getJson(path);
+      const { status, json } = await client.getJson(path, WHAPI_HISTORY_GET_TIMEOUT_MS);
       if (status < 200 || status >= 300) {
         throw whapiHistoryHttpError("chats", status);
       }
@@ -67,7 +68,7 @@ export function createWhapiHistoryClient(client: WhapiClient): WhapiHistoryClien
     async listMessages(chatId, count, offset, sort) {
       const encoded = encodeURIComponent(chatId);
       const path = `/messages/list/${encoded}?count=${count}&offset=${offset}&sort=${sort}`;
-      const { status, json } = await client.getJson(path);
+      const { status, json } = await client.getJson(path, WHAPI_HISTORY_GET_TIMEOUT_MS);
       const classification = classifyWhapiMessagesListHttpStatus(status, chatId, json);
       if (classification.kind === "auth_error") {
         throw whapiHistoryHttpError("messages", status);

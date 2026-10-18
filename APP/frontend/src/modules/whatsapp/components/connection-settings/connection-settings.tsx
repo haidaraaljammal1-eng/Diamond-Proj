@@ -408,7 +408,13 @@ export function WhatsAppConnectionSettings({
                 <p>{t("manage.historySyncCompletedWithSkips")}</p>
               ) : null}
               {historySync?.status === "COMPLETED" ? <p>{t("manage.historySyncDone")}</p> : null}
-              {historySync?.status === "FAILED" ? <p>{t("manage.historySyncFailed")}</p> : null}
+              {historySync?.status === "FAILED" ? (
+                <p>
+                  {resolveWhatsAppErrorMessage(t, {
+                    code: historySync.lastErrorCode ?? undefined,
+                  }) ?? t("manage.historySyncFailed")}
+                </p>
+              ) : null}
               <div className={styles.actions}>
                 <Button
                   type="button"
