@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { PERMISSIONS } from "src/constants/permissions";
+import { FN } from "src/lib/rbac/functional-permissions/keys";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import {
   resetStripeAccountKeyCache,
@@ -48,6 +49,7 @@ if (!INTEGRATION_ENABLED) {
   test("unified invoice closure skipped", { skip: true });
 } else {
   bindIntegrationDatabase();
+  process.env.FUNCTIONAL_RBAC_V2_ENABLED = "true";
   process.env.SCHEDULER_ENABLED = "false";
   process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? "sk_test_integration_fake";
   process.env.PAYMENT_PROVIDER = "stripe";
@@ -75,7 +77,11 @@ if (!INTEGRATION_ENABLED) {
 
     async function postManualCharge(
       contractId: string,
-      body: { chargeCategory: "TRAFFIC_VIOLATION" | "SALIK"; amountAed: number },
+      body: {
+        chargeCategory: "TRAFFIC_VIOLATION" | "SALIK";
+        amountAed: number;
+        referenceNumber: string;
+      },
       idempotencyKey: string,
     ) {
       return app.inject({
@@ -170,16 +176,34 @@ if (!INTEGRATION_ENABLED) {
 
       adminUserId = await seedRenewalGuardUser(prisma, admin.email, admin.password, `uic_admin_${run}`);
       const extraPerms = [
+        PERMISSIONS.VIOLATIONS_READ,
         PERMISSIONS.VIOLATIONS_CHARGE,
         PERMISSIONS.INVOICES_READ,
         PERMISSIONS.INVOICES_SEND_WHATSAPP,
+        "vehicles.manage",
+        FN.vehicles.viewPage,
+        FN.vehicles.addDelete,
+        FN.violations.viewPage,
+        FN.violations.collectCharges,
+        FN.invoices.viewPage,
+        FN.invoices.sendWhatsapp,
+        FN.whatsapp.full,
+        FN.contracts.viewPage,
+        FN.contracts.rentalLink,
+        FN.contracts.deliveryReturnReconcile,
+        FN.contracts.collectionClosure,
+        FN.contracts.renewal,
       ];
       const role = await prisma.role.findFirstOrThrow({ where: { key: `uic_admin_${run}` } });
       for (const key of extraPerms) {
         const perm = await prisma.permission.upsert({
           where: { key },
           update: {},
-          create: { key, category: key.split(".")[0]!, description: key },
+          create: {
+            key,
+            category: key.startsWith("diamond.fn.") ? "functional" : key.split(".")[0]!,
+            description: key,
+          },
         });
         await prisma.rolePermission.upsert({
           where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } },
@@ -285,9 +309,17 @@ if (!INTEGRATION_ENABLED) {
       await completeCarInToReview(app, authHeaders, contractId);
       await ensurePaymentAuthorization(contractId);
 
-      const tv = await postManualCharge(contractId, { chargeCategory: "TRAFFIC_VIOLATION", amountAed: 100 }, `uic-tv-${run}`);
+      const tv = await postManualCharge(
+        contractId,
+        { chargeCategory: "TRAFFIC_VIOLATION", amountAed: 100, referenceNumber: `UIC-TV-${run}` },
+        `uic-tv-${run}`,
+      );
       assert.equal(tv.statusCode, 200, tv.body);
-      const salik = await postManualCharge(contractId, { chargeCategory: "SALIK", amountAed: 50 }, `uic-salik-${run}`);
+      const salik = await postManualCharge(
+        contractId,
+        { chargeCategory: "SALIK", amountAed: 50, referenceNumber: `UIC-SLK-${run}` },
+        `uic-salik-${run}`,
+      );
       assert.equal(salik.statusCode, 200, salik.body);
       await drainInvoiceOutbox(app);
 

@@ -14,12 +14,24 @@ export function fingerprintIdempotentPayload(payload: unknown): string {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
+/** In-flight marker prefix — same payload may still be executing (staff manual charge). */
+export const IDEMPOTENCY_INFLIGHT_REF_PREFIX = "inflight:";
+
+export function idempotencyFingerprintMatches(
+  stored: string | null | undefined,
+  incoming: string | undefined,
+): boolean {
+  if (!incoming || !stored) return true;
+  if (stored === incoming) return true;
+  if (stored === `${IDEMPOTENCY_INFLIGHT_REF_PREFIX}${incoming}`) return true;
+  return false;
+}
+
 export function assertIdempotencyFingerprint(
   stored: string | null | undefined,
   incoming: string | undefined,
 ): void {
-  if (!incoming || !stored) return;
-  if (stored !== incoming) {
+  if (!idempotencyFingerprintMatches(stored, incoming)) {
     throw new AppError({
       code: ErrorCode.CONFLICT,
       message: "Idempotency key was reused with a different request",
@@ -47,7 +59,7 @@ export async function runIdempotent<T>(
   },
   effect: () => Promise<T>,
 ): Promise<IdempotencyResult<T>> {
-  const resultRef = params.fingerprint ?? params.resultRef;
+  const resultRef = params.resultRef ?? params.fingerprint;
   try {
     await prisma.idempotencyKey.create({
       data: {

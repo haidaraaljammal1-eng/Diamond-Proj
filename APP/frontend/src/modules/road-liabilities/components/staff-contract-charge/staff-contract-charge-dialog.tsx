@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
@@ -13,20 +13,28 @@ import type {
 } from "../../types/road-liabilities.types";
 import { resolveRoadLiabilitiesErrorMessage } from "../../utils/resolve-road-liabilities-error";
 import styles from "./staff-contract-charge-dialog.module.css";
+import {
+  createStaffChargeDialogResetState,
+  isStaffChargeReferenceValid,
+  parseStaffChargeReference,
+  parseWholeAed,
+  shouldAutoCloseStaffChargeDialog,
+  shouldClearStaffChargeInputsAfterOutcome,
+  shouldShowSuccessHighlight,
+  resolveStaffChargeFailureMessage,
+  staffChargeOutcomeMessageKey,
+  staffChargeSuccessMessageKey,
+  staffChargeReferenceLabelKey,
+  staffChargeReferenceRequiredKey,
+  isStaffChargeSuccessPendingClose,
+  STAFF_CHARGE_SUCCESS_CLOSE_MS,
+} from "./staff-contract-charge-dialog.logic";
 
 export interface StaffContractChargeDialogProps {
   open: boolean;
   contract: ReturnedContractListItemDto | null;
   onClose: () => void;
   onSuccess: () => void;
-}
-
-function parseWholeAed(raw: string): number | null {
-  const trimmed = raw.trim().replace(/,/g, "");
-  if (!/^\d+$/.test(trimmed)) return null;
-  const n = Number(trimmed);
-  if (!Number.isInteger(n) || n <= 0) return null;
-  return n;
 }
 
 export function StaffContractChargeDialog({
@@ -37,24 +45,47 @@ export function StaffContractChargeDialog({
 }: StaffContractChargeDialogProps) {
   const t = useTranslations("RoadLiabilities.staffCharge");
   const tRoot = useTranslations("RoadLiabilities");
+  const locale = useLocale();
   const [category, setCategory] = useState<StaffRoadChargeCategory>("TRAFFIC_VIOLATION");
+  const [referenceRaw, setReferenceRaw] = useState("");
   const [amountRaw, setAmountRaw] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<ApiRequestError | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [successHighlight, setSuccessHighlight] = useState(false);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) {
-      setCategory("TRAFFIC_VIOLATION");
-      setAmountRaw("");
-      setConfirming(false);
-      setSubmitting(false);
-      setError(null);
-      setResultMessage(null);
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
+      const reset = createStaffChargeDialogResetState();
+      setCategory(reset.category);
+      setReferenceRaw(reset.referenceRaw);
+      setAmountRaw(reset.amountRaw);
+      setConfirming(reset.confirming);
+      setSubmitting(reset.submitting);
+      setError(reset.error);
+      setResultMessage(reset.resultMessage);
+      setSuccessHighlight(reset.successHighlight);
+      setReferenceError(reset.referenceError);
     }
   }, [open]);
 
+  const referenceNumber = useMemo(() => parseStaffChargeReference(referenceRaw), [referenceRaw]);
   const amount = useMemo(() => parseWholeAed(amountRaw), [amountRaw]);
   const categoryLabel = useMemo(() => {
     if (category === "TRAFFIC_VIOLATION") return t("typeTraffic");
@@ -66,14 +97,30 @@ export function StaffContractChargeDialog({
       ? `${contract.savedPaymentMethod.brand} ···· ${contract.savedPaymentMethod.last4}`
       : null;
 
+  const successPendingClose = isStaffChargeSuccessPendingClose(successHighlight, resultMessage);
+
   const canProceed =
-    contract != null && amount != null && contract.cardAvailability === "available";
+    contract != null &&
+    amount != null &&
+    referenceNumber.length > 0 &&
+    contract.cardAvailability === "available";
+
+  function validateReference(): boolean {
+    if (!isStaffChargeReferenceValid(referenceRaw)) {
+      setReferenceError(t(staffChargeReferenceRequiredKey(category)));
+      return false;
+    }
+    setReferenceError(null);
+    return true;
+  }
 
   async function handleConfirm() {
-    if (!contract || amount == null) return;
+    if (!contract || amount == null || submitting) return;
+    if (!validateReference()) return;
     setSubmitting(true);
     setError(null);
     setResultMessage(null);
+    setSuccessHighlight(false);
     const idempotencyKey = crypto.randomUUID();
     try {
       const result = await postStaffManualCharge(
@@ -81,20 +128,34 @@ export function StaffContractChargeDialog({
         {
           chargeCategory: category,
           amountAed: amount,
+          referenceNumber,
         },
         idempotencyKey,
       );
-      if (result.status === "succeeded") {
-        setResultMessage(t("resultSuccess"));
-        onSuccess();
-      } else if (result.status === "processing") {
-        setResultMessage(t("resultProcessing"));
-      } else if (result.status === "requires_action") {
-        setResultMessage(t("resultRequiresAction"));
-      } else if (result.status === "failed") {
-        setResultMessage(t("resultFailed"));
+      const outcomeStatus = result.status;
+      if (shouldAutoCloseStaffChargeDialog(outcomeStatus)) {
+        setResultMessage(t(staffChargeSuccessMessageKey(category)));
+        setSuccessHighlight(shouldShowSuccessHighlight(outcomeStatus));
+        successTimerRef.current = setTimeout(() => {
+          successTimerRef.current = null;
+          onSuccess();
+          onClose();
+        }, STAFF_CHARGE_SUCCESS_CLOSE_MS);
+        return;
+      }
+      const failureText = resolveStaffChargeFailureMessage(locale, result.failure);
+      const outcomeKey = staffChargeOutcomeMessageKey(outcomeStatus, result.recoveryState);
+      if (failureText && outcomeStatus === "failed") {
+        setResultMessage(failureText);
+      } else if (outcomeKey) {
+        setResultMessage(t(outcomeKey));
       } else {
         setResultMessage(t("resultFailed"));
+      }
+      if (shouldClearStaffChargeInputsAfterOutcome(outcomeStatus)) {
+        setReferenceRaw("");
+        setAmountRaw("");
+        setReferenceError(null);
       }
     } catch (err) {
       setError(err as ApiRequestError);
@@ -130,7 +191,13 @@ export function StaffContractChargeDialog({
           ) : null}
 
           {resultMessage ? (
-            <p className={styles.success} role="status">{resultMessage}</p>
+            <p
+              className={successHighlight ? styles.successBanner : styles.resultNotice}
+              role="status"
+              data-testid="staff-charge-result"
+            >
+              {resultMessage}
+            </p>
           ) : null}
           {error ? (
             <p className={styles.error} role="alert">
@@ -138,7 +205,7 @@ export function StaffContractChargeDialog({
             </p>
           ) : null}
 
-          {!confirming ? (
+          {successPendingClose ? null : !confirming ? (
             <>
               <div className={styles.fieldGroup}>
                 <label className={styles.radioRow}>
@@ -162,6 +229,24 @@ export function StaffContractChargeDialog({
               </div>
 
               <div className={styles.amountRow}>
+                <label htmlFor="staff-charge-reference">{t(staffChargeReferenceLabelKey(category))}</label>
+                <Input
+                  id="staff-charge-reference"
+                  value={referenceRaw}
+                  onChange={(e) => {
+                    setReferenceRaw(e.target.value);
+                    if (referenceError) setReferenceError(null);
+                  }}
+                  dir="ltr"
+                  data-testid="staff-charge-reference"
+                  autoComplete="off"
+                />
+                {referenceError ? (
+                  <p className={styles.fieldError} role="alert">{referenceError}</p>
+                ) : null}
+              </div>
+
+              <div className={styles.amountRow}>
                 <label htmlFor="staff-charge-amount">{t("amountLabel")}</label>
                 <Input
                   id="staff-charge-amount"
@@ -174,14 +259,17 @@ export function StaffContractChargeDialog({
               </div>
 
               <div className={styles.actions}>
-                <Button type="button" variant="secondary" onClick={onClose}>
+                <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
                   {t("cancel")}
                 </Button>
                 <Button
                   type="button"
                   variant="primary"
                   disabled={!canProceed || submitting}
-                  onClick={() => setConfirming(true)}
+                  onClick={() => {
+                    if (!validateReference()) return;
+                    setConfirming(true);
+                  }}
                 >
                   {t("review")}
                 </Button>
@@ -192,6 +280,7 @@ export function StaffContractChargeDialog({
               <div className={styles.confirmBox}>
                 <div>{contract.contractNumber}</div>
                 <div>{categoryLabel}</div>
+                <div dir="ltr">{referenceNumber}</div>
                 <div dir="ltr">{amount} AED</div>
                 {savedCard ? <div dir="ltr">{savedCard}</div> : null}
               </div>

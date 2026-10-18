@@ -59,8 +59,6 @@ export function RoadLiabilitiesList({
   const page = meta?.page ?? query.page;
   const totalPages = meta?.totalPages ?? 1;
   const showEmpty = !error && !loading && items.length === 0;
-  const showActionsColumn = Boolean(collection?.canCharge);
-
   return (
     <section className={styles.list} data-testid="road-liabilities-list">
       <RoadLiabilitiesToolbar
@@ -102,7 +100,6 @@ export function RoadLiabilitiesList({
                   <th>{t("columns.occurred")}</th>
                   <th>{t("columns.amount")}</th>
                   <th>{t("columns.status")}</th>
-                  {showActionsColumn ? <th>{t("columns.actions")}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -114,7 +111,6 @@ export function RoadLiabilitiesList({
                     onSelect={onSelect}
                     showCollectAction={Boolean(collection?.canCollectRow(item))}
                     showCashCollectAction={Boolean(collection?.canCashCollectRow(item))}
-                    showActionsColumn={showActionsColumn}
                     onCollect={collection?.onCollect}
                     onCashCollect={collection?.onCashCollect}
                     collectSubmitting={

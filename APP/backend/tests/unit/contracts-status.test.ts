@@ -74,6 +74,7 @@ test("idempotency fingerprint matches same payload and rejects a mismatch", () =
   assert.equal(a, b);
   assert.notEqual(a, c);
   assert.doesNotThrow(() => assertIdempotencyFingerprint(a, b));
+  assert.doesNotThrow(() => assertIdempotencyFingerprint(`inflight:${a}`, a));
   assert.throws(
     () => assertIdempotencyFingerprint(a, c),
     (err: unknown) => err instanceof AppError && err.context?.reason === "IDEMPOTENCY_KEY_CONFLICT",

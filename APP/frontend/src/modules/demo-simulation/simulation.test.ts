@@ -8,15 +8,16 @@ const read = (relative: string) => readFileSync(path.join(import.meta.dirname, r
 
 describe("external provider simulation only", () => {
   it("requires an explicit development frontend flag", () => {
-    assert.equal(isProviderSimulationEnabled("true", "development"), true);
+    assert.equal(isProviderSimulationEnabled("true", "development"), false);
     assert.equal(isProviderSimulationEnabled("false", "development"), false);
     assert.equal(isProviderSimulationEnabled("true", "production"), false);
   });
 
   it("retires broad journey overlays and mutation interception", () => {
     assert.equal(isDemoSimulationEnabled("true", "development"), false);
-    assert.equal(isUiDemoSimulationEnabled("roadLiabilities", "true", "development"), true);
+    assert.equal(isUiDemoSimulationEnabled("roadLiabilities", "true", "development"), false);
     assert.equal(isUiDemoSimulationEnabled("roadLiabilities", "true", "production"), false);
+    assert.equal(isUiDemoSimulationEnabled("dashboard", "true", "development"), false);
     assert.equal(isUiDemoSimulationEnabled("finance" as "dashboard", "true", "development"), false);
     assert.equal(read("../public-rental/stores/public-rental.store.ts").includes("shouldSkipRentalMutation"), false);
   });
@@ -27,7 +28,7 @@ describe("external provider simulation only", () => {
     const review = read("../public-rental/components/contract-review-step/contract-review-step.tsx");
     const carOut = read("../contracts/forms/car-out/car-out-dialog.tsx");
     assert.equal((screen.match(/<SimulationAction/g) ?? []).length, 0);
-    assert.equal((payment.match(/<SimulationAction/g) ?? []).length, 1);
+    assert.equal((payment.match(/<SimulationAction/g) ?? []).length, 0);
     assert.equal(review.includes("fillDevTestData"), false);
     assert.equal(review.includes("SimulationAction"), false);
     assert.equal(carOut.includes("SimulationAction"), false);

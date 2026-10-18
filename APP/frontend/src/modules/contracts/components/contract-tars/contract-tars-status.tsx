@@ -4,7 +4,6 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Chip } from "@/shared/components/ui/chip";
 import { CompanyIdentity } from "@/shared/components/company-identity";
 import { IntegrationStatusRow } from "@/shared/components/integration-status-row";
-import { SimulationButton, applyTarsSimulation, useDemoSimulation } from "@/modules/demo-simulation";
 import { useContractTars } from "../../hooks/use-contract-tars";
 import { getTarsSectionView } from "../../utils/tars-status";
 import styles from "./contract-tars-status.module.css";
@@ -23,11 +22,8 @@ export interface ContractTarsStatusProps {
 export function ContractTarsStatus({ contractId }: ContractTarsStatusProps) {
   const t = useTranslations("Contracts.tars");
   const format = useFormatter();
-  const { tars: realTars, status } = useContractTars(contractId);
-  const simulation = useDemoSimulation();
-  const preset = simulation.enabled ? simulation.snapshot.tarsPreset : null;
-  const tars = applyTarsSimulation(realTars, preset);
-  const view = preset ? getTarsSectionView("ready", tars) : getTarsSectionView(status, tars);
+  const { tars, status } = useContractTars(contractId);
+  const view = getTarsSectionView(status, tars);
 
   return (
     <section className={styles.section} data-testid="contract-tars">
@@ -48,7 +44,6 @@ export function ContractTarsStatus({ contractId }: ContractTarsStatusProps) {
           ) : null}
         </div>
         <div className={styles.headActions}>
-          {simulation.enabled ? <SimulationButton surface="tars" /> : null}
           {view.kind === "ready" ? (
             <Chip tone={view.summary.connection.tone} dot>
               {t(view.summary.connection.translationKey)}

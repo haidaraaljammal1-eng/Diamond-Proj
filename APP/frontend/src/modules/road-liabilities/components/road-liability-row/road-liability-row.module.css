@@ -32,7 +32,7 @@
 
 .cell {
   padding: 10px 12px;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .sourceBlock {
@@ -93,26 +93,27 @@
   color: var(--diamond-gold-hi);
 }
 
-.vehicle {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
+.vehicleStack,
+.partyStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   min-width: 0;
 }
 
-.photo {
-  width: 44px;
-  height: 36px;
-  border-radius: 6px;
-  object-fit: cover;
-  background:
-    radial-gradient(130% 160% at 20% 0%, rgba(201, 161, 92, 0.28), transparent 52%),
-    linear-gradient(160deg, #f7f0e2, #efe6d2 60%);
+.vehicleTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
 }
 
-.photo[data-empty="true"] {
-  box-shadow: inset 0 0 0 1px rgba(201, 161, 92, 0.22);
+.vehicleTitleRow .name {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .name {
@@ -131,10 +132,6 @@
   color: var(--diamond-muted);
 }
 
-.party {
-  min-width: 0;
-}
-
 .partyName {
   margin: 0;
   font-size: 13px;
@@ -148,6 +145,17 @@
   margin: 2px 0 0;
   font-size: 11px;
   color: var(--diamond-muted);
+}
+
+.metaLine {
+  margin: 0;
+  font-size: 11px;
+  color: var(--diamond-muted);
+  line-height: 1.35;
+}
+
+.metaLabel {
+  font-weight: 600;
 }
 
 .occurred {
@@ -259,29 +267,23 @@
   .recordFocus { animation: none; }
 }
 
-/* The company marker sits under the plate. CompanyIdentity never yields width, so
-   the flexible vehicle name above it keeps min-width: 0 and an ellipsis — the
-   layout rule the Phase A QA pass established. The wrapper carries the layout; the
-   shared component is never re-styled from here. */
-.vehicleText {
-  min-width: 0;
-}
-
 .companyMark {
   display: inline-flex;
-  margin-top: 4px;
+  max-width: 100%;
 }
 
 /* Neutral unmatched treatment: a liability with no Contract and no Vehicle belongs
    to no company and is never rendered as one. */
 .noCompany {
-  display: block;
-  margin: 4px 0 0;
-  font-size: 11px;
+  display: inline;
+  margin: 0;
+  font-size: 10px;
   color: var(--diamond-muted);
+  white-space: nowrap;
 }
 
 .collectAction {
+  margin-top: 6px;
   width: auto;
   max-width: 100%;
   white-space: normal;

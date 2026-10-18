@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma, RoadLiability } from "@prisma/client";
+import type { Prisma, RoadLiability, RoadLiabilityType } from "@prisma/client";
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { writeOutboxEvent } from "src/lib/db/outbox";
@@ -15,6 +15,8 @@ import {
   buildGpsInferenceFingerprint,
   buildIngestionFingerprint,
 } from "src/modules/road-liabilities/road-liability.fingerprint";
+import { registerProviderAuthoritativeReference } from "src/modules/road-liabilities/road-charge-reference.service";
+import { roadLiabilityTypeToChargeCategory } from "src/modules/road-liabilities/road-charge-reference.normalize";
 import {
   attributionStatusFromDto,
   collectionStatusFromDto,
@@ -107,6 +109,25 @@ function maybeWriteChargeableOutbox(
       occurredAt: liability.occurredAt.toISOString(),
     },
   }).then(() => undefined);
+}
+
+async function syncProviderReferenceRegistry(
+  tx: Tx,
+  liabilityId: string,
+  eventType: RoadLiabilityType,
+  externalReference: string | null | undefined,
+  authoritative: boolean,
+): Promise<void> {
+  if (!authoritative) return;
+  const ref = externalReference?.trim();
+  if (!ref) return;
+  const chargeCategory = roadLiabilityTypeToChargeCategory(eventType);
+  if (!chargeCategory) return;
+  await registerProviderAuthoritativeReference(tx, {
+    chargeCategory,
+    referenceNumber: ref,
+    roadLiabilityId: liabilityId,
+  });
 }
 
 export function createRoadLiabilityService(fastify: FastifyInstance) {
@@ -267,6 +288,16 @@ export function createRoadLiabilityService(fastify: FastifyInstance) {
         await maybeWriteChargeableOutbox(tx, created);
       }
 
+      if (liabilityId) {
+        await syncProviderReferenceRegistry(
+          tx,
+          liabilityId,
+          raw.eventType,
+          raw.externalReference,
+          authoritative,
+        );
+      }
+
       try {
         const observation = await tx.roadLiabilityObservation.create({
           data: {
@@ -306,6 +337,9 @@ export function createRoadLiabilityService(fastify: FastifyInstance) {
 
   function buildListWhere(query: ListRoadLiabilitiesQuery): Prisma.RoadLiabilityWhereInput {
     const and: Prisma.RoadLiabilityWhereInput[] = [];
+    if (query.collectionStatus !== "void") {
+      and.push({ collectionStatus: { not: "VOID" } });
+    }
     if (query.type) and.push({ type: roadLiabilityTypeFromDto(query.type) });
     if (query.confirmationStatus) {
       and.push({ confirmationStatus: confirmationStatusFromDto(query.confirmationStatus) });

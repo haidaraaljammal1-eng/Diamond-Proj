@@ -2607,6 +2607,8 @@
       "occurred": "Occurred",
       "location": "Location",
       "reference": "Reference",
+      "staffViolationNumber": "Violation Number",
+      "staffReferenceHint": "Employee-entered reference — not a verified RTA/Salik provider number.",
       "vehicle": "Vehicle",
       "contract": "Contract & customer",
       "contractNumber": "Contract",
@@ -2627,23 +2629,36 @@
     },
     "error": {
       "generic": "Road liabilities could not be loaded. Try again.",
-      "RETURNED_CONTRACT_NOT_ELIGIBLE": "This contract is not in the returned-contracts window or is not eligible for manual charge.",
-      "ROAD_LIABILITY_AUTHORIZATION_MISSING": "No authorized saved card is available for this contract."
+      "RETURNED_CONTRACT_NOT_ELIGIBLE": "This contract is not eligible for manual off-session collection.",
+      "ROAD_LIABILITY_AUTHORIZATION_MISSING": "No authorized saved card is available for this contract.",
+      "REFERENCE_ALREADY_USED": "This violation number is already used for this charge type.",
+      "REFERENCE_IN_PROGRESS": "This violation number has a collection already in progress. Wait for the outcome or contact support.",
+      "REFERENCE_REGISTRY_SCHEMA_OUTDATED": "Manual charge collection is temporarily unavailable — the database migration for reference tracking must be applied on this environment.",
+      "STAFF_MANUAL_IDEMPOTENCY_UNRESOLVED": "This charge request could not be completed safely. Wait a moment and try again, or contact support with the request reference."
     },
     "pageTabs": {
       "liabilities": "Road Liabilities",
-      "returnedContracts": "Returned Contracts — Last 30 Days"
+      "returnedContracts": "Manual Collection"
     },
     "returnedContracts": {
-      "searchPlaceholder": "Search contract, customer or plate…",
-      "search": "Search",
+      "intro": "Traffic violations and Salik may be collected one month after the vehicle is returned to the office, using the saved card on file.",
+      "search": {
+        "inputLabel": "Search eligible contracts",
+        "placeholder": "Search contract, customer or plate…",
+        "button": "Search",
+        "clear": "Clear search"
+      },
+      "columnCustomer": "Customer",
+      "columnContract": "Contract",
+      "columnActions": "Actions",
+      "columnContractStatus": "Contract status",
+      "columnCarInDate": "Vehicle return date",
       "collect": "Collect Charge",
       "cardAvailable": "Available",
       "cardUnavailable": "Unavailable",
-      "carIn": "Car-In",
-      "status": "Status",
-      "empty": "No returned contracts in the last 30 days.",
-      "loading": "Loading returned contracts…",
+      "carInNotYet": "—",
+      "empty": "No active or recently returned contracts are eligible for collection.",
+      "loading": "Loading eligible contracts…",
       "results": "{count} contracts"
     },
     "staffCharge": {
@@ -2651,6 +2666,10 @@
       "close": "Close",
       "typeTraffic": "Traffic Violation",
       "typeSalik": "Salik",
+      "referenceLabelTraffic": "Violation Number",
+      "referenceLabelSalik": "Salik Reference Number",
+      "referenceRequiredTraffic": "Violation number is required.",
+      "referenceRequiredSalik": "Salik reference number is required.",
       "amountLabel": "Charge Amount (AED)",
       "cancel": "Cancel",
       "review": "Continue",
@@ -2659,9 +2678,13 @@
       "noCard": "No saved card on file",
       "noAuthorizedCard": "No authorized card — collection is unavailable.",
       "resultSuccess": "Successfully collected.",
+      "resultSuccessTraffic": "Violation paid successfully.",
+      "resultSuccessSalik": "Salik charge collected successfully.",
       "resultProcessing": "Processing — please wait.",
       "resultRequiresAction": "Customer action is required — this was not collected.",
-      "resultFailed": "Charge failed — amount was not collected."
+      "resultFailed": "Charge failed — amount was not collected.",
+      "resultAwaitingProvider": "Payment is still being confirmed — do not retry yet.",
+      "resultManualReview": "This charge needs a manual review before retrying. Contact support if it does not resolve."
     },
     "charge": {
       "section": "Customer Charge",

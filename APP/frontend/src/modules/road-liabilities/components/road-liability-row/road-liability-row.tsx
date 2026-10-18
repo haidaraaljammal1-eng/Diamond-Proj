@@ -4,7 +4,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Chip } from "@/shared/components/ui/chip";
 import { CompanyIdentity } from "@/shared/components/company-identity";
-import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicle-image";
 import type { RoadLiabilityListItemDto } from "../../types/road-liabilities.types";
 import { formatLiabilityAmount, toValidOccurredDate } from "../../utils/road-liability-format";
 import {
@@ -15,6 +14,7 @@ import {
   workStateChipTone,
   workStateTranslationKey,
 } from "../../utils/road-liability-status";
+import { staffChargeReferenceLabelKey } from "../staff-contract-charge/staff-contract-charge-dialog.logic";
 import styles from "./road-liability-row.module.css";
 
 export interface RoadLiabilityRowProps {
@@ -23,7 +23,6 @@ export interface RoadLiabilityRowProps {
   onSelect: (id: string) => void;
   showCollectAction?: boolean;
   showCashCollectAction?: boolean;
-  showActionsColumn?: boolean;
   onCollect?: (item: RoadLiabilityListItemDto) => void;
   onCashCollect?: (item: RoadLiabilityListItemDto) => void;
   collectSubmitting?: boolean;
@@ -71,6 +70,34 @@ function CompanyMark({ item }: { item: RoadLiabilityListItemDto }) {
   );
 }
 
+function PartyReference({ item }: { item: RoadLiabilityListItemDto }) {
+  const t = useTranslations("RoadLiabilities");
+  if (item.staffEntered?.referenceNumber) {
+    return (
+      <p className={styles.metaLine} dir="ltr" data-testid="road-liability-staff-reference">
+        <span className={styles.metaLabel}>
+          {t(
+            `staffCharge.${staffChargeReferenceLabelKey(
+              item.staffEntered.chargeCategory ?? "TRAFFIC_VIOLATION",
+            )}`,
+          )}
+          :
+        </span>{" "}
+        {item.staffEntered.referenceNumber}
+      </p>
+    );
+  }
+
+  const externalReference = item.authoritative.externalReference?.trim();
+  if (!externalReference) return null;
+
+  return (
+    <p className={styles.metaLine} dir="ltr" data-testid="road-liability-external-reference">
+      <span className={styles.metaLabel}>{t("detail.reference")}:</span> {externalReference}
+    </p>
+  );
+}
+
 function WorkStateChip({ item }: { item: RoadLiabilityListItemDto }) {
   const t = useTranslations("RoadLiabilities");
   return (
@@ -88,7 +115,6 @@ export function RoadLiabilityRow({
   onSelect,
   showCollectAction = false,
   showCashCollectAction = false,
-  showActionsColumn = false,
   onCollect,
   onCashCollect,
   collectSubmitting = false,
@@ -135,23 +161,23 @@ export function RoadLiabilityRow({
         <AuthorityMark item={item} />
       </td>
       <td className={styles.cell}>
-        <div className={styles.vehicle}>
-          <VehicleImage path={item.vehicle?.primaryImageUrl} alt="" className={styles.photo} />
-          <div className={styles.vehicleText}>
+        <div className={styles.vehicleStack}>
+          <div className={styles.vehicleTitleRow}>
             <p className={styles.name}>{item.vehicle?.displayName ?? t("noVehicle")}</p>
-            <p className={styles.plate} dir="ltr">
-              {plate}
-            </p>
             <CompanyMark item={item} />
           </div>
+          <p className={styles.plate} dir="ltr">
+            {plate}
+          </p>
         </div>
       </td>
       <td className={styles.cell}>
-        <div className={styles.party}>
+        <div className={styles.partyStack}>
           <p className={styles.partyName}>{item.customer?.displayName ?? t("noCustomer")}</p>
           <p className={styles.contract} dir="ltr">
             {item.contract?.contractNumber ?? t("noContract")}
           </p>
+          <PartyReference item={item} />
         </div>
       </td>
       <td className={styles.cell}>
@@ -175,43 +201,39 @@ export function RoadLiabilityRow({
         {item.reconciliationAttached ? (
           <p className={styles.attachedHint}>{t("charge.addedShort")}</p>
         ) : null}
+        {showCashCollectAction ? (
+          <Button
+            type="button"
+            size="sm"
+            className={styles.collectAction}
+            loading={collectSubmitting}
+            data-testid="road-liability-cash-collect-row"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (collectSubmitting) return;
+              onCashCollect?.(item);
+            }}
+          >
+            {t("collect.cashRowAction")}
+          </Button>
+        ) : null}
+        {showCollectAction ? (
+          <Button
+            type="button"
+            size="sm"
+            className={styles.collectAction}
+            loading={collectSubmitting}
+            data-testid="road-liability-collect-row"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (collectSubmitting) return;
+              onCollect?.(item);
+            }}
+          >
+            {t("collect.rowAction")}
+          </Button>
+        ) : null}
       </td>
-      {showActionsColumn ? (
-        <td className={styles.cell}>
-          {showCashCollectAction ? (
-            <Button
-              type="button"
-              size="sm"
-              className={styles.collectAction}
-              loading={collectSubmitting}
-              data-testid="road-liability-cash-collect-row"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (collectSubmitting) return;
-                onCashCollect?.(item);
-              }}
-            >
-              {t("collect.cashRowAction")}
-            </Button>
-          ) : null}
-          {showCollectAction ? (
-            <Button
-              type="button"
-              size="sm"
-              className={styles.collectAction}
-              loading={collectSubmitting}
-              data-testid="road-liability-collect-row"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (collectSubmitting) return;
-                onCollect?.(item);
-              }}
-            >
-              {t("collect.rowAction")}
-            </Button>
-          ) : null}
-        </td>
-      ) : null}
     </tr>
   );
 }
@@ -221,7 +243,6 @@ export function RoadLiabilityCard({
   selected,
   onSelect,
   showCollectAction = false,
-  showActionsColumn = false,
   onCollect,
   collectSubmitting = false,
 }: RoadLiabilityRowProps) {
@@ -257,21 +278,21 @@ export function RoadLiabilityCard({
           </span>
         )}
       </div>
-      <div className={styles.vehicle}>
-        <VehicleImage path={item.vehicle?.primaryImageUrl} alt="" className={styles.photo} />
-        <div className={styles.vehicleText}>
+      <div className={styles.vehicleStack}>
+        <div className={styles.vehicleTitleRow}>
           <p className={styles.name}>{item.vehicle?.displayName ?? t("noVehicle")}</p>
-          <p className={styles.plate} dir="ltr">
-            {plate}
-          </p>
           <CompanyMark item={item} />
         </div>
+        <p className={styles.plate} dir="ltr">
+          {plate}
+        </p>
       </div>
-      <div className={styles.party}>
+      <div className={styles.partyStack}>
         <p className={styles.partyName}>{item.customer?.displayName ?? t("noCustomer")}</p>
         <p className={styles.contract} dir="ltr">
           {item.contract?.contractNumber ?? t("noContract")}
         </p>
+        <PartyReference item={item} />
       </div>
       <div className={styles.cardBottom}>
         <WorkStateChip item={item} />

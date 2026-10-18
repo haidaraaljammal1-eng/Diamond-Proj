@@ -81,3 +81,9 @@
   box-shadow: var(--diamond-shadow-near);
   overflow: hidden;
 }
+
+.surfaceCompact {
+  composes: surface;
+  min-height: 0;
+  overflow: visible;
+}

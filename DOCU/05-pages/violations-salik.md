@@ -185,16 +185,31 @@ endpoint or an external reference.
   `ContractPostCloseReceivable` deliberately have no `companyId`: both reach it
   through their Contract.
 
-## Returned contracts — staff manual charge (30 days)
+## Active & returned contracts — staff manual charge
 
-Staff with `violations.charge` may create a **staff-attested** liability (`STAFF_MANUAL` provenance, not RTA/Salik provider confirmation) for contracts with completed Car-In in the last **30×24h** (UTC), status `REVIEW` or `CLOSED`, then collect via existing **DIRECT_COLLECTION** off-session when consent v2 is present.
+Staff with `violations.charge` may create a **staff-attested** liability (`STAFF_MANUAL` provenance, not RTA/Salik provider confirmation) and collect via existing **DIRECT_COLLECTION** off-session when consent v2 is present. Eligibility is enforced server-side (list and charge share one predicate):
+
+| Contract state | Eligible for list + manual charge |
+| --- | --- |
+| `ACTIVE`, no Car-In | Yes (no day limit while active) |
+| `RETOUT` / `REVIEW` / `CLOSED` after Car-In | Yes until **30×24h** after `carIn.occurredAt` (UTC) |
+| Before `ACTIVE` (`AWAITING` … `PAID`) | No |
+| Car-In older than 30×24h | No (authorizations and history are retained) |
+
+Listing a contract does not imply a saved card; off-session still requires Consent v2 on the same contract, an active saved method, and matching Stripe account/mode.
 
 - `GET /road-liabilities/returned-contracts` (`violations.read`)
 - `POST /road-liabilities/returned-contracts/:contractId/manual-charge` (`violations.charge`, `Idempotency-Key` required)
 - Charge category is **TRAFFIC_VIOLATION** or **SALIK** only (no custom “other” type).
+- Staff must enter a **violation/reference number** (trimmed; leading zeros preserved). Uniqueness is enforced per category (`TRAFFIC_VIOLATION` / `SALIK`) via `road_charge_reference_registry` (`RESERVED` → `CONFIRMED` on successful settlement, `RELEASED` on definitive failure).
+- After successful settlement, the number is stored on `staffChargeDescription` and exposed as `staffEntered.referenceNumber` — never as an authoritative RTA/Salik provider reference. Provisional/failed staff attempts do not surface `staffEntered`.
+- Delayed Stripe outcomes (webhook, provider poll, idempotent replay) align registry + `staffEntered` via `reconcileStaffManualChargeOutcome` on trusted confirmation or definitive failure only — no second invoice or Stripe charge. `PROCESSING` / `REQUIRES_ACTION` / `UNKNOWN` keep `RESERVED` until a trusted terminal result. Read-only discrepancy report: `APP/backend/scripts/diagnose-staff-manual-reference-inconsistencies.ts` (no auto-repair).
+- **Local/dev database:** staff manual charge requires migration `20261017210000_road_charge_reference_registry` on the application database (e.g. `diamond` on port 5432). Without it, the API returns `REFERENCE_REGISTRY_SCHEMA_OUTDATED` (not a generic load error). Do not apply to production without ops approval; development uses `prisma migrate deploy` against the approved dev database only.
+- **Database:** staff manual charge requires migration `20261017210000_road_charge_reference_registry` on the runtime app database. Without it, API returns `REFERENCE_REGISTRY_SCHEMA_OUTDATED` (HTTP 409). Apply on dev only with ops approval (`prisma migrate deploy` against the approved dev DSN — not production).
+- Staff `Idempotency-Key` recovery (`staff-manual-idempotency-recovery.ts`): deduped replays classify provider phase (`PROVEN_PRE_PROVIDER` / `POSSIBLY_SENT` / `TERMINAL`). Orphan staff keys are cleared only when the idempotency row still has the original fingerprint (effect never marked `inflight:`), with no observation and no registry row for that key. Collection resumes only when pre-provider is proven and a stuck collect idempotency row exists; `POSSIBLY_SENT` never starts a new Stripe attempt. API may return `recoveryState` (`orphan_idempotency_cleared`, `collection_resumed`, `awaiting_provider`, `manual_review`).
 - Confirmed **DIRECT_COLLECTION** payments enqueue `road_liability.customer_charge.confirmed` for invoice issuance (same outbox as reconciliation/post-close charges).
 
-The main liabilities list and history are unchanged; the 30-day window is UI-only.
+The main liabilities list and history are unchanged.
 
 ## No provider manual creation
 

@@ -1,25 +1,23 @@
-/** Rental provider substitutes write to a real development Contract. */
+/** Retired — provider simulation must not substitute production rental flows. */
 export function isProviderSimulationEnabled(
-  flag: string | undefined = process.env.NEXT_PUBLIC_DIAMOND_SIMULATION,
-  nodeEnv: string | undefined = process.env.NODE_ENV,
+  _flag?: string,
+  _nodeEnv?: string,
 ): boolean {
-  return nodeEnv !== "production" && flag === "true";
+  void _flag;
+  void _nodeEnv;
+  return false;
 }
 
-/** Explicit browser-only demo surfaces. This flag never enables rental mutations. */
+/** Retired — browser fixture overlays removed; staff surfaces use backend APIs only. */
 export function isUiDemoSimulationEnabled(
-  surface: "dashboard" | "whatsapp" | "roadLiabilities" | "notifications",
-  flag: string | undefined = process.env.NEXT_PUBLIC_DEMO_SIMULATION_ENABLED,
-  nodeEnv: string | undefined = process.env.NODE_ENV,
+  _surface: "dashboard" | "whatsapp" | "roadLiabilities" | "notifications",
+  _flag?: string,
+  _nodeEnv?: string,
 ): boolean {
-  return (
-    (surface === "dashboard" ||
-      surface === "whatsapp" ||
-      surface === "roadLiabilities" ||
-      surface === "notifications") &&
-    nodeEnv !== "production" &&
-    flag === "true"
-  );
+  void _surface;
+  void _flag;
+  void _nodeEnv;
+  return false;
 }
 
 /** Retired general workflow simulation remains disabled for other consumers. */
