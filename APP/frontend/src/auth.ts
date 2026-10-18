@@ -56,6 +56,7 @@ const fetchCurrentUser = createRefreshCoordinator<AuthUser>(
 );
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
   pages: { signIn: "/ar/login" },
   providers: [
