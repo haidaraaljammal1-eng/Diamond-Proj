@@ -17,6 +17,7 @@ import {
   getWhatsAppConnectionQr,
   getWhatsAppHistorySyncStatus,
   startWhatsAppHistorySync,
+  startWhatsAppContactSync,
   selectWhatsAppConnection,
   startWhatsAppConnectionAttempt,
 } from "../../api/whatsapp.api";
@@ -94,6 +95,7 @@ export function WhatsAppConnectionSettings({
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [historySync, setHistorySync] = useState<WhatsAppHistorySyncStatusDto | null>(null);
   const [confirmForceFullSync, setConfirmForceFullSync] = useState(false);
+  const [contactSyncRunning, setContactSyncRunning] = useState(false);
   const linked = connection && connection.status !== "DISCONNECTED";
   const banner = connectionBanner(connection);
   const caps = connectionCapabilities(connection);
@@ -174,6 +176,19 @@ export function WhatsAppConnectionSettings({
     } finally {
       setBusy(false);
       setConfirmForceFullSync(false);
+    }
+  }
+
+  async function runContactSync() {
+    setBusy(true);
+    setError(null);
+    try {
+      const status = await startWhatsAppContactSync();
+      setContactSyncRunning(status.status === "RUNNING");
+    } catch (err) {
+      setError(resolveWhatsAppErrorMessage(t, err));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -421,6 +436,23 @@ export function WhatsAppConnectionSettings({
                     {t("manage.historySyncCancel")}
                   </Button>
                 ) : null}
+              </div>
+            </div>
+          ) : null}
+          {linked && !inbox.simulationActive ? (
+            <div className={styles.historySync} data-testid="whatsapp-contact-sync-panel">
+              <p>{t("manage.contactSyncHint")}</p>
+              {contactSyncRunning ? <p>{t("manage.contactSyncRunning")}</p> : null}
+              <div className={styles.actions}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy || contactSyncRunning}
+                  data-testid="whatsapp-contact-sync-start"
+                  onClick={() => void runContactSync()}
+                >
+                  {t("manage.contactSync")}
+                </Button>
               </div>
             </div>
           ) : null}

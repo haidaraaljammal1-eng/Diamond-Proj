@@ -25,6 +25,7 @@ if (!RUN) {
     let prisma: PrismaClient;
     let connectionA = "";
     let connectionB = "";
+    let adminToken = "";
     const phoneChat = "971509998877@s.whatsapp.net";
 
     before(async () => {
@@ -69,6 +70,15 @@ if (!RUN) {
         providerOccurredAt: new Date("2026-01-01T00:00:00.000Z"),
         receivedAt: new Date("2026-01-01T00:00:00.000Z"),
       });
+      const login = await app.inject({
+        method: "POST",
+        url: "/auth/login",
+        payload: {
+          email: "admin@diamond.test",
+          password: process.env.DEV_ADMIN_PASSWORD ?? "Diamond123!",
+        },
+      });
+      adminToken = login.json().data.accessToken;
     });
 
     after(async () => {
@@ -166,6 +176,26 @@ if (!RUN) {
       await sync.processContactSyncBatch(connectionA);
       const updated = await prisma.whatsAppConversation.findUniqueOrThrow({ where: { id: convo.id } });
       assert.equal(updated.customerDisplayName, "Linked Customer");
+    });
+
+    test("POST contact-sync/start queues worker without history sync", async () => {
+      setWhapiContactsClientForTests({
+        async listContacts(count, off) {
+          return { items: [], pageSize: count, hasMore: false };
+        },
+        async getProfilePicture() {
+          return { status: 404, contentType: null, body: Buffer.alloc(0) };
+        },
+      });
+      const res = await app.inject({
+        method: "POST",
+        url: "/whatsapp/connection/contact-sync/start",
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      assert.equal(res.statusCode, 200, res.body);
+      const body = res.json().data as { status: string; contactsOffset: number };
+      assert.equal(body.status, "RUNNING");
+      assert.equal(body.contactsOffset, 0);
     });
   });
 }

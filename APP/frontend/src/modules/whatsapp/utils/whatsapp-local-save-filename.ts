@@ -24,6 +24,11 @@ const TYPE_EXT: Record<string, string> = {
 export function waIdToSaveFolderName(customerWaId: string | null | undefined): string | null {
   const trimmed = (customerWaId ?? "").trim();
   if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+  if (lower.includes("@g.us")) {
+    const safe = sanitizeLocalFileSegment(lower.replace(/@/g, "_at_"));
+    return safe ? `group_${safe}` : null;
+  }
   const digits = trimmed.replace(/\D/g, "");
   if (digits.length < 6) return null;
   return digits.slice(0, 24);

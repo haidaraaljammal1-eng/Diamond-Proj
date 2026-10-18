@@ -415,6 +415,12 @@ export const WhatsAppHistorySyncStatusSchema = z.object({
   lastSuccessfulSyncAt: z.string().nullable(),
 });
 
+export const WhatsAppContactSyncStatusSchema = z.object({
+  status: z.enum(["IDLE", "RUNNING"]),
+  contactsOffset: z.number().int().nonnegative(),
+  lastSyncedAt: z.date().nullable(),
+});
+
 export const WhatsAppHistorySyncStartBodySchema = z
   .object({
     execute: z.boolean().optional().default(true),
@@ -432,4 +438,5 @@ export type WhatsAppSendTemplateBody = z.infer<typeof WhatsAppSendTemplateBodySc
 export type WhatsAppCustomerMatchDto = z.infer<typeof WhatsAppCustomerMatchSchema>;
 export type WhatsAppCustomerContextDto = z.infer<typeof WhatsAppCustomerContextSchema>;
 export type WhatsAppGroupContext = z.infer<typeof WhatsAppGroupContextSchema>;
+export type WhatsAppContactSyncStatusDto = z.infer<typeof WhatsAppContactSyncStatusSchema>;
 export type WhatsAppHistorySyncStatusDto = z.infer<typeof WhatsAppHistorySyncStatusSchema>;

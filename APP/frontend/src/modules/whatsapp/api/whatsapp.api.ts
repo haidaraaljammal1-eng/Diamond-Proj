@@ -16,6 +16,7 @@ import type {
   WhatsAppSendResult,
   WhatsAppTemplateDto,
   WhatsAppHistorySyncStatusDto,
+  WhatsAppContactSyncStatusDto,
   WhatsAppGroupContextDto,
 } from "../types/whatsapp.types";
 import { WHATSAPP_MESSAGE_PAGE_SIZE } from "../types/whatsapp.types";
@@ -358,6 +359,15 @@ export async function fetchWhatsAppConversationAvatarBlob(conversationId: string
 export async function fetchWhatsAppConversationAvatarObjectUrl(conversationId: string): Promise<string> {
   const blob = await fetchWhatsAppConversationAvatarBlob(conversationId);
   return URL.createObjectURL(blob);
+}
+
+/** `POST /whatsapp/connection/contact-sync/start` (`whatsapp.manage_connection`). */
+export async function startWhatsAppContactSync(): Promise<WhatsAppContactSyncStatusDto> {
+  const response = await apiRequest<WhatsAppContactSyncStatusDto>(
+    `${WHATSAPP_PATH}/connection/contact-sync/start`,
+    { method: "POST" },
+  );
+  return response.data;
 }
 
 export async function cancelWhatsAppHistorySync(): Promise<WhatsAppHistorySyncStatusDto> {

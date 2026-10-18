@@ -15,6 +15,10 @@ import {
   isWhapiPhoneChatId,
   outboundWhapiChatId,
 } from "src/modules/whatsapp/whapi.chat-id";
+import { writeWhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime-outbox";
+import { publishWhatsAppRealtime } from "src/modules/whatsapp/whatsapp.realtime-publisher";
+import type { WhatsAppRealtimeEvent } from "src/modules/whatsapp/whatsapp.realtime";
+import { whatsappError } from "src/modules/whatsapp/whatsapp.errors";
 
 const CONTACTS_PAGE = 50;
 const CONTACTS_PER_TICK = 25;
@@ -95,6 +99,7 @@ export function createWhatsAppContactSyncService(deps: FastifyInstance | Contact
       select: { id: true, customerDisplayName: true, customerWaId: true, customerId: true, providerChatId: true },
     });
 
+    const events: WhatsAppRealtimeEvent[] = [];
     for (const convo of conversations) {
       const merged = mergeWhapiContactDisplayName(
         convo.customerDisplayName,
@@ -107,7 +112,15 @@ export function createWhatsAppContactSyncService(deps: FastifyInstance | Contact
         where: { id: convo.id },
         data: { customerDisplayName: merged },
       });
+      const event = await writeWhatsAppRealtimeEvent(prisma, {
+        type: "whatsapp.conversation.updated",
+        dedupeKey: `whatsapp.conversation.updated:${convo.id}:contact-sync:${merged ?? "cleared"}`,
+        conversationId: convo.id,
+        connectionId,
+      });
+      if (event) events.push(event);
     }
+    if (events.length > 0) publishWhatsAppRealtime(events);
   }
 
   /** Bounded batch; returns true when more contacts remain. */
@@ -216,6 +229,41 @@ export function createWhatsAppContactSyncService(deps: FastifyInstance | Contact
     };
   }
 
+  async function getContactSyncStatus(connectionId: string) {
+    const row = await prisma.whatsAppContactSyncState.findUnique({
+      where: { connectionId },
+      select: { status: true, contactsOffset: true, lastSyncedAt: true },
+    });
+    const running = row?.status === "RUNNING" || contactSyncScheduled.has(connectionId);
+    return {
+      status: running ? ("RUNNING" as const) : ("IDLE" as const),
+      contactsOffset: row?.contactsOffset ?? 0,
+      lastSyncedAt: row?.lastSyncedAt ?? null,
+    };
+  }
+
+  async function requestContactSync(connectionId: string) {
+    if (!contactSyncScheduled.has(connectionId)) {
+      await prisma.whatsAppContactSyncState.upsert({
+        where: { connectionId },
+        create: { connectionId, status: "IDLE", contactsOffset: 0 },
+        update: { contactsOffset: 0 },
+      });
+    }
+    scheduleContactSync(connectionId);
+    return getContactSyncStatus(connectionId);
+  }
+
+  async function requestContactSyncForCurrentOffice() {
+    const connection = await prisma.whatsAppConnection.findFirst({
+      where: { status: { in: [...WHATSAPP_CURRENT_STATUSES] } },
+      select: { id: true, provider: true },
+    });
+    if (!connection) throw whatsappError.connectionNotFound();
+    if (connection.provider !== "WHAPI") throw whatsappError.providerNotConfigured();
+    return requestContactSync(connection.id);
+  }
+
   function scheduleContactSync(connectionId: string): void {
     if (contactSyncScheduled.has(connectionId)) return;
     contactSyncScheduled.add(connectionId);
@@ -232,7 +280,14 @@ export function createWhatsAppContactSyncService(deps: FastifyInstance | Contact
     })();
   }
 
-  return { processContactSyncBatch, fetchConversationAvatar, scheduleContactSync };
+  return {
+    processContactSyncBatch,
+    fetchConversationAvatar,
+    scheduleContactSync,
+    getContactSyncStatus,
+    requestContactSync,
+    requestContactSyncForCurrentOffice,
+  };
 }
 
 export function enqueueWhatsAppContactSyncAfterHistory(

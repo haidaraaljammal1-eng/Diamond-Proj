@@ -3318,7 +3318,10 @@
       "historySyncLastAt": "Last successful sync: {when}",
       "historySyncCompletedWithSkips": "Import finished with some chats skipped (partial history).",
       "historySyncForceFull": "Force full resync",
-      "historySyncForceFullConfirm": "Re-import all chats from scratch? This may take longer and re-scan every chat."
+      "historySyncForceFullConfirm": "Re-import all chats from scratch? This may take longer and re-scan every chat.",
+      "contactSync": "Sync contacts",
+      "contactSyncHint": "Refresh Whapi contact names and avatars without re-importing message history.",
+      "contactSyncRunning": "Syncing contacts…"
     },
     "customer": {
       "linked": "Linked Customer",

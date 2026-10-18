@@ -3318,7 +3318,10 @@
       "historySyncLastAt": "آخر مزامنة ناجحة: {when}",
       "historySyncCompletedWithSkips": "اكتمل الاستيراد مع تخطي بعض المحادثات (سجل جزئي).",
       "historySyncForceFull": "مزامنة كاملة إجبارية",
-      "historySyncForceFullConfirm": "إعادة استيراد كل المحادثات من البداية؟ قد يستغرق ذلك وقتاً أطول."
+      "historySyncForceFullConfirm": "إعادة استيراد كل المحادثات من البداية؟ قد يستغرق ذلك وقتاً أطول.",
+      "contactSync": "مزامنة جهات الاتصال",
+      "contactSyncHint": "تحديث أسماء وصور جهات الاتصال من Whapi دون إعادة استيراد سجل الرسائل.",
+      "contactSyncRunning": "جاري مزامنة جهات الاتصال…"
     },
     "customer": {
       "linked": "عميل مرتبط",

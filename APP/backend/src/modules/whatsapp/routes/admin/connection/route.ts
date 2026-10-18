@@ -16,8 +16,10 @@ import {
   WhatsAppWhapiConfigureBodySchema,
   WhatsAppHistorySyncStatusSchema,
   WhatsAppHistorySyncStartBodySchema,
+  WhatsAppContactSyncStatusSchema,
 } from "src/modules/whatsapp/whatsapp.schema";
 import { createWhatsAppHistorySyncService } from "src/modules/whatsapp/whatsapp.history-sync.service";
+import { createWhatsAppContactSyncService } from "src/modules/whatsapp/whatsapp.contact-sync.service";
 
 const T = ["WhatsApp"];
 
@@ -25,6 +27,7 @@ export default async function whatsappConnectionRoutes(fastify: FastifyInstance)
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const whatsapp = createWhatsAppConnectionService(fastify);
   const historySync = createWhatsAppHistorySyncService(fastify);
+  const contactSync = createWhatsAppContactSyncService(fastify);
 
   app.get(
     "/",
@@ -261,6 +264,32 @@ export default async function whatsappConnectionRoutes(fastify: FastifyInstance)
         request.body.execute ?? true,
         request.body.mode,
       );
+      return { data };
+    },
+  );
+
+  app.post(
+    "/contact-sync/start",
+    {
+      config: sensitiveMutationRateLimit(),
+      schema: {
+        summary: "Queue bounded Whapi contact name refresh for the current connection",
+        operationId: "startWhatsAppContactSync",
+        tags: T,
+        permissions: [PERMISSIONS.WHATSAPP_MANAGE_CONNECTION],
+        response: {
+          200: dataResponse(WhatsAppContactSyncStatusSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      requireAuth(request);
+      request.setAudit({
+        action: "WHATSAPP_CONTACT_SYNC_STARTED",
+        entityType: "WhatsAppConnection",
+      });
+      const data = await contactSync.requestContactSyncForCurrentOffice();
       return { data };
     },
   );

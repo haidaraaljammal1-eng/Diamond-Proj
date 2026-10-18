@@ -76,6 +76,7 @@ describe("local media filename", () => {
 
   it("sanitizes phone folders from wa id digits only", () => {
     assert.equal(waIdToSaveFolderName("963984179466"), "963984179466");
+    assert.equal(waIdToSaveFolderName("120363000000000001@g.us"), "group_120363000000000001_at_g.us");
     assert.equal(waIdToSaveFolderName("  "), null);
     assert.equal(UNIDENTIFIED_SENDER_FOLDER, "_unidentified");
     assert.equal(sanitizeLocalFileSegment("bad/name?"), "bad_name_");

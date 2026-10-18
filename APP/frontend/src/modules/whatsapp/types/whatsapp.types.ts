@@ -1,3 +1,9 @@
+export type WhatsAppContactSyncStatusDto = {
+  status: "IDLE" | "RUNNING";
+  contactsOffset: number;
+  lastSyncedAt: string | null;
+};
+
 export type WhatsAppHistorySyncStatusDto = {
   runId: string | null;
   connectionId: string | null;
