@@ -1,7 +1,12 @@
 import type { PrismaClient } from "@prisma/client";
+import { assertTestDatabaseUrl } from "./integration-harness";
 
 /** Child rows first — conversation/message FKs restrict connection deletes. */
 export async function resetWhatsAppTables(prisma: PrismaClient) {
+  if (process.env.RUN_INTEGRATION === "true") {
+    const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? "";
+    assertTestDatabaseUrl(url);
+  }
   await prisma.whatsAppOutboundAttempt.deleteMany();
   await prisma.whatsAppMessage.deleteMany();
   await prisma.whatsAppConversation.deleteMany();

@@ -294,5 +294,8 @@ export function enqueueWhatsAppContactSyncAfterHistory(
   deps: FastifyInstance | ContactSyncDeps,
   connectionId: string,
 ): void {
+  // Integration history suites finish with a linked connection; skip auto contact sync
+  // so workers never call live Whapi (contact sync is covered in its own test file).
+  if (process.env.RUN_INTEGRATION === "true") return;
   createWhatsAppContactSyncService(deps).scheduleContactSync(connectionId);
 }
