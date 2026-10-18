@@ -1157,7 +1157,6 @@ if (!INTEGRATION_ENABLED) {
         const event = fakePayments.buildWebhookEvent({
           paymentId: payment.id,
           status: "CONFIRMED",
-          eventType: "payment_intent.succeeded",
         });
         const wh = await sendTestStripeWebhook(app, event);
         assert.equal(wh.statusCode, 200, wh.body);

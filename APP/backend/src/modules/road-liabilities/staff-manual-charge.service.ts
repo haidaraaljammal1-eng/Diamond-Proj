@@ -244,7 +244,7 @@ export function createStaffManualChargeService(fastify: FastifyInstance) {
       status,
       operationalState: view.operationalState ?? null,
       invoicePending: paid,
-      failure: view.failure ?? null,
+      failure: null,
       recoveryState,
     };
   }

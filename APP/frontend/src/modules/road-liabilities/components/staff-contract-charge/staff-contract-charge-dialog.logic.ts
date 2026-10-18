@@ -40,9 +40,10 @@ export function resolveStaffChargeFailureMessage(
   locale: string,
   failure: RoadLiabilityCollectionFailureDto | null | undefined,
 ): string | null {
-  if (!failure) return null;
-  if (locale.startsWith("ar") && failure.messageAr) return failure.messageAr;
-  if (failure.messageEn) return failure.messageEn;
+  const detail = failure?.failure;
+  if (!detail) return null;
+  if (locale.startsWith("ar") && detail.messageAr) return detail.messageAr;
+  if (detail.messageEn) return detail.messageEn;
   return null;
 }
 

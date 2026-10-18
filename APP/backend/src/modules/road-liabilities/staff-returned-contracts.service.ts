@@ -147,7 +147,7 @@ export async function listReturnedContracts(
 }
 
 export async function assertReturnedContractEligible(
-  prisma: PrismaClient,
+  prisma: PrismaClient | import("@prisma/client").Prisma.TransactionClient,
   contractId: string,
   now = new Date(),
 ) {

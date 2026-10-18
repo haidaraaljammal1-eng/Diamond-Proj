@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { assertTestDatabaseUrl } from "./integration-harness";
 
 /**
  * Deletes fixtures created by staff-manual-charge integration tests for one run id.
@@ -9,6 +10,8 @@ export async function cleanupStaffManualChargeFixtures(
   contractIds: string[],
 ): Promise<void> {
   if (contractIds.length === 0) return;
+  const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? "";
+  assertTestDatabaseUrl(url);
 
   const liabilities = await prisma.roadLiability.findMany({
     where: { attributedContractId: { in: contractIds } },

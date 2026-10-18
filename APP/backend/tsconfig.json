@@ -28,6 +28,11 @@
     "scripts/_tmp-*.ts",
     "scripts/rebuild-dev-fleet-gps-safe.ts",
     "scripts/update-elite-legal-names-once.ts",
-    "scripts/run-rbac-v2-e2e.ts"
+    "scripts/run-rbac-v2-e2e.ts",
+    "scripts/find-eligible-manual-charge-contract.ts",
+    "scripts/preflight-diamond-5432-readonly.ts",
+    "scripts/runtime-preflight-manual-charge.ts",
+    "scripts/smoke-registry-diamond-readonly.ts",
+    "scripts/verify-registry-post-migrate.ts"
   ]
 }
