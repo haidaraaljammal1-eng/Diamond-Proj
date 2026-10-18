@@ -41,3 +41,22 @@ export async function acquireAdvisoryLocks(
     await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock($1, $2)", a, b);
   }
 }
+
+/** Session-scoped lock — pair with releaseSessionAdvisoryLock in a finally block. */
+export async function acquireSessionAdvisoryLock(
+  db: { $executeRawUnsafe: Tx["$executeRawUnsafe"] },
+  namespace: string,
+  entityId: string | number,
+): Promise<void> {
+  const [a, b] = advisoryLockKey(namespace, entityId);
+  await db.$executeRawUnsafe("SELECT pg_advisory_lock($1, $2)", a, b);
+}
+
+export async function releaseSessionAdvisoryLock(
+  db: { $executeRawUnsafe: Tx["$executeRawUnsafe"] },
+  namespace: string,
+  entityId: string | number,
+): Promise<void> {
+  const [a, b] = advisoryLockKey(namespace, entityId);
+  await db.$executeRawUnsafe("SELECT pg_advisory_unlock($1, $2)", a, b);
+}

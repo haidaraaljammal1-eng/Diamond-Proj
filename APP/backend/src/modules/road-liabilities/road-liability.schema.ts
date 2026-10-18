@@ -129,6 +129,12 @@ export const RoadLiabilityListItemSchema = z.object({
     confirmed: z.boolean(),
     destination: z.enum(["RECONCILIATION", "POST_CLOSE_RECEIVABLE", "DIRECT_COLLECTION"]).nullable(),
   }),
+  staffEntered: z
+    .object({
+      referenceNumber: z.string(),
+      chargeCategory: z.enum(["TRAFFIC_VIOLATION", "SALIK"]),
+    })
+    .nullable(),
 });
 export type RoadLiabilityListItem = z.infer<typeof RoadLiabilityListItemSchema>;
 

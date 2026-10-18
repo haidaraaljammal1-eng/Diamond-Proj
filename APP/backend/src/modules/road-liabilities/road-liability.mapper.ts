@@ -157,12 +157,28 @@ export function isStaffManualRoadLiability(input: {
   return input.authoritativeSourceKey === "STAFF_MANUAL" && input.staffEnteredAt != null;
 }
 
+export function isStaffManualProvisionalCollectible(input: {
+  authoritativeSourceKey?: string | null;
+  confirmationStatus: RoadLiabilityConfirmationStatus;
+  staffEnteredAt?: Date | null;
+  collectionStatus: RoadLiabilityCollectionStatus;
+}): boolean {
+  return (
+    input.authoritativeSourceKey === "STAFF_MANUAL" &&
+    input.confirmationStatus === "CONFIRMED" &&
+    input.staffEnteredAt == null &&
+    input.collectionStatus === "OPEN"
+  );
+}
+
 export function isChargeableRoadLiability(input: ChargeableRoadLiabilityInput): boolean {
   const staffAttested =
-    isStaffManualRoadLiability(input) && input.confirmationStatus === "CONFIRMED";
+    (isStaffManualRoadLiability(input) && input.confirmationStatus === "CONFIRMED") ||
+    isStaffManualProvisionalCollectible(input);
   const providerConfirmed =
     input.confirmationStatus === "CONFIRMED" &&
-    !isStaffManualRoadLiability(input);
+    !isStaffManualRoadLiability(input) &&
+    !isStaffManualProvisionalCollectible(input);
   if (!staffAttested && !providerConfirmed) return false;
   return (
     input.attributionStatus === "MATCHED" &&
@@ -458,6 +474,17 @@ export function toListItem(row: RoadLiabilityRow): RoadLiabilityListItem {
       confirmed: Boolean(row.customerCharge),
       destination: row.customerCharge?.destinationType ?? null,
     },
+    staffEntered:
+      isStaffManualRoadLiability(row) &&
+      row.staffEnteredAt != null &&
+      row.staffChargeDescription &&
+      row.staffChargeCategory &&
+      row.collectionStatus !== "VOID"
+        ? {
+            referenceNumber: row.staffChargeDescription,
+            chargeCategory: row.staffChargeCategory,
+          }
+        : null,
   };
 }
 

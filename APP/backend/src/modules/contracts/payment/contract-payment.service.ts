@@ -13,6 +13,7 @@ import {
 import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
 import { writeOutboxEvent } from "src/lib/db/outbox";
 import { enqueueRoadLiabilityInvoiceOutbox } from "src/modules/road-liabilities/road-liability-invoice-outbox";
+import { reconcileStaffManualChargeOutcome } from "src/modules/road-liabilities/staff-manual-outcome.service";
 import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import { expiryFromNow, generateOpaqueToken, hashToken } from "src/lib/security/tokens";
@@ -698,7 +699,12 @@ export function createContractPaymentService(prisma: PrismaClient) {
     amountMinor?: number,
     currency?: string,
   ): Promise<ContractPayment> {
-    if (payment.status === "CONFIRMED") return payment;
+    if (payment.status === "CONFIRMED") {
+      if (payment.purpose === "ROAD_LIABILITY") {
+        await reconcileStaffManualChargeOutcome(tx, { paymentId: payment.id });
+      }
+      return payment;
+    }
     if (payment.providerReference) {
       verifyProviderAmount(payment, amountMinor, currency);
     }
@@ -706,6 +712,7 @@ export function createContractPaymentService(prisma: PrismaClient) {
       const winning = await resolveRoadLiabilityWinningPayment(tx, payment);
       if (winning) {
         await markRoadLiabilityLateProviderConflict(tx, payment, winning.id);
+        await reconcileStaffManualChargeOutcome(tx, { paymentId: winning.id });
         return winning;
       }
     }
@@ -739,6 +746,9 @@ export function createContractPaymentService(prisma: PrismaClient) {
         currency: payment.currency,
         dedupe: payment.id,
       });
+      if (payment.purpose === "ROAD_LIABILITY") {
+        await reconcileStaffManualChargeOutcome(tx, { paymentId: updated.id });
+      }
       return updated;
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -748,6 +758,9 @@ export function createContractPaymentService(prisma: PrismaClient) {
         if (existing) {
           if (payment.purpose === "ROAD_LIABILITY" && existing.id !== payment.id) {
             await markRoadLiabilityLateProviderConflict(tx, payment, existing.id);
+          }
+          if (payment.purpose === "ROAD_LIABILITY") {
+            await reconcileStaffManualChargeOutcome(tx, { paymentId: existing.id });
           }
           return existing;
         }
@@ -809,6 +822,9 @@ export function createContractPaymentService(prisma: PrismaClient) {
         status: terminalStatus,
         dedupe: payment.id,
       });
+      if (payment.purpose === "ROAD_LIABILITY") {
+        await reconcileStaffManualChargeOutcome(tx, { paymentId: updated.id });
+      }
       return updated;
     }
     return payment;

@@ -7,6 +7,17 @@ export function isUniqueViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 }
 
+/** True when a required table is missing (P2021), optionally filtered by name. */
+export function isMissingDatabaseTableError(err: unknown, tableName?: string): boolean {
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== "P2021") {
+    return false;
+  }
+  if (!tableName) return true;
+  const metaTable = typeof err.meta?.table === "string" ? err.meta.table : "";
+  const message = err.message ?? "";
+  return metaTable.includes(tableName) || message.includes(tableName);
+}
+
 /**
  * Map known Prisma errors to a structured AppError. Returns null for anything
  * unrecognized so the caller can fall through to a generic 500 (never leaking

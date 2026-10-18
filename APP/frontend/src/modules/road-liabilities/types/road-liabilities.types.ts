@@ -1,4 +1,5 @@
 import type { OperatingCompanyIdentity } from "@/modules/operating-companies";
+import type { CustomerChargeDestination } from "./road-liability-charge-review.types";
 
 export type RoadLiabilityType =
   | "rta_violation"
@@ -163,8 +164,12 @@ export interface RoadLiabilityListItemDto {
   reconciliationLineId?: string | null;
   customerCharge?: {
     confirmed: boolean;
-    destination: "RECONCILIATION" | "POST_CLOSE_RECEIVABLE" | null;
+    destination: CustomerChargeDestination | null;
   };
+  staffEntered?: {
+    referenceNumber: string;
+    chargeCategory: StaffRoadChargeCategory;
+  } | null;
 }
 
 export interface RoadLiabilityProvenanceDto {
@@ -356,7 +361,7 @@ export interface ReturnedContractsListQuery {
 export interface ReturnedContractListItemDto {
   contractId: string;
   contractNumber: string;
-  status: "REVIEW" | "CLOSED";
+  status: "ACTIVE" | "RETOUT" | "REVIEW" | "CLOSED";
   collectionMode: string;
   company: {
     id: number;
@@ -367,7 +372,7 @@ export interface ReturnedContractListItemDto {
   customerName: string | null;
   vehicleDisplayName: string;
   plateNumber: string | null;
-  carInOccurredAt: string;
+  carInOccurredAt: string | null;
   cardAvailability: "available" | "unavailable";
   capabilityReasonCode: string | null;
   savedPaymentMethod: RoadLiabilitySavedPaymentMethodDto | null;
@@ -376,7 +381,15 @@ export interface ReturnedContractListItemDto {
 export interface StaffManualChargeInput {
   chargeCategory: StaffRoadChargeCategory;
   amountAed: number;
+  referenceNumber: string;
 }
+
+export type StaffManualRecoveryStateDto =
+  | "none"
+  | "orphan_idempotency_cleared"
+  | "collection_resumed"
+  | "awaiting_provider"
+  | "manual_review";
 
 export interface StaffManualChargeResultDto {
   roadLiabilityId: string;
@@ -384,6 +397,7 @@ export interface StaffManualChargeResultDto {
   operationalState: string | null;
   invoicePending: boolean;
   failure?: RoadLiabilityCollectionFailureDto | null;
+  recoveryState?: StaffManualRecoveryStateDto;
 }
 
 export const RETURNED_CONTRACTS_PAGE_SIZE = 20;

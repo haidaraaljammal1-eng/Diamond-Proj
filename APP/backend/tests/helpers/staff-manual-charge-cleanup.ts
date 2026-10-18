@@ -65,6 +65,23 @@ export async function cleanupStaffManualChargeFixtures(
   await prisma.roadLiabilityObservation.deleteMany({
     where: { liabilityId: { in: liabilityIds } },
   });
+  try {
+    await prisma.roadChargeReferenceRegistry.deleteMany({
+      where: {
+        OR: [
+          { roadLiabilityId: { in: liabilityIds } },
+          { staffManualIdempotencyKey: { contains: "smc-" } },
+          {
+            provenance: "STAFF_MANUAL",
+            roadLiabilityId: null,
+            staffManualIdempotencyKey: { contains: "smc-" },
+          },
+        ],
+      },
+    });
+  } catch {
+    /* registry table may be absent on databases without migration 20261017210000 */
+  }
   await prisma.roadLiability.deleteMany({
     where: { id: { in: liabilityIds } },
   });
@@ -94,6 +111,14 @@ export async function cleanupStaffManualChargeRunArtifacts(
   },
 ): Promise<void> {
   await cleanupStaffManualChargeFixtures(prisma, input.contractIds);
+
+  try {
+    await prisma.roadChargeReferenceRegistry.deleteMany({
+      where: { staffManualIdempotencyKey: { contains: input.run } },
+    });
+  } catch {
+    /* registry table may be absent on databases without migration 20261017210000 */
+  }
 
   if (input.customerId != null) {
     const profiles = await prisma.customerPaymentProfile.findMany({

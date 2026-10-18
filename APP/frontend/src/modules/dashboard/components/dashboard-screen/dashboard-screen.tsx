@@ -10,12 +10,6 @@ import { ContractDetailDrawer } from "@/modules/contracts/components/contract-de
 import { GENERATE_RENTAL_LINK_HREF } from "../../utils/dashboard.routes";
 import { hasAnyDashboardSection } from "../../utils/dashboard.selectors";
 import { useDashboardOverview } from "../../hooks/use-dashboard-overview";
-import {
-  DashboardSimulationControls,
-  isDashboardSimulationId,
-  selectDashboardPresentation,
-  useDashboardSimulation,
-} from "../../simulation";
 import { DashboardCompanyScope } from "../dashboard-company-scope/dashboard-company-scope";
 import { ExpenseBreakdownCard } from "../expense-breakdown-card/expense-breakdown-card";
 import { FleetStatusCard } from "../fleet-status-card/fleet-status-card";
@@ -31,7 +25,7 @@ export function DashboardScreen() {
   const locale = useLocale();
   const router = useRouter();
   const {
-    overview: realOverview,
+    overview,
     isAllowed,
     isAuthLoading,
     error,
@@ -43,24 +37,16 @@ export function DashboardScreen() {
     companyId,
     setCompanyId,
   } = useDashboardOverview();
-  const simulation = useDashboardSimulation();
   const registerNotificationTargets = useNotificationRecordTargets();
-  const overview = selectDashboardPresentation(
-    realOverview,
-    simulation.active,
-    simulation.overview,
-  );
   const [drawerId, setDrawerId] = useState<string | null>(null);
 
   useEffect(() => {
     const records = [
-      ...(realOverview?.todayContracts ?? []),
-      ...(realOverview?.todayDeliveries ?? []),
+      ...(overview?.todayContracts ?? []),
+      ...(overview?.todayDeliveries ?? []),
     ];
     registerNotificationTargets(
-      records
-        .filter((record) => !isDashboardSimulationId(record.id))
-        .map((record) => ({
+      records.map((record) => ({
           entityType: "contract" as const,
           entityId: record.id,
           route: "/contracts" as const,
@@ -68,7 +54,7 @@ export function DashboardScreen() {
           reference: record.vehicleName,
         })),
     );
-  }, [realOverview, registerNotificationTargets]);
+  }, [overview, registerNotificationTargets]);
 
   const isOfficeView = canReadContracts && canReadVehicles;
   const greeting = viewerName
@@ -85,7 +71,6 @@ export function DashboardScreen() {
   }, [locale, router, setDrawerId]);
 
   const openContract = useCallback((id: string) => {
-    if (isDashboardSimulationId(id)) return;
     setDrawerId(id);
   }, [setDrawerId]);
 
@@ -99,7 +84,6 @@ export function DashboardScreen() {
           {isAllowed ? (
             <DashboardCompanyScope companyId={companyId} onChange={setCompanyId} />
           ) : null}
-          <DashboardSimulationControls />
           {canGenerateLink ? (
             <Button type="button" size="md" onClick={goVehicles}>
               {t("generateNewLink")}

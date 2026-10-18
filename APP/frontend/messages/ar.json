@@ -2607,6 +2607,8 @@
       "occurred": "وقت الحدث",
       "location": "الموقع",
       "reference": "المرجع",
+      "staffViolationNumber": "رقم المخالفة",
+      "staffReferenceHint": "رقم أدخله الموظف — وليس مرجعاً مؤكداً من مزود RTA/سالك.",
       "vehicle": "المركبة",
       "contract": "العقد والعميل",
       "contractNumber": "العقد",
@@ -2627,23 +2629,36 @@
     },
     "error": {
       "generic": "تعذر تحميل الالتزامات المرورية. حاول مرة أخرى.",
-      "RETURNED_CONTRACT_NOT_ELIGIBLE": "هذا العقد خارج نافذة العقود المُعادة أو غير مؤهل للتحصيل اليدوي.",
-      "ROAD_LIABILITY_AUTHORIZATION_MISSING": "لا توجد بطاقة مخوّلة محفوظة لهذا العقد."
+      "RETURNED_CONTRACT_NOT_ELIGIBLE": "هذا العقد غير مؤهل للتحصيل اليدوي من البطاقة المحفوظة.",
+      "REFERENCE_ALREADY_USED": "رقم المخالفة مستخدم مسبقاً لهذا النوع من الرسوم.",
+      "REFERENCE_IN_PROGRESS": "يوجد تحصيل قيد المعالجة لهذا رقم المخالفة. انتظر النتيجة أو تواصل مع الدعم.",
+      "ROAD_LIABILITY_AUTHORIZATION_MISSING": "لا توجد بطاقة مخوّلة محفوظة لهذا العقد.",
+      "REFERENCE_REGISTRY_SCHEMA_OUTDATED": "التحصيل اليدوي غير متاح حالياً — يلزم تطبيق ترحيل قاعدة البيانات لتتبع أرقام المخالفات على هذا البيئة.",
+      "STAFF_MANUAL_IDEMPOTENCY_UNRESOLVED": "تعذر إكمال هذا التحصيل بأمان. انتظر قليلاً ثم أعد المحاولة، أو تواصل مع الدعم مع رقم الطلب."
     },
     "pageTabs": {
       "liabilities": "الالتزامات المرورية",
-      "returnedContracts": "عقود مُعادة — آخر 30 يومًا"
+      "returnedContracts": "التحصيل اليدوي"
     },
     "returnedContracts": {
-      "searchPlaceholder": "بحث برقم العقد أو العميل أو اللوحة…",
-      "search": "بحث",
+      "intro": "يمكن تحصيل مخالفات المرور و«سالك» بعد مرور شهر من إعادة المركبة إلى المكتب باستخدام البطاقة المحفوظة.",
+      "search": {
+        "inputLabel": "بحث في العقود المؤهلة للتحصيل",
+        "placeholder": "بحث برقم العقد أو العميل أو اللوحة…",
+        "button": "بحث",
+        "clear": "مسح البحث"
+      },
+      "columnCustomer": "العميل",
+      "columnContract": "العقد",
+      "columnActions": "إجراءات",
+      "columnContractStatus": "حالة العقد",
+      "columnCarInDate": "تاريخ استلام المركبة",
       "collect": "تحصيل رسوم",
       "cardAvailable": "متاحة",
       "cardUnavailable": "غير متاحة",
-      "carIn": "استلام المركبة",
-      "status": "الحالة",
-      "empty": "لا توجد عقود مُعادة خلال آخر 30 يومًا.",
-      "loading": "جاري تحميل العقود المُعادة…",
+      "carInNotYet": "—",
+      "empty": "لا توجد عقود نشطة أو مُعادة مؤهلة للتحصيل.",
+      "loading": "جاري تحميل العقود المؤهلة…",
       "results": "{count} عقد"
     },
     "staffCharge": {
@@ -2651,6 +2666,10 @@
       "close": "إغلاق",
       "typeTraffic": "مخالفة مرورية",
       "typeSalik": "سالك",
+      "referenceLabelTraffic": "رقم المخالفة",
+      "referenceLabelSalik": "رقم سالك",
+      "referenceRequiredTraffic": "رقم المخالفة مطلوب.",
+      "referenceRequiredSalik": "رقم سالك مطلوب.",
       "amountLabel": "المبلغ المطلوب خصمه (AED)",
       "cancel": "إلغاء",
       "review": "متابعة",
@@ -2659,9 +2678,13 @@
       "noCard": "لا توجد بطاقة محفوظة",
       "noAuthorizedCard": "لا توجد بطاقة مخوّلة — التحصيل غير متاح.",
       "resultSuccess": "تم الخصم بنجاح.",
+      "resultSuccessTraffic": "تم دفع المخالفة بنجاح",
+      "resultSuccessSalik": "تم تحصيل رسوم سالك بنجاح",
       "resultProcessing": "العملية قيد المعالجة — يرجى الانتظار.",
       "resultRequiresAction": "تتطلب العملية إجراءً من العميل — لم يتم التحصيل.",
-      "resultFailed": "تعذر الخصم — لم يُحصَّل المبلغ."
+      "resultFailed": "تعذر الخصم — لم يُحصَّل المبلغ.",
+      "resultAwaitingProvider": "جارٍ تأكيد الدفع — لا تُعِد المحاولة الآن.",
+      "resultManualReview": "يتطلب هذا التحصيل مراجعة يدوية قبل إعادة المحاولة. تواصل مع الدعم إن لم يُحسم."
     },
     "charge": {
       "section": "المبلغ على العميل",

@@ -21,7 +21,6 @@ export function useReturnedContracts() {
     page: 1,
     pageSize: RETURNED_CONTRACTS_PAGE_SIZE,
   });
-  const [searchDraft, setSearchDraft] = useState("");
   const [items, setItems] = useState<ReturnedContractListItemDto[]>([]);
   const [meta, setMeta] = useState<RoadLiabilityPageMeta | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,8 +45,13 @@ export function useReturnedContracts() {
     void load();
   }, [load]);
 
-  const applySearch = () => {
-    setQuery((q) => ({ ...q, page: 1, search: searchDraft.trim() || undefined }));
+  const applySearch = (value: string) => {
+    const trimmed = value.trim();
+    setQuery((q) => ({ ...q, page: 1, search: trimmed || undefined }));
+  };
+
+  const clearSearch = () => {
+    setQuery((q) => ({ ...q, page: 1, search: undefined }));
   };
 
   const setCompanyFilter = (companyId?: number) => {
@@ -62,9 +66,8 @@ export function useReturnedContracts() {
     items,
     meta,
     query,
-    searchDraft,
-    setSearchDraft,
     applySearch,
+    clearSearch,
     setCompanyFilter,
     setPage,
     loading,

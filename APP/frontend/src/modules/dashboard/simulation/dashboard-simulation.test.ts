@@ -70,13 +70,12 @@ const realOverview = (partial: Partial<DashboardOverviewDto> = {}): DashboardOve
 });
 
 describe("dashboard simulation overlay", () => {
-  it("activates only the browser-only Dashboard demo in development", () => {
-    assert.equal(isUiDemoSimulationEnabled("dashboard", "true", "development"), true);
+  it("never enables the retired Dashboard browser overlay", () => {
+    assert.equal(isUiDemoSimulationEnabled("dashboard", "true", "development"), false);
     assert.equal(isUiDemoSimulationEnabled("dashboard", "false", "development"), false);
     assert.equal(isUiDemoSimulationEnabled("dashboard", "true", "production"), false);
-    const store = read("./dashboard-simulation.store.ts");
-    assert.match(store, /isUiDemoSimulationEnabled\("dashboard"\)/);
-    assert.match(store, /if \(!isUiDemoSimulationEnabled\("dashboard"\)\) return;/);
+    const screen = read("../components/dashboard-screen/dashboard-screen.tsx");
+    assert.doesNotMatch(screen, /DashboardSimulationControls|useDashboardSimulation/);
   });
 
   it("keeps the real API and store independent of simulation", () => {
@@ -175,7 +174,7 @@ describe("dashboard simulation overlay", () => {
   it("leaves real Dashboard files functional if the overlay folder is removed", () => {
     const screen = read("../components/dashboard-screen/dashboard-screen.tsx");
     assert.match(screen, /useDashboardOverview/);
-    assert.match(screen, /selectDashboardPresentation/);
+    assert.doesNotMatch(screen, /selectDashboardPresentation|DashboardSimulationControls/);
     assert.match(read("../api/dashboard.api.ts"), /getDashboardOverview/);
   });
 });

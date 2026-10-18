@@ -8,6 +8,18 @@ export function returnedContractWindowStart(now = new Date()): Date {
   return new Date(now.getTime() - RETURNED_CONTRACT_WINDOW_MS);
 }
 
+const PRE_ACTIVE_CONTRACT_STATUSES = new Set(["AWAITING", "FORM", "SIGNED", "PAID"]);
+const POST_CAR_IN_COLLECTION_STATUSES = new Set(["RETOUT", "REVIEW", "CLOSED"]);
+
+function isCarInWithinCollectionWindow(
+  occurredAt: Date,
+  now: Date,
+): boolean {
+  const start = returnedContractWindowStart(now);
+  return occurredAt.getTime() >= start.getTime();
+}
+
+/** Shared eligibility for returned-contracts list and staff manual off-session charge. */
 export function isReturnedContractEligible(
   contract: {
     status: string;
@@ -15,10 +27,29 @@ export function isReturnedContractEligible(
   },
   now = new Date(),
 ): boolean {
-  if (contract.status !== "REVIEW" && contract.status !== "CLOSED") return false;
+  if (PRE_ACTIVE_CONTRACT_STATUSES.has(contract.status)) return false;
+
+  if (contract.status === "ACTIVE") {
+    if (!contract.carIn) return true;
+    return isCarInWithinCollectionWindow(contract.carIn.occurredAt, now);
+  }
+
+  if (!POST_CAR_IN_COLLECTION_STATUSES.has(contract.status)) return false;
   if (!contract.carIn) return false;
-  const start = returnedContractWindowStart(now);
-  return contract.carIn.occurredAt.getTime() >= start.getTime();
+  return isCarInWithinCollectionWindow(contract.carIn.occurredAt, now);
+}
+
+function buildEligibleContractsWhere(now: Date): Prisma.ContractWhereInput {
+  const windowStart = returnedContractWindowStart(now);
+  return {
+    OR: [
+      { status: "ACTIVE", carIn: null },
+      {
+        status: { in: ["ACTIVE", "RETOUT", "REVIEW", "CLOSED"] },
+        carIn: { occurredAt: { gte: windowStart } },
+      },
+    ],
+  };
 }
 
 export type ReturnedContractsQuery = {
@@ -46,12 +77,12 @@ export async function listReturnedContracts(
   query: ReturnedContractsQuery,
   now = new Date(),
 ) {
-  const windowStart = returnedContractWindowStart(now);
   const where: Prisma.ContractWhereInput = {
-    status: { in: ["REVIEW", "CLOSED"] },
-    carIn: { occurredAt: { gte: windowStart } },
-    ...(query.companyId ? { companyId: query.companyId } : {}),
-    ...buildSearchWhere(query.search ?? ""),
+    AND: [
+      buildEligibleContractsWhere(now),
+      ...(query.companyId ? [{ companyId: query.companyId }] : []),
+      buildSearchWhere(query.search ?? ""),
+    ],
   };
 
   const skip = (query.page - 1) * query.pageSize;
@@ -59,7 +90,7 @@ export async function listReturnedContracts(
     prisma.contract.count({ where }),
     prisma.contract.findMany({
       where,
-      orderBy: { carIn: { occurredAt: "desc" } },
+      orderBy: [{ carIn: { occurredAt: "desc" } }, { contractNumber: "desc" }],
       skip,
       take: query.pageSize,
       include: {
@@ -83,7 +114,7 @@ export async function listReturnedContracts(
       return {
         contractId: row.id,
         contractNumber: row.contractNumber,
-        status: row.status as "REVIEW" | "CLOSED",
+        status: row.status as "ACTIVE" | "RETOUT" | "REVIEW" | "CLOSED",
         collectionMode: row.collectionMode ?? "",
         company: row.company,
         customerName: row.customer?.name ?? null,
@@ -96,7 +127,7 @@ export async function listReturnedContracts(
             })
           : "",
         plateNumber: row.vehicle?.plateNumber ?? null,
-        carInOccurredAt: row.carIn!.occurredAt,
+        carInOccurredAt: row.carIn?.occurredAt ?? null,
         cardAvailability,
         capabilityReasonCode: capability.reasonCode,
         savedPaymentMethod: capability.savedPaymentMethod,

@@ -47,8 +47,8 @@ test.describe("Violations & Salik Operations Center", () => {
     await expect(page.getByTestId("road-liabilities-empty")).toBeVisible();
     await expect(page.getByTestId("road-liabilities-queues")).toBeVisible();
     await expect(page.getByTestId("road-liabilities-queue-collectible")).toBeVisible();
-    await expect(page.getByTestId("road-liabilities-advanced")).toBeVisible();
-    await expect(page.getByTestId("road-liabilities-advanced-panel")).toHaveCount(0);
+    await expect(page.getByTestId("road-liabilities-company")).toBeVisible();
+    await expect(page.getByTestId("road-liabilities-advanced")).toHaveCount(0);
     await expect(page.getByTestId("road-liabilities-summary")).toContainText("المبلغ المستحق للتحصيل");
     await expect(page.getByTestId("road-liabilities-summary")).toContainText("بانتظار التأكيد");
     await expect(page.getByTestId("road-liabilities-summary")).toContainText("تحتاج مراجعة");

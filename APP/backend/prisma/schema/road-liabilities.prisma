@@ -152,6 +152,7 @@ model RoadLiability {
   reconciliationLine  ContractReconciliationLine?
   customerCharge      RoadLiabilityCustomerCharge?
   postCloseReceivable ContractPostCloseReceivable?
+  referenceRegistries RoadChargeReferenceRegistry[]
 
   @@index([occurredAt])
   @@index([type])
@@ -259,4 +260,38 @@ model ContractPostCloseReceivable {
 
   @@index([contractId, status])
   @@map("contract_post_close_receivables")
+}
+
+/// Global business identity for traffic/Salik reference numbers (trim-normalized).
+enum RoadChargeReferenceRegistryStatus {
+  RESERVED
+  CONFIRMED
+  RELEASED
+}
+
+enum RoadChargeReferenceProvenance {
+  STAFF_MANUAL
+  PROVIDER_AUTHORITATIVE
+}
+
+model RoadChargeReferenceRegistry {
+  id                        String                            @id @default(uuid())
+  chargeCategory            StaffRoadChargeCategory
+  referenceNumber           String
+  referenceNormalized       String
+  status                    RoadChargeReferenceRegistryStatus
+  provenance                RoadChargeReferenceProvenance
+  roadLiabilityId           String?
+  roadLiability             RoadLiability?                    @relation(fields: [roadLiabilityId], references: [id], onDelete: SetNull)
+  staffManualIdempotencyKey String?
+  reservedByUserId          Int?
+  reservedBy                User?                             @relation("RoadChargeReferenceReservedBy", fields: [reservedByUserId], references: [id], onDelete: SetNull)
+  confirmedAt               DateTime?
+  releasedAt                DateTime?
+  createdAt                 DateTime                          @default(now())
+  updatedAt                 DateTime                          @updatedAt
+
+  @@index([roadLiabilityId])
+  @@index([chargeCategory, referenceNormalized])
+  @@map("road_charge_reference_registry")
 }

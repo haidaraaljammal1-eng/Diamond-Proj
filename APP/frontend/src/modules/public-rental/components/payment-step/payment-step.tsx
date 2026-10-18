@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
 import { Checkbox } from "@/shared/components/ui/checkbox/checkbox";
-import { SimulationAction } from "@/modules/demo-simulation";
 import type {
   ContractPaymentStatus,
   PublicRentalContext,
@@ -244,19 +243,6 @@ export function PaymentStep({
               ? t("retry")
               : t("payNowStripe")}
         </Button>
-      ) : null}
-      {simulationEnabled && !stripeCheckoutAvailable ? (
-        <SimulationAction
-          label={t("simulateSuccess")}
-          testId="simulate-payment-success"
-          disabled={
-            context.contract.status !== "SIGNED" ||
-            inFlight ||
-            status === "CONFIRMED" ||
-            linkExpiredDuringPayment
-          }
-          onClick={onSimulatePayment}
-        />
       ) : null}
     </Card>
   );

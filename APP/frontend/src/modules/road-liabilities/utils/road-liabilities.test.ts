@@ -376,20 +376,12 @@ describe("empty real state", () => {
 });
 
 describe("Demo Simulation overlay", () => {
-  it("uses the Road Liabilities browser demo control without enabling rental simulation", () => {
+  it("does not expose a Road Liabilities browser demo control", () => {
     const screen = readFileSync(
       path.join(import.meta.dirname, "../components/road-liabilities-screen/road-liabilities-screen.tsx"),
       "utf8",
     );
-    assert.ok(screen.includes("SimulationButton"));
-    assert.ok(screen.includes('surface="violations"'));
-    const button = readFileSync(
-      path.join(import.meta.dirname, "../../demo-simulation/components/simulation-button/simulation-button.tsx"),
-      "utf8",
-    );
-    assert.ok(button.includes('surface !== "violations" || !simulation.enabled'));
-    assert.ok(button.includes('road-liabilities-simulation-run'));
-    assert.ok(button.includes('clearRoadLiabilitiesOverlay'));
+    assert.doesNotMatch(screen, /SimulationButton|road-liabilities-simulation-run/);
   });
 
   it("covers GPS pending, GPS then Salik, RTA, unmatched, ambiguous, and settled", () => {
@@ -524,11 +516,11 @@ describe("work queues, workState, and simplified surfaces", () => {
       "utf8",
     );
     assert.ok(toolbar.includes("ROAD_LIABILITY_CHANNELS"));
-    assert.ok(toolbar.includes("ROAD_LIABILITY_SOURCES"));
+    assert.equal(toolbar.includes("ROAD_LIABILITY_SOURCES"), false);
     assert.equal(toolbar.includes("channel.GPS"), false);
     assert.equal(toolbar.includes("TARS"), false);
-    assert.ok(toolbar.includes("road-liabilities-advanced-panel"));
-    assert.ok(toolbar.includes("filters.advanced"));
+    assert.equal(toolbar.includes("road-liabilities-advanced"), false);
+    assert.equal(toolbar.includes("filters.advanced"), false);
     const row = readFileSync(
       path.join(
         import.meta.dirname,
@@ -573,7 +565,8 @@ describe("work queues, workState, and simplified surfaces", () => {
       ),
       "utf8",
     );
-    assert.ok(rowCss.includes("data-empty"));
+    assert.ok(rowCss.includes("vehicleStack"));
+    assert.ok(rowCss.includes("partyStack"));
     assert.equal(isContractStatus("ACTIVE"), true);
     assert.equal(isContractStatus("ACTIVE"), true);
   });

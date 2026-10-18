@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { PageHeader } from "@/shared/components/ui/page-header";
-import { SimulationButton, useDemoSimulation } from "@/modules/demo-simulation";
 import { useOperatingCompanies } from "@/modules/operating-companies";
 import { ContractDetailDrawer } from "@/modules/contracts/components/contract-detail/contract-detail-drawer";
 import { useRoadLiabilities } from "../../hooks/use-road-liabilities";
-import { buildRoadLiabilitiesSimulationOverlay } from "../../utils/road-liability-simulation";
 import { resolveRoadLiabilitiesErrorMessage } from "../../utils/resolve-road-liabilities-error";
 import { RoadLiabilitiesList } from "../road-liabilities-list/road-liabilities-list";
 import { RoadLiabilitiesQueues } from "../road-liabilities-queues/road-liabilities-queues";
@@ -32,7 +30,6 @@ export function RoadLiabilitiesScreen() {
   const t = useTranslations("RoadLiabilities");
   const locale = useLocale();
   const router = useRouter();
-  const simulation = useDemoSimulation("violations");
   const page = useRoadLiabilities();
   const collection = useRoadLiabilityCollection(page.items, () => {
     if (!page.simulationActive) void page.refresh();
@@ -77,12 +74,6 @@ export function RoadLiabilitiesScreen() {
       actions={
         page.isAllowed ? (
           <div className={styles.headerActions}>
-            <SimulationButton
-              surface="violations"
-              onViolationsSimulate={() => {
-                simulation.simulateRoadLiabilities(buildRoadLiabilitiesSimulationOverlay());
-              }}
-            />
             <Button
               type="button"
               variant="secondary"
@@ -184,21 +175,18 @@ export function RoadLiabilitiesScreen() {
             onClearSearch: page.clearSearch,
             onCompanyFilter: page.setCompanyFilter,
             onChannelFilter: page.setChannelFilter,
-            onTypeFilter: page.setTypeFilter,
-            onSourceFilter: page.setSourceFilter,
-            onConfirmationFilter: page.setConfirmationFilter,
-            onAttributionFilter: page.setAttributionFilter,
-            onCollectionFilter: page.setCollectionFilter,
             onDateRangeApply: page.setDateRange,
             onDateRangeClear: () => page.setDateRange("", ""),
-            onClearAdvanced: page.clearFilters,
           }}
         />
       </div>
         </>
       ) : (
-        <div className={styles.surface}>
-          <ReturnedContractsPanel companies={companies} />
+        <div className={styles.surfaceCompact}>
+          <ReturnedContractsPanel
+            companies={companies}
+            companiesLoading={companiesLoading}
+          />
         </div>
       )}
 

@@ -9,6 +9,7 @@ import { VehicleImage } from "@/modules/vehicles/components/vehicle-image/vehicl
 import { VehicleStatus } from "@/modules/vehicles/components/vehicle-status/vehicle-status";
 import { ContractStatusChip } from "@/modules/contracts/components/contract-status/contract-status";
 import type { RoadLiabilityDetailDto } from "../../types/road-liabilities.types";
+import { staffChargeReferenceLabelKey } from "../staff-contract-charge/staff-contract-charge-dialog.logic";
 import { formatLiabilityAmount, toValidOccurredDate } from "../../utils/road-liability-format";
 import {
   attributionChipTone,
@@ -99,7 +100,11 @@ export function RoadLiabilityDetailDrawer({
       onClose={onClose}
       title={t("detail.title")}
       closeLabel={t("detail.close")}
-      heading={detail?.authoritative.externalReference ?? undefined}
+      heading={
+        detail?.staffEntered?.referenceNumber ??
+        detail?.authoritative.externalReference ??
+        undefined
+      }
     >
       {loading ? <p className={styles.muted}>{t("detail.loading")}</p> : null}
       {error ? (
@@ -160,11 +165,26 @@ export function RoadLiabilityDetailDrawer({
               }
             />
             <Kv label={t("detail.location")} value={gateLabel} />
-            <Kv
-              label={t("detail.reference")}
-              value={detail.authoritative.externalReference}
-              ltr
-            />
+            {detail.staffEntered?.referenceNumber ? (
+              <>
+                <Kv
+                  label={t(
+                    `staffCharge.${staffChargeReferenceLabelKey(
+                      detail.staffEntered.chargeCategory ?? "TRAFFIC_VIOLATION",
+                    )}`,
+                  )}
+                  value={detail.staffEntered.referenceNumber}
+                  ltr
+                />
+                <p className={styles.note}>{t("detail.staffReferenceHint")}</p>
+              </>
+            ) : (
+              <Kv
+                label={t("detail.reference")}
+                value={detail.authoritative.externalReference}
+                ltr
+              />
+            )}
           </section>
 
           <section data-testid="road-liability-event-status">

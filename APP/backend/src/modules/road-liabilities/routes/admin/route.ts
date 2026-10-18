@@ -88,7 +88,8 @@ export default async function roadLiabilityRoutes(fastify: FastifyInstance) {
     "/returned-contracts",
     {
       schema: {
-        summary: "Contracts with completed Car-In in the last 30 days",
+        summary:
+          "Active rentals and returned contracts within the post-Car-In collection window",
         operationId: "listReturnedContractsForRoadCharges",
         tags: T,
         permissions: [PERMISSIONS.VIOLATIONS_READ],

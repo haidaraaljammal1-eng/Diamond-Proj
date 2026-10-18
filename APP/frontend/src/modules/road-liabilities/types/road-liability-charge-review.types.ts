@@ -1,6 +1,9 @@
 export type RoadLiabilityChargeType = "RTA_VIOLATION" | "SALIK_TOLL" | "SALIK_VIOLATION";
 
-export type CustomerChargeDestination = "RECONCILIATION" | "POST_CLOSE_RECEIVABLE";
+export type CustomerChargeDestination =
+  | "RECONCILIATION"
+  | "POST_CLOSE_RECEIVABLE"
+  | "DIRECT_COLLECTION";
 
 export type CustomerChargeReviewState = "NOT_ELIGIBLE" | "AVAILABLE" | "LOCKED";
 

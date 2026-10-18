@@ -60,6 +60,7 @@ export function createFakePaymentProvider(run: string) {
   type OffSessionBehavior =
     | { mode: "confirm" }
     | { mode: "processing" }
+    | { mode: "requires_action" }
     | { mode: "failed"; failureCode?: string };
   let offSessionBehavior: OffSessionBehavior = { mode: "confirm" };
 
@@ -181,6 +182,20 @@ export function createFakePaymentProvider(run: string) {
           providerStatus: "processing",
           status: "PROCESSING" as const,
           requiresAction: false,
+          amountMinor: input.amount * 100,
+          currency: input.currency,
+        };
+      }
+      if (offSessionBehavior.mode === "requires_action") {
+        statuses.set(ref, "PROCESSING");
+        paymentRefs.set(input.paymentId, ref);
+        provider.lastRef = ref;
+        provider.lastPaymentId = input.paymentId;
+        return {
+          providerReference: ref,
+          providerStatus: "requires_action",
+          status: "PROCESSING" as const,
+          requiresAction: true,
           amountMinor: input.amount * 100,
           currency: input.currency,
         };
