@@ -261,7 +261,7 @@ export const useContractsStore = create<ContractsState>((set, get) => {
     closeSlot: IDLE_SLOT,
     load() {
       const status = get().status;
-      if (status === "ready" || status === "loading") {
+      if (status === "loading") {
         return listGate.current() ?? Promise.resolve();
       }
       return runList();

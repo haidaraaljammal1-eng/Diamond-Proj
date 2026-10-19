@@ -404,7 +404,7 @@ export function createUsersService(fastify: FastifyInstance) {
     }
     await assertActorMayGrantSystemAdmin(actor, roleIds);
     await assertActorMayAssignRoles(prisma, actor, roleIds);
-    assertFunctionalUserCapability(actor, FN.users.assignRoles);
+    assertFunctionalUserCapability(actor, FN.users.edit);
 
     const user = await withTransaction(prisma, async (tx) => {
       const adminRole = await tx.role.findUnique({

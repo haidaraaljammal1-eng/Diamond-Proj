@@ -115,11 +115,7 @@ export function PermissionMatrix({
             {matrix.groups.map((group) => (
               <Fragment key={group.key}>
                 <tr>
-                  <th
-                    scope="colgroup"
-                    colSpan={matrix.roles.length + placeholders + 1}
-                    className={styles.groupHead}
-                  >
+                  <th scope="row" className={styles.groupHead}>
                     {labels.groupLabelOf(group.key)}
                     <span className={styles.groupCount}>
                       {t("groupPermissionCount", {
@@ -127,6 +123,11 @@ export function PermissionMatrix({
                       })}
                     </span>
                   </th>
+                  <td
+                    colSpan={matrix.roles.length + placeholders}
+                    className={styles.groupHeadSpacer}
+                    aria-hidden="true"
+                  />
                 </tr>
                 {group.permissions.map((permission) => (
                   <tr key={permission.id} className={styles.row}>

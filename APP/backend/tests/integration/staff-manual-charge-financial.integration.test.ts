@@ -52,7 +52,7 @@ if (!INTEGRATION_ENABLED) {
     FN.vehicles.viewPage,
     FN.vehicles.addDelete,
     FN.violations.viewPage,
-    FN.violations.collectCharges,
+    FN.violations.manualCollection,
     FN.invoices.viewPage,
   ];
 

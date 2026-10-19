@@ -7,3 +7,17 @@ export function officialContractCompanyNames(contract: OfficialContractView) {
     en: contract.header.company.legalNameEn,
   };
 }
+
+/** Official contract header raster logo — keyed by `header.company.code` from the backend view. */
+export function officialContractHeaderLogo(companyCode: string) {
+  if (companyCode === "UNIQUE") {
+    return {
+      logoSrc: "/official-contract/diamond-unique-contract-logo.png",
+      logoAlt: "Diamond Unique Rent Car",
+    };
+  }
+  return {
+    logoSrc: "/official-contract/diamond-elite-contract-logo.png",
+    logoAlt: "Diamond Elite Rent Car",
+  };
+}

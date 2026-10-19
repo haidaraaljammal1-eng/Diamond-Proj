@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -17,6 +17,8 @@ import { FunctionalPermissionMatrix } from "../functional-permission-matrix/func
 import { RoleFormDialog } from "../role-form-dialog";
 import type { RoleFormTarget } from "../role-form-dialog";
 import { useRoleMutations } from "../../hooks/use-role-mutations";
+import { useFunctionalMatrixDelegation } from "../../hooks/use-functional-matrix-delegation";
+import { usePermissions } from "@/modules/auth";
 import styles from "./roles-screen.module.css";
 
 const ALL_GROUPS = "__all__";
@@ -49,9 +51,17 @@ export function RolesScreen() {
     error: writeError,
     clearError: clearWriteError,
   } = useRoleMutations();
+  const canDelegateGrantToggle = useFunctionalMatrixDelegation();
+  const { permissions: sessionPermissions } = usePermissions();
 
   // Which role dialog is open — UI-local, never store state.
   const [formTarget, setFormTarget] = useState<RoleFormTarget | null>(null);
+
+  useEffect(() => {
+    if (formTarget !== null && !canEditRoleMetadata) {
+      setFormTarget(null);
+    }
+  }, [formTarget, canEditRoleMetadata, sessionPermissions]);
 
   // Search and group filter are UI-local: the whole catalog is already loaded,
   // so filtering is derived locally and never hits the Backend per keystroke.
@@ -268,6 +278,7 @@ export function RolesScreen() {
             <FunctionalPermissionMatrix
               matrix={visibleFunctionalMatrix}
               matrixEditingDisabled={matrixEditingDisabled}
+              canToggleGrant={canDelegateGrantToggle}
               onEditRole={
                 canEditRoleMetadata
                   ? (role) => setFormTarget({ mode: "edit", role })

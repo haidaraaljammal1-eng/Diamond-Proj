@@ -34,7 +34,8 @@ or shared package — **do not duplicate keys by hand**.
 | ------- | ------- | ------ |
 | `FUNCTIONAL_RBAC_V2_ENABLED` in `APP/backend/.env` | `false` | When `true`, mapped routes use `diamond.fn.*` only (no legacy bypass). |
 
-- Catalog: run idempotent `npm run db:seed` (or `dev:bootstrap`) to upsert **151** keys (117 + 34).
+- Catalog: run idempotent `npm run db:seed` (or `dev:bootstrap`) to upsert **149** keys (117 legacy + **32** functional).
+- **Oct 2026 simplification:** `diamond.fn.contracts.operations_closure` replaces delivery/reconcile + collection/closure; `diamond.fn.users.edit` covers role assignment on the Employees edit dialog (`assign_roles` removed). Roles administration stays under `diamond.fn.roles.*` only.
 - Role grants: `PUT /admin/roles/:id/functional-grants` with `{ functionalGrants: string[] }` (preserves non-functional keys).
 - Frontend matrix still hides `diamond.fn.*` until Phase 3.
 

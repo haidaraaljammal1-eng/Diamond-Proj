@@ -8,7 +8,8 @@ export function useAuth() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const user = session?.user ?? null;
-  const isLoading = status === "loading";
+  /** NextAuth `update()` sets `status` to loading while keeping `session.user`; do not block the shell. */
+  const isLoading = status === "loading" && user == null;
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const error = useAuthStore((state) => state.error);
   const setLoggingOut = useAuthStore((state) => state.setLoggingOut);
@@ -27,7 +28,7 @@ export function useAuth() {
   return {
     user,
     status,
-    isAuthenticated: status === "authenticated",
+    isAuthenticated: status === "authenticated" || (status === "loading" && user != null),
     isLoading,
     isLoggingOut,
     error,

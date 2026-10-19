@@ -35,6 +35,6 @@ export const LOOKUP_VEHICLE_FOR_MAINTENANCE_CREATE = {
 } as const;
 
 export const LOOKUP_ROLES_FOR_USER_ASSIGN = {
-  capability: FN.users.assignRoles,
+  capability: FN.users.edit,
   legacy: [PERMISSIONS.ROLES_READ, PERMISSIONS.USERS_CREATE, PERMISSIONS.USERS_UPDATE],
 } as const;

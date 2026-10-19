@@ -19,7 +19,4 @@ export function assertFunctionalUserCreate(
   roleIds: readonly number[],
 ): void {
   assertFunctionalUserCapability(actor, FN.users.create);
-  if (roleIds.length > 0) {
-    assertFunctionalUserCapability(actor, FN.users.assignRoles);
-  }
 }

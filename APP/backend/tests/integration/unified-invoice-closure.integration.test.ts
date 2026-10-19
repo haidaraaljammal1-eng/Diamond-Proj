@@ -184,14 +184,13 @@ if (!INTEGRATION_ENABLED) {
         FN.vehicles.viewPage,
         FN.vehicles.addDelete,
         FN.violations.viewPage,
-        FN.violations.collectCharges,
+        FN.violations.manualCollection,
         FN.invoices.viewPage,
         FN.invoices.sendWhatsapp,
         FN.whatsapp.full,
         FN.contracts.viewPage,
         FN.contracts.rentalLink,
-        FN.contracts.deliveryReturnReconcile,
-        FN.contracts.collectionClosure,
+        FN.contracts.operationsClosure,
         FN.contracts.renewal,
       ];
       const role = await prisma.role.findFirstOrThrow({ where: { key: `uic_admin_${run}` } });

@@ -6,6 +6,7 @@ import type {
   TokenPair,
 } from "@/infrastructure/auth/auth.types";
 import { createRefreshCoordinator } from "@/infrastructure/auth/refresh-coordinator";
+import { selectAuthMeFetcher } from "@/infrastructure/auth/auth-me-fetch";
 import {
   shouldSyncPermissionsFromAuthMe,
   syncJwtPermissionsFromAuthMe,
@@ -45,13 +46,18 @@ const refreshToken = createRefreshCoordinator<TokenPair>((token) =>
   backendRequest<TokenPair>("/auth/refresh", { refreshToken: token }),
 );
 
+async function fetchCurrentUserFresh(accessToken: string): Promise<AuthUser> {
+  return backendRequest<AuthUser>("/auth/me", undefined, accessToken, "GET");
+}
+
 /**
  * Concurrent jwt callbacks share one GET /auth/me per access token so session
  * revalidation cannot stampede the Backend. Failures are not cached.
+ * Explicit `update()` uses {@link fetchCurrentUserFresh} so remote revokes land
+ * within the live-sync window instead of waiting out this TTL.
  */
 const fetchCurrentUser = createRefreshCoordinator<AuthUser>(
-  (accessToken) =>
-    backendRequest<AuthUser>("/auth/me", undefined, accessToken, "GET"),
+  fetchCurrentUserFresh,
   { ttlMs: 5_000 },
 );
 
@@ -109,7 +115,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (accessTokenStillFresh) {
         if (shouldSyncPermissionsFromAuthMe(token, Date.now(), trigger)) {
-          return syncJwtPermissionsFromAuthMe(token, fetchCurrentUser);
+          const fetchMe = selectAuthMeFetcher(
+            trigger,
+            fetchCurrentUserFresh,
+            fetchCurrentUser,
+          );
+          return syncJwtPermissionsFromAuthMe(token, fetchMe);
         }
         return token;
       }

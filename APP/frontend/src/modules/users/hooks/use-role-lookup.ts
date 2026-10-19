@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  isFunctionalRbacV2UiEnabled,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import { ROLES_READ_PERMISSION } from "@/modules/roles/roles.permissions";
 import {
   USERS_CREATE_PERMISSION,
@@ -21,11 +26,25 @@ export interface UseRoleLookupResult {
  * role inside the user form must not require access to the Roles page.
  */
 export function useRoleLookup(enabled = true): UseRoleLookupResult {
+  const v2 = isFunctionalRbacV2UiEnabled();
   const { hasPermission } = usePermissions();
-  const isAllowed =
-    hasPermission(ROLES_READ_PERMISSION) ||
-    hasPermission(USERS_CREATE_PERMISSION) ||
-    hasPermission(USERS_UPDATE_PERMISSION);
+  const canCreate = useLegacyOrFunctionalCapability(
+    USERS_CREATE_PERMISSION,
+    FN.users.create,
+  );
+  const canEdit = useLegacyOrFunctionalCapability(
+    USERS_UPDATE_PERMISSION,
+    FN.users.edit,
+  );
+  const isAllowed = useMemo(
+    () =>
+      v2
+        ? canCreate || canEdit
+        : hasPermission(ROLES_READ_PERMISSION) ||
+          hasPermission(USERS_CREATE_PERMISSION) ||
+          hasPermission(USERS_UPDATE_PERMISSION),
+    [v2, canCreate, canEdit, hasPermission],
+  );
   const roles = useRoleLookupStore((state) => state.roles);
   const status = useRoleLookupStore((state) => state.status);
   const load = useRoleLookupStore((state) => state.load);

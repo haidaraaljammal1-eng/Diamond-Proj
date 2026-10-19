@@ -39,7 +39,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-rbac-v2-e2e/types/**/*.ts",
-    ".next-rbac-v2-e2e/dev/types/**/*.ts"
+    ".next-rbac-v2-e2e/dev/types/**/*.ts",
+    ".next-rbac-closure-e2e/types/**/*.ts",
+    ".next-rbac-closure-e2e/dev/types/**/*.ts",
+    ".next-rbac-browser-cert/types/**/*.ts",
+    ".next-rbac-browser-cert/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

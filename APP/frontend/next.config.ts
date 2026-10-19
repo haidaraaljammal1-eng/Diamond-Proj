@@ -1,9 +1,33 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
 
 const frontendRoot = path.dirname(fileURLToPath(import.meta.url));
+
+/** `.env.development` wins over Windows user-level NEXT_PUBLIC_* pollution in local dev. */
+function readEnvDevelopmentValue(key: string): string | undefined {
+  try {
+    const raw = readFileSync(path.join(frontendRoot, ".env.development"), "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      if (trimmed.slice(0, eq).trim() !== key) continue;
+      return trimmed
+        .slice(eq + 1)
+        .trim()
+        .replace(/^["']|["']$/g, "");
+    }
+  } catch {
+    /* optional in CI/production */
+  }
+  return undefined;
+}
+
+const localDevApiUrl = readEnvDevelopmentValue("NEXT_PUBLIC_API_URL");
 
 const withNextIntl = createNextIntlPlugin(
   "./src/infrastructure/i18n/request.ts",
@@ -28,7 +52,8 @@ const nextConfig: NextConfig = {
   // Isolated E2E API proxy: `src/app/backend-api/[...path]/route.ts` + exclude
   // `backend-api` in `src/proxy.ts` matcher (Next 16 proxy / next-intl).
   env: {
-    NEXT_PUBLIC_API_URL: rbacE2eApiUrl ?? process.env.NEXT_PUBLIC_API_URL,
+    NEXT_PUBLIC_API_URL:
+      rbacE2eApiUrl ?? localDevApiUrl ?? process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_API_PROXY: rbacE2eApiPort ? "true" : process.env.NEXT_PUBLIC_API_PROXY,
     NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_UI: process.env.NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_UI,
     NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_BACKEND_ENABLED:

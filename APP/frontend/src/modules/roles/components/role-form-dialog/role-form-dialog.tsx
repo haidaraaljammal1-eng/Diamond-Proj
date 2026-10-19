@@ -34,7 +34,7 @@ export interface RoleFormDialogProps {
  */
 export function RoleFormDialog({ target, onClose }: RoleFormDialogProps) {
   const t = useTranslations("Roles");
-  const { createRole, updateRole, isSubmitting, error, clearError } =
+  const { createRole, updateRole, isSubmitting, error, clearError, canEditRoleMetadata } =
     useRoleMutations();
   // Existing keys come from the loaded roles so a derived key stays unique.
   const { matrix } = useRolesPermissions();
@@ -43,6 +43,10 @@ export function RoleFormDialog({ target, onClose }: RoleFormDialogProps) {
   useEffect(() => {
     if (target) clearError();
   }, [target, clearError]);
+
+  useEffect(() => {
+    if (target && !canEditRoleMetadata) onClose();
+  }, [target, canEditRoleMetadata, onClose]);
 
   const fieldLabels = {
     name: t("form.namePlaceholder"),

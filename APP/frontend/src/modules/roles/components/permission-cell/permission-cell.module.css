@@ -1,4 +1,6 @@
 .cell {
+  position: relative;
+  z-index: 0;
   padding: 8px 10px;
   text-align: center;
   border-bottom: 1px solid var(--diamond-hair);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { useAuth } from "@/modules/auth";
 import {
   FN,
   useDiamondPageAccess,
@@ -63,6 +64,7 @@ export interface UseVehiclesResult {
 }
 
 export function useVehicles(): UseVehiclesResult {
+  const { user } = useAuth();
   const isAllowed = useDiamondPageAccess("vehicles");
   const canAddDelete = useLegacyOrFunctionalCapability(
     VEHICLES_MANAGE_PERMISSION,
@@ -98,8 +100,9 @@ export function useVehicles(): UseVehiclesResult {
   const canCreate = canAddDelete;
 
   useEffect(() => {
-    if (isAllowed) void load();
-  }, [isAllowed, load]);
+    if (!isAllowed) return;
+    void refresh();
+  }, [isAllowed, user?.id, refresh]);
 
   const filters = useMemo<VehicleFiltersState>(
     () => ({

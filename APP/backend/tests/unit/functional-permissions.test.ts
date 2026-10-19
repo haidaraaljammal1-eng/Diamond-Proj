@@ -147,6 +147,18 @@ describe("owner-approved capability separation (metadata)", () => {
     assert.equal(canPerformFunctionalCapability(addOnly, FN.vehicles.editPrices), false);
   });
 
+  test("violations manual collection distinct from view page parent", () => {
+    const viewOnly = ctx([FN.violations.viewPage]);
+    assert.equal(canPerformFunctionalCapability(viewOnly, FN.violations.viewPage), true);
+    assert.equal(
+      canPerformFunctionalCapability(viewOnly, FN.violations.manualCollection),
+      false,
+    );
+    const manual = ctx([FN.violations.manualCollection]);
+    assert.equal(canPerformFunctionalCapability(manual, FN.violations.manualCollection), true);
+    assert.equal(canPerformFunctionalCapability(manual, FN.violations.viewPage), true);
+  });
+
   test("invoice PDF distinct from view page parent", () => {
     const viewOnly = ctx([FN.invoices.viewPage]);
     assert.equal(canPerformFunctionalCapability(viewOnly, FN.invoices.viewPage), true);
@@ -168,7 +180,7 @@ describe("system administrator", () => {
   test("functional layer honors system admin override", () => {
     const admin = ctx([], true);
     assert.equal(canViewFunctionalPage(admin, "contracts"), true);
-    assert.equal(canPerformFunctionalCapability(admin, FN.contracts.collectionClosure), true);
+    assert.equal(canPerformFunctionalCapability(admin, FN.contracts.operationsClosure), true);
   });
 
   test("existing resolveEffectivePermissions still grants full catalog", () => {

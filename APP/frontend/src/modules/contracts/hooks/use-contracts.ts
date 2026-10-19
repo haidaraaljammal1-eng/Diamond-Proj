@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { useAuth } from "@/modules/auth";
 import { useDiamondPageAccess, useLegacyOrFunctionalCapability } from "@/modules/functional-rbac";
 import { FN } from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
@@ -39,6 +40,7 @@ export interface UseContractsResult {
 }
 
 export function useContracts(): UseContractsResult {
+  const { user } = useAuth();
   const isAllowed = useDiamondPageAccess("contracts");
   const canManage = useLegacyOrFunctionalCapability(
     CONTRACTS_MANAGE_PERMISSION,
@@ -54,9 +56,11 @@ export function useContracts(): UseContractsResult {
   const setQuery = useContractsStore((state) => state.setQuery);
   const resetFilters = useContractsStore((state) => state.resetFilters);
 
+  // Authoritative list read when access is granted (avoids stale empty cache after env/DB/session changes).
   useEffect(() => {
-    if (isAllowed) void load();
-  }, [isAllowed, load]);
+    if (!isAllowed) return;
+    void refresh();
+  }, [isAllowed, user?.id, refresh]);
 
   // Contracts also change outside this page (Rental Link payment, another session):
   // re-read quietly on focus, on tab return, and on a slow poll while visible.
