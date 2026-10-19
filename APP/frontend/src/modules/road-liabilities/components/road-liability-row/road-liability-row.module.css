@@ -203,7 +203,21 @@
   background: var(--diamond-onyx);
   color: inherit;
   text-align: start;
+  font: inherit;
+}
+
+.cardSelectable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
   cursor: pointer;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
   font: inherit;
 }
 
@@ -211,9 +225,10 @@
   background: rgba(201, 161, 92, 0.08);
 }
 
-.card:focus-visible {
+.cardSelectable:focus-visible {
   outline: 2px solid var(--diamond-gold);
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
 .cardSelected {

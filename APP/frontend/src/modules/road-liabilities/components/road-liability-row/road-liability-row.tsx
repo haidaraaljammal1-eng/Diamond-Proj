@@ -243,7 +243,9 @@ export function RoadLiabilityCard({
   selected,
   onSelect,
   showCollectAction = false,
+  showCashCollectAction = false,
   onCollect,
+  onCashCollect,
   collectSubmitting = false,
 }: RoadLiabilityRowProps) {
   const t = useTranslations("RoadLiabilities");
@@ -251,55 +253,91 @@ export function RoadLiabilityCard({
   const gpsOnly = isGpsPredictionOnly(item);
   const plate = item.vehicle?.plateNumber?.trim() || t("noPlate");
 
+  const cardClassName = [
+    styles.card,
+    selected ? styles.cardSelected : "",
+    gpsOnly ? styles.cardPrediction : "",
+    showCashCollectAction ? styles.cashAttention : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const selectCard = () => onSelect(item.id);
+
   return (
-    <button
-      type="button"
-      className={[
-        styles.card,
-        selected ? styles.cardSelected : "",
-        gpsOnly ? styles.cardPrediction : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      aria-pressed={selected}
+    <article
+      className={cardClassName}
       data-testid="road-liability-card"
       data-liability-id={item.id}
       data-record-id={item.id}
       data-work-state={item.workState}
-      onClick={() => onSelect(item.id)}
+      data-prediction={gpsOnly ? "true" : "false"}
     >
-      <div className={styles.cardTop}>
-        <AuthorityMark item={item} />
-        {amount.kind === "awaiting" ? (
-          <span className={styles.awaiting}>{t("amount.awaiting")}</span>
-        ) : (
-          <span className={styles.amount} dir="ltr">
-            {amount.formatted}
-          </span>
-        )}
-      </div>
-      <div className={styles.vehicleStack}>
-        <div className={styles.vehicleTitleRow}>
-          <p className={styles.name}>{item.vehicle?.displayName ?? t("noVehicle")}</p>
-          <CompanyMark item={item} />
+      <div
+        className={styles.cardSelectable}
+        role="button"
+        tabIndex={0}
+        aria-pressed={selected}
+        onClick={selectCard}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectCard();
+          }
+        }}
+      >
+        <div className={styles.cardTop}>
+          <AuthorityMark item={item} />
+          {amount.kind === "awaiting" ? (
+            <span className={styles.awaiting}>{t("amount.awaiting")}</span>
+          ) : (
+            <span className={styles.amount} dir="ltr">
+              {amount.formatted}
+            </span>
+          )}
         </div>
-        <p className={styles.plate} dir="ltr">
-          {plate}
-        </p>
+        <div className={styles.vehicleStack}>
+          <div className={styles.vehicleTitleRow}>
+            <p className={styles.name}>{item.vehicle?.displayName ?? t("noVehicle")}</p>
+            <CompanyMark item={item} />
+          </div>
+          <p className={styles.plate} dir="ltr">
+            {plate}
+          </p>
+        </div>
+        <div className={styles.partyStack}>
+          <p className={styles.partyName}>{item.customer?.displayName ?? t("noCustomer")}</p>
+          <p className={styles.contract} dir="ltr">
+            {item.contract?.contractNumber ?? t("noContract")}
+          </p>
+          <PartyReference item={item} />
+        </div>
+        <div className={styles.cardBottom}>
+          <WorkStateChip item={item} />
+          {showCashCollectAction ? (
+            <p className={styles.cashHint}>{t("collect.cashRowHint")}</p>
+          ) : null}
+          {item.reconciliationAttached ? (
+            <p className={styles.attachedHint}>{t("charge.addedShort")}</p>
+          ) : null}
+        </div>
       </div>
-      <div className={styles.partyStack}>
-        <p className={styles.partyName}>{item.customer?.displayName ?? t("noCustomer")}</p>
-        <p className={styles.contract} dir="ltr">
-          {item.contract?.contractNumber ?? t("noContract")}
-        </p>
-        <PartyReference item={item} />
-      </div>
-      <div className={styles.cardBottom}>
-        <WorkStateChip item={item} />
-        {item.reconciliationAttached ? (
-          <p className={styles.attachedHint}>{t("charge.addedShort")}</p>
-        ) : null}
-      </div>
+      {showCashCollectAction ? (
+        <Button
+          type="button"
+          size="sm"
+          className={styles.collectAction}
+          loading={collectSubmitting}
+          data-testid="road-liability-cash-collect-card"
+          onClick={(event) => {
+            event.stopPropagation();
+            if (collectSubmitting) return;
+            onCashCollect?.(item);
+          }}
+        >
+          {t("collect.cashRowAction")}
+        </Button>
+      ) : null}
       {showCollectAction ? (
         <Button
           type="button"
@@ -316,6 +354,6 @@ export function RoadLiabilityCard({
           {t("collect.rowAction")}
         </Button>
       ) : null}
-    </button>
+    </article>
   );
 }
