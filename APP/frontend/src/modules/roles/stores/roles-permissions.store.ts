@@ -211,6 +211,8 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
           const apiError = normalizeApiError(error);
           if (apiError.code === "RESOURCE_MODIFIED") {
             await refreshRoles();
+            set({ submitError: apiError });
+            return false;
           }
           set({ roles: previousRoles, submitError: apiError });
           return false;

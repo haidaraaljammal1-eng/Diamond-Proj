@@ -126,20 +126,12 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       labels: { ar: "عرض الصفحة", en: "View Page" },
     }),
     def({
-      key: FN.violations.reviewDues,
+      key: FN.violations.manualCollection,
       pageId: "violations",
       kind: "child_action",
       pageModel: "parent_child",
       parentKey: FN.violations.viewPage,
-      labels: { ar: "مراجعة المستحقات", en: "Review Dues" },
-    }),
-    def({
-      key: FN.violations.collectCharges,
-      pageId: "violations",
-      kind: "child_action",
-      pageModel: "parent_child",
-      parentKey: FN.violations.viewPage,
-      labels: { ar: "تحصيل الرسوم", en: "Collect Charges" },
+      labels: { ar: "التحصيل اليدوي", en: "Manual Collection" },
     }),
     def({
       key: FN.finance.viewPage,
@@ -214,25 +206,14 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       labels: { ar: "إنشاء رابط تأجير", en: "Create Rental Link" },
     }),
     def({
-      key: FN.contracts.deliveryReturnReconcile,
+      key: FN.contracts.operationsClosure,
       pageId: "contracts",
       kind: "child_action",
       pageModel: "parent_child",
       parentKey: FN.contracts.viewPage,
       labels: {
-        ar: "تسليم المركبة والإرجاع والتسوية",
-        en: "Vehicle Delivery, Return & Reconciliation",
-      },
-    }),
-    def({
-      key: FN.contracts.collectionClosure,
-      pageId: "contracts",
-      kind: "child_action",
-      pageModel: "parent_child",
-      parentKey: FN.contracts.viewPage,
-      labels: {
-        ar: "التحصيل وإغلاق العقد",
-        en: "Collection & Contract Closure",
+        ar: "تسليم وإرجاع وتسوية وإغلاق العقد",
+        en: "Delivery, Return, Reconciliation & Closure",
       },
     }),
     def({
@@ -274,14 +255,6 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       pageModel: "parent_child",
       parentKey: FN.users.viewPage,
       labels: { ar: "تعديل مستخدم", en: "Edit User" },
-    }),
-    def({
-      key: FN.users.assignRoles,
-      pageId: "users",
-      kind: "child_action",
-      pageModel: "parent_child",
-      parentKey: FN.users.viewPage,
-      labels: { ar: "إدارة أدوار المستخدم", en: "Manage User Role Assignments" },
     }),
     def({
       key: FN.users.enableDisable,

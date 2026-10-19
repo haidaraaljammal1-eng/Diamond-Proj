@@ -6,9 +6,9 @@ import { applyFunctionalGrantToggle } from "./checkbox-transitions.ts";
 import { normalizeFunctionalGrants } from "./policy-engine.ts";
 
 describe("functional RBAC checkbox transitions", () => {
-  it("exposes 12 page groups and 34 capabilities", () => {
+  it("exposes 12 page groups and 32 capabilities", () => {
     assert.equal(FUNCTIONAL_PAGES.length, 12);
-    assert.equal(FUNCTIONAL_CAPABILITY_REGISTRY.length, 34);
+    assert.equal(FUNCTIONAL_CAPABILITY_REGISTRY.length, 32);
   });
 
   it("checking a child adds parent automatically", () => {

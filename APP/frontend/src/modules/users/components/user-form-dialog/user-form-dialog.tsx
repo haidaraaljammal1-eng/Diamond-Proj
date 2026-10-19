@@ -43,7 +43,8 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
   const {
     addUser,
     editUser,
-    canAssignRoles,
+    canCreate,
+    canUpdate,
     isCreating,
     isUpdating,
     createError,
@@ -51,8 +52,12 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     clearCreateError,
     clearUpdateError,
   } = useUserMutations();
-  const { roles } = useRoleLookup(target !== null && canAssignRoles);
-  const canPickRoles = canAssignRoles;
+  const canPickRolesOnCreate = canCreate;
+  const canPickRolesOnEdit = canUpdate;
+  const { roles } = useRoleLookup(
+    target !== null &&
+      (target.mode === "create" ? canPickRolesOnCreate : canPickRolesOnEdit),
+  );
 
   useEffect(() => {
     if (target) {
@@ -88,7 +93,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     const succeeded = await addUser({
       email: values.email,
       name: toNameValue(values.name) || undefined,
-      ...(canPickRoles ? { roleIds: toRoleIds(values.roleId) } : {}),
+      ...(canPickRolesOnCreate ? { roleIds: toRoleIds(values.roleId) } : {}),
       password: values.password,
       confirmPassword: values.confirmPassword,
     });
@@ -99,7 +104,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     const succeeded = await editUser(userId, {
       email: values.email,
       name: toNameValue(values.name),
-      roleIds: canPickRoles ? toRoleIds(values.roleId) : undefined,
+      roleIds: canPickRolesOnEdit ? toRoleIds(values.roleId) : undefined,
     });
     if (succeeded) onClose();
   };
@@ -130,7 +135,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
         <FormBuilder<EditUserValues>
           key={`edit-${target.user.id}`}
           className={styles.form}
-          fields={editUserFields(fieldLabels, roleOptions, canPickRoles)}
+          fields={editUserFields(fieldLabels, roleOptions, canPickRolesOnEdit)}
           schema={editUserSchema}
           defaultValues={{
             email: target.user.email,
@@ -147,7 +152,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
         <FormBuilder<CreateUserValues>
           key="create"
           className={styles.form}
-          fields={createUserFields(fieldLabels, roleOptions, canPickRoles)}
+          fields={createUserFields(fieldLabels, roleOptions, canPickRolesOnCreate)}
           schema={createUserSchema}
           defaultValues={{
             email: "",

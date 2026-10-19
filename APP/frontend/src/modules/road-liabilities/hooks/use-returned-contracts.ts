@@ -1,10 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePermissions } from "@/modules/auth";
+import {
+  FN,
+  useDiamondPageAccess,
+  useLegacyOrFunctionalCapability,
+} from "@/modules/functional-rbac";
 import { normalizeApiError, type ApiRequestError } from "@/infrastructure/api/errors";
 import { listReturnedContracts } from "../api/returned-contracts.api";
-import { VIOLATIONS_CHARGE_PERMISSION, VIOLATIONS_READ_PERMISSION } from "../road-liabilities.permissions";
+import { VIOLATIONS_CHARGE_PERMISSION } from "../road-liabilities.permissions";
 import type {
   ReturnedContractListItemDto,
   ReturnedContractsListQuery,
@@ -13,9 +17,11 @@ import type {
 import { RETURNED_CONTRACTS_PAGE_SIZE } from "../types/road-liabilities.types";
 
 export function useReturnedContracts() {
-  const { hasPermission } = usePermissions();
-  const isAllowed = hasPermission(VIOLATIONS_READ_PERMISSION);
-  const canCharge = hasPermission(VIOLATIONS_CHARGE_PERMISSION);
+  const isAllowed = useDiamondPageAccess("violations");
+  const canCharge = useLegacyOrFunctionalCapability(
+    VIOLATIONS_CHARGE_PERMISSION,
+    FN.violations.manualCollection,
+  );
 
   const [query, setQuery] = useState<ReturnedContractsListQuery>({
     page: 1,

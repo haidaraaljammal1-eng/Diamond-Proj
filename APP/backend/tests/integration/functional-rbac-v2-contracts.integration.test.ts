@@ -32,8 +32,7 @@ const CONTRACT_VEHICLE_FN = [
 const ALL_CONTRACT_FN = [
   FN.contracts.viewPage,
   FN.contracts.rentalLink,
-  FN.contracts.deliveryReturnReconcile,
-  FN.contracts.collectionClosure,
+  FN.contracts.operationsClosure,
   FN.contracts.renewal,
   ...CONTRACT_VEHICLE_FN,
 ];
@@ -50,8 +49,7 @@ if (!RUN) {
     let fixtureToken = "";
     let viewToken = "";
     let rentalToken = "";
-    let deliveryToken = "";
-    let collectionToken = "";
+    let operationsToken = "";
     let renewalToken = "";
     let legacyManageToken = "";
 
@@ -138,14 +136,9 @@ if (!RUN) {
         FN.contracts.rentalLink,
         ...CONTRACT_VEHICLE_FN,
       ]);
-      await seedUser(`cd-${run}@example.test`, "pass-cd", `cd_${run}`, [
+      await seedUser(`co-${run}@example.test`, "pass-co", `co_${run}`, [
         FN.contracts.viewPage,
-        FN.contracts.deliveryReturnReconcile,
-        ...CONTRACT_VEHICLE_FN,
-      ]);
-      await seedUser(`cc-${run}@example.test`, "pass-cc", `cc_${run}`, [
-        FN.contracts.viewPage,
-        FN.contracts.collectionClosure,
+        FN.contracts.operationsClosure,
         ...CONTRACT_VEHICLE_FN,
       ]);
       await seedUser(`cn-${run}@example.test`, "pass-cn", `cn_${run}`, [
@@ -162,8 +155,7 @@ if (!RUN) {
       fixtureToken = await login(`fx-${run}@example.test`, "pass-fx");
       viewToken = await login(`cv-${run}@example.test`, "pass-cv");
       rentalToken = await login(`cr-${run}@example.test`, "pass-cr");
-      deliveryToken = await login(`cd-${run}@example.test`, "pass-cd");
-      collectionToken = await login(`cc-${run}@example.test`, "pass-cc");
+      operationsToken = await login(`co-${run}@example.test`, "pass-co");
       renewalToken = await login(`cn-${run}@example.test`, "pass-cn");
       legacyManageToken = await login(`lg-${run}@example.test`, "pass-lg");
 
@@ -314,11 +306,21 @@ if (!RUN) {
       assert.equal(carOut.statusCode, 403, carOut.body);
     });
 
-    test("delivery_return_reconcile: car-out draft allowed; offer denied", async () => {
+    test("view_page: car-out denied", async () => {
+      const carOut = await app.inject({
+        method: "PATCH",
+        url: `/contracts/${paidContractId}/car-out`,
+        headers: auth(viewToken),
+        payload: { mileageOut: 11 },
+      });
+      assert.equal(carOut.statusCode, 403, carOut.body);
+    });
+
+    test("operations_closure: car-out allowed; close not forbidden by RBAC", async () => {
       const offerDenied = await app.inject({
         method: "POST",
         url: "/contracts/offers",
-        headers: auth(deliveryToken),
+        headers: auth(operationsToken),
         payload: {
           vehicleId: vehicleActiveId,
           priceType: "DAILY",
@@ -331,38 +333,16 @@ if (!RUN) {
       const draft = await app.inject({
         method: "PATCH",
         url: `/contracts/${paidContractId}/car-out`,
-        headers: auth(deliveryToken),
+        headers: auth(operationsToken),
         payload: { mileageOut: 12 },
       });
       assert.equal(draft.statusCode, 200, draft.body);
-      const closeDenied = await app.inject({
-        method: "POST",
-        url: `/contracts/${paidContractId}/close`,
-        headers: auth(deliveryToken),
-      });
-      assert.equal(closeDenied.statusCode, 403, closeDenied.body);
-    });
-
-    test("collection_closure: close denied without reconcile path; not rental_link", async () => {
       const close = await app.inject({
         method: "POST",
         url: `/contracts/${paidContractId}/close`,
-        headers: auth(collectionToken),
+        headers: auth(operationsToken),
       });
-      assert.ok(close.statusCode === 403 || close.statusCode === 409, close.body);
-      const offerDenied = await app.inject({
-        method: "POST",
-        url: "/contracts/offers",
-        headers: auth(collectionToken),
-        payload: {
-          vehicleId: vehicleActiveId,
-          priceType: "DAILY",
-          rentalDays: 1,
-          agreedAmount: 400,
-          collectionMode: "ELECTRONIC",
-        },
-      });
-      assert.equal(offerDenied.statusCode, 403, offerDenied.body);
+      assert.notEqual(close.statusCode, 403, close.body);
     });
 
     test("renewal: renewal-link allowed on ACTIVE; offer denied", async () => {

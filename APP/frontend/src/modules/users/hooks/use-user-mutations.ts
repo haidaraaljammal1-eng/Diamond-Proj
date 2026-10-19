@@ -17,7 +17,6 @@ export interface UseUserMutationsResult {
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;
-  canAssignRoles: boolean;
   canEnableDisable: boolean;
   isCreating: boolean;
   isUpdating: boolean;
@@ -52,10 +51,6 @@ export function useUserMutations(): UseUserMutationsResult {
     USERS_DELETE_PERMISSION,
     FN.users.delete,
   );
-  const canAssignRoles = useLegacyOrFunctionalCapability(
-    USERS_UPDATE_PERMISSION,
-    FN.users.assignRoles,
-  );
   const canEnableDisable = useLegacyOrFunctionalCapability(
     USERS_UPDATE_PERMISSION,
     FN.users.enableDisable,
@@ -81,7 +76,6 @@ export function useUserMutations(): UseUserMutationsResult {
     canCreate,
     canUpdate,
     canDelete,
-    canAssignRoles,
     canEnableDisable,
     isCreating,
     isUpdating,

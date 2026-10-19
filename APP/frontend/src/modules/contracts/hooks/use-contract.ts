@@ -123,18 +123,15 @@ export function useContract(): UseContractResult {
     CONTRACTS_MANAGE_PERMISSION,
     FN.contracts.rentalLink,
   );
-  const canDeliveryReturn = useLegacyAnyOrFunctionalCapability(
+  const canOperationsClosure = useLegacyAnyOrFunctionalCapability(
     [
       CONTRACTS_ACTIVATE_PERMISSION,
       CONTRACTS_CAR_OUT_PERMISSION,
       CONTRACTS_RETURN_PERMISSION,
       CONTRACTS_RECONCILE_PERMISSION,
+      CONTRACTS_CLOSE_PERMISSION,
     ],
-    FN.contracts.deliveryReturnReconcile,
-  );
-  const canCollectionClosure = useLegacyAnyOrFunctionalCapability(
-    [CONTRACTS_RECONCILE_PERMISSION, CONTRACTS_CLOSE_PERMISSION],
-    FN.contracts.collectionClosure,
+    FN.contracts.operationsClosure,
   );
   const canRenewal = useLegacyOrFunctionalCapability(
     CONTRACTS_RENEW_PERMISSION,
@@ -144,14 +141,14 @@ export function useContract(): UseContractResult {
   const permissions = useMemo<ContractPermissionFlags>(
     () => ({
       canManage: canRentalLink,
-      canActivate: canDeliveryReturn,
-      canCarOut: canDeliveryReturn,
-      canReturn: canDeliveryReturn,
-      canReconcile: canDeliveryReturn,
-      canClose: canCollectionClosure,
+      canActivate: canOperationsClosure,
+      canCarOut: canOperationsClosure,
+      canReturn: canOperationsClosure,
+      canReconcile: canOperationsClosure,
+      canClose: canOperationsClosure,
       canRenew: canRenewal,
     }),
-    [canRentalLink, canDeliveryReturn, canCollectionClosure, canRenewal],
+    [canRentalLink, canOperationsClosure, canRenewal],
   );
 
   const actions = store.detail

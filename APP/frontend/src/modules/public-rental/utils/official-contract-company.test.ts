@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { OfficialContractView } from "../types/official-contract.types.ts";
-import { officialContractCompanyNames } from "./official-contract-company.ts";
+import {
+  officialContractCompanyNames,
+  officialContractHeaderLogo,
+} from "./official-contract-company.ts";
 
 function contractWithCompany(code: "UNIQUE" | "ELITE"): OfficialContractView {
   const legalNameAr = code === "UNIQUE"
@@ -32,5 +35,16 @@ describe("official contract company identity", () => {
       ar: "شركة دايموند إيليت لتأجير السيارات ذ.م.م ش.ش.و",
       en: "Diamond Elite Car Rental LLC",
     });
+  });
+
+  it("selects the official header logo by company code", () => {
+    assert.equal(
+      officialContractHeaderLogo("UNIQUE").logoSrc,
+      "/official-contract/diamond-unique-contract-logo.png",
+    );
+    assert.equal(
+      officialContractHeaderLogo("ELITE").logoSrc,
+      "/official-contract/diamond-elite-contract-logo.png",
+    );
   });
 });

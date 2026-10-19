@@ -42,6 +42,13 @@ export function isDiamondV2MappedOperation(operationId: string): boolean {
 export const V2_SYSTEM_ADMIN_ONLY_OPERATION_IDS = new Set<string>([
   "deleteRole",
   "resetUserPassword",
+  // Retired violations.collect_charges paths (not manual_collection tab).
+  "confirmRoadLiabilityCustomerCharge",
+  "collectRoadLiabilityOffSession",
+  "createRoadLiabilityPaymentLink",
+  "startRoadLiabilityManualCollection",
+  "confirmRoadLiabilityCashCollection",
+  "confirmRoadLiabilityManualCollection",
 ]);
 
 export function diamondV2MappedOperationCount(): number {

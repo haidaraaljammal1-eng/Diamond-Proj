@@ -36,7 +36,7 @@
   position: sticky;
   inset-block-start: 0;
   inset-inline-start: 0;
-  z-index: 3;
+  z-index: 4;
   width: 340px;
   min-width: 340px;
   padding: 12px 16px;
@@ -54,15 +54,27 @@
 .groupHead {
   position: sticky;
   inset-inline-start: 0;
-  z-index: 1;
+  z-index: 2;
+  width: 340px;
+  min-width: 340px;
+  max-width: 340px;
+  box-sizing: border-box;
   padding: 11px 18px;
   text-align: start;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--diamond-gold-hi);
-  background: rgba(201, 161, 92, 0.08);
+  background: color-mix(in srgb, var(--diamond-gold-hi) 8%, var(--diamond-onyx));
   border-block: 1px solid var(--diamond-hair);
+  border-inline-end: 1px solid var(--diamond-hair);
+}
+
+/* Fills role columns on group rows; label stays in .groupHead above. */
+.groupHeadSpacer {
+  padding: 0;
+  border-block: 1px solid var(--diamond-hair);
+  background: rgba(201, 161, 92, 0.08);
 }
 
 .groupCount {
@@ -79,7 +91,7 @@
 .rowHead {
   position: sticky;
   inset-inline-start: 0;
-  z-index: 1;
+  z-index: 2;
   width: 340px;
   min-width: 340px;
   padding: 11px 18px;
@@ -90,9 +102,12 @@
   border-inline-end: 1px solid var(--diamond-hair);
 }
 
-.row:hover .rowHead,
 .row:hover td {
   background: rgba(201, 161, 92, 0.05);
+}
+
+.row:hover .rowHead {
+  background: color-mix(in srgb, var(--diamond-gold-hi) 5%, var(--diamond-onyx));
 }
 
 .permissionLabel {
@@ -116,9 +131,11 @@
 
 @media (max-width: 900px) {
   .corner,
-  .rowHead {
+  .rowHead,
+  .groupHead {
     width: 200px;
     min-width: 200px;
+    max-width: 200px;
   }
 }
 

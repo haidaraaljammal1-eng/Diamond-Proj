@@ -24,8 +24,7 @@ export const FN = {
   },
   violations: {
     viewPage: "diamond.fn.violations.view_page",
-    reviewDues: "diamond.fn.violations.review_dues",
-    collectCharges: "diamond.fn.violations.collect_charges",
+    manualCollection: "diamond.fn.violations.manual_collection",
   },
   finance: {
     viewPage: "diamond.fn.finance.view_page",
@@ -41,8 +40,7 @@ export const FN = {
   contracts: {
     viewPage: "diamond.fn.contracts.view_page",
     rentalLink: "diamond.fn.contracts.rental_link",
-    deliveryReturnReconcile: "diamond.fn.contracts.delivery_return_reconcile",
-    collectionClosure: "diamond.fn.contracts.collection_closure",
+    operationsClosure: "diamond.fn.contracts.operations_closure",
     renewal: "diamond.fn.contracts.renewal",
   },
   whatsapp: {
@@ -52,7 +50,6 @@ export const FN = {
     viewPage: "diamond.fn.users.view_page",
     create: "diamond.fn.users.create",
     edit: "diamond.fn.users.edit",
-    assignRoles: "diamond.fn.users.assign_roles",
     enableDisable: "diamond.fn.users.enable_disable",
     delete: "diamond.fn.users.delete",
   },

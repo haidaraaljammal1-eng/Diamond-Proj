@@ -5,7 +5,7 @@ export const BACKEND = process.env.PLAYWRIGHT_API_URL ?? "http://localhost:8000"
 export const RBAC_V2_E2E_ENABLED = process.env.PLAYWRIGHT_RBAC_V2_E2E === "true";
 
 export const EXPECTED_FUNCTIONAL_GROUPS = 12;
-export const EXPECTED_FUNCTIONAL_CAPABILITIES = 34;
+export const EXPECTED_FUNCTIONAL_CAPABILITIES = 32;
 
 export function requireRbacV2E2E(): void {
   if (!RBAC_V2_E2E_ENABLED) {
@@ -21,7 +21,7 @@ async function establishNextAuthSession(
   password: string,
   locale: "ar" | "en",
 ): Promise<void> {
-  const baseURL = (process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100").replace(
+  const baseURL = (process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3100").replace(
     /\/$/,
     "",
   );
@@ -102,8 +102,42 @@ export async function gotoRolesMatrixReady(page: Page, locale: "ar" | "en") {
     });
   }
 
-  await page.goto(`/${locale}/roles`, { waitUntil: "load", timeout: 90_000 });
-  await expect(page.getByTestId("roles-search")).toBeVisible({ timeout: 90_000 });
+  // Staff API client awaits NextAuth `getSession()`; ensure cookies/session exist before roles load.
+  await page.waitForFunction(
+    async () => {
+      const res = await fetch("/api/auth/session", { credentials: "include", cache: "no-store" });
+      if (!res.ok) return false;
+      const session = (await res.json()) as { accessToken?: string } | null;
+      return Boolean(session?.accessToken);
+    },
+    undefined,
+    { timeout: 60_000 },
+  );
+
+  const rolesResponse = page.waitForResponse(
+    (res) => res.url().includes("/roles") && res.url().includes("page=") && res.status() !== 0,
+    { timeout: 120_000 },
+  );
+
+  await page.goto(`/${locale}/roles`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  await rolesResponse.catch(() => null);
+
+  await expect(
+    page
+      .getByTestId("functional-rbac-matrix")
+      .or(page.getByTestId("roles-denied"))
+      .or(page.getByTestId("roles-matrix-skeleton")),
+  ).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByTestId("roles-matrix-skeleton")).toBeHidden({
+    timeout: 120_000,
+  });
+  await expect(
+    page.getByTestId("functional-rbac-matrix").or(page.getByTestId("roles-denied")),
+  ).toBeVisible({ timeout: 5_000 });
+
+  if (await page.getByTestId("functional-rbac-matrix").isVisible().catch(() => false)) {
+    await expect(page.getByTestId("roles-search")).toBeVisible({ timeout: 15_000 });
+  }
 
   if (captureFile) {
     const groupsCount = await page.getByTestId(/^functional-rbac-group-/).count();

@@ -172,7 +172,31 @@ async function ensureLicenseApi(): Promise<void> {
     return;
   }
   licenseChild = spawnLicenseApi(target.host, target.port);
-  await waitForHealth(() => fetchLicenseHealth(target.baseUrl), target.baseUrl, "Licence API");
+  const deadline = Date.now() + HEALTH_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if (await fetchLicenseHealth(target.baseUrl)) {
+      console.log(`[dev] Licence API healthy at ${target.baseUrl}${HEALTH_PATH}`);
+      return;
+    }
+    const exitCode = licenseChild.exitCode;
+    if (exitCode !== null && exitCode !== 0) {
+      licenseChild = undefined;
+      if (await fetchLicenseHealth(target.baseUrl)) {
+        console.log(`[dev] Reusing Licence API at ${target.baseUrl} after spawn conflict`);
+        return;
+      }
+      console.warn(
+        `[dev] Licence API on ${target.baseUrl} is unavailable (port busy or unhealthy). ` +
+          "Contract licence OCR will fail until it is healthy. Continuing backend startup.",
+      );
+      return;
+    }
+    await new Promise((r) => setTimeout(r, HEALTH_POLL_MS));
+  }
+  licenseChild = undefined;
+  console.warn(
+    `[dev] Licence API did not become healthy within ${HEALTH_TIMEOUT_MS}ms. Continuing backend startup.`,
+  );
 }
 
 function spawnBackend(): ChildProcess {

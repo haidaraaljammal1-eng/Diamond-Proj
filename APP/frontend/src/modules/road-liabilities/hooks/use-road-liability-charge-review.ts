@@ -1,16 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  FN,
-  useLegacyOrFunctionalCapability,
-} from "@/modules/functional-rbac";
+import { usePermissions } from "@/modules/auth";
+import { isFunctionalRbacV2UiEnabled } from "@/modules/functional-rbac";
 import { useDemoSimulationStore } from "@/modules/demo-simulation/simulation.store";
 import { normalizeApiError, type ApiRequestError } from "@/infrastructure/api/errors";
-import {
-  VIOLATIONS_CHARGE_PERMISSION,
-  VIOLATIONS_READ_PERMISSION,
-} from "../road-liabilities.permissions";
+import { VIOLATIONS_CHARGE_PERMISSION } from "../road-liabilities.permissions";
 import {
   confirmRoadLiabilityCustomerCharge,
   getRoadLiabilityCustomerCharge,
@@ -32,13 +27,11 @@ export function useRoadLiabilityChargeReview(
   detailOpen: boolean,
   onConfirmed: () => void,
 ) {
-  const canReview = useLegacyOrFunctionalCapability(
-    VIOLATIONS_READ_PERMISSION,
-    FN.violations.reviewDues,
-  );
-  const canCharge = useLegacyOrFunctionalCapability(
-    VIOLATIONS_CHARGE_PERMISSION,
-    FN.violations.collectCharges,
+  const v2 = isFunctionalRbacV2UiEnabled();
+  const { hasPermission } = usePermissions();
+  const canCharge = useMemo(
+    () => !v2 && hasPermission(VIOLATIONS_CHARGE_PERMISSION),
+    [v2, hasPermission],
   );
   const overlay = useDemoSimulationStore((state) => state.roadLiabilitiesOverlay);
   const attachSimulated = useDemoSimulationStore(

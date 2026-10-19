@@ -32,7 +32,7 @@ Development admin (when `SEED_DEV_ADMIN=true`): use `DEV_ADMIN_EMAIL` and `DEV_A
 3. `npm install` (in `APP/backend`)
 4. Ensure PostgreSQL is running (`dev:postgres:start` if needed)
 5. `npm run dev:bootstrap`
-6. `npm run dev`
+6. `npm run dev` (frontend pins `NEXT_PUBLIC_API_URL` to `http://localhost:3000` unless RBAC E2E is active; a Windows **user** env var `:8000` overrides `.env` and breaks fleet/contracts loads)
 
 ## Existing laptop (after a DB-related pull)
 

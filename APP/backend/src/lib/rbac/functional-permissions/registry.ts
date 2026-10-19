@@ -198,6 +198,8 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "listRoadLiabilities",
         "getRoadLiability",
         "roadLiabilitiesSummary",
+        "getRoadLiabilityCollection",
+        "getRoadLiabilityCustomerCharge",
         "listReturnedContractsForRoadCharges",
       ],
       technicalMapping: {
@@ -206,37 +208,18 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       },
     }),
     def({
-      key: FN.violations.reviewDues,
+      key: FN.violations.manualCollection,
       pageId: "violations",
       kind: "child_action",
       pageModel: "parent_child",
       parentKey: FN.violations.viewPage,
-      labels: { ar: "مراجعة المستحقات", en: "Review Dues" },
-      operationalActions: ["getRoadLiabilityChargeReview"],
-      technicalMapping: {
-        existingKeys: [P.VIOLATIONS_READ],
-        readiness: "partial",
-        notes:
-          "Charge review GET is violations.read today; Phase 2 may split sensitive review data.",
-      },
-    }),
-    def({
-      key: FN.violations.collectCharges,
-      pageId: "violations",
-      kind: "child_action",
-      pageModel: "parent_child",
-      parentKey: FN.violations.viewPage,
-      labels: { ar: "تحصيل الرسوم", en: "Collect Charges" },
-      operationalActions: [
-        "confirmRoadLiabilityCharge",
-        "collectRoadLiabilityOffSession",
-        "roadLiabilityCashConfirm",
-        "roadLiabilityManualReceipt",
-        "staffManualChargeReturnedContract",
-      ],
+      labels: { ar: "التحصيل اليدوي", en: "Manual Collection" },
+      operationalActions: ["staffManualChargeReturnedContract"],
       technicalMapping: {
         existingKeys: [P.VIOLATIONS_CHARGE],
         readiness: "ready",
+        notes:
+          "Returned-contracts manual off-session charge only; traffic-list collection and post-close receivable payment are outside this capability.",
       },
     }),
 
@@ -393,14 +376,14 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       ],
     }),
     def({
-      key: FN.contracts.deliveryReturnReconcile,
+      key: FN.contracts.operationsClosure,
       pageId: "contracts",
       kind: "child_action",
       pageModel: "parent_child",
       parentKey: FN.contracts.viewPage,
       labels: {
-        ar: "تسليم المركبة والإرجاع والتسوية",
-        en: "Vehicle Delivery, Return & Reconciliation",
+        ar: "تسليم وإرجاع وتسوية وإغلاق العقد",
+        en: "Delivery, Return, Reconciliation & Closure",
       },
       operationalActions: [
         "completeContractCarOut",
@@ -409,6 +392,10 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "completeContractCarIn",
         "reconcileContract",
         "finalizeContractReconciliation",
+        "settleContractReconciliationCash",
+        "startReconciliationPayment",
+        "closeContract",
+        "confirmContractPayment",
       ],
       technicalMapping: {
         existingKeys: [
@@ -416,31 +403,11 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
           P.CONTRACTS_ACTIVATE,
           P.CONTRACTS_RETURN,
           P.CONTRACTS_RECONCILE,
+          P.CONTRACTS_CLOSE,
         ],
         readiness: "partial",
-        notes: "Car-Out completion requires car_out AND activate (ALL semantics on route).",
-      },
-    }),
-    def({
-      key: FN.contracts.collectionClosure,
-      pageId: "contracts",
-      kind: "child_action",
-      pageModel: "parent_child",
-      parentKey: FN.contracts.viewPage,
-      labels: {
-        ar: "التحصيل وإغلاق العقد",
-        en: "Collection & Contract Closure",
-      },
-      operationalActions: [
-        "settleContractReconciliationCash",
-        "startReconciliationPayment",
-        "closeContract",
-      ],
-      technicalMapping: {
-        existingKeys: [P.CONTRACTS_RECONCILE, P.CONTRACTS_CLOSE],
-        readiness: "partial",
         notes:
-          "Post-close road liability collection stays under violations.collect_charges, not this capability.",
+          "Post-close receivable card payment is not part of violations manual_collection (system admin / future capability).",
       },
     }),
     def({
@@ -520,7 +487,7 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         {
           description: "Role picker when creating user",
           lookupPermission: P.ROLES_READ,
-          requiredCapability: FN.users.assignRoles,
+          requiredCapability: FN.users.create,
         },
       ],
     }),
@@ -531,26 +498,20 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       pageModel: "parent_child",
       parentKey: FN.users.viewPage,
       labels: { ar: "تعديل مستخدم", en: "Edit User" },
-      operationalActions: ["updateUser"],
+      operationalActions: ["updateUser", "setUserRoles"],
       technicalMapping: {
         existingKeys: [P.USERS_UPDATE],
-        readiness: "partial",
-        notes: "Today users.update also covers status and roles until split in Phase 2.",
+        readiness: "ready",
+        notes:
+          "Assigning existing roles on edit is included; roles page administration stays under roles.*.",
       },
-    }),
-    def({
-      key: FN.users.assignRoles,
-      pageId: "users",
-      kind: "child_action",
-      pageModel: "parent_child",
-      parentKey: FN.users.viewPage,
-      labels: { ar: "إدارة أدوار المستخدم", en: "Manage User Role Assignments" },
-      operationalActions: ["setUserRoles"],
-      technicalMapping: {
-        existingKeys: [P.USERS_UPDATE],
-        proposedKeys: ["users.assign_roles"],
-        readiness: "deferred",
-      },
+      contextualLookups: [
+        {
+          description: "Role picker when editing user",
+          lookupPermission: P.ROLES_READ,
+          requiredCapability: FN.users.edit,
+        },
+      ],
     }),
     def({
       key: FN.users.enableDisable,

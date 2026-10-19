@@ -17,6 +17,11 @@ export {
 } from "./policy-engine";
 export { applyFunctionalGrantToggle, roleHasFunctionalGrant } from "./checkbox-transitions";
 export {
+  actorMayDelegatePermissionKeys,
+  actorMayDelegateFunctionalGrantToggle,
+  projectedRolePermissionKeysAfterFunctionalToggle,
+} from "./delegation-guard";
+export {
   isFunctionalRbacV2UiEnabled,
   isFunctionalRbacV2BackendDeclaredEnabled,
   isFunctionalRbacV2ModeMismatch,

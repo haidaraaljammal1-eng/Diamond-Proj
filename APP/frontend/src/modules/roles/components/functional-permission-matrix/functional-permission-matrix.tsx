@@ -22,6 +22,12 @@ export interface FunctionalPermissionMatrixProps {
   ) => void;
   isCellPending?: (roleId: number, capabilityKey: string) => boolean;
   matrixEditingDisabled?: boolean;
+  /** When false, the proposed grant set is not delegable by the current actor. */
+  canToggleGrant?: (
+    role: RoleDto,
+    capabilityKey: string,
+    enabled: boolean,
+  ) => boolean;
 }
 
 function usePlaceholderColumns(roleCount: number) {
@@ -51,6 +57,7 @@ export function FunctionalPermissionMatrix({
   onToggleGrant,
   isCellPending,
   matrixEditingDisabled = false,
+  canToggleGrant,
 }: FunctionalPermissionMatrixProps) {
   const t = useTranslations("Roles");
   const tFn = useTranslations("FunctionalRbac");
@@ -113,8 +120,7 @@ export function FunctionalPermissionMatrix({
               <Fragment key={group.pageId}>
                 <tr>
                   <th
-                    scope="colgroup"
-                    colSpan={matrix.roles.length + placeholders + 1}
+                    scope="row"
                     className={styles.groupHead}
                     data-testid={`functional-rbac-group-${group.pageId}`}
                   >
@@ -125,6 +131,11 @@ export function FunctionalPermissionMatrix({
                       })}
                     </span>
                   </th>
+                  <td
+                    colSpan={matrix.roles.length + placeholders}
+                    className={styles.groupHeadSpacer}
+                    aria-hidden="true"
+                  />
                 </tr>
                 {group.capabilities.map((capability) => (
                   <tr
@@ -147,11 +158,16 @@ export function FunctionalPermissionMatrix({
                       const fullAccess = matrix.isFullAccessRole(role);
                       const allowed =
                         fullAccess || matrix.hasGrant(role.id, capability.key);
+                      const nextEnabled = !allowed;
+                      const delegable =
+                        canToggleGrant?.(role, capability.key, nextEnabled) ??
+                        true;
                       const editable =
                         Boolean(onToggleGrant) &&
                         !fullAccess &&
                         !role.isSystem &&
-                        !matrixEditingDisabled;
+                        !matrixEditingDisabled &&
+                        delegable;
                       return (
                         <PermissionCell
                           key={role.id}

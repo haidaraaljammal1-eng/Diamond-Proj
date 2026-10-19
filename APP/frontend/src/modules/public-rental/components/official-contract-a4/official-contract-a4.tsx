@@ -15,7 +15,10 @@ import type {
   OfficialSignatureSlot,
 } from "../../types/official-contract.types";
 import { toggleDamageMark, type DiagramView } from "../../utils/official-contract-damage-zones";
-import { officialContractCompanyNames } from "../../utils/official-contract-company";
+import {
+  officialContractCompanyNames,
+  officialContractHeaderLogo,
+} from "../../utils/official-contract-company";
 import {
   buildOfficialContractDocument,
   type ContractFieldModel,
@@ -91,6 +94,7 @@ export function OfficialContractA4({
       ),
   });
   const companyNames = officialContractCompanyNames(contract);
+  const headerLogo = officialContractHeaderLogo(contract.header.company.code);
   const [tool, setTool] = useState<DamageMarkType>("SCRATCH");
 
   const renderField = (field: ContractFieldModel, stacked: boolean) => {
@@ -195,7 +199,7 @@ export function OfficialContractA4({
       aria-label="Rental Agreement / عقد إيجار"
     >
       <header className={styles.hdr}>
-        <img className={styles.logo} src={CONTRACT_HEADER.logoSrc} alt={CONTRACT_HEADER.logoAlt} />
+        <img className={styles.logo} src={headerLogo.logoSrc} alt={headerLogo.logoAlt} />
         <div className={styles.hdrCo}>
           <span className={styles.coAr} dir="rtl" lang="ar">{companyNames.ar}</span>
           <span className={styles.coEn}>{companyNames.en}</span>
