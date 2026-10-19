@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import dotenv from "dotenv";
 import path from "node:path";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, InjectOptions } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { ALL_FUNCTIONAL_CAPABILITY_KEYS, FN } from "src/lib/rbac/functional-permissions/keys";
 import { ROUTE_FUNCTIONAL_REQUIREMENTS } from "src/lib/rbac/functional-permissions/route-requirements";
@@ -164,7 +164,7 @@ const PARENT_CHILD_DENY: Record<string, string> = {
 };
 
 type HttpProbe = {
-  method: "GET" | "POST" | "PUT" | "PATCH";
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   url: string;
   payload?: unknown;
 };
@@ -414,20 +414,26 @@ async function main(): Promise<void> {
           ? await prisma.vehicle.count()
           : null;
 
-      const pos = await app.inject({
+      const posOptions: InjectOptions = {
         method: probe.method,
         url: probe.url,
         headers: { authorization: `Bearer ${token}` },
-        payload: probe.payload,
-      });
+      };
+      if (probe.payload !== undefined && probe.payload !== null) {
+        posOptions.payload = probe.payload;
+      }
+      const pos = await app.inject(posOptions);
       httpPos = isAuthorizedStatus(pos.statusCode);
 
-      const neg = await app.inject({
+      const negOptions: InjectOptions = {
         method: probe.method,
         url: probe.url,
         headers: { authorization: `Bearer ${denyToken}` },
-        payload: probe.payload,
-      });
+      };
+      if (probe.payload !== undefined && probe.payload !== null) {
+        negOptions.payload = probe.payload;
+      }
+      const neg = await app.inject(negOptions);
       httpNeg = neg.statusCode === 403;
 
       if (vehicleCountBefore !== null) {

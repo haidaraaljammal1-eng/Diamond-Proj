@@ -1,6 +1,8 @@
 /**
  * Surgical cleanup of verified deferred-test fixtures — LAB DATABASE ONLY.
  * Usage: set LAB_DATABASE_URL to an isolated clone (e.g. haidara_contamination_lab).
+ *
+ * NEVER modifies: GPS tables, WhatsApp tables, or Vehicle rows (operational tracking preserved).
  */
 import dotenv from "dotenv";
 import fs from "node:fs";
@@ -106,9 +108,9 @@ async function main() {
       where: {
         contractNumber: { not: PROTECTED_CONTRACT_NUMBER },
         OR: [
-          ...RUN_TOKENS.flatMap((token) => [
-            { contractNumber: { contains: token, mode: "insensitive" } },
-          ]),
+            ...RUN_TOKENS.flatMap((token) => [
+              { contractNumber: { contains: token, mode: "insensitive" as const } },
+            ]),
           { contractNumber: { startsWith: "DR-", mode: "insensitive" } },
           { contractNumber: { gte: "DE-2026-000216", lte: "DE-2026-000226" } },
         ],
@@ -205,6 +207,38 @@ async function main() {
     return { counts, purgeContractIds, contractNumbers: testContracts.map((c) => c.contractNumber) };
   });
   Object.assign(deleted, contractPhase.counts);
+
+  const remnantPhase = await prisma.$transaction(async (tx) => {
+    const counts: Record<string, number> = {};
+    const bump = async (label: string, result: { count: number }) => {
+      counts[label] = result.count;
+    };
+    const tokenNotifications = await tx.notification.findMany({
+      where: {
+        OR: RUN_TOKENS.flatMap((token) => [
+          { title: { contains: token, mode: "insensitive" } },
+          { body: { contains: token, mode: "insensitive" } },
+        ]),
+      },
+      select: { id: true },
+    });
+    const notificationIds = tokenNotifications.map((n) => n.id);
+    if (notificationIds.length) {
+      bump("notification_delivery_logs", await tx.notificationDeliveryLog.deleteMany({
+        where: { notificationId: { in: notificationIds } },
+      }));
+      bump("notifications", await tx.notification.deleteMany({
+        where: { id: { in: notificationIds } },
+      }));
+    }
+    bump("idempotency_keys", await tx.idempotencyKey.deleteMany({
+      where: {
+        OR: RUN_TOKENS.map((token) => ({ key: { contains: token, mode: "insensitive" } })),
+      },
+    }));
+    return { counts };
+  });
+  Object.assign(deleted, remnantPhase.counts);
 
   const after = await snapshot(prisma);
   const out = path.join(__dirname, "../backups", `contamination-lab-cleanup-${Date.now()}.json`);

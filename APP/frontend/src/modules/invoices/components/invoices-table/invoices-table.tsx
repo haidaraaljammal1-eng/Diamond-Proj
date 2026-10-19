@@ -102,7 +102,6 @@ export function InvoicesTable({
                   <th>{t("columns.customer")}</th>
                   <th>{t("columns.contract")}</th>
                   <th>{t("columns.vehicle")}</th>
-                  <th>{t("columns.source")}</th>
                   <th>{t("columns.issueDate")}</th>
                   <th>{t("columns.amount")}</th>
                   <th>{t("columns.whatsapp")}</th>
@@ -149,7 +148,6 @@ export function InvoicesTable({
                         <span className={styles.plate} dir="ltr">{item.plateNumber}</span>
                       </div>
                     </td>
-                    <td>{item.sourceLabel}</td>
                     <td dir="ltr">{formatInvoiceCalendarDate(item.issueDate)}</td>
                     <td className={styles.amount} dir="ltr">
                       {formatInvoiceAmount(item.totalAmount, item.currency)}

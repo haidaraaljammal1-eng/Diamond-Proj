@@ -33,7 +33,6 @@ const dumpUrl = pgCliDatabaseUrl(databaseUrl);
 
 execSync(`pg_dump --format=custom --file="${outFile}" "${dumpUrl}"`, {
   stdio: "inherit",
-  shell: true,
   env: process.env,
 });
 

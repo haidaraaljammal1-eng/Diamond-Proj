@@ -126,7 +126,7 @@ async function main() {
           where: {
             OR: RUN_TOKENS.map((token) => ({ key: { contains: token, mode: "insensitive" } })),
           },
-          select: { key: true, createdAt: true },
+          select: { id: true, scope: true, key: true, resultRef: true, createdAt: true },
         }),
         contractScopeIds.length
           ? prisma.domainOutboxEvent.findMany({
@@ -171,6 +171,60 @@ async function main() {
         }),
       ]);
 
+    const customerIds = [
+      ...new Set(contracts.map((c) => c.customerId).filter((id): id is number => id != null)),
+    ];
+    const vehicleIds = [...new Set(contracts.map((c) => c.vehicleId).filter(Boolean) as number[])];
+    const [customers, vehicles, gpsBindingsOnTestVehicles, notifications] = await Promise.all([
+      customerIds.length
+        ? prisma.customer.findMany({
+            where: { id: { in: customerIds } },
+            select: { id: true, name: true, mobile: true, createdAt: true },
+          })
+        : [],
+      vehicleIds.length
+        ? prisma.vehicle.findMany({
+            where: { id: { in: vehicleIds } },
+            select: {
+              id: true,
+              vehicleName: true,
+              plateNumber: true,
+              operationalStatus: true,
+              createdAt: true,
+            },
+          })
+        : [],
+      vehicleIds.length
+        ? prisma.vehicleGpsBinding.findMany({
+            where: { vehicleId: { in: vehicleIds } },
+            select: {
+              vehicleId: true,
+              providerKey: true,
+              externalDeviceId: true,
+              isActive: true,
+            },
+          })
+        : [],
+      prisma.notification.findMany({
+        where: {
+          OR: RUN_TOKENS.flatMap((token) => [
+            { title: { contains: token, mode: "insensitive" } },
+            { body: { contains: token, mode: "insensitive" } },
+          ]),
+        },
+        select: { id: true, eventKey: true, title: true, createdAt: true },
+      }),
+    ]);
+
+    const cascadeSafety = {
+      cleanup_touches_gps_tables: false,
+      cleanup_touches_whatsapp_tables: false,
+      cleanup_deletes_vehicles: false,
+      test_vehicles_with_gps_bindings: gpsBindingsOnTestVehicles.filter((b) => b.isActive).length,
+      note:
+        "Lab cleanup deletes contracts/liabilities only; Vehicle onDelete is Restrict from GPS bindings — vehicles are never removed by contamination-cleanup-lab.ts.",
+    };
+
     const externalProviderPayments = payments.filter(
       (p) => p.provider === "stripe" && p.providerReference?.startsWith("cs_test_") === false,
     );
@@ -186,6 +240,11 @@ async function main() {
             invoices: invoices.length,
             stripe_live_like_payments: externalProviderPayments.length,
             protected_de_192_present: Boolean(protectedLiability),
+            idempotency_keys: idempotencyKeys.length,
+            outbox_events: outboxEvents.length,
+            notifications_token_match: notifications.length,
+            suspected_customers: customers.length,
+            suspected_vehicles: vehicles.length,
           },
           liabilities,
           contracts,
@@ -197,6 +256,11 @@ async function main() {
           outboxEvents,
           allContractPayments,
           uncertain_staff_manual_liabilities: uncertainLiabilities,
+          customers_identification_only: customers,
+          vehicles_identification_only: vehicles,
+          gps_bindings_on_test_vehicles: gpsBindingsOnTestVehicles,
+          notifications_matching_tokens: notifications,
+          cascade_safety: cascadeSafety,
           protected: protectedLiability,
         },
         null,

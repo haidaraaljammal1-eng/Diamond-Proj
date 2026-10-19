@@ -3,24 +3,13 @@
 import { useTranslations } from "next-intl";
 import { DataSearch } from "@/shared/components/data-search";
 import { Button } from "@/shared/components/ui/button";
-import { Select } from "@/shared/components/ui/select";
-import type { SelectOption } from "@/shared/components/ui/select";
-import type { InvoiceTypeFilter, InvoicesListQuery } from "../../types/invoices.types";
+import type { InvoicesListQuery } from "../../types/invoices.types";
 import styles from "./invoices-toolbar.module.css";
-
-const TYPE_OPTIONS: InvoiceTypeFilter[] = [
-  "ALL",
-  "RENTAL",
-  "ROAD_LIABILITY",
-  "RECONCILIATION",
-  "RENEWAL",
-];
 
 export interface InvoicesToolbarProps {
   query: InvoicesListQuery;
   onSearch: (value: string) => void;
   onClearSearch: () => void;
-  onTypeChange: (type: InvoiceTypeFilter) => void;
   onDateFrom: (value: string) => void;
   onDateTo: (value: string) => void;
   onClearFilters: () => void;
@@ -33,7 +22,6 @@ export function InvoicesToolbar({
   query,
   onSearch,
   onClearSearch,
-  onTypeChange,
   onDateFrom,
   onDateTo,
   onClearFilters,
@@ -42,11 +30,6 @@ export function InvoicesToolbar({
   loading,
 }: InvoicesToolbarProps) {
   const t = useTranslations("Invoices");
-
-  const typeSelectOptions: SelectOption<string>[] = TYPE_OPTIONS.map((type) => ({
-    value: type,
-    label: t(`filters.typeOptions.${type}`),
-  }));
 
   return (
     <div className={styles.toolbar} data-testid="invoices-toolbar">
@@ -64,16 +47,6 @@ export function InvoicesToolbar({
           embedded
         />
         <div className={styles.filters}>
-          <span data-testid="invoices-type-filter">
-            <Select
-              variant="ghost"
-              size="sm"
-              options={typeSelectOptions}
-              value={query.invoiceType}
-              onChange={(next) => onTypeChange(next as InvoiceTypeFilter)}
-              aria-label={t("filters.type")}
-            />
-          </span>
           <label className={styles.dateField}>
             <span className={styles.dateLabel}>{t("filters.dateFrom")}</span>
             <input

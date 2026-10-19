@@ -131,7 +131,7 @@ test.describe("Invoices archive", () => {
     await expectInvoice1100Row(page);
   });
 
-  test("search, rental type, and date filters", async ({ page }) => {
+  test("search filter", async ({ page }) => {
     await page.goto("/en/invoices", { waitUntil: "domcontentloaded" });
     await waitForInvoicesReady(page);
     await page.getByTestId("invoices-company-ALL").click();
@@ -143,13 +143,7 @@ test.describe("Invoices archive", () => {
 
     const clearReq = invoicesListResponse(page, (url) => !url.searchParams.get("search"));
     await Promise.all([page.getByTestId("data-search-clear").click(), clearReq]);
-
-    const typeReq = invoicesListResponse(page, (url) => url.searchParams.get("invoiceType") === "RENTAL");
-    const typeTrigger = page.getByTestId("invoices-type-filter").getByRole("combobox");
-    await typeTrigger.click();
-    await Promise.all([page.getByRole("option", { name: /^Rental$/i }).click(), typeReq]);
     await expectInvoice1100Row(page);
-
   });
 
   test("date filter keeps invoice 1100 visible", async ({ page }) => {

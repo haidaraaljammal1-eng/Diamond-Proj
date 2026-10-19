@@ -44,7 +44,7 @@ const PAGES: {
   key: string;
   path: string;
   nav: RegExp;
-  screen?: RegExp;
+  screen?: string;
   denied?: string;
 }[] = [
   { key: "dashboard", path: "/dashboard", nav: /dashboard|لوحة/i },
@@ -52,9 +52,9 @@ const PAGES: {
     key: "vehicles",
     path: "/vehicles",
     nav: /vehicles|المركبات|cars/i,
-    screen: /vehicle-filters/,
+    screen: "vehicle-filters",
   },
-  { key: "gps", path: "/gps", nav: /gps/i, screen: /gps-map/ },
+  { key: "gps", path: "/gps", nav: /gps/i, screen: "gps-map" },
   { key: "maintenance", path: "/maintenance", nav: /maintenance|صيانة/i },
   { key: "archive", path: "/archive", nav: /archive|أرشيف/i },
   {
@@ -68,7 +68,7 @@ const PAGES: {
     path: "/finance",
     nav: /finance|مالية/i,
     denied: "finance-denied",
-    screen: /finance-screen/,
+    screen: "finance-screen",
   },
   {
     key: "invoices",
@@ -129,7 +129,7 @@ test.describe("RBAC browser certification", () => {
       if (p.denied) {
         await expect(page.getByTestId(p.denied)).toHaveCount(0);
       } else if (p.screen) {
-        await expect(page.locator(p.screen).first()).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByTestId(p.screen).first()).toBeVisible({ timeout: 30_000 });
       } else {
         await expect(page.getByText(/access|denied|صلاحية/i)).toHaveCount(0);
       }

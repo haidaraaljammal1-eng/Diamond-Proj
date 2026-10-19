@@ -24,6 +24,8 @@ export const FN = {
   violations: {
     viewPage: "diamond.fn.violations.view_page",
     manualCollection: "diamond.fn.violations.manual_collection",
+    reviewDues: "diamond.fn.violations.review_dues",
+    collectCharges: "diamond.fn.violations.collect_charges",
   },
   finance: {
     viewPage: "diamond.fn.finance.view_page",

@@ -23,4 +23,6 @@ Entry points:
 
 - `scripts/backup-operational-haidara.ts` — `pg_dump` of `haidara` only.
 - `scripts/audit-deferred-contamination.ts` — read-only contamination graph.
-- `scripts/provision-contamination-lab.ts` + `scripts/contamination-cleanup-lab.ts` — validate cleanup on `haidara_contamination_lab` only (`LAB_DATABASE_URL`).
+- `scripts/provision-contamination-lab.ts` + `scripts/contamination-cleanup-lab.ts` — validate cleanup on `haidara_contamination_lab` only (`LAB_DATABASE_URL`). Does **not** touch GPS, WhatsApp, or `Vehicle` rows.
+- `scripts/protected-data-integrity-manifest.ts` — read-only GPS/WhatsApp digests (no secrets).
+- `scripts/run-lab-contamination-validation.ts` — lab provision → manifest → cleanup → manifest compare.

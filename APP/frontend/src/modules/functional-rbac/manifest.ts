@@ -134,6 +134,22 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       labels: { ar: "التحصيل اليدوي", en: "Manual Collection" },
     }),
     def({
+      key: FN.violations.reviewDues,
+      pageId: "violations",
+      kind: "child_action",
+      pageModel: "parent_child",
+      parentKey: FN.violations.viewPage,
+      labels: { ar: "مراجعة المستحقات", en: "Review Dues" },
+    }),
+    def({
+      key: FN.violations.collectCharges,
+      pageId: "violations",
+      kind: "child_action",
+      pageModel: "parent_child",
+      parentKey: FN.violations.viewPage,
+      labels: { ar: "تحصيل الرسوم", en: "Collect Charges" },
+    }),
+    def({
       key: FN.finance.viewPage,
       pageId: "finance",
       kind: "page_parent",

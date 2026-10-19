@@ -33,7 +33,7 @@ const password = decodeURIComponent(parsed.password || "");
 const pgEnv = { ...process.env, PGPASSWORD: password };
 
 function run(cmd: string) {
-  execSync(cmd, { shell: true, stdio: "inherit", env: pgEnv });
+  execSync(cmd, { stdio: "inherit", env: pgEnv });
 }
 
 run(

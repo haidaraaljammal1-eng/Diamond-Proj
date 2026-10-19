@@ -30,8 +30,9 @@ async function main(): Promise<void> {
   const { PrismaClient } = await import("@prisma/client");
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: testUrl }) });
 
-  const db = (await prisma.$queryRaw<{ db: string }[]>`SELECT current_database()::text AS db`)[0]
-    .db;
+  const dbRow = (await prisma.$queryRaw<{ db: string }[]>`SELECT current_database()::text AS db`)[0];
+  assert.ok(dbRow, "database identity query returned no row");
+  const db = dbRow.db;
   assert.equal(db, "haidara_test");
 
   const { hashPassword } = await import("src/lib/security/password");

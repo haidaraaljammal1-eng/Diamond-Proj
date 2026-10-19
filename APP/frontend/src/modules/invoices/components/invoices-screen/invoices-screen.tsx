@@ -124,7 +124,6 @@ export function InvoicesScreen() {
         query={page.query}
         onSearch={page.applySearch}
         onClearSearch={page.clearSearch}
-        onTypeChange={page.setInvoiceType}
         onDateFrom={(from) => page.setDateRange(from, page.query.dateTo)}
         onDateTo={(to) => page.setDateRange(page.query.dateFrom, to)}
         onClearFilters={page.clearFilters}

@@ -1,9 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { env } from "src/config/env";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const explicit = process.env.TEST_DATABASE_URL?.trim();
-const derived = env.DATABASE_URL.replace(/\/diamond(\?|$)/, "/haidara_test$1");
+const derived = (process.env.DATABASE_URL ?? "").replace(/\/haidara(\?|$)/, "/haidara_test$1").replace(
+  /\/diamond(\?|$)/,
+  "/haidara_test$1",
+);
 const testUrl = explicit || derived;
+const bootstrap = pathToFileURL(
+  path.join(__dirname, "../tests/helpers/integration-bootstrap.ts"),
+).href;
 
 if (!/\/haidara_test(?:\?|$)/.test(testUrl)) {
   console.error("TEST_DATABASE_URL must point at haidara_test");
@@ -18,14 +25,15 @@ if (files.length === 0) {
 
 const result = spawnSync(
   process.execPath,
-  ["--import", "tsx", "--test-concurrency=1", "--test", ...files],
+  ["--import", "tsx", "--import", bootstrap, "--test-concurrency=1", "--test", ...files],
   {
     stdio: "inherit",
     env: {
       ...process.env,
       RUN_INTEGRATION: "true",
+      DIAMOND_INTEGRATION_SUBPROCESS: "true",
       TEST_DATABASE_URL: testUrl,
-      DATABASE_URL: testUrl,
+      DATABASE_URL: "postgresql://localhost:5432/haidara?schema=public",
     },
   },
 );

@@ -31,9 +31,9 @@ function loadSeed(): Seed {
   };
 }
 
-const PAGES: { path: string; nav: RegExp; screen?: RegExp; denied?: string }[] = [
+const PAGES: { path: string; nav: RegExp; screen?: string; denied?: string }[] = [
   { path: "/dashboard", nav: /dashboard|لوحة/i },
-  { path: "/vehicles", nav: /vehicles|المركبات|cars/i, screen: /vehicles-grid|vehicle-filters/i },
+  { path: "/vehicles", nav: /vehicles|المركبات|cars/i, screen: "vehicle-filters" },
   { path: "/gps", nav: /gps/i },
   { path: "/maintenance", nav: /maintenance|صيانة/i },
   { path: "/archive", nav: /archive|أرشيف/i },
@@ -78,7 +78,7 @@ test.describe("RBAC closure page guards", () => {
       if (p.denied) {
         await expect(page.getByTestId(p.denied)).toHaveCount(0);
       } else if (p.screen) {
-        await expect(page.locator(p.screen).first()).toBeVisible({ timeout: 25_000 });
+        await expect(page.getByTestId(p.screen).first()).toBeVisible({ timeout: 25_000 });
       } else {
         await expect(page.getByText(/access|denied|صلاحية/i)).toHaveCount(0);
       }

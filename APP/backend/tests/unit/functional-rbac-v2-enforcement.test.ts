@@ -26,8 +26,8 @@ function employee(grants: string[]): AuthUser {
 }
 
 describe("functional RBAC V2 catalog", () => {
-  test("catalog includes all 31 functional keys", () => {
-    assert.equal(ALL_FUNCTIONAL_CAPABILITY_KEYS.length, 31);
+  test("catalog includes all functional keys", () => {
+    assert.equal(ALL_FUNCTIONAL_CAPABILITY_KEYS.length, 33);
     for (const key of ALL_FUNCTIONAL_CAPABILITY_KEYS) {
       assert.ok(
         PERMISSION_CATALOG.some((row) => row.key === key),
@@ -36,8 +36,8 @@ describe("functional RBAC V2 catalog", () => {
     }
     assert.equal(
       PERMISSION_CATALOG.length,
-      117 + 31,
-      "expected 148 catalog rows (117 legacy + 31 functional)",
+      117 + 33,
+      "expected 150 catalog rows (117 legacy + 33 functional)",
     );
   });
 });
