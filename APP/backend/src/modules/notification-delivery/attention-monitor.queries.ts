@@ -1,4 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { AWAITING_PAYMENT_RENEWAL_FILTER } from "src/modules/contracts/contracts-renewal-collection";
+import { COLLECTIBLE_WHERE } from "src/modules/road-liabilities/road-liability.mapper";
+import { STAFF_MANUAL_SOURCE_KEY } from "src/modules/road-liabilities/road-liability.constants";
 
 /** Matches Finance Collected: trusted Stripe CARD or explicit CASH collections. */
 const TRUSTED_RENTAL_PAYMENT: Prisma.ContractPaymentWhereInput = {
@@ -14,8 +17,12 @@ const TRUSTED_RENTAL_PAYMENT: Prisma.ContractPaymentWhereInput = {
 export interface AttentionMonitorSnapshot {
   unpaidContractsCount: number;
   unpaidContractsTotal: number;
-  unpaidRoadLiabilitiesCount: number;
-  unpaidRoadLiabilitiesTotal: number;
+  unpaidDeferredViolationsCount: number;
+  unpaidDeferredViolationsTotal: number;
+  unpaidPostCloseViolationsCount: number;
+  unpaidPostCloseViolationsTotal: number;
+  awaitingRenewalsCount: number;
+  awaitingRenewalsTotal: number;
   overdueRentalsCount: number;
   outstandingFinancialTotal: number;
   currency: string;
@@ -38,20 +45,40 @@ export async function loadAttentionMonitorSnapshot(
     select: { agreedAmount: true },
   });
 
-  const unpaidRoadLiabilities = await prisma.roadLiability.findMany({
+  const unpaidDeferredViolations = await prisma.roadLiability.findMany({
     where: {
-      collectionStatus: "OPEN",
-      customerCharge: {
-        is: {
-          operationalState: { not: "PAID" },
+      ...COLLECTIBLE_WHERE,
+      authoritativeSourceKey: STAFF_MANUAL_SOURCE_KEY,
+      OR: [
+        { customerCharge: { is: null } },
+        {
+          customerCharge: {
+            is: {
+              destinationType: "DIRECT_COLLECTION",
+              operationalState: { not: "PAID" },
+            },
+          },
+        },
+      ],
+      NOT: {
+        customerCharge: {
+          is: {
+            destinationType: { in: ["RECONCILIATION", "POST_CLOSE_RECEIVABLE"] },
+          },
         },
       },
     },
-    select: {
-      customerCharge: {
-        select: { customerChargeAmount: true },
-      },
-    },
+    select: { amount: true },
+  });
+
+  const unpaidPostCloseViolations = await prisma.contractPostCloseReceivable.findMany({
+    where: { status: "OPEN", amount: { gt: 0 } },
+    select: { amount: true },
+  });
+
+  const awaitingRenewals = await prisma.contractRenewal.findMany({
+    where: AWAITING_PAYMENT_RENEWAL_FILTER,
+    select: { additionalAmount: true },
   });
 
   const overdueRentals = await prisma.contract.count({
@@ -62,18 +89,31 @@ export async function loadAttentionMonitorSnapshot(
   });
 
   const unpaidContractsTotal = unpaidContracts.reduce((sum, row) => sum + row.agreedAmount, 0);
-  const unpaidRoadLiabilitiesTotal = unpaidRoadLiabilities.reduce(
-    (sum, row) => sum + (row.customerCharge?.customerChargeAmount ?? 0),
+  const unpaidDeferredViolationsTotal = unpaidDeferredViolations.reduce(
+    (sum, row) => sum + (row.amount ?? 0),
     0,
   );
+  const unpaidPostCloseViolationsTotal = unpaidPostCloseViolations.reduce(
+    (sum, row) => sum + row.amount,
+    0,
+  );
+  const awaitingRenewalsTotal = awaitingRenewals.reduce((sum, row) => sum + row.additionalAmount, 0);
 
   return {
     unpaidContractsCount: unpaidContracts.length,
     unpaidContractsTotal,
-    unpaidRoadLiabilitiesCount: unpaidRoadLiabilities.length,
-    unpaidRoadLiabilitiesTotal,
+    unpaidDeferredViolationsCount: unpaidDeferredViolations.length,
+    unpaidDeferredViolationsTotal,
+    unpaidPostCloseViolationsCount: unpaidPostCloseViolations.length,
+    unpaidPostCloseViolationsTotal,
+    awaitingRenewalsCount: awaitingRenewals.length,
+    awaitingRenewalsTotal,
     overdueRentalsCount: overdueRentals,
-    outstandingFinancialTotal: unpaidContractsTotal + unpaidRoadLiabilitiesTotal,
+    outstandingFinancialTotal:
+      unpaidContractsTotal +
+      unpaidDeferredViolationsTotal +
+      unpaidPostCloseViolationsTotal +
+      awaitingRenewalsTotal,
     currency,
   };
 }
@@ -81,7 +121,9 @@ export async function loadAttentionMonitorSnapshot(
 export function attentionMonitorHasOutstandingCases(snapshot: AttentionMonitorSnapshot): boolean {
   return (
     snapshot.unpaidContractsCount > 0 ||
-    snapshot.unpaidRoadLiabilitiesCount > 0 ||
+    snapshot.unpaidDeferredViolationsCount > 0 ||
+    snapshot.unpaidPostCloseViolationsCount > 0 ||
+    snapshot.awaitingRenewalsCount > 0 ||
     snapshot.overdueRentalsCount > 0
   );
 }

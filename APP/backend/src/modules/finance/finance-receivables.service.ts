@@ -12,7 +12,13 @@ import {
   contractCompanyScopeWhere,
   type FinanceCompanyScope,
 } from "src/modules/finance/finance-company-scope";
-import { OUTSTANDING_OFFICE_RENEWAL_FILTER } from "src/modules/contracts/contracts-renewal-collection";
+import {
+  AWAITING_PAYMENT_RENEWAL_FILTER,
+  OUTSTANDING_OFFICE_RENEWAL_FILTER,
+} from "src/modules/contracts/contracts-renewal-collection";
+import { COLLECTIBLE_WHERE } from "src/modules/road-liabilities/road-liability.mapper";
+import { STAFF_MANUAL_SOURCE_KEY } from "src/modules/road-liabilities/road-liability.constants";
+import { resolveCollectionAuthorization } from "src/modules/road-liabilities/road-liability-collection.capability";
 
 const ALL_COMPANIES: FinanceCompanyScope = { kind: "ALL" };
 
@@ -113,11 +119,22 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
   ): Promise<OpenReceivableRow[]> {
     const renewals = await prisma.contractRenewal.findMany({
       where: {
-        ...OUTSTANDING_OFFICE_RENEWAL_FILTER,
-        contract: {
-          ...(contractWhere ?? {}),
-          status: { not: "REVIEW" },
-        },
+        OR: [
+          {
+            ...OUTSTANDING_OFFICE_RENEWAL_FILTER,
+            contract: {
+              ...(contractWhere ?? {}),
+              status: { not: "REVIEW" },
+            },
+          },
+          {
+            ...AWAITING_PAYMENT_RENEWAL_FILTER,
+            contract: {
+              ...(contractWhere ?? {}),
+              status: { not: "REVIEW" },
+            },
+          },
+        ],
       },
       include: {
         contract: {
@@ -148,7 +165,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         amountPaid: 0,
         outstandingAmount: amountDue,
         currency: contract.currency,
-        obligationCreatedAt: renewal.appliedAt!,
+        obligationCreatedAt: renewal.appliedAt ?? renewal.approvedAt!,
         paymentState: paymentMeta.paymentState,
         paymentPurpose: "RENEWAL",
         latestPaymentId: paymentMeta.latestPaymentId,
@@ -215,6 +232,87 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
         latestPaymentId: paymentMeta.latestPaymentId,
       }];
     });
+  }
+
+  async function fetchRoadLiabilityOutstanding(
+    contractWhere: Prisma.ContractWhereInput | undefined,
+  ): Promise<OpenReceivableRow[]> {
+    const liabilities = await prisma.roadLiability.findMany({
+      where: {
+        ...COLLECTIBLE_WHERE,
+        authoritativeSourceKey: STAFF_MANUAL_SOURCE_KEY,
+        ...(contractWhere ? { attributedContract: contractWhere } : {}),
+        OR: [
+          { customerCharge: { is: null } },
+          {
+            customerCharge: {
+              is: {
+                destinationType: "DIRECT_COLLECTION",
+                operationalState: { not: "PAID" },
+              },
+            },
+          },
+        ],
+        NOT: {
+          customerCharge: {
+            is: {
+              destinationType: { in: ["RECONCILIATION", "POST_CLOSE_RECEIVABLE"] },
+            },
+          },
+        },
+      },
+      include: {
+        attributedContract: {
+          include: CONTRACT_INCLUDE,
+        },
+        customerCharge: {
+          include: {
+            contractPayment: { select: { id: true, status: true } },
+          },
+        },
+      },
+    });
+
+    const rows: OpenReceivableRow[] = [];
+    for (const liability of liabilities) {
+      const contract = liability.attributedContract;
+      if (!contract || liability.amount == null) continue;
+
+      const { capability } = await resolveCollectionAuthorization(
+        prisma,
+        contract.id,
+        contract.customer?.id ?? null,
+      );
+      const cashConfirmEligible =
+        capability.cashCollectionRequired &&
+        (!liability.customerCharge || liability.customerCharge.destinationType === "DIRECT_COLLECTION");
+
+      const payments = liability.customerCharge?.contractPayment
+        ? [{ id: liability.customerCharge.contractPayment.id, status: liability.customerCharge.contractPayment.status }]
+        : [];
+      const paymentMeta = latestPaymentState(payments);
+      const amountDue = liability.amount;
+
+      rows.push({
+        sourceType: "ROAD_LIABILITY",
+        sourceId: liability.id,
+        contractId: contract.id,
+        contractNumber: contract.contractNumber,
+        customer: toCustomerSummary(contract.customer),
+        vehicle: toVehicleSummary(contract.vehicle),
+        company: toFinanceCompanyRef(contract.company),
+        amountDue,
+        amountPaid: 0,
+        outstandingAmount: amountDue,
+        currency: liability.currency ?? "AED",
+        obligationCreatedAt: liability.staffEnteredAt ?? liability.createdAt,
+        paymentState: paymentMeta.paymentState,
+        paymentPurpose: "ROAD_LIABILITY",
+        latestPaymentId: paymentMeta.latestPaymentId,
+        cashCollectionAvailable: cashConfirmEligible,
+      });
+    }
+    return rows;
   }
 
   async function fetchPostCloseOutstanding(
@@ -284,6 +382,9 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
     if (!sourceType || sourceType === "POST_CLOSE_RECEIVABLE") {
       rows.push(...(await fetchPostCloseOutstanding(contractWhere)));
     }
+    if (!sourceType || sourceType === "ROAD_LIABILITY") {
+      rows.push(...(await fetchRoadLiabilityOutstanding(contractWhere)));
+    }
     return rows;
   }
 
@@ -298,7 +399,7 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
     > {
       const rows = await listAll(undefined, scope);
       const map = new Map<OpenReceivableSourceType, { count: number; amount: number }>();
-      for (const type of ["RENTAL", "RENEWAL", "RECONCILIATION", "POST_CLOSE_RECEIVABLE"] as const) {
+      for (const type of ["RENTAL", "RENEWAL", "RECONCILIATION", "POST_CLOSE_RECEIVABLE", "ROAD_LIABILITY"] as const) {
         map.set(type, { count: 0, amount: 0 });
       }
       for (const row of rows) {

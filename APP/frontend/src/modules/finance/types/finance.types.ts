@@ -2,7 +2,8 @@ export type OpenReceivableSourceType =
   | "RENTAL"
   | "RENEWAL"
   | "RECONCILIATION"
-  | "POST_CLOSE_RECEIVABLE";
+  | "POST_CLOSE_RECEIVABLE"
+  | "ROAD_LIABILITY";
 
 export type ManualExpenseCategory =
   | "VEHICLE_CLEANING"
@@ -142,6 +143,7 @@ export interface OpenReceivableDto {
   paymentState: string;
   paymentPurpose: string;
   latestPaymentId: string | null;
+  cashCollectionAvailable?: boolean;
 }
 
 export interface LedgerEntryDto {

@@ -101,6 +101,7 @@ export interface ContractActionsDto {
   canReconcile: boolean;
   canClose: boolean;
   canRenew: boolean;
+  canRegisterDeferredRoadCharge: boolean;
 }
 
 export interface ContractVehicleRefDto {

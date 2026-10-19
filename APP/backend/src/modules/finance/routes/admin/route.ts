@@ -1,5 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
+import { AppError } from "src/lib/errors/app-error";
+import { ErrorCode } from "src/constants/error-codes";
 import { UuidIdParam } from "src/lib/http/common-schemas";
 import { commonErrorResponses, dataResponse, listResponse } from "src/lib/http/response";
 import { requireAuth } from "src/lib/context/auth-context";
@@ -28,7 +31,6 @@ import {
   renderFinanceStatementPdf,
   statementPdfFilename,
 } from "src/modules/finance/finance-statement-pdf.service";
-import { z } from "zod";
 
 const T = ["Finance"];
 
@@ -162,6 +164,44 @@ export default async function financeRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => finance.openReceivables(request.query),
+  );
+
+  app.post(
+    "/open-receivables/road-liabilities/:roadLiabilityId/cash-confirm",
+    {
+      schema: {
+        summary: "Confirm external CASH/POS collection for an open road liability receivable",
+        operationId: "confirmFinanceOpenReceivableRoadLiabilityCash",
+        tags: T,
+        permissions: [PERMISSIONS.FINANCE_READ, PERMISSIONS.VIOLATIONS_CHARGE],
+        params: z.object({ roadLiabilityId: z.string().uuid() }),
+        response: {
+          200: dataResponse(z.object({ received: z.literal(true) })),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      if (typeof key !== "string" || !key.trim()) {
+        throw new AppError({
+          code: ErrorCode.VALIDATION_ERROR,
+          message: "Idempotency-Key header is required",
+        });
+      }
+      await finance.confirmOpenReceivableRoadLiabilityCash(
+        request.params.roadLiabilityId,
+        actor.id,
+        key.trim(),
+      );
+      request.setAudit({
+        action: "finance.open_receivable_road_liability_cash",
+        entityType: "road_liability",
+        entityId: request.params.roadLiabilityId,
+      });
+      return { data: { received: true as const } };
+    },
   );
 
   app.post(

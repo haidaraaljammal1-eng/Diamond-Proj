@@ -1069,11 +1069,19 @@
       "returnLink": "إنشاء رابط الإرجاع",
       "returnWaiting": "بانتظار إرجاع العميل",
       "renew": "تجديد",
+      "registerDeferredCharge": "تسجيل مخالفة لتحصيلها عند المطابقة",
       "reconcile": "المطابقة",
       "close": "إغلاق العقد",
       "viewContract": "عرض العقد",
       "viewContractFor": "عرض العقد {number}",
       "manage": "إدارة العقد"
+    },
+    "deferredCharge": {
+      "title": "تسجيل مخالفة للمطابقة",
+      "subtitle": "سجّل المبلغ الآن؛ التحصيل يتم لاحقاً عبر المطابقة النهائية أو المستحقات بعد الإغلاق.",
+      "note": "لا يتم خصم أي مبلغ من البطاقة من هذه النافذة.",
+      "submit": "تسجيل المخالفة",
+      "success": "تم تسجيل المخالفة. سيتم تحصيلها عبر المطابقة أو المالية عند الاستحقاق."
     },
     "document": {
       "liveTitle": "العقد مع آخر تحديث",
@@ -2868,6 +2876,11 @@
       },
       "empty": "لا توجد مبالغ مستحقة على العملاء حالياً.",
       "view": "عرض",
+      "cashCollect": "تم التحصيل كاش أو ماكينة",
+      "cashCollectTitle": "تأكيد التحصيل كاش أو ماكينة",
+      "cashCollectBody": "سجّل تحصيل هذه المخالفة خارج Stripe باستخدام مسار التحصيل النقدي المعتمد.",
+      "cashCollectConfirm": "تأكيد التحصيل",
+      "cashCollectSuccess": "تم تسجيل التحصيل.",
       "columns": {
         "source": "المصدر",
         "contract": "العقد",
@@ -2884,7 +2897,8 @@
       "RENTAL": "إيجار",
       "RENEWAL": "تجديد",
       "RECONCILIATION": "تسوية الإرجاع",
-      "POST_CLOSE_RECEIVABLE": "مطالبة بعد الإغلاق"
+      "POST_CLOSE_RECEIVABLE": "مطالبة بعد الإغلاق",
+      "ROAD_LIABILITY": "المخالفات"
     },
     "receivablePaymentState": {
       "UNPAID": "بانتظار الدفع",

@@ -79,6 +79,9 @@ Ledger rows are created inside the existing payment confirmation transaction (`r
 | `RENEWAL` | `approvedAt` set, `appliedAt` null, `additionalAmount > 0` | `additionalAmount` |
 | `RECONCILIATION` | approved, `settledAt` null, `finalAmount > 0` | `finalAmount` |
 | `POST_CLOSE_RECEIVABLE` | `status = OPEN` | receivable `amount` |
+| `ROAD_LIABILITY` | Staff manual `OPEN`, not on reconciliation/post-close | liability `amount` |
+
+`RENEWAL` rows also include customer-approved renewals with `approvedAt` set, `appliedAt` null, and no settlement (electronic awaiting payment), in addition to office-applied unpaid renewals.
 
 Outstanding is a **current balance** (`outstandingAsOf = now`), not period-filtered.
 

@@ -21,6 +21,10 @@ import type { ContractsListQuery } from "../types/contract.types";
 import { parsePageMeta } from "./contracts.api.types";
 import type { PageMeta } from "./contracts.api.types";
 import { buildContractsQuery } from "../utils/contract-filters";
+import type {
+  StaffDeferredRegisterResultDto,
+  StaffManualChargeInput,
+} from "@/modules/road-liabilities/types/road-liabilities.types";
 
 const CONTRACTS_PATH = "/contracts";
 
@@ -349,6 +353,23 @@ export async function closeContract(
     `${CONTRACTS_PATH}/${id}/close`,
     {
       method: "POST",
+      headers: withIdempotency(idempotencyKey),
+    },
+  );
+  return response.data;
+}
+
+/** `POST /contracts/:id/deferred-road-charge` (`violations.charge`). */
+export async function postDeferredRoadCharge(
+  contractId: string,
+  body: StaffManualChargeInput,
+  idempotencyKey: string,
+): Promise<StaffDeferredRegisterResultDto> {
+  const response = await apiRequest<StaffDeferredRegisterResultDto>(
+    `${CONTRACTS_PATH}/${contractId}/deferred-road-charge`,
+    {
+      method: "POST",
+      body,
       headers: withIdempotency(idempotencyKey),
     },
   );

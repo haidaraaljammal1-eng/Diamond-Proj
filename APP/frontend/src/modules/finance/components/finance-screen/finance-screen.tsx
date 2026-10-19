@@ -15,6 +15,8 @@ import {
   useFinanceOverview,
   useFinanceReceivables,
 } from "../../hooks/use-finance";
+import { FN, useLegacyOrFunctionalCapability } from "@/modules/functional-rbac";
+import { VIOLATIONS_CHARGE_PERMISSION } from "@/modules/road-liabilities/road-liabilities.permissions";
 import { useFinanceStore } from "../../stores/finance.store";
 import { resolveFinanceErrorMessage } from "../../utils/resolve-finance-error";
 import { ExpenseDetailDrawer } from "../expense-detail-drawer/expense-detail-drawer";
@@ -39,6 +41,11 @@ export function FinanceScreen() {
   const resetLedgerFilters = useFinanceStore((s) => s.resetLedgerFilters);
   const resetReceivablesFilters = useFinanceStore((s) => s.resetReceivablesFilters);
   const setOverviewQuery = useFinanceStore((s) => s.setOverviewQuery);
+  const confirmReceivableCash = useFinanceStore((s) => s.confirmReceivableRoadLiabilityCash);
+  const canConfirmReceivableCash = useLegacyOrFunctionalCapability(
+    VIOLATIONS_CHARGE_PERMISSION,
+    FN.violations.collectCharges,
+  );
 
   const [addOpen, setAddOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
@@ -195,6 +202,9 @@ export function FinanceScreen() {
         onPageChange={receivables.setPage}
         onRetry={() => void overview.refresh()}
         onViewContract={openContract}
+        canConfirmReceivableCash={canConfirmReceivableCash}
+        onConfirmReceivableCash={confirmReceivableCash}
+        onCashCollectSuccess={() => showNotice(t("receivables.cashCollectSuccess"))}
       />
 
       <AddExpenseDialog

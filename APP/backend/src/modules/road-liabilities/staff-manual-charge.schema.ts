@@ -62,3 +62,7 @@ export const StaffManualChargeResultSchema = z.object({
   failure: z.any().nullable().optional(),
   recoveryState: StaffManualRecoveryStateSchema.optional().default("none"),
 });
+
+export const StaffDeferredRegisterResultSchema = z.object({
+  roadLiabilityId: z.string().uuid(),
+});

@@ -400,4 +400,8 @@ export interface StaffManualChargeResultDto {
   recoveryState?: StaffManualRecoveryStateDto;
 }
 
+export interface StaffDeferredRegisterResultDto {
+  roadLiabilityId: string;
+}
+
 export const RETURNED_CONTRACTS_PAGE_SIZE = 20;

@@ -10,6 +10,7 @@ const perms = {
   canReconcile: true,
   canClose: true,
   canRenew: true,
+  canChargeViolation: false,
 };
 
 describe("contracts payment UI policy", () => {
@@ -26,6 +27,7 @@ describe("contracts payment UI policy", () => {
           canReconcile: false,
           canClose: false,
           canRenew: false,
+          canRegisterDeferredRoadCharge: false,
         },
       },
       perms,
@@ -46,6 +48,7 @@ describe("contracts payment UI policy", () => {
           canReconcile: true,
           canClose: false,
           canRenew: false,
+          canRegisterDeferredRoadCharge: false,
         },
       },
       perms,
@@ -67,6 +70,7 @@ describe("contracts payment UI policy", () => {
           canReconcile: false,
           canClose: true,
           canRenew: false,
+          canRegisterDeferredRoadCharge: false,
         },
       },
       perms,

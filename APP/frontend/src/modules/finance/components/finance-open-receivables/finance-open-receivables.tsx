@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/shared/components/ui/button";
+import { Dialog } from "@/shared/components/ui/dialog";
 import { DataSearch } from "@/shared/components/data-search";
 import { Select } from "@/shared/components/ui/select";
 import type { SelectOption } from "@/shared/components/ui/select";
@@ -38,6 +40,9 @@ export interface FinanceOpenReceivablesProps {
   onPageChange: (page: number) => void;
   onRetry: () => void;
   onViewContract: (contractId: string) => void;
+  canConfirmReceivableCash: boolean;
+  onConfirmReceivableCash: (roadLiabilityId: string, idempotencyKey: string) => Promise<boolean>;
+  onCashCollectSuccess?: () => void;
 }
 
 const SOURCE_OPTIONS: Array<OpenReceivableSourceType | "ALL"> = [
@@ -46,6 +51,7 @@ const SOURCE_OPTIONS: Array<OpenReceivableSourceType | "ALL"> = [
   "RENEWAL",
   "RECONCILIATION",
   "POST_CLOSE_RECEIVABLE",
+  "ROAD_LIABILITY",
 ];
 
 const SORT_OPTIONS: ReceivableSortKey[] = [
@@ -70,10 +76,17 @@ export function FinanceOpenReceivables({
   onPageChange,
   onRetry,
   onViewContract,
+  canConfirmReceivableCash,
+  onConfirmReceivableCash,
+  onCashCollectSuccess,
 }: FinanceOpenReceivablesProps) {
   const t = useTranslations("Finance");
   const format = useFormatter();
   const errorMessage = resolveFinanceErrorMessage(t, error as never);
+  const [cashTarget, setCashTarget] = useState<OpenReceivableDto | null>(null);
+  const [cashSubmitting, setCashSubmitting] = useState(false);
+  const [cashError, setCashError] = useState(false);
+  const cashKeyRef = useRef<string>(crypto.randomUUID());
 
   const sourceSelectOptions: SelectOption<string>[] = SOURCE_OPTIONS.map((value) => ({
     value,
@@ -191,20 +204,41 @@ export function FinanceOpenReceivables({
                     {formatFinanceAed(row.outstandingAmount)}
                   </td>
                   <td>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={isSimulatedFinanceId(row.contractId)}
-                      title={
-                        isSimulatedFinanceId(row.contractId)
-                          ? t("simulation.viewDisabled")
-                          : undefined
-                      }
-                      onClick={() => onViewContract(row.contractId)}
-                    >
-                      {t("receivables.view")}
-                    </Button>
+                    <div className={styles.rowActions}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={isSimulatedFinanceId(row.contractId)}
+                        title={
+                          isSimulatedFinanceId(row.contractId)
+                            ? t("simulation.viewDisabled")
+                            : undefined
+                        }
+                        onClick={() => onViewContract(row.contractId)}
+                      >
+                        {t("receivables.view")}
+                      </Button>
+                      {canConfirmReceivableCash &&
+                      row.sourceType === "ROAD_LIABILITY" &&
+                      row.cashCollectionAvailable &&
+                      row.outstandingAmount > 0 ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          data-testid="finance-receivable-cash-collect"
+                          disabled={isSimulatedFinanceId(row.contractId)}
+                          onClick={() => {
+                            setCashError(false);
+                            cashKeyRef.current = crypto.randomUUID();
+                            setCashTarget(row);
+                          }}
+                        >
+                          {t("receivables.cashCollect")}
+                        </Button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -238,6 +272,61 @@ export function FinanceOpenReceivables({
           </div>
         </div>
       ) : null}
+
+      <Dialog
+        open={cashTarget != null}
+        onClose={() => {
+          if (!cashSubmitting) setCashTarget(null);
+        }}
+        title={t("receivables.cashCollectTitle")}
+        description={t("receivables.cashCollectBody")}
+        closeLabel={t("clear")}
+      >
+        {cashTarget ? (
+          <div className={styles.cashDialog}>
+            <p dir="ltr">
+              <b>{cashTarget.contractNumber}</b> — {formatFinanceAed(cashTarget.outstandingAmount)}
+            </p>
+            {cashError ? (
+              <p className={styles.cashError} role="alert">{t("retry")}</p>
+            ) : null}
+            <div className={styles.cashDialogActions}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                disabled={cashSubmitting}
+                onClick={() => setCashTarget(null)}
+              >
+                {t("clear")}
+              </Button>
+              <Button
+                type="button"
+                size="md"
+                loading={cashSubmitting}
+                data-testid="finance-receivable-cash-collect-confirm"
+                onClick={() => {
+                  if (!cashTarget || cashSubmitting) return;
+                  setCashSubmitting(true);
+                  setCashError(false);
+                  void onConfirmReceivableCash(cashTarget.sourceId, cashKeyRef.current)
+                    .then((ok) => {
+                      if (ok) {
+                        setCashTarget(null);
+                        onCashCollectSuccess?.();
+                      } else {
+                        setCashError(true);
+                      }
+                    })
+                    .finally(() => setCashSubmitting(false));
+                }}
+              >
+                {t("receivables.cashCollectConfirm")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
     </section>
   );
 }

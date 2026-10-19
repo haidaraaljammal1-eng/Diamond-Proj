@@ -37,6 +37,12 @@ import { commonErrorResponses, dataResponse, listResponse } from "src/lib/http/r
 import { PERMISSIONS } from "src/constants/permissions";
 import { requireAuth } from "src/lib/context/auth-context";
 import { AppError } from "src/lib/errors/app-error";
+import { ErrorCode } from "src/constants/error-codes";
+import { createStaffDeferredRoadChargeService } from "src/modules/road-liabilities/staff-deferred-road-charge.service";
+import {
+  StaffDeferredRegisterResultSchema,
+  StaffManualChargeInputSchema,
+} from "src/modules/road-liabilities/staff-manual-charge.schema";
 
 const InspectionPhotoParam = ContractIdParam.extend({ photoId: z.string().uuid() });
 const PostCloseReceivableParam = ContractIdParam.extend({ receivableId: z.string().uuid() });
@@ -45,6 +51,7 @@ const OfficialSignatureStaffParam = ContractIdParam.extend({ slot: z.enum(["hire
 export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const contracts = createContractsService(fastify);
+  const deferredCharges = createStaffDeferredRoadChargeService(fastify);
   // Read-only integration state. Contracts business logic never calls TARS —
   // see DOCU/04-api-contracts/tars-integration.md.
   const tars = createTarsWorkflowOrchestrator(fastify);
@@ -845,6 +852,46 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       const data = await contracts.generateReconciliationLink(request.params.id, actor.id);
       request.setAudit({
         action: "contracts.reconciliation_link",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
+    "/:id/deferred-road-charge",
+    {
+      schema: {
+        summary: "Register a deferred traffic/Salik charge for reconciliation collection",
+        operationId: "registerContractDeferredRoadCharge",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.VIOLATIONS_CHARGE],
+        params: ContractIdParam,
+        body: StaffManualChargeInputSchema,
+        response: {
+          200: dataResponse(StaffDeferredRegisterResultSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const key = request.headers["idempotency-key"];
+      if (typeof key !== "string" || !key.trim()) {
+        throw new AppError({
+          code: ErrorCode.VALIDATION_ERROR,
+          message: "Idempotency-Key header is required",
+        });
+      }
+      const data = await deferredCharges.register(
+        request.params.id,
+        request.body,
+        actor.id,
+        key.trim(),
+      );
+      request.setAudit({
+        action: "contracts.deferred_road_charge",
         entityType: "contract",
         entityId: request.params.id,
       });

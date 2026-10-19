@@ -87,6 +87,21 @@ export async function getOpenReceivables(
   return { data: response.data, meta: parsePageMeta(response.meta) };
 }
 
+/** `POST /finance/open-receivables/road-liabilities/:roadLiabilityId/cash-confirm`. */
+export async function confirmOpenReceivableRoadLiabilityCash(
+  roadLiabilityId: string,
+  idempotencyKey: string,
+): Promise<{ received: true }> {
+  const response = await apiRequest<{ received: true }>(
+    `${FINANCE_PATH}/open-receivables/road-liabilities/${roadLiabilityId}/cash-confirm`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+    },
+  );
+  return response.data;
+}
+
 /** `GET /finance/ledger` (Backend permission: `finance.read`). */
 export async function getFinanceLedger(
   query: LedgerQuery,

@@ -9,6 +9,7 @@ import {
   createManualExpense,
   getFinanceAnalytics,
   getFinanceLedger,
+  confirmOpenReceivableRoadLiabilityCash,
   getFinanceSummary,
   getManualExpense,
   getOpenReceivables,
@@ -95,6 +96,10 @@ interface FinanceState {
   clearCreateExpenseError: () => void;
   clearVoidExpenseError: () => void;
   clearCorrectExpenseError: () => void;
+  confirmReceivableRoadLiabilityCash: (
+    roadLiabilityId: string,
+    idempotencyKey: string,
+  ) => Promise<boolean>;
 }
 
 function isFinanceSimulating(): boolean {
@@ -545,6 +550,17 @@ export const useFinanceStore = create<FinanceState>((set, get) => {
     clearCreateExpenseError: () => set({ createExpenseError: null }),
     clearVoidExpenseError: () => set({ voidExpenseError: null }),
     clearCorrectExpenseError: () => set({ correctExpenseError: null }),
+
+    confirmReceivableRoadLiabilityCash: async (roadLiabilityId, idempotencyKey) => {
+      if (isFinanceSimulating()) return false;
+      try {
+        await confirmOpenReceivableRoadLiabilityCash(roadLiabilityId, idempotencyKey);
+        await get().refreshAll();
+        return true;
+      } catch {
+        return false;
+      }
+    },
   };
 });
 

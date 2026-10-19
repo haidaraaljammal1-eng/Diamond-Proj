@@ -35,6 +35,7 @@ import {
   CONTRACTS_RENEW_PERMISSION,
   CONTRACTS_RETURN_PERMISSION,
 } from "../contracts.permissions";
+import { VIOLATIONS_CHARGE_PERMISSION } from "@/modules/road-liabilities/road-liabilities.permissions";
 
 export interface UseContractResult {
   detail: ContractDetailDto | null;
@@ -140,6 +141,10 @@ export function useContract(): UseContractResult {
     CONTRACTS_RENEW_PERMISSION,
     FN.contracts.renewal,
   );
+  const canChargeViolation = useLegacyOrFunctionalCapability(
+    VIOLATIONS_CHARGE_PERMISSION,
+    FN.violations.collectCharges,
+  );
 
   const permissions = useMemo<ContractPermissionFlags>(
     () => ({
@@ -150,8 +155,9 @@ export function useContract(): UseContractResult {
       canReconcile: canDeliveryReturn,
       canClose: canCollectionClosure,
       canRenew: canRenewal,
+      canChargeViolation,
     }),
-    [canRentalLink, canDeliveryReturn, canCollectionClosure, canRenewal],
+    [canRentalLink, canDeliveryReturn, canCollectionClosure, canRenewal, canChargeViolation],
   );
 
   const actions = store.detail

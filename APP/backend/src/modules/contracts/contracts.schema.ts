@@ -783,6 +783,7 @@ export const ContractDetailSchema = z.object({
     canReconcile: z.boolean(),
     canClose: z.boolean(),
     canRenew: z.boolean(),
+    canRegisterDeferredRoadCharge: z.boolean(),
   }),
   roadLiabilitySignals: ContractRoadLiabilitySignalsSchema,
   postCloseReceivables: ContractPostCloseReceivablesSummarySchema,

@@ -147,8 +147,12 @@ export interface ManualExpenseMessageInput {
 export interface AttentionSummaryMessageInput {
   unpaidContractsCount: number;
   unpaidContractsTotal: number;
-  unpaidRoadLiabilitiesCount: number;
-  unpaidRoadLiabilitiesTotal: number;
+  unpaidDeferredViolationsCount: number;
+  unpaidDeferredViolationsTotal: number;
+  unpaidPostCloseViolationsCount: number;
+  unpaidPostCloseViolationsTotal: number;
+  awaitingRenewalsCount: number;
+  awaitingRenewalsTotal: number;
   overdueRentalsCount: number;
   outstandingFinancialTotal: number;
   currency: string;
@@ -401,10 +405,26 @@ export function buildAttentionSummaryMessage(input: AttentionSummaryMessageInput
     );
   }
 
-  if (input.unpaidRoadLiabilitiesCount > 0) {
+  if (input.unpaidDeferredViolationsCount > 0) {
     lines.push(
-      "Unpaid traffic liabilities:",
-      `${input.unpaidRoadLiabilitiesCount} — ${formatMoney(input.unpaidRoadLiabilitiesTotal, input.currency)}`,
+      "Unpaid deferred violations:",
+      `${input.unpaidDeferredViolationsCount} — ${formatMoney(input.unpaidDeferredViolationsTotal, input.currency)}`,
+      "",
+    );
+  }
+
+  if (input.unpaidPostCloseViolationsCount > 0) {
+    lines.push(
+      "Unpaid post-close violations:",
+      `${input.unpaidPostCloseViolationsCount} — ${formatMoney(input.unpaidPostCloseViolationsTotal, input.currency)}`,
+      "",
+    );
+  }
+
+  if (input.awaitingRenewalsCount > 0) {
+    lines.push(
+      "Renewals awaiting payment:",
+      `${input.awaitingRenewalsCount} — ${formatMoney(input.awaitingRenewalsTotal, input.currency)}`,
       "",
     );
   }

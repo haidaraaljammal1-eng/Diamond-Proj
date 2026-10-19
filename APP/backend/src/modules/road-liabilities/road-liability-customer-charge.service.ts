@@ -3,8 +3,6 @@ import type { ContractStatus } from "@prisma/client";
 import { acquireAdvisoryLocks } from "src/lib/db/advisory-lock";
 import { withTransaction, type Tx } from "src/lib/db/transaction";
 import { runIdempotent, fingerprintIdempotentPayload } from "src/lib/db/idempotency";
-import { writeOutboxEvent } from "src/lib/db/outbox";
-import { INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE } from "src/modules/invoices/invoices.constants";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import {
   CONTRACT_RECONCILE_LOCK_NS,
@@ -12,13 +10,7 @@ import {
 } from "src/modules/contracts/contracts.constants";
 import { contractError } from "src/modules/contracts/contracts.errors";
 import { assertReconciliationLinesEditable } from "src/modules/contracts/contracts-reconciliation";
-import {
-  deriveCustomerChargeAdjustment,
-  mapRoadLiabilityTypeToReconLineType,
-  reconciliationTotalsFromLines,
-  ROAD_LIABILITY_RECON_SOURCE_DOMAIN,
-  roadLiabilityReconDescription,
-} from "src/modules/contracts/contracts-road-liability-charge";
+import { deriveCustomerChargeAdjustment } from "src/modules/contracts/contracts-road-liability-charge";
 import {
   buildRoadLiabilityChargeProposal,
   isChargeableRoadLiability,
@@ -27,6 +19,7 @@ import { roadLiabilityNotFoundError } from "src/modules/road-liabilities/road-li
 import type { ConfirmRoadLiabilityChargeSchema } from "src/modules/contracts/contracts.schema";
 import type { z } from "zod";
 import type { RoadLiabilityCustomerChargeReview } from "src/modules/road-liabilities/road-liability.schema";
+import { persistRoadLiabilityCustomerChargeInTx } from "src/modules/road-liabilities/road-liability-customer-charge.persist";
 
 type ConfirmInput = z.infer<typeof ConfirmRoadLiabilityChargeSchema>;
 
@@ -165,7 +158,7 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
       contract: {
         id: string;
         status: ContractStatus;
-        reconciliation: { id: string } | null;
+        reconciliation: { id: string; finalizedAt?: Date | null; settledAt?: Date | null } | null;
         carIn: { id: string } | null;
       };
       destination: "RECONCILIATION" | "POST_CLOSE_RECEIVABLE";
@@ -174,95 +167,24 @@ export function createRoadLiabilityCustomerChargeService(fastify: FastifyInstanc
       actorUserId: number;
     },
   ) {
-    const now = new Date();
-    const charge = await tx.roadLiabilityCustomerCharge.create({
-      data: {
-        roadLiabilityId: input.liability.id,
-        contractId: input.contract.id,
-        destinationType: input.destination,
-        officialAmountSnapshot: input.derived.officialAmount,
-        customerChargeAmount: input.derived.customerChargeAmount,
-        adjustmentAmount: input.derived.adjustmentAmount,
-        adjustmentReason: input.derived.adjustmentReason,
-        adjustmentNote: input.adjustmentNote,
-        confirmedByUserId: input.actorUserId,
-        confirmedAt: now,
+    return persistRoadLiabilityCustomerChargeInTx(tx, {
+      liability: input.liability,
+      contract: {
+        id: input.contract.id,
+        status: input.contract.status,
+        reconciliation: input.contract.reconciliation
+          ? {
+              id: input.contract.reconciliation.id,
+              finalizedAt: input.contract.reconciliation.finalizedAt ?? null,
+            }
+          : null,
+        carIn: input.contract.carIn,
       },
+      destination: input.destination,
+      derived: input.derived,
+      adjustmentNote: input.adjustmentNote,
+      actorUserId: input.actorUserId,
     });
-
-    if (input.destination === "RECONCILIATION") {
-      if (!input.contract.carIn) throw contractError.carInRequired();
-      let reconciliationId = input.contract.reconciliation?.id;
-      if (!reconciliationId) {
-        const created = await tx.contractReconciliation.create({
-          data: {
-            contractId: input.contract.id,
-            chargesTotal: 0,
-            depositAmount: 0,
-            deductions: 0,
-            finalAmount: 0,
-          },
-        });
-        reconciliationId = created.id;
-      }
-      const line = await tx.contractReconciliationLine.create({
-        data: {
-          reconciliationId,
-          type: mapRoadLiabilityTypeToReconLineType(input.liability.type),
-          description: roadLiabilityReconDescription(input.liability.type),
-          amount: input.derived.customerChargeAmount,
-          externalReference: input.liability.authoritativeExternalReference,
-          sourceDomain: ROAD_LIABILITY_RECON_SOURCE_DOMAIN,
-          roadLiabilityId: input.liability.id,
-          officialAmountSnapshot: input.derived.officialAmount,
-          adjustmentAmount: input.derived.adjustmentAmount,
-          adjustmentReason: input.derived.adjustmentReason,
-          adjustmentNote: input.adjustmentNote,
-          confirmedByUserId: input.actorUserId,
-          confirmedAt: now,
-        },
-      });
-      await tx.roadLiabilityCustomerCharge.update({
-        where: { id: charge.id },
-        data: { reconciliationLineId: line.id },
-      });
-      const allLines = await tx.contractReconciliationLine.findMany({ where: { reconciliationId } });
-      await tx.contractReconciliation.update({
-        where: { id: reconciliationId },
-        data: {
-          ...reconciliationTotalsFromLines(allLines),
-          depositAmount: 0,
-          deductions: 0,
-        },
-      });
-      await writeOutboxEvent(tx, {
-        eventType: INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE,
-        aggregateType: "road_liability_customer_charge",
-        aggregateId: charge.id,
-        dedupeKey: `${INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE}:${charge.id}`,
-        payload: { customerChargeId: charge.id, contractId: input.contract.id },
-      });
-      return charge.id;
-    }
-
-    await tx.contractPostCloseReceivable.create({
-      data: {
-        contractId: input.contract.id,
-        customerChargeId: charge.id,
-        roadLiabilityId: input.liability.id,
-        amount: input.derived.customerChargeAmount,
-        currency: "AED",
-        status: "OPEN",
-      },
-    });
-    await writeOutboxEvent(tx, {
-      eventType: INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE,
-      aggregateType: "road_liability_customer_charge",
-      aggregateId: charge.id,
-      dedupeKey: `${INVOICE_OUTBOX_ROAD_LIABILITY_CHARGE}:${charge.id}`,
-      payload: { customerChargeId: charge.id, contractId: input.contract.id },
-    });
-    return charge.id;
   }
 
   function samePayloadLocked(

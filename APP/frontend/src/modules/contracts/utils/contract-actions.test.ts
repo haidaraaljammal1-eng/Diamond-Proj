@@ -12,6 +12,7 @@ const allTrue: ContractActionsDto = {
   canReconcile: true,
   canClose: true,
   canRenew: true,
+  canRegisterDeferredRoadCharge: true,
 };
 
 const perms = {
@@ -22,6 +23,7 @@ const perms = {
   canReconcile: true,
   canClose: true,
   canRenew: true,
+  canChargeViolation: true,
 };
 
 function actionsFor(status: ContractStatus, dto: Partial<ContractActionsDto> = {}) {
@@ -194,7 +196,7 @@ describe("getContractActions", () => {
     assert.equal(actions.showClose, true);
   });
 
-  it("CLOSED is read-only", () => {
+  it("CLOSED allows deferred violation registration only", () => {
     const actions = actionsFor("CLOSED");
     assert.deepEqual(actions, {
       showGenerateRentalLink: false,
@@ -204,6 +206,7 @@ describe("getContractActions", () => {
       showCarIn: false,
       showReturnWaiting: false,
       showRenew: false,
+      showRegisterDeferredRoadCharge: true,
       showReconcile: false,
       showClose: false,
     });

@@ -48,6 +48,7 @@ import {
 import { assertVehicleBookableForRental, assertVehicleFreeForRental, canCarOutFromState, findBlockingContract } from "src/modules/contracts/vehicle-rental-guard";
 import { createPendingRentalRequestDeleteService } from "src/modules/contracts/pending-rental-request-delete.service";
 import { contractError } from "src/modules/contracts/contracts.errors";
+import { attachPendingRoadLiabilitiesForReconciliationInTx } from "src/modules/road-liabilities/road-liability-reconciliation-auto-attach";
 import {
   CONTRACT_DETAIL_INCLUDE,
   toDetail,
@@ -978,6 +979,7 @@ export function createContractsService(fastify: FastifyInstance) {
           where: { id: contractId },
           data: { status: "REVIEW", revision: { increment: 1 } },
         });
+        await attachPendingRoadLiabilitiesForReconciliationInTx(tx, contractId, actorUserId);
         await tx.vehicle.update({
           where: { id: contract.vehicleId },
           data: { operationalStatus: "AVAILABLE" },
@@ -1426,6 +1428,13 @@ export function createContractsService(fastify: FastifyInstance) {
       where: { id: contract.id },
       data: { status: "REVIEW", revision: { increment: 1 } },
     });
+    if (performedByUserId) {
+      await attachPendingRoadLiabilitiesForReconciliationInTx(
+        tx,
+        contract.id,
+        performedByUserId,
+      );
+    }
     const vehicle = await tx.vehicle.findUnique({
       where: { id: contract.vehicleId },
       select: { operationalStatus: true },

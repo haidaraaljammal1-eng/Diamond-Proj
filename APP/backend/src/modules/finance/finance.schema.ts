@@ -159,6 +159,7 @@ export const OpenReceivableSchema = z.object({
   paymentState: z.string(),
   paymentPurpose: z.string(),
   latestPaymentId: z.string().nullable(),
+  cashCollectionAvailable: z.boolean().optional(),
 });
 
 export const OpenReceivablesQuerySchema = PaginationQuerySchema.extend({

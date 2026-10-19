@@ -22,6 +22,7 @@ import {
   resolveFinanceCompanyScope,
   type FinanceCompanyScopeQuery,
 } from "src/modules/finance/finance-company-scope";
+import { createRoadLiabilityCollectionService } from "src/modules/road-liabilities/road-liability-collection.service";
 
 const LEDGER_SORT_FIELDS = ["occurredAt", "amount", "kind", "sourceType"];
 
@@ -29,6 +30,7 @@ export function createFinanceService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
   const analytics = createFinanceAnalyticsService(prisma);
   const receivables = createFinanceReceivablesService(prisma);
+  const roadCollections = createRoadLiabilityCollectionService(fastify);
 
   return {
     async summary(
@@ -237,6 +239,14 @@ export function createFinanceService(fastify: FastifyInstance) {
       });
 
       return result;
+    },
+
+    confirmOpenReceivableRoadLiabilityCash(
+      roadLiabilityId: string,
+      actorUserId: number,
+      idempotencyKey: string,
+    ) {
+      return roadCollections.confirmCashCollection(roadLiabilityId, actorUserId, idempotencyKey);
     },
 
     openReceivables(query: {

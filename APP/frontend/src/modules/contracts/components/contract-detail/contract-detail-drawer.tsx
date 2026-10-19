@@ -28,6 +28,7 @@ import {
 } from "../../forms/reconcile/reconciliation-sections";
 import { reconciliationSettlementSummary } from "../../utils/reconciliation.utils";
 import { ReconciliationImagePairsSection } from "../../forms/reconcile/reconciliation-images";
+import { DeferredRoadChargeDialog } from "../deferred-road-charge/deferred-road-charge-dialog";
 import styles from "./contract-detail-drawer.module.css";
 
 function reviewSettlementAmountDue(detail: ContractDetailDto): number {
@@ -81,6 +82,7 @@ export function ContractDetailDrawer({
   const checkout = useStripeCheckout();
   const [providerAvailable, setProviderAvailable] = useState(true);
   const [collectRenewalId, setCollectRenewalId] = useState<string | null>(null);
+  const [deferredChargeOpen, setDeferredChargeOpen] = useState(false);
   const collectKeyRef = useRef(createIdempotencyKey());
   const {
     detail,
@@ -464,6 +466,17 @@ export function ContractDetailDrawer({
                   {t("actions.renew")}
                 </Button>
               ) : null}
+              {actions.showRegisterDeferredRoadCharge ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  data-testid="contract-register-deferred-charge"
+                  onClick={() => setDeferredChargeOpen(true)}
+                >
+                  {t("actions.registerDeferredCharge")}
+                </Button>
+              ) : null}
               {actions.showReconcile ? (
                 <Button type="button" size="sm" onClick={() => onReconcile(detail.id)}>
                   {t("actions.reconcile")}
@@ -522,6 +535,14 @@ export function ContractDetailDrawer({
         </div>
       ) : null}
     </Dialog>
+    <DeferredRoadChargeDialog
+      open={deferredChargeOpen}
+      contract={detail}
+      onClose={() => setDeferredChargeOpen(false)}
+      onSuccess={() => {
+        if (detail) void loadContract(detail.id);
+      }}
+    />
     </>
   );
 }

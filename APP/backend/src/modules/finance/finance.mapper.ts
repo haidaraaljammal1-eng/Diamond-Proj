@@ -54,6 +54,8 @@ export interface OpenReceivableRow {
   paymentState: string;
   paymentPurpose: string;
   latestPaymentId: string | null;
+  /** ROAD_LIABILITY rows: external CASH/POS confirm is available when true. */
+  cashCollectionAvailable?: boolean;
 }
 
 export function toCustomerSummary(

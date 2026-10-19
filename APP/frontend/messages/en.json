@@ -1069,11 +1069,19 @@
       "returnLink": "Generate return link",
       "returnWaiting": "Waiting for customer return",
       "renew": "Renew",
+      "registerDeferredCharge": "Register violation for reconciliation collection",
       "reconcile": "Reconciliation",
       "close": "Close contract",
       "viewContract": "View contract",
       "viewContractFor": "View contract {number}",
       "manage": "Manage contract"
+    },
+    "deferredCharge": {
+      "title": "Register violation for reconciliation",
+      "subtitle": "Record the charge now; collection follows the normal reconciliation or post-close flow.",
+      "note": "No card charge is made from this dialog.",
+      "submit": "Register charge",
+      "success": "Violation registered. It will be collected through reconciliation or Finance when due."
     },
     "document": {
       "liveTitle": "Contract with latest updates",
@@ -2868,6 +2876,11 @@
       },
       "empty": "No outstanding customer obligations.",
       "view": "View",
+      "cashCollect": "Collected cash or POS",
+      "cashCollectTitle": "Confirm cash or POS collection",
+      "cashCollectBody": "Record this violation as collected outside Stripe using the existing cash workflow.",
+      "cashCollectConfirm": "Confirm collection",
+      "cashCollectSuccess": "Collection recorded.",
       "columns": {
         "source": "Source",
         "contract": "Contract",
@@ -2884,7 +2897,8 @@
       "RENTAL": "Rental",
       "RENEWAL": "Renewal",
       "RECONCILIATION": "Return Reconciliation",
-      "POST_CLOSE_RECEIVABLE": "Post-Close Charge"
+      "POST_CLOSE_RECEIVABLE": "Post-Close Charge",
+      "ROAD_LIABILITY": "Violations"
     },
     "receivablePaymentState": {
       "UNPAID": "Awaiting Payment",

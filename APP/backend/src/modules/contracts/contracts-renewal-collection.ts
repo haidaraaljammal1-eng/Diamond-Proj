@@ -44,6 +44,14 @@ export const OUTSTANDING_OFFICE_RENEWAL_FILTER = {
   settledPaymentId: null,
 } as const;
 
+/** Customer-approved electronic renewals not yet applied to the contract. */
+export const AWAITING_PAYMENT_RENEWAL_FILTER = {
+  additionalAmount: { gt: 0 },
+  approvedAt: { not: null },
+  appliedAt: null,
+  settledPaymentId: null,
+} as const;
+
 export type OutstandingRenewalRow = {
   id: string;
   createdAt: Date;

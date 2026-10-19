@@ -87,12 +87,17 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   confirmRoadLiabilityManualCollection: all(FN.violations.collectCharges),
   listReturnedContractsForRoadCharges: all(FN.violations.viewPage),
   staffManualChargeReturnedContract: all(FN.violations.collectCharges),
+  registerContractDeferredRoadCharge: all(FN.violations.collectCharges),
 
   // Finance
   getFinanceSummary: all(FN.finance.viewPage),
   getFinanceAnalytics: all(FN.finance.viewPage),
   listFinanceLedger: all(FN.finance.viewPage),
   listFinanceOpenReceivables: all(FN.finance.viewPage),
+  confirmFinanceOpenReceivableRoadLiabilityCash: all(
+    FN.finance.viewPage,
+    FN.violations.collectCharges,
+  ),
   getFinanceStatementBusinessToday: all(FN.finance.viewPage),
   downloadFinanceStatementPdf: all(FN.finance.viewPage),
   createManualExpense: all(FN.finance.addExpense),

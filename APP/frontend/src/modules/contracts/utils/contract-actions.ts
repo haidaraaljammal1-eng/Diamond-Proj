@@ -8,6 +8,7 @@ export interface ContractPermissionFlags {
   canReconcile: boolean;
   canClose: boolean;
   canRenew: boolean;
+  canChargeViolation: boolean;
 }
 
 export interface ContractUiActions {
@@ -18,6 +19,7 @@ export interface ContractUiActions {
   showCarIn: boolean;
   showReturnWaiting: boolean;
   showRenew: boolean;
+  showRegisterDeferredRoadCharge: boolean;
   showReconcile: boolean;
   showClose: boolean;
 }
@@ -30,6 +32,7 @@ const NONE: ContractUiActions = {
   showCarIn: false,
   showReturnWaiting: false,
   showRenew: false,
+  showRegisterDeferredRoadCharge: false,
   showReconcile: false,
   showClose: false,
 };
@@ -44,7 +47,17 @@ export function getContractActions(
 ): ContractUiActions {
   const { actions, status } = contract;
 
-  if (status === "CLOSED") return NONE;
+  const showRegisterDeferredRoadCharge =
+    actions.canRegisterDeferredRoadCharge &&
+    permissions.canChargeViolation &&
+    (status === "ACTIVE" ||
+      status === "RETOUT" ||
+      status === "REVIEW" ||
+      status === "CLOSED");
+
+  if (status === "CLOSED") {
+    return { ...NONE, showRegisterDeferredRoadCharge };
+  }
 
   return {
     showGenerateRentalLink:
@@ -60,6 +73,7 @@ export function getContractActions(
     showReturnWaiting:
       status === "RETOUT" && !(actions.canCarIn && permissions.canReturn),
     showRenew: actions.canRenew && permissions.canRenew && status === "ACTIVE",
+    showRegisterDeferredRoadCharge,
     showReconcile: actions.canReconcile && permissions.canReconcile,
     showClose: actions.canClose && permissions.canClose,
   };

@@ -16,6 +16,7 @@ import {
   type FullReconciliationRow,
 } from "src/modules/contracts/contracts-reconciliation";
 import { deriveRenewalCollectionState } from "src/modules/contracts/contracts-renewal-collection";
+import { canRegisterDeferredRoadCharge } from "src/modules/road-liabilities/staff-deferred-road-charge.service";
 import { resolveContractDisplayCustomerName } from "src/modules/contracts/contract-display-customer";
 import { rentalPaymentAuthorizationState } from "src/modules/contracts/payment/payment-authorization.policy";
 
@@ -178,6 +179,7 @@ function actionsFor(row: ContractDetailRow, canCarOut: boolean): ContractDetail[
       isReconciliationFinalized(row.reconciliation) &&
       reconciliationSettled(row),
     canRenew: row.status === "ACTIVE",
+    canRegisterDeferredRoadCharge: canRegisterDeferredRoadCharge(row.status),
   };
 }
 

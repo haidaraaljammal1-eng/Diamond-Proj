@@ -1,3 +1,26 @@
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.cashDialog {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cashDialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.cashError {
+  color: var(--danger, #b42318);
+  font-size: 0.9rem;
+}
+
 .section {
   margin-bottom: 22px;
 }

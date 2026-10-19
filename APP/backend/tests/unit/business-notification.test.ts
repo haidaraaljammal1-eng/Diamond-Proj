@@ -42,8 +42,12 @@ test("attention summary sends nothing content-wise when all counts are zero", ()
     attentionMonitorHasOutstandingCases({
       unpaidContractsCount: 0,
       unpaidContractsTotal: 0,
-      unpaidRoadLiabilitiesCount: 0,
-      unpaidRoadLiabilitiesTotal: 0,
+      unpaidDeferredViolationsCount: 0,
+      unpaidDeferredViolationsTotal: 0,
+      unpaidPostCloseViolationsCount: 0,
+      unpaidPostCloseViolationsTotal: 0,
+      awaitingRenewalsCount: 0,
+      awaitingRenewalsTotal: 0,
       overdueRentalsCount: 0,
       outstandingFinancialTotal: 0,
       currency: "AED",
@@ -56,8 +60,12 @@ test("attention summary message consolidates outstanding categories", () => {
   const message = buildAttentionSummaryMessage({
     unpaidContractsCount: 3,
     unpaidContractsTotal: 8400,
-    unpaidRoadLiabilitiesCount: 2,
-    unpaidRoadLiabilitiesTotal: 1250,
+    unpaidDeferredViolationsCount: 2,
+    unpaidDeferredViolationsTotal: 1250,
+    unpaidPostCloseViolationsCount: 0,
+    unpaidPostCloseViolationsTotal: 0,
+    awaitingRenewalsCount: 0,
+    awaitingRenewalsTotal: 0,
     overdueRentalsCount: 1,
     outstandingFinancialTotal: 9650,
     currency: "AED",
@@ -65,7 +73,7 @@ test("attention summary message consolidates outstanding categories", () => {
 
   assert.match(message.message, /Unpaid contracts:/);
   assert.match(message.message, /3 — AED 8,400/);
-  assert.match(message.message, /Unpaid traffic liabilities:/);
+  assert.match(message.message, /Unpaid deferred violations:/);
   assert.match(message.message, /Overdue rentals:/);
   assert.match(message.message, /Outstanding financial total:/);
   assert.match(message.message, /AED 9,650/);
@@ -338,8 +346,12 @@ test("attention monitor sends one consolidated summary when outstanding cases ex
     async () => ({
       unpaidContractsCount: 2,
       unpaidContractsTotal: 5000,
-      unpaidRoadLiabilitiesCount: 1,
-      unpaidRoadLiabilitiesTotal: 250,
+      unpaidDeferredViolationsCount: 1,
+      unpaidDeferredViolationsTotal: 250,
+      unpaidPostCloseViolationsCount: 0,
+      unpaidPostCloseViolationsTotal: 0,
+      awaitingRenewalsCount: 0,
+      awaitingRenewalsTotal: 0,
       overdueRentalsCount: 1,
       outstandingFinancialTotal: 5250,
       currency: "AED",
@@ -378,8 +390,12 @@ test("attention monitor sends nothing when no outstanding cases exist", async ()
     async () => ({
       unpaidContractsCount: 0,
       unpaidContractsTotal: 0,
-      unpaidRoadLiabilitiesCount: 0,
-      unpaidRoadLiabilitiesTotal: 0,
+      unpaidDeferredViolationsCount: 0,
+      unpaidDeferredViolationsTotal: 0,
+      unpaidPostCloseViolationsCount: 0,
+      unpaidPostCloseViolationsTotal: 0,
+      awaitingRenewalsCount: 0,
+      awaitingRenewalsTotal: 0,
       overdueRentalsCount: 0,
       outstandingFinancialTotal: 0,
       currency: "AED",
@@ -418,8 +434,12 @@ test("attention monitor suppresses duplicate sends for the same slot", async () 
     async () => ({
       unpaidContractsCount: 1,
       unpaidContractsTotal: 1000,
-      unpaidRoadLiabilitiesCount: 0,
-      unpaidRoadLiabilitiesTotal: 0,
+      unpaidDeferredViolationsCount: 0,
+      unpaidDeferredViolationsTotal: 0,
+      unpaidPostCloseViolationsCount: 0,
+      unpaidPostCloseViolationsTotal: 0,
+      awaitingRenewalsCount: 0,
+      awaitingRenewalsTotal: 0,
       overdueRentalsCount: 0,
       outstandingFinancialTotal: 1000,
       currency: "AED",

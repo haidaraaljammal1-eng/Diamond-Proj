@@ -233,6 +233,8 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "roadLiabilityCashConfirm",
         "roadLiabilityManualReceipt",
         "staffManualChargeReturnedContract",
+        "registerContractDeferredRoadCharge",
+        "confirmFinanceOpenReceivableRoadLiabilityCash",
       ],
       technicalMapping: {
         existingKeys: [P.VIOLATIONS_CHARGE],
@@ -252,6 +254,7 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "financeAnalytics",
         "financeLedger",
         "financeOpenReceivables",
+        "confirmFinanceOpenReceivableRoadLiabilityCash",
         "getFinanceStatementBusinessToday",
         "downloadFinanceStatementPdf",
       ],
