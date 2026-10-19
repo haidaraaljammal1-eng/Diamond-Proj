@@ -3,8 +3,11 @@
  * Usage: npx tsx scripts/run-integration-file.ts <test-file> [more files]
  */
 import dotenv from "dotenv";
+import path from "node:path";
 import { spawn } from "node:child_process";
 import { buildIntegrationProcessEnv } from "../tests/helpers/integration-harness";
+
+const integrationBootstrap = path.join(__dirname, "../tests/helpers/integration-bootstrap.ts");
 
 dotenv.config({ override: true });
 
@@ -30,7 +33,15 @@ try {
 
 const child = spawn(
   process.execPath,
-  ["--import", "tsx", "--test", "--test-concurrency=1", ...files],
+  [
+    "--import",
+    "tsx",
+    "--import",
+    integrationBootstrap,
+    "--test",
+    "--test-concurrency=1",
+    ...files,
+  ],
   { env, stdio: "inherit" },
 );
 

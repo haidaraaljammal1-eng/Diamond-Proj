@@ -2,6 +2,7 @@ import fp from "fastify-plugin";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env, isDevelopment } from "src/config/env";
+import { assertPrismaDatabaseUrlAllowed } from "src/lib/db/integration-database-guard";
 import { normalizedNameExtension } from "src/lib/db/prisma-extensions";
 
 /**
@@ -23,6 +24,7 @@ const globalOmit = {
 
 export const prismaPlugin = fp(
   async (fastify) => {
+    assertPrismaDatabaseUrlAllowed(env.DATABASE_URL);
     const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
     const base = new PrismaClient({
       adapter,

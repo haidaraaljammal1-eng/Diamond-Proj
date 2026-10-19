@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { assertTestDatabaseUrl } from "../helpers/integration-harness";
+import { assertTestDatabaseUrl } from "src/lib/db/integration-database-guard";
 
 test("assertTestDatabaseUrl rejects operational haidara", () => {
   assert.throws(

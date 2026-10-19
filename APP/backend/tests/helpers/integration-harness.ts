@@ -2,7 +2,13 @@
  * Shared guards and helpers for backend integration tests.
  * All destructive reset paths must call {@link assertTestDatabaseUrl} first.
  */
+import {
+  assertTestDatabaseUrl,
+  extractPostgresDatabaseName,
+} from "src/lib/db/integration-database-guard";
 import { assertRbacE2eDatabaseUrl } from "./rbac-e2e-database";
+
+export { assertTestDatabaseUrl, extractPostgresDatabaseName };
 
 export const INTEGRATION_ENABLED =
   process.env.RUN_INTEGRATION === "true" && Boolean(process.env.TEST_DATABASE_URL);
@@ -14,35 +20,33 @@ export function bindIntegrationDatabase(): void {
   }
   assertTestDatabaseUrl(process.env.TEST_DATABASE_URL);
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
-}
-
-/** Parse the database name from a PostgreSQL connection URL. */
-export function extractPostgresDatabaseName(databaseUrl: string): string {
-  const normalized = databaseUrl.trim();
-  if (!normalized) {
-    throw new Error("Database URL is empty");
-  }
-  const withScheme = normalized.startsWith("postgres://") || normalized.startsWith("postgresql://")
-    ? normalized
-    : `postgresql://${normalized}`;
-  const parsed = new URL(withScheme);
-  const rawName = parsed.pathname.replace(/^\/+/, "");
-  if (!rawName) {
-    throw new Error("Database URL is missing a database name");
-  }
-  return decodeURIComponent(rawName.split("/")[0] ?? "");
+  assertIntegrationEnvMatchesProcessDatabase();
 }
 
 /**
- * Fail closed unless the URL targets the disposable integration database exactly.
- * Substring matches like `prod_haidara_test` or `haidara` are rejected.
+ * Fastify Prisma reads the parsed `env` object, not `process.env` after load.
+ * If application modules imported `src/config/env` before {@link bindIntegrationDatabase},
+ * integration tests would still write to the development database.
  */
-export function assertTestDatabaseUrl(databaseUrl: string): void {
-  const dbName = extractPostgresDatabaseName(databaseUrl);
-  if (dbName !== "haidara_test") {
-    throw new Error(
-      `Integration cleanup is restricted to haidara_test; refusing: ${databaseUrl}`,
-    );
+export function assertIntegrationEnvMatchesProcessDatabase(): void {
+  const expected = process.env.DATABASE_URL;
+  if (!expected) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { env } = require("src/config/env") as { env: { DATABASE_URL: string } };
+    const effective = extractPostgresDatabaseName(env.DATABASE_URL);
+    const bound = extractPostgresDatabaseName(expected);
+    if (effective !== bound) {
+      throw new Error(
+        `Integration database binding mismatch: env module uses "${effective}" but TEST_DATABASE_URL binds "${bound}". ` +
+          "Start tests via scripts/run-integration-file.ts (or set DATABASE_URL before any src/ import).",
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Integration database binding mismatch")) {
+      throw error;
+    }
+    // env module not loaded yet — process.env binding is sufficient for a fresh process.
   }
 }
 
@@ -89,6 +93,7 @@ export function buildIntegrationProcessEnv(
   return {
     ...source,
     RUN_INTEGRATION: "true",
+    DIAMOND_INTEGRATION_SUBPROCESS: "true",
     TEST_DATABASE_URL: testDatabaseUrl,
     DATABASE_URL: testDatabaseUrl,
   };
