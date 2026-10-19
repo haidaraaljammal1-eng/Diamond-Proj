@@ -23,6 +23,40 @@ import {
 import { createBusinessNotificationService } from "src/modules/notification-delivery/business-notification.service";
 import { PUSHOVER_BUSINESS_IDEMPOTENCY_SCOPE, ATTENTION_MONITOR_IDEMPOTENCY_SCOPE } from "src/modules/notification-delivery/business-notification.constants";
 
+test("attention monitor fires independently for each configured Dubai slot", () => {
+  const slots = "09:00,14:00,19:00";
+  const cases: Array<{ utc: string; expected: string }> = [
+    { utc: "2026-09-24T05:00:00.000Z", expected: "09:00" },
+    { utc: "2026-09-24T10:00:00.000Z", expected: "14:00" },
+    { utc: "2026-09-24T15:00:00.000Z", expected: "19:00" },
+  ];
+  for (const row of cases) {
+    assert.equal(
+      resolveDueAttentionSlot(new Date(row.utc), "Asia/Dubai", parseAttentionMonitorTimes(slots)),
+      row.expected,
+    );
+  }
+});
+
+test("attention summary lists deferred, post-close, and renewal sections", () => {
+  const message = buildAttentionSummaryMessage({
+    unpaidContractsCount: 0,
+    unpaidContractsTotal: 0,
+    unpaidDeferredViolationsCount: 2,
+    unpaidDeferredViolationsTotal: 400,
+    unpaidPostCloseViolationsCount: 1,
+    unpaidPostCloseViolationsTotal: 120,
+    awaitingRenewalsCount: 3,
+    awaitingRenewalsTotal: 900,
+    overdueRentalsCount: 0,
+    outstandingFinancialTotal: 1420,
+    currency: "AED",
+  });
+  assert.match(message.message, /Unpaid deferred violations:/);
+  assert.match(message.message, /Unpaid post-close violations:/);
+  assert.match(message.message, /Renewals awaiting payment:/);
+});
+
 test("attention monitor slot parsing and due-slot resolution", () => {
   assert.deepEqual(parseAttentionMonitorTimes("09:00,14:00,19:00"), ["09:00", "14:00", "19:00"]);
   const now = new Date("2026-09-24T05:00:00.000Z"); // 09:00 in Asia/Dubai (UTC+4)
