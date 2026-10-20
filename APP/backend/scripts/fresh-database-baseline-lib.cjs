@@ -137,6 +137,28 @@ function assertMigrationHistory(rows, requiredNames, optionalNames, fileBytesByN
   }
 }
 
+const POSTGRES_IDENTIFIER_MAX_LENGTH = 63;
+
+/**
+ * Prisma migrate diff may emit RENAME INDEX when PostgreSQL truncated an identifier
+ * differently than the Prisma schema name (63-byte limit). Allow only paired renames
+ * that share a long stable prefix — not structural drift.
+ */
+function isSafePostgresIndexRename(statement) {
+  const match = statement.match(/^ALTER\s+INDEX\s+"([^"]+)"\s+RENAME\s+TO\s+"([^"]+)"$/i);
+  if (!match) return false;
+  const from = match[1];
+  const to = match[2];
+  if (from.length > POSTGRES_IDENTIFIER_MAX_LENGTH || to.length > POSTGRES_IDENTIFIER_MAX_LENGTH) {
+    return false;
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(from) || !/^[a-zA-Z0-9_]+$/.test(to)) {
+    return false;
+  }
+  const sharedPrefixLength = Math.min(from.length, to.length, 48);
+  return from.slice(0, sharedPrefixLength) === to.slice(0, sharedPrefixLength);
+}
+
 function driftPreservesCustomSql(script) {
   const statements = String(script)
     .split(";")
@@ -145,7 +167,8 @@ function driftPreservesCustomSql(script) {
   return statements.every(
     (statement) =>
       /^(BEGIN|COMMIT|ROLLBACK)\b/i.test(statement) ||
-      /^DROP\s+(INDEX|EXTENSION|FUNCTION|PROCEDURE|TRIGGER)\b/i.test(statement),
+      /^DROP\s+(INDEX|EXTENSION|FUNCTION|PROCEDURE|TRIGGER)\b/i.test(statement) ||
+      isSafePostgresIndexRename(statement),
   );
 }
 
@@ -197,4 +220,5 @@ module.exports = {
   checksumMatchesApplied,
   assertMigrationHistory,
   driftPreservesCustomSql,
+  isSafePostgresIndexRename,
 };

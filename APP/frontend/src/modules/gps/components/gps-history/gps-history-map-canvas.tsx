@@ -6,6 +6,11 @@ import "leaflet/dist/leaflet.css";
 import type { GpsHistoryPointDto } from "../../types/gps.types";
 import { clampPlaybackIndex } from "../../utils/gps-history";
 import { DUBAI_DEFAULT_CENTER, DUBAI_DEFAULT_ZOOM } from "../../utils/gps-map";
+import {
+  GPS_MAP_OSM_ATTRIBUTION,
+  GPS_MAP_OSM_TILE_REFERRER_POLICY,
+  GPS_MAP_OSM_TILE_URL,
+} from "../../utils/gps-map-basemap-config";
 import styles from "./gps-history-map.module.css";
 
 export interface GpsHistoryMapCanvasProps {
@@ -51,9 +56,10 @@ export function GpsHistoryMapCanvas({
       [DUBAI_DEFAULT_CENTER.latitude, DUBAI_DEFAULT_CENTER.longitude],
       DUBAI_DEFAULT_ZOOM,
     );
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer(GPS_MAP_OSM_TILE_URL, {
       maxZoom: 19,
-      attribution: "&copy; OpenStreetMap",
+      attribution: GPS_MAP_OSM_ATTRIBUTION,
+      referrerPolicy: GPS_MAP_OSM_TILE_REFERRER_POLICY,
     }).addTo(map);
     routeLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;

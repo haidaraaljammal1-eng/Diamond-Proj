@@ -1,9 +1,13 @@
 export type GpsMapBasemapKind = "map" | "satellite";
 
+/** Official OSM tile endpoint (no subdomain rotation). See operations.osmfoundation.org/policies/tiles */
 export const GPS_MAP_OSM_TILE_URL =
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-export const GPS_MAP_OSM_ATTRIBUTION = "OpenStreetMap";
+export const GPS_MAP_OSM_ATTRIBUTION = "OpenStreetMap contributors";
+
+/** OSM tile policy requires a Referer; explicit img policy overrides stricter document defaults. */
+export const GPS_MAP_OSM_TILE_REFERRER_POLICY = "strict-origin-when-cross-origin";
 
 /** Esri World Imagery — public ArcGIS MapServer tiles (see Esri Terms of Use). */
 export const GPS_MAP_DEFAULT_SATELLITE_TILE_URL =

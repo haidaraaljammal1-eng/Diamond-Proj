@@ -12,7 +12,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV DOCKER_BUILD=1
 # No localhost default. Compose or the operator must pass the browser-visible API origin.
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_PROXY=false
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_PROXY=$NEXT_PUBLIC_API_PROXY
 RUN test -n "$NEXT_PUBLIC_API_URL"
 # Turbopack is the Next 16 production bundler. Webpack fails on existing
 # CSS modules and then looks for a proxy NFT file that this app does not emit.

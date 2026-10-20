@@ -1,6 +1,7 @@
 import L from "leaflet";
 import {
   GPS_MAP_OSM_ATTRIBUTION,
+  GPS_MAP_OSM_TILE_REFERRER_POLICY,
   GPS_MAP_OSM_TILE_URL,
   type GpsMapBasemapKind,
   resolveGpsSatelliteBasemap,
@@ -11,6 +12,7 @@ export {
   GPS_MAP_DEFAULT_SATELLITE_ATTRIBUTION,
   GPS_MAP_DEFAULT_SATELLITE_TILE_URL,
   GPS_MAP_OSM_ATTRIBUTION,
+  GPS_MAP_OSM_TILE_REFERRER_POLICY,
   GPS_MAP_OSM_TILE_URL,
   gpsMapBasemapAttributionLabel,
   isGpsSatelliteBasemapEnabled,
@@ -21,6 +23,7 @@ function createOsmTileLayer(): L.TileLayer {
   return L.tileLayer(GPS_MAP_OSM_TILE_URL, {
     maxZoom: 19,
     attribution: GPS_MAP_OSM_ATTRIBUTION,
+    referrerPolicy: GPS_MAP_OSM_TILE_REFERRER_POLICY,
   });
 }
 

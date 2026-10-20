@@ -26,6 +26,7 @@ import {
 import {
   GPS_MAP_DEFAULT_SATELLITE_ATTRIBUTION,
   GPS_MAP_DEFAULT_SATELLITE_TILE_URL,
+  GPS_MAP_OSM_ATTRIBUTION,
   GPS_MAP_OSM_TILE_URL,
   gpsMapBasemapAttributionLabel,
   isGpsSatelliteBasemapEnabled,
@@ -1208,12 +1209,19 @@ describe("GPS map basemap", () => {
       "utf8",
     );
     assert.ok(basemapLayer.includes("createGpsBasemapTileLayer"));
-    assert.ok(basemap.includes("tile.openstreetmap.org"));
+    assert.equal(
+      GPS_MAP_OSM_TILE_URL,
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    );
+    assert.equal(GPS_MAP_OSM_TILE_URL.includes("{s}."), false);
     assert.ok(basemap.includes("World_Imagery"));
     assert.equal(basemap.includes("imagery/labels/static"), false);
     assert.equal(basemap.includes("SELF_HOSTED"), false);
     assert.equal(basemap.includes("mt0.google.com"), false);
-    assert.equal(GPS_MAP_OSM_TILE_URL.includes("openstreetmap"), true);
+    assert.equal(GPS_MAP_OSM_ATTRIBUTION, "OpenStreetMap contributors");
+    assert.ok(basemap.includes("strict-origin-when-cross-origin"));
+    assert.ok(basemapLayer.includes("referrerPolicy"));
+    assert.ok(basemapLayer.includes("GPS_MAP_OSM_TILE_REFERRER_POLICY"));
   });
 
   it("swaps base tiles without remounting the map or touching vehicle layers", () => {

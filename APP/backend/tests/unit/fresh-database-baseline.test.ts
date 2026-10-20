@@ -23,6 +23,7 @@ const lib = nodeRequire("../../scripts/fresh-database-baseline-lib.cjs") as {
   ) => void;
   canonicalSha256: (bytes: Buffer | string) => string;
   driftPreservesCustomSql: (script: string) => boolean;
+  isSafePostgresIndexRename: (statement: string) => boolean;
   loadBoundary: (filePath: string) => {
     id: string;
     lastMigration: string;
@@ -141,6 +142,30 @@ test("drift policy keeps custom SQL and rejects structural changes", () => {
   assert.equal(lib.driftPreservesCustomSql('DROP TABLE "contracts";'), false);
   assert.equal(lib.driftPreservesCustomSql('ALTER TABLE "contracts" DROP COLUMN "status";'), false);
   assert.equal(lib.driftPreservesCustomSql('CREATE INDEX "x" ON "vehicles" ("id");'), false);
+});
+
+test("drift policy accepts postgres index renames from identifier truncation", () => {
+  const roadRename =
+    'ALTER INDEX "road_charge_reference_registry_chargeCategory_referenceNormaliz" RENAME TO "road_charge_reference_registry_chargeCategory_referenceNorm_idx"';
+  const whatsappRename =
+    'ALTER INDEX "whatsapp_connection_chat_sync_checkpoints_connectionId_provider" RENAME TO "whatsapp_connection_chat_sync_checkpoints_connectionId_prov_key"';
+  assert.equal(lib.isSafePostgresIndexRename(roadRename), true);
+  assert.equal(lib.isSafePostgresIndexRename(whatsappRename), true);
+  const stagingDrift = [
+    'DROP INDEX "contract_payment_attempts_one_active_per_payment_idx";',
+    'DROP INDEX "contract_payments_provider_reference_idx";',
+    'DROP INDEX "road_charge_reference_registry_active_category_ref_key";',
+    roadRename,
+    whatsappRename,
+  ].join("\n");
+  assert.equal(lib.driftPreservesCustomSql(stagingDrift), true);
+  assert.equal(
+    lib.isSafePostgresIndexRename(
+      'ALTER INDEX "contracts_status_idx" RENAME TO "vehicles_id_idx";',
+    ),
+    false,
+  );
+  assert.equal(lib.driftPreservesCustomSql('ALTER INDEX "a" RENAME TO "contracts_pkey";'), false);
 });
 
 test("migration history rejects failed, unknown, and checksum-mismatched rows", () => {

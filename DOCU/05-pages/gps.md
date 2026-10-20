@@ -13,7 +13,7 @@ Route: `/ar/gps` and `/en/gps`. Permission: `gps.read`. Architecture: Page → `
 
 Visual hierarchy: compact page header and KPI strip, then an operations workspace with a narrow fleet control column (~32%) and a large map hero (~68%, `clamp(520px, 65vh, 760px)` map height). The GPS page uses natural vertical document flow inside `#app-main` (not a fixed viewport-height shell) so KPIs stay in flow while the map stays large; AppShell scroll handles overflow. Mobile stacks map first, selected row, then the fleet list.
 
-Map: Leaflet + OpenStreetMap tiles, `dynamic(..., { ssr: false })`. Markers only from `GET /gps/map-points` in real mode. Custom champagne pins — no default Leaflet blue markers.
+Map: Leaflet + OpenStreetMap tiles (`tile.openstreetmap.org`), `dynamic(..., { ssr: false })`. OSM base layers set Leaflet `referrerPolicy: strict-origin-when-cross-origin` so tile images send an origin Referer per [OSMF tile policy](https://operations.osmfoundation.org/policies/tiles/) when the document default would omit it. Esri World Imagery satellite tiles are unchanged. Markers only from `GET /gps/map-points` in real mode. Custom champagne pins — no default Leaflet blue markers.
 
 Row-level `trackingStatus=online` still means fresh + unknown motion. Summary KPI Online is all fresh locations (moving + parked + row-level online). The frontend displays backend values; it does not re-derive them.
 

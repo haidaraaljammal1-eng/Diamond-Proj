@@ -1,6 +1,6 @@
 # Isolated staging on one Ubuntu host.
 # Assumptions: 4 shared vCPU, 8 GB RAM, 100 GB SSD.
-# PostgreSQL is not published. The browser talks to loopback only.
+# PostgreSQL is not published. API is not published when using same-origin /backend-api proxy.
 # One backend process owns the scheduler. Do not scale backend past 1
 # unless SCHEDULER_ENABLED=false on the extra replicas.
 # OCR engines are not part of this stack.
@@ -52,14 +52,14 @@ services:
       TZ: Asia/Dubai
       DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@postgres:5432/diamond_staging
       FILE_STORAGE_DIR: /app/uploads
-      SCHEDULER_ENABLED: "true"
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
       BUSINESS_TIMEZONE_OFFSET_MINUTES: "240"
       PAYMENT_PROVIDER: none
       GPS_ENABLED: "false"
       TARS_ENABLED: "false"
       EMAIL_ENABLED: "false"
-      CORS_ORIGINS: http://127.0.0.1:3100
-      FRONTEND_URL: http://127.0.0.1:3100
+      CORS_ORIGINS: ${STAGING_PUBLIC_ORIGIN:-http://127.0.0.1:3100}
+      FRONTEND_URL: ${STAGING_PUBLIC_ORIGIN:-http://127.0.0.1:3100}
       PASSPORT_NUMBER_API_URL: ""
       UAE_DRIVING_LICENSE_API_URL: ""
     volumes:
@@ -79,11 +79,14 @@ services:
       context: ../APP/frontend
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL in deploy/.env}
+        NEXT_PUBLIC_API_PROXY: ${NEXT_PUBLIC_API_PROXY:-false}
     environment:
       NODE_ENV: production
-      AUTH_URL: http://127.0.0.1:3100
+      AUTH_URL: ${STAGING_PUBLIC_ORIGIN:-http://127.0.0.1:3100}
       AUTH_SECRET: ${AUTH_SECRET}
       AUTH_TRUST_HOST: "true"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL in deploy/.env}
+      NEXT_PUBLIC_API_PROXY: ${NEXT_PUBLIC_API_PROXY:-false}
       TZ: Asia/Dubai
     depends_on:
       - backend

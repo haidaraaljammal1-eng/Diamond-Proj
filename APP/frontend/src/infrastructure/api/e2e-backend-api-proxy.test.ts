@@ -60,6 +60,28 @@ describe("proxy.ts matcher (static file inspect)", () => {
 });
 
 describe("e2e-backend-api-proxy (mocked fetch)", () => {
+  it("staging gate: forwards when NEXT_PUBLIC_API_PROXY and internal API URL are set", async () => {
+    const env: NodeJS.ProcessEnv = {
+      ...disabledEnv(),
+      NEXT_PUBLIC_API_PROXY: "true",
+      NEXT_PUBLIC_API_URL: "http://backend:3000",
+    };
+    const fetchImpl = mockUpstream(200, JSON.stringify({ data: { ok: true } }));
+    const result = await proxyE2eStaffApiRequest(
+      {
+        method: "GET",
+        pathSegments: ["health", "ready"],
+        search: "",
+        headers: new Headers({ authorization: "Bearer staging" }),
+      },
+      fetchImpl,
+      env,
+    );
+    assert.equal(result.status, 200);
+    assert.equal(fetchCalls.length, 1);
+    assert.equal(fetchCalls[0].url, "http://backend:3000/health/ready");
+  });
+
   it("security gate: disabled without RBAC_E2E_API_PROXY and port", async () => {
     assert.equal(isE2eStaffApiProxyEnabled(disabledEnv()), false);
     const result = await proxyE2eStaffApiRequest(
@@ -174,5 +196,66 @@ describe("e2e-backend-api-proxy (mocked fetch)", () => {
       error: { code: string };
     };
     assert.equal(json.error.code, "FORBIDDEN");
+  });
+
+  it("strips stale Content-Encoding and Content-Length after Node fetch decompression", async () => {
+    const env = enableE2eProxy("8054");
+    const plainJson = JSON.stringify({ data: { section: "dashboard" } });
+    const fetchImpl = mock.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      fetchCalls.push({ url: String(input), init: init ?? {} });
+      return new Response(plainJson, {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "content-encoding": "gzip",
+          "content-length": "99999",
+        },
+      });
+    }) as typeof fetch;
+
+    const result = await proxyE2eStaffApiRequest(
+      {
+        method: "GET",
+        pathSegments: ["dashboard", "overview"],
+        search: "",
+        headers: new Headers({
+          authorization: "Bearer staff-token",
+          accept: "application/json",
+        }),
+      },
+      fetchImpl,
+      env,
+    );
+
+    assert.equal(result.status, 200);
+    assert.equal(result.headers.get("content-encoding"), null);
+    assert.equal(result.headers.get("content-length"), null);
+    assert.match(result.headers.get("content-type") ?? "", /application\/json/);
+    const json = JSON.parse(new TextDecoder().decode(result.body)) as {
+      data: { section: string };
+    };
+    assert.equal(json.data.section, "dashboard");
+    const upstreamHeaders = fetchCalls[0].init.headers as Headers;
+    assert.equal(upstreamHeaders.get("authorization"), "Bearer staff-token");
+  });
+
+  it("uncompressed JSON responses remain valid without encoding headers", async () => {
+    const env = enableE2eProxy("8055");
+    const fetchImpl = mockUpstream(200, JSON.stringify({ data: { ok: true } }));
+    const result = await proxyE2eStaffApiRequest(
+      {
+        method: "GET",
+        pathSegments: ["health", "ready"],
+        search: "",
+        headers: new Headers(),
+      },
+      fetchImpl,
+      env,
+    );
+    assert.equal(result.status, 200);
+    assert.equal(result.headers.get("content-encoding"), null);
+    const json = JSON.parse(new TextDecoder().decode(result.body)) as { data: { ok: boolean } };
+    assert.equal(json.data.ok, true);
   });
 });

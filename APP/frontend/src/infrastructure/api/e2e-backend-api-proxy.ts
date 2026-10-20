@@ -27,6 +27,18 @@ export function resolveE2eBackendOrigin(env: NodeJS.ProcessEnv = process.env): s
   return `http://127.0.0.1:${port}`;
 }
 
+/** E2E port wins; else staging/docker same-origin proxy uses internal NEXT_PUBLIC_API_URL. */
+export function resolveStaffApiProxyUpstream(
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  const e2eOrigin = resolveE2eBackendOrigin(env);
+  if (e2eOrigin) return e2eOrigin;
+  if (env.NEXT_PUBLIC_API_PROXY !== "true") return null;
+  const url = env.NEXT_PUBLIC_API_URL?.trim();
+  if (!url) return null;
+  return url.replace(/\/$/, "");
+}
+
 export function isSafeBackendPath(pathSegments: string[]): boolean {
   if (pathSegments.length === 0) return false;
   return pathSegments.every(
@@ -68,7 +80,7 @@ export async function proxyE2eStaffApiRequest(
   fetchImpl: typeof fetch = fetch,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<E2eProxyResponse> {
-  const origin = resolveE2eBackendOrigin(env);
+  const origin = resolveStaffApiProxyUpstream(env);
   if (!origin || !isSafeBackendPath(request.pathSegments)) {
     return e2eProxyDisabledResponse();
   }
@@ -88,6 +100,10 @@ export async function proxyE2eStaffApiRequest(
   const upstream = await fetchImpl(target, init);
   const responseHeaders = new Headers(upstream.headers);
   responseHeaders.delete("transfer-encoding");
+  // Node fetch decompresses gzip/deflate bodies but may keep Content-Encoding /
+  // Content-Length from upstream — browsers would mis-decode the plain body.
+  responseHeaders.delete("content-encoding");
+  responseHeaders.delete("content-length");
   const body = await upstream.arrayBuffer();
 
   return {

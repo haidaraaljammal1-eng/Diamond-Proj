@@ -19,6 +19,20 @@ One backend container runs the scheduler (`SCHEDULER_ENABLED=true`). Do not add 
 
 `NEXT_PUBLIC_API_URL` is fixed at frontend image build time. The image has no localhost default. `deploy/.env.example` shows `http://127.0.0.1:3000` only for a browser on the same host. A later reverse proxy must rebuild the frontend with the public API origin.
 
+## GitHub Codespaces (HTTPS, single browser origin)
+
+Use one public URL: `https://${CODESPACE_NAME}-3100.app.github.dev`. Keep port **3100** private in the Codespaces UI until you intentionally share it. Do **not** forward port **3000** publicly when using the same-origin API proxy.
+
+In `deploy/.env`:
+
+- `STAGING_PUBLIC_ORIGIN=https://${CODESPACE_NAME}-3100.app.github.dev`
+- `NEXT_PUBLIC_API_URL=http://backend:3000` (Docker network; server-side NextAuth and the `/backend-api` route handler)
+- `NEXT_PUBLIC_API_PROXY=true` (browser calls `${origin}/backend-api/...` only)
+
+Set `COOKIE_SECURE=true` in `deploy/staging.env` and align `CORS_ORIGINS` / `FRONTEND_URL` with `STAGING_PUBLIC_ORIGIN`. Rebuild the frontend image after changing `NEXT_PUBLIC_*` build args.
+
+Docker builds ignore `APP/frontend/.env.development` when `DOCKER_BUILD=1`.
+
 ## Commands
 
 From `deploy/` after `deploy/.env` and `deploy/staging.env` exist:
