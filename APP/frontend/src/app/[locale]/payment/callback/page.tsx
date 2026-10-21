@@ -5,31 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { getPublicPaymentStatus } from "@/modules/payments/api/payments.api";
 import type { PaymentStatusDto } from "@/modules/payments/types/payment.types";
-
-function resolveCallbackMessage(
-  status: PaymentStatusDto | null,
-  failedToken: string | null,
-  statusToken: string | null,
-  t: (key: string) => string,
-): string {
-  if (!statusToken) return t("failed");
-  if (failedToken === statusToken && !status) return t("paymentUnknown");
-  if (!status) return t("checking");
-
-  if (status.status === "FAILED") return t("failed");
-  if (status.status === "CANCELLED") return t("cancelled");
-  if (status.status === "PENDING" || status.status === "PROCESSING") return t("checking");
-
-  const paymentVerified = status.status === "CONFIRMED";
-  if (!paymentVerified) return t("checking");
-
-  if (status.purpose === "RENTAL" && status.contractStatus !== "PAID") return t("checking");
-
-  const authState = status.summary?.rentalPaymentAuthorizationState;
-  if (authState === "incomplete") return t("successAuthorizationIncomplete");
-
-  return t("success");
-}
+import {
+  isPaymentCallbackVerified,
+  resolveCallbackAmountLabelKey,
+  resolveCallbackMessage,
+  resolveCallbackPageTitleKey,
+  shouldShowRentalHandoverCopy,
+} from "@/modules/payments/utils/payment-callback.utils";
 
 function PaymentCallbackContent() {
   const t = useTranslations("Payments.callback");
@@ -64,13 +46,16 @@ function PaymentCallbackContent() {
     };
   }, [statusToken]);
 
-  const paymentVerified =
-    status?.status === "CONFIRMED" &&
-    (status.purpose !== "RENTAL" || status.contractStatus === "PAID");
+  const paymentVerified = isPaymentCallbackVerified(status);
+  const showRentalHandover = shouldShowRentalHandoverCopy(status);
   const authIncomplete =
-    paymentVerified && status?.summary?.rentalPaymentAuthorizationState === "incomplete";
+    showRentalHandover &&
+    paymentVerified &&
+    status?.summary?.rentalPaymentAuthorizationState === "incomplete";
   const summary = paymentVerified ? status?.summary : null;
   const message = resolveCallbackMessage(status, failedToken, statusToken, t);
+  const pageTitleKey = resolveCallbackPageTitleKey(status, paymentVerified);
+  const amountLabelKey = resolveCallbackAmountLabelKey(status, paymentVerified);
   const card =
     summary?.cardLast4
       ? `${summary.cardBrand ?? "Card"} \u2022\u2022\u2022\u2022 ${summary.cardLast4}`
@@ -78,7 +63,7 @@ function PaymentCallbackContent() {
 
   return (
     <main style={{ margin: "2rem auto", maxWidth: 480, padding: "0 1rem" }}>
-      <h1>{t("title")}</h1>
+      <h1>{t(pageTitleKey)}</h1>
       <p role="status">{summary ? `\u2713 ${message}` : message}</p>
       {authIncomplete ? (
         <p role="status" className="payment-callback-info">
@@ -98,7 +83,7 @@ function PaymentCallbackContent() {
               {summary.vehicle.displayName}
               {summary.vehicle.plateNumber ? ` - ${summary.vehicle.plateNumber}` : ""}
             </dd>
-            <dt>{t("amountPaid")}</dt>
+            <dt>{t(amountLabelKey)}</dt>
             <dd dir="ltr">
               {summary.currency} {summary.amount.toLocaleString("en-US")}
             </dd>
@@ -109,11 +94,17 @@ function PaymentCallbackContent() {
               </>
             ) : null}
           </dl>
-          <p>{t("readyForHandover")}</p>
-          {summary.paymentMethodSavedForFutureUse ? (
-            <p role="status">{t("paymentMethodSaved")}</p>
-          ) : authIncomplete ? (
-            <p role="status">{t("savedCardNotAvailable")}</p>
+          {showRentalHandover ? (
+            <>
+              <p>{t("readyForHandover")}</p>
+              {summary.paymentMethodSavedForFutureUse ? (
+                <p role="status">{t("paymentMethodSaved")}</p>
+              ) : authIncomplete ? (
+                <p role="status">{t("savedCardNotAvailable")}</p>
+              ) : null}
+            </>
+          ) : status?.purpose === "RENEWAL" ? (
+            <p>{t("renewalExtensionApplied")}</p>
           ) : null}
         </>
       ) : null}
