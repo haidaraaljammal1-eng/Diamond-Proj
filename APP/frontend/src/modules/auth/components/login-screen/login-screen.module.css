@@ -1,4 +1,4 @@
-:global(#login) {
+.shell {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -12,13 +12,13 @@
     visibility 0.55s;
 }
 
-:global(#login.off) {
+.shellOff {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 }
 
-:global(#login)::before {
+.shell::before {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -33,7 +33,7 @@
   animation: mo-spin 70s linear infinite;
 }
 
-:global(#login)::after {
+.shell::after {
   position: absolute;
   inset: 0;
   background:
@@ -90,14 +90,14 @@
   mix-blend-mode: normal;
 }
 
-:global(#swash) {
+.swash {
   display: block;
   width: min(340px, 80vw);
   height: 40px;
   margin: -6px auto 6px;
 }
 
-:global(#swash) path {
+.swash path {
   stroke: var(--diamond-gold-gradient);
   stroke-width: 2.4;
   fill: none;
@@ -234,10 +234,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global(#login)::before,
+  .shell::before,
   .loginbox::after,
   .bigLogo,
-  :global(#swash) path,
+  .swash path,
   .logintitle {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;

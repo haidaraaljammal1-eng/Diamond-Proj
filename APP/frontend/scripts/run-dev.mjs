@@ -9,10 +9,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const frontendRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+/** Sibling main checkout `.env.local` when integration worktree has no file (junctions break on files). */
+const sharedEnvLocalPath = path.join(
+  frontendRoot,
+  "..",
+  "..",
+  "..",
+  "Diamond-Proj",
+  "APP",
+  "frontend",
+  ".env.local",
+);
 
-function readEnvDevelopmentValue(key) {
+function readEnvFile(fileName, key) {
   try {
-    const raw = readFileSync(path.join(frontendRoot, ".env.development"), "utf8");
+    const raw = readFileSync(path.join(frontendRoot, fileName), "utf8");
     for (const line of raw.split(/\r?\n/)) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
@@ -30,16 +41,48 @@ function readEnvDevelopmentValue(key) {
   return undefined;
 }
 
+function readEnvDevelopmentValue(key) {
+  return readEnvFile(".env.development", key);
+}
+
+function applyEnvFileAt(filePath, target) {
+  try {
+    const raw = readFileSync(filePath, "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      const name = trimmed.slice(0, eq).trim();
+      const value = trimmed
+        .slice(eq + 1)
+        .trim()
+        .replace(/^["']|["']$/g, "");
+      if (name) target[name] = value;
+    }
+  } catch {
+    /* optional */
+  }
+}
+
+function applyEnvFile(fileName, target) {
+  applyEnvFileAt(path.join(frontendRoot, fileName), target);
+}
+
 const env = { ...process.env };
+applyEnvFile(".env.local", env);
+applyEnvFileAt(sharedEnvLocalPath, env);
 const e2ePort = env.RBAC_E2E_API_PORT?.trim();
 if (e2ePort) {
   env.NEXT_PUBLIC_API_URL = `http://127.0.0.1:${e2ePort}`;
+  env.RBAC_E2E_API_PROXY = "true";
 } else {
   env.NEXT_PUBLIC_API_URL =
     readEnvDevelopmentValue("NEXT_PUBLIC_API_URL") ?? "http://localhost:8000";
 }
 
-const child = spawn("npx", ["next", "dev", "-p", "3100"], {
+// Webpack dev: Turbopack rejects junctioned `node_modules` on Windows worktrees.
+const child = spawn("npx", ["next", "dev", "-p", "3100", "--webpack"], {
   stdio: "inherit",
   env,
   shell: true,

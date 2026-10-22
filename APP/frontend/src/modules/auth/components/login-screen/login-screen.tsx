@@ -48,7 +48,11 @@ export function LoginScreen() {
   if (status === "authenticated") return null;
 
   return (
-    <div id="login" className={isLoggedIn ? styles.off : ""} data-testid="login-shell">
+    <div
+      id="login"
+      className={[styles.shell, isLoggedIn ? styles.shellOff : ""].filter(Boolean).join(" ")}
+      data-testid="login-shell"
+    >
       <div className={styles.loginbox}>
         <div className={styles.logoContainer}>
           <Image
@@ -61,7 +65,7 @@ export function LoginScreen() {
           />
         </div>
 
-        <svg id="swash" viewBox="0 0 340 40" xmlns="http://www.w3.org/2000/svg">
+        <svg id="swash" className={styles.swash} viewBox="0 0 340 40" xmlns="http://www.w3.org/2000/svg">
           <path d="M6 30 C60 8 120 34 170 22 C215 12 250 26 300 14 C316 10 328 12 334 16" />
         </svg>
 

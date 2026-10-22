@@ -6,10 +6,10 @@ import type { NextConfig } from "next";
 
 const frontendRoot = path.dirname(fileURLToPath(import.meta.url));
 
-/** `.env.development` wins over Windows user-level NEXT_PUBLIC_* pollution in local dev. */
-function readEnvDevelopmentValue(key: string): string | undefined {
+function readEnvFileValue(fileName: string, key: string): string | undefined {
   try {
-    const raw = readFileSync(path.join(frontendRoot, ".env.development"), "utf8");
+    const filePath = path.isAbsolute(fileName) ? fileName : path.join(frontendRoot, fileName);
+    const raw = readFileSync(filePath, "utf8");
     for (const line of raw.split(/\r?\n/)) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
@@ -27,7 +27,27 @@ function readEnvDevelopmentValue(key: string): string | undefined {
   return undefined;
 }
 
+/** `.env.development` wins over Windows user-level NEXT_PUBLIC_* pollution in local dev. */
+function readEnvDevelopmentValue(key: string): string | undefined {
+  return readEnvFileValue(".env.development", key);
+}
+
 const localDevApiUrl = readEnvDevelopmentValue("NEXT_PUBLIC_API_URL");
+const sharedEnvLocalPath = path.join(
+  frontendRoot,
+  "..",
+  "..",
+  "..",
+  "Diamond-Proj",
+  "APP",
+  "frontend",
+  ".env.local",
+);
+
+const localAuthSecret =
+  readEnvFileValue(".env.local", "AUTH_SECRET") ??
+  readEnvFileValue(sharedEnvLocalPath, "AUTH_SECRET") ??
+  process.env.AUTH_SECRET;
 
 const withNextIntl = createNextIntlPlugin(
   "./src/infrastructure/i18n/request.ts",
@@ -62,6 +82,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_UI: process.env.NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_UI,
     NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_BACKEND_ENABLED:
       process.env.NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_BACKEND_ENABLED,
+    AUTH_SECRET: localAuthSecret,
   },
   experimental: {
     cpus: 1,
