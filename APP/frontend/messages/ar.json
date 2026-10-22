@@ -1111,7 +1111,8 @@
       "copied": "تم النسخ",
       "open": "فتح الرابط",
       "done": "تم",
-      "expires": "ينتهي {date}"
+      "expires": "ينتهي {date}",
+      "rentalValidityNotice": "مدة صلاحية رابط الإيجار 24 ساعة فقط من وقت إنشائه."
     },
     "payment": {
       "title": "تأكيد الدفع",
@@ -1209,35 +1210,12 @@
       "addPhoto": "إضافة صورة",
       "submit": "تأكيد التسليم",
       "angle": {
-        "FRONT": "أمامي",
-        "REAR": "خلفي",
-        "RIGHT_SIDE": "جانب يمين",
-        "LEFT_SIDE": "جانب يسار",
-        "FRONT_PLATE": "لوحة أمامية",
-        "REAR_PLATE": "لوحة خلفية",
-        "INTERIOR_ODOMETER": "داخلي / عدّاد",
-        "TIRES": "الإطارات",
+        "FRONT": "أمامية",
+        "REAR": "خلفية",
         "LEFT": "يسار",
         "RIGHT": "يمين",
-        "FRONT_LEFT": "أمامي يسار",
-        "FRONT_RIGHT": "أمامي يمين",
-        "REAR_LEFT": "خلفي يسار",
-        "REAR_RIGHT": "خلفي يمين",
-        "ODOMETER": "عداد المسافة",
-        "DASHBOARD_FUEL": "عداد الوقود",
         "OTHER": "أخرى"
       }
-    },
-    "carOutAngles": {
-      "LEFT": "اليسار",
-      "RIGHT": "اليمين",
-      "FRONT_LEFT": "أمامي يسار",
-      "FRONT_RIGHT": "أمامي يمين",
-      "REAR_LEFT": "خلفي يسار",
-      "REAR_RIGHT": "خلفي يمين",
-      "ODOMETER": "العداد",
-      "DASHBOARD_FUEL": "وقود لوحة القيادة",
-      "OTHER": "أخرى"
     },
     "carIn": {
       "title": "استلام السيارة",
@@ -1314,16 +1292,10 @@
         }
       },
       "angle": {
-        "FRONT": "أمامي",
-        "REAR": "خلفي",
+        "FRONT": "أمامية",
+        "REAR": "خلفية",
         "LEFT": "يسار",
         "RIGHT": "يمين",
-        "FRONT_LEFT": "أمامي يسار",
-        "FRONT_RIGHT": "أمامي يمين",
-        "REAR_LEFT": "خلفي يسار",
-        "REAR_RIGHT": "خلفي يمين",
-        "ODOMETER": "عداد المسافة",
-        "DASHBOARD_FUEL": "عداد الوقود",
         "OTHER": "أخرى"
       }
     },

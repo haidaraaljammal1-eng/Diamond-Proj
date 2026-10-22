@@ -5,7 +5,6 @@ import type { ApiErrorResponse, ApiResponse } from "@/infrastructure/api/types";
 import type {
   CarInDraftPatch,
   ContractCarInHandoverDto,
-  CarOutPayload,
   CarOutDraftPatch,
   ContractCarOutHandoverDto,
   CarOutAngle,
@@ -135,23 +134,6 @@ export async function confirmContractPayment(
   return response.data;
 }
 
-/** `POST /contracts/:id/car-out` (`contracts.car_out` + `contracts.activate`). */
-export async function submitCarOut(
-  id: string,
-  payload: CarOutPayload,
-  idempotencyKey?: string,
-): Promise<ContractDetailDto> {
-  const response = await apiRequest<ContractDetailDto>(
-    `${CONTRACTS_PATH}/${id}/car-out`,
-    {
-      method: "POST",
-      body: payload,
-      headers: withIdempotency(idempotencyKey),
-    },
-  );
-  return response.data;
-}
-
 export async function getCarOut(id: string): Promise<ContractCarOutHandoverDto> {
   const response = await apiRequest<ContractCarOutHandoverDto>(`${CONTRACTS_PATH}/${id}/car-out`);
   return response.data;
@@ -241,7 +223,7 @@ export async function deletePendingRentalRequest(
   const body = options.vehicleId != null ? { vehicleId: options.vehicleId } : {};
   const response = await apiRequest<RentalRequestDeletedDto>(
     `${CONTRACTS_PATH}/${id}/rental-request/cancel`,
-    { method: "POST", body: JSON.stringify(body) },
+    { method: "POST", body },
   );
   return response.data;
 }

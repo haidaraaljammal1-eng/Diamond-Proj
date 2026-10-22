@@ -36,20 +36,7 @@ export type ReconciliationLineType =
   | "VIOLATION"
   | "OTHER";
 
-export type InspectionAngle =
-  | "FRONT"
-  | "REAR"
-  | "RIGHT_SIDE"
-  | "LEFT_SIDE"
-  | "FRONT_PLATE"
-  | "REAR_PLATE"
-  | "INTERIOR_ODOMETER"
-  | "TIRES";
-
-export type CarOutAngle =
-  | "FRONT" | "REAR" | "LEFT" | "RIGHT"
-  | "FRONT_LEFT" | "FRONT_RIGHT" | "REAR_LEFT" | "REAR_RIGHT"
-  | "ODOMETER" | "DASHBOARD_FUEL" | "OTHER";
+export type CarOutAngle = "FRONT" | "REAR" | "LEFT" | "RIGHT" | "OTHER";
 
 export type FuelLevel = "F" | "7/8" | "3/4" | "5/8" | "1/2" | "3/8" | "1/4" | "1/8" | "E";
 
@@ -137,7 +124,7 @@ export interface ContractPaymentDto {
 export interface ContractInspectionPhotoDto {
   id: string;
   attachmentId: string;
-  angle: InspectionAngle | CarOutAngle;
+  angle: CarOutAngle;
   url: string;
 }
 
@@ -159,7 +146,7 @@ export interface CarOutEvidencePhotoDto {
   vehicleId: number;
   stage: "OUT";
   attachmentId: string;
-  angle: CarOutAngle | InspectionAngle;
+  angle: CarOutAngle;
   url: string;
   uploadedAt: string;
   uploadedByUserId: number | null;
@@ -199,7 +186,7 @@ export interface CarInEvidencePhotoDto {
   vehicleId: number | null;
   stage: "IN";
   attachmentId: string;
-  angle: CarOutAngle | InspectionAngle;
+  angle: CarOutAngle;
   url: string;
   uploadedAt: string;
   uploadedByUserId: number | null;
@@ -375,11 +362,6 @@ export interface ConfirmContractPaymentPayload {
   externalReference?: string;
 }
 
-export interface InspectionPhotoInput {
-  attachmentId: string;
-  angle: InspectionAngle;
-}
-
 export interface CarInDraftPatch {
   mileageIn?: number;
   fuelIn?: FuelLevel;
@@ -399,14 +381,6 @@ export interface CarOutDraftPatch {
 export interface CustodyPaperInput {
   damage?: DamageMark[];
   hirerSignatureAttachmentId?: string;
-}
-
-export interface CarOutPayload extends CustodyPaperInput {
-  occurredAt?: string;
-  mileageOut: number;
-  fuelOut: FuelLevel;
-  notes?: string;
-  photos: InspectionPhotoInput[];
 }
 
 export interface ReconciliationLineInput {

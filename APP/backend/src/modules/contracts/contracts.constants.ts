@@ -2,7 +2,7 @@ import type { ContractStatus } from "@prisma/client";
 
 /** Opaque public-link lifetimes (seconds), from the Diamond Demo. */
 export const CONTRACT_LINK_TTL_SECONDS = {
-  RENTAL: 72 * 60 * 60,
+  RENTAL: 24 * 60 * 60,
   RETURN: 24 * 60 * 60,
   RENEWAL: 48 * 60 * 60,
   RECONCILIATION: 72 * 60 * 60,
@@ -67,26 +67,10 @@ export const CURRENT_RENTAL_STATUSES: readonly ContractStatus[] = [
   "RETOUT",
 ] as const;
 
-export const INSPECTION_ANGLES = [
-  "FRONT",
-  "REAR",
-  "RIGHT_SIDE",
-  "LEFT_SIDE",
-  "FRONT_PLATE",
-  "REAR_PLATE",
-  "INTERIOR_ODOMETER",
-  "TIRES",
-] as const;
-
-/// Shared walk-around vocabulary for both custody events: Car-Out (OUT) and the
-/// staged Car-In (IN) draft/complete workflow. Car-In has no angle set of its
-/// own — reusing these keeps the two evidence sets directly comparable.
-export const CAR_OUT_REQUIRED_ANGLES = [
-  "FRONT", "REAR", "FRONT_RIGHT", "REAR_RIGHT", "FRONT_LEFT", "REAR_LEFT", "ODOMETER", "DASHBOARD_FUEL",
-] as const;
-export const CAR_OUT_PHOTO_ANGLES = [
-  ...CAR_OUT_REQUIRED_ANGLES, "LEFT", "RIGHT", "OTHER",
-] as const;
+/// Shared custody photo vocabulary for Car-Out and staged Car-In.
+export const CAR_OUT_REQUIRED_ANGLES = ["FRONT", "REAR", "LEFT", "RIGHT"] as const;
+export const CAR_OUT_PHOTO_ANGLES = [...CAR_OUT_REQUIRED_ANGLES, "OTHER"] as const;
+export const CUSTODY_PHOTO_DISPLAY_ORDER = [...CAR_OUT_PHOTO_ANGLES] as const;
 
 export const FUEL_LEVELS = ["F", "7/8", "3/4", "5/8", "1/2", "3/8", "1/4", "1/8", "E"] as const;
 

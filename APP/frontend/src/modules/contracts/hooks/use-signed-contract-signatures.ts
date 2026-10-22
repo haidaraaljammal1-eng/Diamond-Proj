@@ -9,12 +9,27 @@ import type { OfficialContractView, OfficialSignatureSlot } from "@/modules/publ
 const LEGAL_SLOTS = ["hirer", "additionalDriver", "sponsor"] as const;
 const SLOT_PATHS = { hirer: "hirer", additionalDriver: "additional-driver", sponsor: "sponsor" } as const;
 
+const CUSTODY_HIRER_SLOTS = ["vehicleOutHirer", "vehicleInHirer"] as const;
+
+export type CustodyHirerSignaturePaths = Partial<
+  Record<(typeof CUSTODY_HIRER_SLOTS)[number], string | null | undefined>
+>;
+
+async function fetchCustodySignatureBlob(path: string, accessToken: string): Promise<Blob | null> {
+  const url = path.startsWith("http") ? path : `${env.apiUrl}${path}`;
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
+  return response.ok ? response.blob() : null;
+}
+
 /**
  * Object URLs for the stored signature images of a signed contract.
- * `vehicleOutSignaturePath` (the Car-Out handover signature stream) adds the
- * hirer OUT signature for the live contract view.
+ * Optional `custodyHirerPaths` loads authenticated Car-Out / Car-In hirer streams for the live view.
  */
-export function useSignedContractSignatures(contractId: string, contract: OfficialContractView | null, vehicleOutSignaturePath?: string | null) {
+export function useSignedContractSignatures(
+  contractId: string,
+  contract: OfficialContractView | null,
+  custodyHirerPaths?: CustodyHirerSignaturePaths | null,
+) {
   const { data: session } = useSession();
   const [urls, setUrls] = useState<Partial<Record<OfficialSignatureSlot, string>>>({});
 
@@ -29,23 +44,33 @@ export function useSignedContractSignatures(contractId: string, contract: Offici
       created.push(url);
       setUrls((current) => ({ ...current, [slot]: url }));
     };
-    void Promise.all(LEGAL_SLOTS.filter((slot) => contract.signatures[slot].hasImage).map(async (slot) => {
-      try {
-        keep(slot, await getSignedContractSignature(contractId, SLOT_PATHS[slot], accessToken));
-      } catch { /* The signed status remains visible if an image cannot load. */ }
-    }));
-    if (vehicleOutSignaturePath && contract.signatures.vehicleOutHirer.hasImage) {
-      const url = vehicleOutSignaturePath.startsWith("http") ? vehicleOutSignaturePath : `${env.apiUrl}${vehicleOutSignaturePath}`;
-      void fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" })
-        .then(async (response) => { if (response.ok) keep("vehicleOutHirer", await response.blob()); })
-        .catch(() => { /* Same as above: the signed status still shows. */ });
-    }
+    void Promise.all(
+      LEGAL_SLOTS.filter((slot) => contract.signatures[slot].hasImage).map(async (slot) => {
+        try {
+          keep(slot, await getSignedContractSignature(contractId, SLOT_PATHS[slot], accessToken));
+        } catch {
+          /* The signed status remains visible if an image cannot load. */
+        }
+      }),
+    );
+    void Promise.all(
+      CUSTODY_HIRER_SLOTS.map(async (slot) => {
+        const path = custodyHirerPaths?.[slot];
+        if (!path || !contract.signatures[slot].hasImage) return;
+        try {
+          const blob = await fetchCustodySignatureBlob(path, accessToken);
+          if (blob) keep(slot, blob);
+        } catch {
+          /* Same as above: the signed status still shows. */
+        }
+      }),
+    );
     return () => {
       active = false;
       created.forEach((url) => URL.revokeObjectURL(url));
       setUrls({});
     };
-  }, [contractId, contract, vehicleOutSignaturePath, session?.accessToken]);
+  }, [contractId, contract, custodyHirerPaths, session?.accessToken]);
 
   return urls;
 }

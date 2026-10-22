@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { AppError } from "src/lib/errors/app-error";
-import { INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { CAR_OUT_REQUIRED_ANGLES } from "src/modules/contracts/contracts.constants";
 import { TarsUnconfiguredProvider } from "src/modules/integrations/tars/providers/tars-unconfigured.provider";
 import { createTarsProvider } from "src/modules/integrations/tars/tars.provider";
 import { toTarsContractIntegrationState } from "src/modules/integrations/tars/tars.projection";
@@ -22,7 +22,7 @@ const APPROVED_AT = new Date("2026-03-06T18:00:00.000Z");
 const CLOSED_AT = new Date("2026-03-06T18:30:00.000Z");
 
 function photos(prefix: string) {
-  return INSPECTION_ANGLES.map((angle, index) => ({
+  return CAR_OUT_REQUIRED_ANGLES.map((angle, index) => ({
     id: `${prefix}-photo-${index}`,
     attachmentId: `${prefix}-attachment-${index}`,
     angle,
@@ -312,10 +312,10 @@ describe("tars handover / return mappers", () => {
       fuelLevel: "F",
       notes: "clean",
     });
-    assert.equal(input.photos.length, 8);
+    assert.equal(input.photos.length, 4);
     assert.deepEqual(
       input.photos.map((photo) => photo.angle),
-      [...INSPECTION_ANGLES],
+      [...CAR_OUT_REQUIRED_ANGLES],
     );
     assert.equal(input.photos[0]!.attachmentId, "out-attachment-0");
     assert.equal(
@@ -333,7 +333,7 @@ describe("tars handover / return mappers", () => {
       fuelLevel: "1/2",
       notes: null,
     });
-    assert.equal(input.photos.length, 8);
+    assert.equal(input.photos.length, 4);
     assert.equal(input.photos[3]!.attachmentId, "in-attachment-3");
     assert.equal(
       input.photos[3]!.streamPath,

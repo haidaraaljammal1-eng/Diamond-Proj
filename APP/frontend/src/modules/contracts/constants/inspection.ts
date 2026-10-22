@@ -1,15 +1,4 @@
-import type { ContractStatus, FuelLevel, InspectionAngle, ReconciliationLineType } from "../types/contract.types";
-
-export const INSPECTION_ANGLES: readonly InspectionAngle[] = [
-  "FRONT",
-  "REAR",
-  "RIGHT_SIDE",
-  "LEFT_SIDE",
-  "FRONT_PLATE",
-  "REAR_PLATE",
-  "INTERIOR_ODOMETER",
-  "TIRES",
-];
+import type { ContractStatus, FuelLevel, ReconciliationLineType } from "../types/contract.types";
 
 export const FUEL_LEVELS: readonly FuelLevel[] = [
   "F",

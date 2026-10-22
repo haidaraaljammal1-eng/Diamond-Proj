@@ -18,7 +18,6 @@ import {
   reconcileContract as reconcileRequest,
   renewContract as renewRequest,
   settleRenewalCash as settleRenewalCashRequest,
-  submitCarOut as submitCarOutRequest,
   getCarOut as getCarOutRequest,
   saveCarOutDraft as saveCarOutDraftRequest,
   uploadCarOutPhoto as uploadCarOutPhotoRequest,
@@ -31,13 +30,11 @@ import {
   uploadCarInSignature as uploadCarInSignatureRequest,
   deleteCarInPhoto as deleteCarInPhotoRequest,
   completeCarIn as completeCarInRequest,
-  uploadContractAttachment,
 } from "../api/contracts.api";
 import type { PageMeta } from "../api/contracts.api.types";
 import { CONTRACTS_PAGE_SIZE } from "../api/contracts.api.types";
 import type {
   CarInDraftPatch,
-  CarOutPayload,
   CarOutDraftPatch,
   ContractCarInHandoverDto,
   ContractCarOutHandoverDto,
@@ -47,7 +44,6 @@ import type {
   ContractFiltersState,
   ContractListItemDto,
   CreateContractOfferPayload,
-  InspectionPhotoInput,
   IssuedContractLinkView,
   ReconcilePayload,
   RenewPayload,
@@ -55,8 +51,6 @@ import type {
 import { DEFAULT_CONTRACT_FILTERS } from "../utils/contract-filters";
 import { createListRequestGate } from "../utils/list-request-gate";
 import { buildPublicContractUrl } from "../utils/contract-link";
-import type { InspectionAngle } from "../types/contract.types";
-
 export type ContractsLoadStatus = "idle" | "loading" | "ready" | "error";
 export type ContractDetailLoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -111,14 +105,6 @@ interface ContractsState {
     payload: ConfirmContractPaymentPayload,
     idempotencyKey: string,
   ) => Promise<boolean>;
-  submitCarOut: (
-    id: string,
-    payload: Omit<CarOutPayload, "photos" | "hirerSignatureAttachmentId"> & {
-      photos: { angle: InspectionAngle; file: File }[];
-      hirerSignature?: Blob | null;
-    },
-    idempotencyKey: string,
-  ) => Promise<boolean>;
   loadCarOut: (id: string) => Promise<void>;
   saveCarOutDraft: (id: string, payload: CarOutDraftPatch) => Promise<boolean>;
   uploadCarOutPhoto: (id: string, angle: CarOutAngle, file: File) => Promise<boolean>;
@@ -156,13 +142,6 @@ interface ContractsState {
 }
 
 const IDLE_SLOT: MutationSlot = { pending: false, error: null };
-
-/** Uploads the drawn custody signature (PNG) and returns its attachment id. */
-async function uploadHirerSignature(image: Blob | null | undefined): Promise<string | undefined> {
-  if (!image) return undefined;
-  const file = new File([image], "hirer-signature.png", { type: "image/png" });
-  return (await uploadContractAttachment(file)).id;
-}
 
 const listGate = createListRequestGate();
 let detailInFlight: Promise<void> | null = null;
@@ -370,36 +349,6 @@ export const useContractsStore = create<ContractsState>((set, get) => {
         return true;
       } catch (error) {
         set({ payment: { pending: false, error: normalizeApiError(error) } });
-        return false;
-      }
-    },
-    async submitCarOut(id, payload, idempotencyKey) {
-      set({ carOut: { pending: true, error: null } });
-      try {
-        const photos: InspectionPhotoInput[] = [];
-        for (const photo of payload.photos) {
-          const attachment = await uploadContractAttachment(photo.file);
-          photos.push({ attachmentId: attachment.id, angle: photo.angle });
-        }
-        const detail = await submitCarOutRequest(
-          id,
-          {
-            occurredAt: payload.occurredAt,
-            mileageOut: payload.mileageOut,
-            fuelOut: payload.fuelOut,
-            notes: payload.notes,
-            photos,
-            damage: payload.damage,
-            hirerSignatureAttachmentId: await uploadHirerSignature(payload.hirerSignature),
-          },
-          idempotencyKey,
-        );
-        set({ carOut: IDLE_SLOT, detail, detailStatus: "ready" });
-        await refreshAll();
-        requestDashboardRefresh();
-        return true;
-      } catch (error) {
-        set({ carOut: { pending: false, error: normalizeApiError(error) } });
         return false;
       }
     },

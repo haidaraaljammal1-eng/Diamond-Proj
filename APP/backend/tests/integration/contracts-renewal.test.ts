@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { injectDocumentOcr, seedReadyIdentity } from "../helpers/public-identity";
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { CAR_OUT_REQUIRED_ANGLES, INSPECTION_ANGLES } from "src/modules/contracts/contracts.constants";
+import { CAR_OUT_REQUIRED_ANGLES } from "src/modules/contracts/contracts.constants";
 import { setPaymentProviderForTests } from "src/modules/contracts/payment/payment-provider.factory";
 import {
   confirmRentalPaymentViaStatusToken,
@@ -116,9 +116,9 @@ if (!RUN) {
       await seedReadyIdentity(app, rentalToken, { licenseNumber: "DL-RN", expiryDate: "2030-01-01" });
     }
 
-    async function dummyPhotos(angles: readonly string[] = INSPECTION_ANGLES) {
+    async function dummyPhotos(angles: readonly string[] = CAR_OUT_REQUIRED_ANGLES) {
       const ids: string[] = [];
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < angles.length; i++) {
         seq += 1;
         const row = await prisma.attachment.create({
           data: {
@@ -133,12 +133,48 @@ if (!RUN) {
       return angles.map((angle, i) => ({ attachmentId: ids[i]!, angle }));
     }
 
-    async function outSignature() {
-      seq += 1;
-      const row = await prisma.attachment.create({
-        data: { originalName: "out-signature.png", storageKey: `rn-${run}-${seq}-sig.png`, mimeType: "image/png", size: 8 },
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lV8AAAAASUVORK5CYII=", "base64");
+    function multipart(bytes: Buffer, mime = "image/png") {
+      const boundary = `diamond-rn-${run}`;
+      return {
+        headers: { ...auth(), "content-type": `multipart/form-data; boundary=${boundary}` },
+        payload: Buffer.concat([
+          Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="evidence.png"\r\nContent-Type: ${mime}\r\n\r\n`),
+          bytes,
+          Buffer.from(`\r\n--${boundary}--\r\n`),
+        ]),
+      };
+    }
+
+    async function completeStagedCarOut(contractId: string, mileageOut = 1000) {
+      const patch = await app.inject({
+        method: "PATCH",
+        url: `/contracts/${contractId}/car-out`,
+        headers: auth(),
+        payload: { mileageOut, fuelOut: "F" },
       });
-      return row.id;
+      assert.equal(patch.statusCode, 200, patch.body);
+      for (const angle of CAR_OUT_REQUIRED_ANGLES) {
+        const uploaded = await app.inject({
+          method: "POST",
+          url: `/contracts/${contractId}/car-out/photos?angle=${angle}`,
+          ...multipart(png),
+        });
+        assert.equal(uploaded.statusCode, 200, `${angle}: ${uploaded.body}`);
+      }
+      const sig = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/car-out/signature`,
+        ...multipart(png),
+      });
+      assert.equal(sig.statusCode, 200, sig.body);
+      const carOut = await app.inject({
+        method: "POST",
+        url: `/contracts/${contractId}/car-out/complete`,
+        headers: auth(),
+      });
+      assert.equal(carOut.statusCode, 200, carOut.body);
+      return carOut;
     }
 
     async function createActiveContract() {
@@ -197,13 +233,7 @@ if (!RUN) {
       setPaymentProviderForTests(payments.provider);
       await linkCardViaFakeProvider(app, payments, rentalToken, contractId);
       await confirmRentalPaymentViaStatusToken(app, payments, rentalToken, `rn-pay-${contractId}`);
-      const carOut = await app.inject({
-        method: "POST",
-        url: `/contracts/${contractId}/car-out`,
-        headers: auth(),
-        payload: { mileageOut: 1000, fuelOut: "F", photos: await dummyPhotos(CAR_OUT_REQUIRED_ANGLES), hirerSignatureAttachmentId: await outSignature() },
-      });
-      assert.equal(carOut.statusCode, 200, carOut.body);
+      const carOut = await completeStagedCarOut(contractId);
       assert.equal(carOut.json().data.status, "ACTIVE");
       return { contractId, contractNumber, vehicleId };
     }

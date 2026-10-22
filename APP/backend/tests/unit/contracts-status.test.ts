@@ -17,6 +17,10 @@ import {
 import { AppError } from "src/lib/errors/app-error";
 import type { ContractStatus } from "@prisma/client";
 
+test("rental link TTL is 24 hours", () => {
+  assert.equal(CONTRACT_LINK_TTL_SECONDS.RENTAL, 24 * 60 * 60);
+});
+
 test("renewal link TTL is 48 hours", () => {
   assert.equal(CONTRACT_LINK_TTL_SECONDS.RENEWAL, 48 * 60 * 60);
 });

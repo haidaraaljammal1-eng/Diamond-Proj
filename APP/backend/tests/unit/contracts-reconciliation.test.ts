@@ -40,6 +40,21 @@ describe("contracts-reconciliation", () => {
     assert.equal(pairs[0]?.inPhoto, null);
   });
 
+  test("returns pairs in product order FRONT, REAR, LEFT, RIGHT, OTHER", () => {
+    const pairs = buildReconciliationImagePairs(
+      "contract-1",
+      [
+        { id: "out-other", angle: "OTHER" },
+        { id: "out-rear", angle: "REAR" },
+      ],
+      [{ id: "in-front", angle: "FRONT" }],
+    );
+    assert.deepEqual(pairs.map((p) => p.angle), ["FRONT", "REAR", "OTHER"]);
+    const other = pairs.find((p) => p.angle === "OTHER");
+    assert.equal(other?.outPhoto?.id, "out-other");
+    assert.equal(other?.inPhoto, null);
+  });
+
   test("computes fuel difference as IN eighths minus OUT eighths", () => {
     assert.equal(computeFuelDifference("F", "1/2"), -4);
     assert.equal(computeFuelDifference("1/2", "F"), 4);

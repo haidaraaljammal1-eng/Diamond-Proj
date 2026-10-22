@@ -3,7 +3,6 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { createContractsService } from "src/modules/contracts/contracts.service";
 import {
-  CarInSchema,
   ContractTokenParam,
   PaymentStatusTokenParam,
   PublicAcceptSchema,
@@ -626,31 +625,6 @@ export default async function contractsPublicRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.getPublic("RETURN", request.params.token) }),
-  );
-
-  app.post(
-    "/return/:token/car-in",
-    {
-      schema: {
-        summary: "Submit Car-In for a return token",
-        operationId: "submitPublicCarIn",
-        tags: ["Contracts"],
-        public: true,
-        params: ContractTokenParam,
-        body: CarInSchema,
-        response: { 200: dataResponse(PublicContractViewSchema), ...commonErrorResponses },
-      },
-    },
-    async (request) => {
-      const key = request.headers["idempotency-key"];
-      return {
-        data: await contracts.carIn(
-          request.params.token,
-          request.body,
-          typeof key === "string" ? key : undefined,
-        ),
-      };
-    },
   );
 
   app.get(

@@ -9,7 +9,7 @@ import type {
 import { writeOutboxEvent } from "src/lib/db/outbox";
 import type { Tx } from "src/lib/db/transaction";
 import { isExpired } from "src/lib/security/tokens";
-import { FUEL_LEVELS } from "src/modules/contracts/contracts.constants";
+import { CUSTODY_PHOTO_DISPLAY_ORDER, FUEL_LEVELS } from "src/modules/contracts/contracts.constants";
 import { contractError } from "src/modules/contracts/contracts.errors";
 import {
   assertNoOutstandingOfficeRenewals,
@@ -235,10 +235,10 @@ export function buildReconciliationImagePairs(
 ): ReconciliationImagePair[] {
   const outByAngle = new Map(outPhotos.map((photo) => [photo.angle, photo]));
   const inByAngle = new Map(inPhotos.map((photo) => [photo.angle, photo]));
-  const angles = new Set<ContractInspectionAngle>([...outByAngle.keys(), ...inByAngle.keys()]);
-  return [...angles]
-    .sort((a, b) => a.localeCompare(b))
-    .map((angle) => {
+  const angles = CUSTODY_PHOTO_DISPLAY_ORDER.filter(
+    (angle) => outByAngle.has(angle) || inByAngle.has(angle),
+  );
+  return angles.map((angle) => {
       const outPhoto = outByAngle.get(angle);
       const inPhoto = inByAngle.get(angle);
       return {

@@ -9,6 +9,8 @@ import {
   deletePendingRentalRequest,
   startContractReturnStaff,
 } from "@/modules/contracts/api/contracts.api";
+import { resolveContractsErrorMessage } from "@/modules/contracts/utils/resolve-contracts-error";
+import { isApiRequestError } from "@/infrastructure/api/errors";
 import {
   CONTRACTS_MANAGE_PERMISSION,
   CONTRACTS_RENEW_PERMISSION,
@@ -51,6 +53,7 @@ export function VehicleDetailDialog({
   fleetReloadToken = 0,
 }: VehicleDetailDialogProps) {
   const t = useTranslations("Vehicles");
+  const tc = useTranslations("Contracts");
   const format = useFormatter();
   const { hasPermission } = usePermissions();
   const canReturn = hasPermission(CONTRACTS_RETURN_PERMISSION);
@@ -196,12 +199,15 @@ export function VehicleDetailDialog({
       onFleetChanged();
       setConfirmKind(null);
       onClose();
-    } catch {
-      setFleetOpsError(t("detail.deleteRentalRequestFailed"));
+    } catch (err) {
+      const backendMessage = isApiRequestError(err)
+        ? resolveContractsErrorMessage(tc, err)
+        : null;
+      setFleetOpsError(backendMessage ?? t("detail.deleteRentalRequestFailed"));
     } finally {
       setFleetOpsPending(false);
     }
-  }, [detail, loadVehicle, onClose, onFleetChanged, pendingFollowUp, t]);
+  }, [detail, loadVehicle, onClose, onFleetChanged, pendingFollowUp, t, tc]);
 
   const open = vehicle != null;
   const rental = detail?.currentRental;

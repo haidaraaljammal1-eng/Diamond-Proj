@@ -191,7 +191,7 @@ Header: vehicle name first, then a plate block (plate code merged into the numbe
 
 Step 1 edits only Vehicle OUT mileage, fuel, damage, notes and the separate hirer handover signature. Save Draft persists through the existing PATCH/signature routes without changing PAID or the Vehicle's AVAILABLE + reserved state. Next saves Step 1 before opening Step 2; save/validation errors appear next to the fixed actions. Reopening reloads the latest draft, signature and photos.
 
-Step 2 is vehicle photography. Required slots: FRONT, REAR, FRONT_RIGHT, REAR_RIGHT, FRONT_LEFT, REAR_LEFT, ODOMETER, DASHBOARD_FUEL. LEFT, RIGHT and OTHER remain optional. Each slot supports camera capture, file upload/replace and delete; progress comes from the Backend projection. Complete Handover is available only after saved mileage, fuel, OUT signature and all eight required photos. `POST /contracts/:id/car-out/complete` alone changes PAID → ACTIVE and Vehicle AVAILABLE → RENTED atomically, then refetches Contracts and Vehicles. The signed legal snapshot and A4 design do not change.
+Step 2 is vehicle photography. Required slots: FRONT, REAR, LEFT, RIGHT. OTHER is optional and visibly marked optional. Each slot supports camera capture, file upload/replace and delete; progress comes from the Backend projection. Complete Handover is available only after saved mileage, fuel, OUT signature and all four required photos. `POST /contracts/:id/car-out/complete` alone changes PAID → ACTIVE and Vehicle AVAILABLE → RENTED atomically, then refetches Contracts and Vehicles. The signed legal snapshot and A4 design do not change.
 
 ## Return link / public return
 
@@ -224,17 +224,17 @@ REVIEW and CLOSED never offer it.
 | Photo slot | `POST /contracts/:id/car-in/photos?angle=…`, `DELETE /car-in/photos/:photoId`, stream `/car-in/photos/:photoId/stream` |
 | Complete | `POST /contracts/:id/car-in/complete` (`Idempotency-Key`) |
 
-The legacy single-shot staff payload is gone from the frontend; the deprecated `POST /contracts/:id/car-in` alias is never called. Public `POST /contracts/return/:token/car-in` remains for the hashed token path.
+The legacy single-shot staff Car-Out and public Car-In routes are removed from the API; the frontend uses staged draft + complete only. Public return stays on `GET /return/:token` and `POST /return/:token/confirm`.
 
 **Step 1 — Return details (بيانات استلام السيارة).** `VehicleConditionSheet side="IN"` (damage map, damage tools, fuel selector, hirer signature pad) beside the field panel (`mileageIn`, notes, saved-signature preview). IN values are independent: nothing is prefilled from Car-Out. Required to continue: mileage, fuel and an IN signature (drawn now or saved earlier); damage and notes are optional. **Save Draft** persists mileage/fuel/damage/notes and uploads a newly drawn signature; the Contract stays RETOUT and the Vehicle stays RENTED. Reopening the dialog restores mileage, fuel, damage, notes, signature and photos from the server.
 
-**Step 2 — Vehicle photos (تصوير السيارة).** Exactly the Car-Out slot set: FRONT, FRONT_LEFT, REAR_LEFT, REAR, REAR_RIGHT, FRONT_RIGHT, ODOMETER, DASHBOARD_FUEL required, plus optional LEFT, RIGHT, OTHER (`forms/custody/custody-angles.ts`, shared with Car-Out). Camera capture, upload, replace and delete per slot; progress comes from the DTO `photoEvidence`, never from a hardcoded count.
+**Step 2 — Vehicle photos (تصوير السيارة).** Same five slots as Car-Out: FRONT, REAR, LEFT, RIGHT required; OTHER optional (`forms/custody/custody-angles.ts`). Camera capture, upload, replace and delete per slot; progress comes from the DTO `photoEvidence`, never from a hardcoded count.
 
 **Next** (التالي إلى تصوير السيارة) validates, saves the draft and uploads the signature before moving on; a failure keeps Step 1 open with the error in the footer region. **Back** (رجوع إلى بيانات الاستلام) keeps all state, with no refetch.
 
 **Complete** (تأكيد استلام السيارة) is enabled only when the DTO says `actions.canComplete`; the frontend does not recompute completion rules. It opens the nested Shared confirmation Dialog and then calls `/car-in/complete`. The response is authoritative: RETOUT → REVIEW, Vehicle RENTED → AVAILABLE, and the store refreshes contract, list and fleet, so the new state appears without a manual browser refresh. Car-In never closes the contract, and no OUT/IN comparison exists yet.
 
-**Ledger.** The return ledger (`forms/custody/custody-ledger.tsx`, shared with Car-Out) lists Mileage IN, Fuel IN, Damage IN (optional) and IN signature, then the eight photo slots, with the same rhombus states: saved, missing, not saved (a local edit), optional. `custody-ledger.model.ts` holds the pure state/progress rules and `custody-draft.ts` the Step 1 validation and PATCH body; both are unit-tested.
+**Ledger.** The return ledger (`forms/custody/custody-ledger.tsx`, shared with Car-Out) lists Mileage IN, Fuel IN, Damage IN (optional) and IN signature, then the four required photo slots plus optional OTHER, with the same rhombus states: saved, missing, not saved (a local edit), optional. `custody-ledger.model.ts` holds the pure state/progress rules and `custody-draft.ts` the Step 1 validation and PATCH body; both are unit-tested.
 
 Drawer Car-In copy: Vehicle returned / حالة الحيازة: انتهت. GPS Salik is a small informational champagne flag (`hasSalikGpsSignal`), never “waiting for a violation”. Compact Post-Close Charges appear when receivables exist.
 

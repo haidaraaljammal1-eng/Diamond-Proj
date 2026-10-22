@@ -81,7 +81,8 @@ async function deleteExclusiveAttachments(tx: Tx, attachmentIds: string[]): Prom
     const stillLinked =
       (await tx.contractDocument.count({ where: { attachmentId } })) +
       (await tx.officialContractSignature.count({ where: { attachmentId } })) +
-      (await tx.contractAcceptance.count({ where: { signatureAttachmentId: attachmentId } }));
+      (await tx.contractAcceptance.count({ where: { signatureAttachmentId: attachmentId } })) +
+      (await tx.customerDocument.count({ where: { attachmentId } }));
     if (stillLinked > 0) continue;
     await tx.attachment.deleteMany({ where: { id: attachmentId } });
   }
