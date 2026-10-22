@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
+import { formatRentalDuration } from "@/modules/contracts/utils/format-rental-duration";
 import { Button } from "@/shared/components/ui/button/button";
 import { Card } from "@/shared/components/ui/card/card";
 import { usePublicRenewal } from "../../hooks/use-public-renewal";
@@ -9,6 +10,10 @@ import {
   publicRenewalErrorReason,
   resolvePublicRenewalErrorMessage,
 } from "../../utils/resolve-public-renewal-error";
+import {
+  publicRenewalCurrentDuration,
+  publicRenewalExtensionDuration,
+} from "../../utils/public-renewal-duration";
 import {
   canRetryRenewalPayment,
   canStartRenewalPayment,
@@ -42,6 +47,7 @@ function Fact({ label, value }: { label: string; value: string | null | undefine
 
 export function PublicRenewalScreen({ token }: PublicRenewalScreenProps) {
   const t = useTranslations("PublicRenewal");
+  const td = useTranslations("Contracts.duration");
   const format = useFormatter();
   const renewal = usePublicRenewal(token);
 
@@ -127,7 +133,7 @@ export function PublicRenewalScreen({ token }: PublicRenewalScreenProps) {
               <Fact label={t("plate")} value={view.vehicle.plateNumber} />
               <Fact
                 label={t("duration")}
-                value={t("daysValue", { count: view.rentalDays })}
+                value={formatRentalDuration(publicRenewalCurrentDuration(view), td)}
               />
               <Fact label={t("end")} value={when(view.endAt)} />
               <Fact label={t("agreedAmount")} value={money(view.agreedAmount)} />
@@ -141,7 +147,7 @@ export function PublicRenewalScreen({ token }: PublicRenewalScreenProps) {
               <dl className={styles.facts}>
                 <Fact
                   label={t("extension")}
-                  value={t("daysValue", { count: offer.additionalDays })}
+                  value={formatRentalDuration(publicRenewalExtensionDuration(offer), td)}
                 />
                 <Fact label={t("previousEnd")} value={when(offer.previousEndAt)} />
                 <Fact label={t("newEnd")} value={when(offer.newEndAt)} />

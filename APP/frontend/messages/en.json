@@ -1132,7 +1132,8 @@
       "copied": "Copied",
       "open": "Open link",
       "done": "Done",
-      "expires": "Expires {date}"
+      "expires": "Expires {date}",
+      "rentalValidityNotice": "Rental link is valid for 24 hours from the time it is created."
     },
     "payment": {
       "title": "Confirm payment",
@@ -1232,33 +1233,10 @@
       "angle": {
         "FRONT": "Front",
         "REAR": "Rear",
-        "RIGHT_SIDE": "Right side",
-        "LEFT_SIDE": "Left side",
-        "FRONT_PLATE": "Front plate",
-        "REAR_PLATE": "Rear plate",
-        "INTERIOR_ODOMETER": "Interior / odometer",
-        "TIRES": "Tires",
         "LEFT": "Left",
         "RIGHT": "Right",
-        "FRONT_LEFT": "Front left",
-        "FRONT_RIGHT": "Front right",
-        "REAR_LEFT": "Rear left",
-        "REAR_RIGHT": "Rear right",
-        "ODOMETER": "Odometer",
-        "DASHBOARD_FUEL": "Dashboard fuel",
         "OTHER": "Other"
       }
-    },
-    "carOutAngles": {
-      "LEFT": "Left",
-      "RIGHT": "Right",
-      "FRONT_LEFT": "Front left",
-      "FRONT_RIGHT": "Front right",
-      "REAR_LEFT": "Rear left",
-      "REAR_RIGHT": "Rear right",
-      "ODOMETER": "Odometer",
-      "DASHBOARD_FUEL": "Dashboard fuel",
-      "OTHER": "Other"
     },
     "carIn": {
       "title": "Car-in return",
@@ -1339,12 +1317,6 @@
         "REAR": "Rear",
         "LEFT": "Left",
         "RIGHT": "Right",
-        "FRONT_LEFT": "Front left",
-        "FRONT_RIGHT": "Front right",
-        "REAR_LEFT": "Rear left",
-        "REAR_RIGHT": "Rear right",
-        "ODOMETER": "Odometer",
-        "DASHBOARD_FUEL": "Dashboard fuel",
         "OTHER": "Other"
       }
     },

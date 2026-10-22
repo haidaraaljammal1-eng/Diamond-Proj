@@ -36,7 +36,17 @@ export function SignedContractPage({ contractId, live = false }: SignedContractP
       : signedContractFromSnapshot(current.snapshot, company);
   }, [companies, current, live]);
   const updated = live && current ? hasPostSigningRecords(current) : false;
-  const signatures = useSignedContractSignatures(contractId, contract, live ? current?.carOutHandover.signature.url : null);
+  const custodyHirerPaths = useMemo(
+    () =>
+      live && current
+        ? {
+            vehicleOutHirer: current.carOutHandover.signature.url,
+            vehicleInHirer: current.carInHandover.signature.url,
+          }
+        : null,
+    [live, current?.carOutHandover.signature.url, current?.carInHandover.signature.url, current?.id],
+  );
+  const signatures = useSignedContractSignatures(contractId, contract, custodyHirerPaths);
   const loading = companiesLoading || detailStatus === "idle" || detailStatus === "loading" || (detail?.id !== contractId && detailStatus !== "error");
 
   return <main className={styles.page}>

@@ -118,7 +118,7 @@ export function ContractDetailDrawer({
   const money = (value: number, currency: string) =>
     `${format.number(value)} ${currency}`;
   const carOutAngleLabel = (angle: string) =>
-    t.has(`carOut.angle.${angle}`) ? t(`carOut.angle.${angle}`) : t(`carOutAngles.${angle}`);
+    t(`carOut.angle.${angle}`);
 
   const collectRenewal =
     collectRenewalId && detail

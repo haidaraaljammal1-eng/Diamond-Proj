@@ -25,8 +25,6 @@ import {
   CONTRACT_LIFECYCLE_LOCK_NS,
   CONTRACT_TERMS_VERSION,
   DRIVING_LICENSE_UPLOAD_MIME,
-  INSPECTION_ANGLES,
-  CAR_OUT_REQUIRED_ANGLES,
   OFFICE_DISPLAY_NAME_DEFAULT,
   PASSPORT_UPLOAD_MIME,
   VEHICLE_RENTAL_LOCK_NS,
@@ -111,10 +109,8 @@ import { createFilesService } from "src/modules/files/files.service";
 import { detachSupersededContractDocumentImages } from "src/modules/contracts/contract-document-image-retention";
 import type { MultipartFile } from "@fastify/multipart";
 import type {
-  CarInSchema,
   CarInDraftPatchSchema,
   CarInPhotoQuerySchema,
-  CarOutSchema,
   CarOutDraftPatchSchema,
   CarOutPhotoQuerySchema,
   ConfirmPaymentSchema,
@@ -155,7 +151,7 @@ import { createRoadLiabilityCustomerChargeService } from "src/modules/road-liabi
 import { loadSalikGpsSignals } from "src/modules/contracts/contract-road-liability-signals";
 import type { z } from "zod";
 import type { ListContractsQuerySchema } from "src/modules/contracts/contracts.schema";
-import { carOutReadiness } from "src/modules/contracts/car-out-evidence";
+import { assertCustodyPhotoAngles, carOutReadiness } from "src/modules/contracts/car-out-evidence";
 
 const SORTABLE = ["createdAt", "contractNumber", "startAt", "endAt", "agreedAmount", "status"] as const;
 
@@ -163,25 +159,6 @@ const SIMULATION_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
 );
-
-function assertEightAngles(photos: { angle: string }[]): void {
-  const set = new Set(photos.map((p) => p.angle));
-  if (photos.length !== 8 || set.size !== 8) {
-    throw AppError.validation("Car inspection requires all 8 unique angles");
-  }
-  for (const angle of INSPECTION_ANGLES) {
-    if (!set.has(angle)) throw AppError.validation("Car inspection requires all 8 unique angles");
-  }
-}
-
-function assertCarOutAngles(photos: { angle: string }[]): void {
-  const present = new Set(photos.map((photo) => photo.angle));
-  if (photos.length < CAR_OUT_REQUIRED_ANGLES.length || present.size !== photos.length ||
-    CAR_OUT_REQUIRED_ANGLES.some((angle) => !present.has(angle))) {
-    throw AppError.validation("Car-Out requires all eight photo angles");
-  }
-}
-
 
 type RenewalHistoryRow = {
   additionalDays: number;
@@ -614,7 +591,7 @@ export function createContractsService(fastify: FastifyInstance) {
     tx: Tx,
     contractId: string,
     side: "OUT" | "IN",
-    input: { damage?: z.infer<typeof CarOutSchema>["damage"]; hirerSignatureAttachmentId?: string },
+    input: z.infer<typeof import("src/modules/contracts/contracts.schema").CustodyPaperSchema>,
   ) {
     if (input.damage !== undefined) {
       const marks = readDamageMarks(input.damage);
@@ -900,8 +877,8 @@ export function createContractsService(fastify: FastifyInstance) {
   /**
    * Completes the staged Car-In draft: RETOUT -> REVIEW, Vehicle RENTED -> AVAILABLE.
    * Reads the persisted draft only — there is no body-supplied override, unlike
-   * `carOut()`. This is the one authoritative staff completion path; the legacy
-   * `POST /contracts/:id/car-in` route now delegates here too (see routes/admin).
+   * `carOut()`. This is the one authoritative staff completion path; the deprecated
+   * `POST /contracts/:id/car-in` alias delegates here too (see routes/admin).
    */
   async function completeCarInStaff(
     contractId: string,
@@ -945,7 +922,7 @@ export function createContractsService(fastify: FastifyInstance) {
         if (!fuelIn) throw AppError.validation("IN fuel is required");
         if (!signatureId) throw AppError.validation("Hirer IN signature is required");
         await validateInAttachment(tx, signatureId, true);
-        assertCarOutAngles(photos);
+        assertCustodyPhotoAngles(photos);
         for (const photo of photos) await validateInAttachment(tx, photo.attachmentId);
 
         const signedMarks = await tx.officialContractReviewDraft.findUnique({
@@ -1006,13 +983,7 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
-  async function carOut(
-    contractId: string,
-    input: z.infer<typeof CarOutSchema> | undefined,
-    actorUserId: number,
-    idempotencyKey?: string,
-  ) {
-    if (input) assertCarOutAngles(input.photos);
+  async function carOut(contractId: string, actorUserId: number, idempotencyKey?: string) {
     const run = async () =>
       withTransaction(prisma, async (tx) => {
         const contract = await tx.contract.findUnique({
@@ -1049,22 +1020,23 @@ export function createContractsService(fastify: FastifyInstance) {
           where: { contractId, purpose: "RENTAL", status: "CONFIRMED" },
         });
         if (!confirmed) throw contractError.paymentRequired();
-        const draft = input ? null : await tx.contractCarOutDraft.findUnique({
+        const draft = await tx.contractCarOutDraft.findUnique({
           where: { contractId }, include: { photos: true },
         });
-        const mileageOut = input?.mileageOut ?? draft?.mileageOut ?? null;
-        const fuelOut = input?.fuelOut ?? draft?.fuelOut ?? null;
-        const signatureId = input?.hirerSignatureAttachmentId ?? draft?.hirerSignatureAttachmentId ?? null;
-        const photos = input?.photos ?? draft?.photos ?? [];
+        if (!draft) throw AppError.validation("Car-Out draft must be saved before completion");
+        const mileageOut = draft.mileageOut ?? null;
+        const fuelOut = draft.fuelOut ?? null;
+        const signatureId = draft.hirerSignatureAttachmentId ?? null;
+        const photos = draft.photos ?? [];
         const signedMarks = await tx.officialContractReviewDraft.findUnique({
           where: { contractId }, select: { damageOut: true },
         });
-        const damageOut = readDamageMarks(input?.damage ?? draft?.damageOut ?? signedMarks?.damageOut);
+        const damageOut = readDamageMarks(draft.damageOut ?? signedMarks?.damageOut);
         if (mileageOut === null || !Number.isInteger(mileageOut) || mileageOut < 0) {
           throw AppError.validation("Valid OUT mileage is required");
         }
         if (!fuelOut) throw AppError.validation("OUT fuel is required");
-        assertCarOutAngles(photos);
+        assertCustodyPhotoAngles(photos);
         if (!signatureId) throw AppError.validation("Hirer OUT signature is required");
         await validateOutAttachment(tx, signatureId, true);
         for (const photo of photos) await validateOutAttachment(tx, photo.attachmentId);
@@ -1077,7 +1049,7 @@ export function createContractsService(fastify: FastifyInstance) {
             occurredAt: now,
             mileageOut,
             fuelOut,
-            notes: input?.notes ?? draft?.notes ?? null,
+            notes: draft.notes ?? null,
             vehicleId: locked.vehicleId,
             damageOut: damageOut as unknown as Prisma.InputJsonValue,
             hirerSignatureAttachmentId: signatureId,
@@ -1117,9 +1089,7 @@ export function createContractsService(fastify: FastifyInstance) {
       {
         scope: `contract:car-out:${contractId}`,
         key: idempotencyKey,
-        fingerprint: fingerprintIdempotentPayload({
-          input: input ?? { mode: "saved-draft" },
-        }),
+        fingerprint: fingerprintIdempotentPayload({ mode: "saved-draft" }),
       },
       run,
     );
@@ -1385,158 +1355,6 @@ export function createContractsService(fastify: FastifyInstance) {
       await emit(tx, "contract.signed", contract.id);
       return loadPublicRental(tx, contract.id, locale);
     });
-  }
-
-  async function persistCarIn(
-    tx: Tx,
-    contract: {
-      id: string;
-      status: ContractStatus;
-      vehicleId: number;
-      carIn: { id: string } | null;
-      carOut: { id: string } | null;
-    },
-    input: z.infer<typeof CarInSchema>,
-    performedByUserId?: number | null,
-  ): Promise<"created" | "existing"> {
-    if (contract.status === "REVIEW" && contract.carIn) return "existing";
-    assertTransition(contract.status, "REVIEW");
-    if (!contract.carOut) throw contractError.carOutRequired();
-
-    await acquireAdvisoryLock(tx, VEHICLE_RENTAL_LOCK_NS, contract.vehicleId);
-    const now = input.occurredAt ?? new Date();
-    const row = await tx.contractCarIn.create({
-      data: {
-        contractId: contract.id,
-        performedByUserId: performedByUserId ?? null,
-        occurredAt: now,
-        mileageIn: input.mileageIn,
-        fuelIn: input.fuelIn,
-        notes: input.notes ?? null,
-      },
-    });
-    await tx.contractCarInPhoto.createMany({
-      data: input.photos.map((p, i) => ({
-        carInId: row.id,
-        attachmentId: p.attachmentId,
-        angle: p.angle,
-        sortOrder: i,
-      })),
-    });
-    await persistCustodyPaper(tx, contract.id, "IN", input);
-    await tx.contract.update({
-      where: { id: contract.id },
-      data: { status: "REVIEW", revision: { increment: 1 } },
-    });
-    if (performedByUserId) {
-      await attachPendingRoadLiabilitiesForReconciliationInTx(
-        tx,
-        contract.id,
-        performedByUserId,
-      );
-    }
-    const vehicle = await tx.vehicle.findUnique({
-      where: { id: contract.vehicleId },
-      select: { operationalStatus: true },
-    });
-    if (vehicle?.operationalStatus === "RENTED") {
-      await tx.vehicle.update({
-        where: { id: contract.vehicleId },
-        data: { operationalStatus: "AVAILABLE" },
-      });
-    }
-    await emit(tx, "contract.return_submitted", contract.id, { vehicleId: contract.vehicleId });
-    return "created";
-  }
-
-  async function carIn(token: string, input: z.infer<typeof CarInSchema>, idempotencyKey?: string) {
-    assertEightAngles(input.photos);
-    const run = async () =>
-      withTransaction(prisma, async (tx) => {
-        const link = await resolveContractLink(tx, token, "RETURN", {
-          allowCompleted: true,
-        });
-        const contract = await tx.contract.findUnique({
-          where: { id: link.contractId },
-          include: { carIn: true, carOut: true },
-        });
-        if (!contract) throw contractError.notFound();
-        const outcome = await persistCarIn(tx, contract, input);
-        if (outcome === "created") await markLinkUsed(tx, link.id);
-        return publicView(
-          await tx.contract.findUniqueOrThrow({
-            where: { id: contract.id },
-            include: { company: { select: { code: true, displayName: true, legalNameAr: true, legalNameEn: true } }, vehicle: { include: { model: { select: { name: true } } } } },
-          }),
-        );
-      });
-
-    if (!idempotencyKey) return run();
-    const outcome = await runIdempotent(
-      prisma,
-      {
-        scope: `contract:car-in:${hashToken(token)}`,
-        key: idempotencyKey,
-        fingerprint: fingerprintIdempotentPayload({
-          mileageIn: input.mileageIn,
-          fuelIn: input.fuelIn,
-          notes: input.notes ?? null,
-          occurredAt: input.occurredAt?.toISOString() ?? null,
-          photos: input.photos,
-          damage: input.damage ?? null,
-          hirerSignatureAttachmentId: input.hirerSignatureAttachmentId ?? null,
-        }),
-      },
-      run,
-    );
-    if (outcome.deduped) return getPublic("RETURN", token);
-    return outcome.result!;
-  }
-
-  async function carInStaff(
-    contractId: string,
-    input: z.infer<typeof CarInSchema>,
-    actorUserId: number,
-    idempotencyKey?: string,
-  ) {
-    assertEightAngles(input.photos);
-    const run = async () =>
-      withTransaction(prisma, async (tx) => {
-        const contract = await tx.contract.findUnique({
-          where: { id: contractId },
-          include: { carIn: true, carOut: true },
-        });
-        if (!contract) throw contractError.notFound();
-        const outcome = await persistCarIn(tx, contract, input, actorUserId);
-        if (outcome === "created") await completeReturnLinks(tx, contract.id);
-        return decorateDetail(
-          await tx.contract.findUniqueOrThrow({
-            where: { id: contract.id },
-            include: CONTRACT_DETAIL_INCLUDE,
-          }),
-        );
-      });
-
-    if (!idempotencyKey) return run();
-    const outcome = await runIdempotent(
-      prisma,
-      {
-        scope: `contract:car-in-staff:${contractId}`,
-        key: idempotencyKey,
-        fingerprint: fingerprintIdempotentPayload({
-          mileageIn: input.mileageIn,
-          fuelIn: input.fuelIn,
-          notes: input.notes ?? null,
-          occurredAt: input.occurredAt?.toISOString() ?? null,
-          photos: input.photos,
-          damage: input.damage ?? null,
-          hirerSignatureAttachmentId: input.hirerSignatureAttachmentId ?? null,
-        }),
-      },
-      run,
-    );
-    if (outcome.deduped) return get(contractId);
-    return outcome.result!;
   }
 
   async function detailFromTx(tx: Tx, contractId: string) {
@@ -2150,14 +1968,14 @@ export function createContractsService(fastify: FastifyInstance) {
       });
       if (!contract) throw contractError.notFound();
       if (contract.status === "RETOUT" || contract.status === "REVIEW" || contract.status === "CLOSED") {
-        return get(contractId);
+        return detailFromTx(tx, contractId);
       }
       assertStatus(contract.status, "ACTIVE");
       if (!contract.carOut) throw contractError.carOutRequired();
       if (contract.vehicle.operationalStatus !== "RENTED") throw contractError.vehicleNotRented();
       await acquireAdvisoryLock(tx, VEHICLE_RENTAL_LOCK_NS, contract.vehicleId);
       await beginContractReturnInTx(tx, contract);
-      return get(contractId);
+      return detailFromTx(tx, contractId);
     });
   }
 
@@ -3390,8 +3208,6 @@ export function createContractsService(fastify: FastifyInstance) {
     submitPublicForm,
     submitPublicOfficialContractReview,
     acceptPublic,
-    carIn,
-    carInStaff,
     saveCarInDraft,
     uploadCarInPhoto,
     uploadCarInSignature,

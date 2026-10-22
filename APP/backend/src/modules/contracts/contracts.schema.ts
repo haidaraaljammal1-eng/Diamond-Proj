@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { PaginationQuerySchema } from "src/lib/http/pagination";
 import { UuidIdParam } from "src/lib/http/common-schemas";
-import {
-  FUEL_LEVELS,
-  INSPECTION_ANGLES,
-  CAR_OUT_PHOTO_ANGLES,
-} from "src/modules/contracts/contracts.constants";
+import { FUEL_LEVELS, CAR_OUT_PHOTO_ANGLES } from "src/modules/contracts/contracts.constants";
 import { DAMAGE_MARK_TYPES, DAMAGE_ZONES } from "src/modules/contracts/official-contract-interactive";
 import {
   TarsOtpPublicStateSchema,
@@ -80,7 +76,7 @@ export const ReconciliationLineTypeSchema = z.enum([
   "VIOLATION",
   "OTHER",
 ]);
-export const InspectionAngleSchema = z.enum(INSPECTION_ANGLES);
+export const CustodyPhotoAngleSchema = z.enum(CAR_OUT_PHOTO_ANGLES);
 export const FuelLevelSchema = z.enum(FUEL_LEVELS);
 
 export const ContractIdParam = UuidIdParam;
@@ -137,13 +133,9 @@ export const ConfirmPaymentSchema = z.object({
   externalReference: z.string().trim().min(1).max(200).optional(),
 });
 
-export const InspectionPhotoInputSchema = z.object({
-  attachmentId: z.string().uuid(),
-  angle: InspectionAngleSchema,
-});
 export const CarOutPhotoInputSchema = z.object({
   attachmentId: z.string().uuid(),
-  angle: z.enum(CAR_OUT_PHOTO_ANGLES),
+  angle: CustodyPhotoAngleSchema,
 });
 
 export const DamageMarkTypeSchema = z.enum(DAMAGE_MARK_TYPES);
@@ -155,18 +147,9 @@ export const DamageMarkSchema = z
   .strict();
 
 /** Vehicle condition marked on the paper diagrams + the hirer's custody signature (PNG attachment). */
-const CustodyPaperInputSchema = {
+export const CustodyPaperSchema = z.object({
   damage: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).optional(),
   hirerSignatureAttachmentId: z.string().uuid().optional(),
-};
-
-export const CarOutSchema = z.object({
-  occurredAt: z.coerce.date().optional(),
-  mileageOut: z.number().int().nonnegative(),
-  fuelOut: FuelLevelSchema,
-  notes: z.string().trim().max(2000).optional(),
-  photos: z.array(CarOutPhotoInputSchema).min(8).max(CAR_OUT_PHOTO_ANGLES.length),
-  ...CustodyPaperInputSchema,
 });
 
 export const CarOutDraftPatchSchema = z.object({
@@ -176,11 +159,8 @@ export const CarOutDraftPatchSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   hirerSignatureAttachmentId: z.string().uuid().nullable().optional(),
 }).strict();
-export const CarOutPhotoQuerySchema = z.object({ angle: z.enum(CAR_OUT_PHOTO_ANGLES) });
-/// The full stored-angle union: legacy INSPECTION_ANGLES rows can still exist on a
-/// final Car-In created through the legacy public single-shot flow (see CarInSchema),
-/// alongside the current CAR_OUT_PHOTO_ANGLES vocabulary used by both custody events.
-export const CarOutEvidenceAngleSchema = z.enum([...INSPECTION_ANGLES, ...CAR_OUT_PHOTO_ANGLES]);
+export const CarOutPhotoQuerySchema = z.object({ angle: CustodyPhotoAngleSchema });
+export const CarOutEvidenceAngleSchema = CustodyPhotoAngleSchema;
 
 /// Staged Car-In draft, mirroring CarOutDraftPatchSchema. The IN signature is
 /// uploaded through its own endpoint, not patched here, same as OUT.
@@ -190,21 +170,7 @@ export const CarInDraftPatchSchema = z.object({
   damageIn: z.array(DamageMarkSchema).max(DAMAGE_ZONES.length).optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
 }).strict();
-export const CarInPhotoQuerySchema = z.object({ angle: z.enum(CAR_OUT_PHOTO_ANGLES) });
-
-/// Legacy single-shot Car-In payload. Still used by the public return-token
-/// route with the original 8-angle INSPECTION_ANGLES vocabulary — see
-/// DOCU/05-pages/contracts-backend.md for the compatibility note. The staged
-/// staff workflow (CarInDraftPatchSchema + CarInPhotoQuerySchema + complete)
-/// uses CAR_OUT_PHOTO_ANGLES instead.
-export const CarInSchema = z.object({
-  occurredAt: z.coerce.date().optional(),
-  mileageIn: z.number().int().nonnegative(),
-  fuelIn: FuelLevelSchema,
-  notes: z.string().trim().max(2000).optional(),
-  photos: z.array(InspectionPhotoInputSchema).length(8),
-  ...CustodyPaperInputSchema,
-});
+export const CarInPhotoQuerySchema = z.object({ angle: CustodyPhotoAngleSchema });
 
 export const ReconciliationLineInputSchema = z.object({
   type: ReconciliationLineTypeSchema,
@@ -513,7 +479,7 @@ export const PublicAcceptSchema = z.object({
 });
 
 export const PhotoAngleQuerySchema = z.object({
-  angle: InspectionAngleSchema.optional(),
+  angle: CustodyPhotoAngleSchema.optional(),
   documentType: CustomerDocumentTypeSchema.optional(),
 });
 

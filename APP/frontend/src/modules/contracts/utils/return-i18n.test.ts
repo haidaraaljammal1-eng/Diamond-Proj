@@ -34,7 +34,7 @@ describe("return / car-in i18n", () => {
       for (const key of ["vehicleIn", "mileage", "fuel", "damage", "saveDraft", "nextToPhotos", "backToData", "complete", "confirmTitle", "confirmDescription", "confirm", "stepOneRequired", "photosTitle"]) {
         assert.ok(nested(locale, ["Contracts", "carIn", key]).length > 0, key);
       }
-      for (const angle of ["FRONT", "FRONT_LEFT", "REAR_LEFT", "REAR", "REAR_RIGHT", "FRONT_RIGHT", "ODOMETER", "DASHBOARD_FUEL", "LEFT", "RIGHT", "OTHER"]) {
+      for (const angle of ["FRONT", "REAR", "LEFT", "RIGHT", "OTHER"]) {
         assert.ok(nested(locale, ["Contracts", "carIn", "angle", angle]).length > 0, angle);
         assert.ok(nested(locale, ["Contracts", "carOut", "angle", angle]).length > 0, angle);
       }

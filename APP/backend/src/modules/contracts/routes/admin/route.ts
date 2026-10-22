@@ -6,7 +6,6 @@ import {
   CarInDraftPatchSchema,
   CarInPhotoQuerySchema,
   CarInHandoverSchema,
-  CarOutSchema,
   CarOutDraftPatchSchema,
   CarOutPhotoQuerySchema,
   CarOutHandoverSchema,
@@ -217,37 +216,6 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
     },
   );
 
-  app.post(
-    "/:id/car-out",
-    {
-      schema: {
-        summary: "Record Car-Out and activate the rental",
-        operationId: "contractCarOut",
-        tags: ["Contracts"],
-        permissions: [PERMISSIONS.CONTRACTS_CAR_OUT, PERMISSIONS.CONTRACTS_ACTIVATE],
-        params: ContractIdParam,
-        body: CarOutSchema,
-        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
-      },
-    },
-    async (request) => {
-      const actor = requireAuth(request);
-      const key = request.headers["idempotency-key"];
-      const data = await contracts.carOut(
-        request.params.id,
-        request.body,
-        actor.id,
-        typeof key === "string" ? key : undefined,
-      );
-      request.setAudit({
-        action: "contracts.car_out",
-        entityType: "contract",
-        entityId: request.params.id,
-      });
-      return { data };
-    },
-  );
-
   app.get(
     "/:id/official-contract/signatures/:slot/stream",
     {
@@ -390,8 +358,11 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
     },
     async (request) => {
       const key = request.headers["idempotency-key"];
-      const data = await contracts.carOut(request.params.id, undefined, requireAuth(request).id,
-        typeof key === "string" ? key : undefined);
+      const data = await contracts.carOut(
+        request.params.id,
+        requireAuth(request).id,
+        typeof key === "string" ? key : undefined,
+      );
       request.setAudit({ action: "contracts.car_out", entityType: "contract", entityId: request.params.id });
       return { data };
     },

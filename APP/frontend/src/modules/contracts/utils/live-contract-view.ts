@@ -6,8 +6,8 @@ import type { OperatingCompanyDto } from "@/modules/operating-companies";
 /**
  * The signed legal view with every custody event recorded since signing laid
  * over it: Car-Out (mileage, fuel, damage marks, hirer OUT signature) and
- * Car-In (mileage, fuel). Only completed events are applied; a Car-Out draft
- * is not part of the contract until the handover is completed.
+ * Car-In (mileage, fuel, damage marks, hirer IN signature). Only completed events are
+ * applied; a Car-Out draft is not part of the contract until the handover is completed.
  */
 export function liveContractView(
   detail: ContractDetailDto,
@@ -50,13 +50,26 @@ export function liveContractView(
   }
 
   if (detail.carIn) {
+    const inHandover = detail.carInHandover;
+    const inSigned = inHandover.signature.present;
     view.vehicleIn = {
       ...signed.vehicleIn,
       status: "RECORDED",
       occurredAt: detail.carIn.occurredAt,
       mileage: detail.carIn.mileageIn,
       fuel: detail.carIn.fuelIn,
+      damage: inHandover.damageIn ?? [],
+      signatureStatus: inSigned ? "SIGNED" : signed.vehicleIn.signatureStatus,
     };
+    if (inSigned) {
+      view.signatures.vehicleInHirer = {
+        ...signed.signatures.vehicleInHirer,
+        status: "SIGNED",
+        signedAt: detail.carIn.occurredAt ?? null,
+        hasImage: true,
+        required: signed.signatures.vehicleInHirer.required,
+      };
+    }
   }
   return view;
 }

@@ -45,6 +45,11 @@ export function ContractLinkResult({ link, onClose }: ContractLinkResultProps) {
           </>
         ) : null}
       </p>
+      {link.type === "RENTAL" ? (
+        <p className={styles.rentalValidityNotice} role="note">
+          {t("rentalValidityNotice")}
+        </p>
+      ) : null}
       <div className={styles.linkbox}>
         <code dir="ltr" data-testid="rental-link-url">{link.url}</code>
       </div>

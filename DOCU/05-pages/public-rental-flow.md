@@ -99,7 +99,7 @@ When the Customer is created/updated, verified license values are copied onto Cu
 
 ## 14–16. Rental token lifecycle
 
-TTL remains 72h (`CONTRACT_LINK_TTL_SECONDS.RENTAL`). Raw token is returned once; DB stores SHA-256 only.
+TTL remains 24h (`CONTRACT_LINK_TTL_SECONDS.RENTAL`). Raw token is returned once; DB stores SHA-256 only.
 
 **Before V2:** RENTAL `usedAt` was set on first completing accept (single-use).
 

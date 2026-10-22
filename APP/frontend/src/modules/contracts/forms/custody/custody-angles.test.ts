@@ -2,14 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CUSTODY_OPTIONAL_ANGLES, CUSTODY_REQUIRED_ANGLES } from "./custody-angles.ts";
 
-test("Car-In and Car-Out share the same eight required slots, in walk-around order", () => {
-  assert.deepEqual([...CUSTODY_REQUIRED_ANGLES], [
-    "FRONT", "FRONT_LEFT", "REAR_LEFT", "REAR", "REAR_RIGHT", "FRONT_RIGHT", "ODOMETER", "DASHBOARD_FUEL",
-  ]);
+test("Car-In and Car-Out share four required slots in product order", () => {
+  assert.deepEqual([...CUSTODY_REQUIRED_ANGLES], ["FRONT", "REAR", "LEFT", "RIGHT"]);
 });
 
-test("three optional slots, none of them required", () => {
-  assert.deepEqual([...CUSTODY_OPTIONAL_ANGLES], ["LEFT", "RIGHT", "OTHER"]);
+test("OTHER is the only optional slot", () => {
+  assert.deepEqual([...CUSTODY_OPTIONAL_ANGLES], ["OTHER"]);
   const required = new Set<string>(CUSTODY_REQUIRED_ANGLES);
   assert.ok(CUSTODY_OPTIONAL_ANGLES.every((angle) => !required.has(angle)));
 });

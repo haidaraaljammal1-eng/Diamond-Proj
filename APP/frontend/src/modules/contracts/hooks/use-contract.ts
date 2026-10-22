@@ -11,7 +11,6 @@ import type { ApiRequestError } from "@/infrastructure/api/errors";
 import { useContractsStore } from "../stores/contracts.store";
 import type {
   CarInDraftPatch,
-  CarOutPayload,
   CarOutDraftPatch,
   ContractCarInHandoverDto,
   ContractCarOutHandoverDto,
@@ -19,7 +18,6 @@ import type {
   ConfirmContractPaymentPayload,
   ContractDetailDto,
   CreateContractOfferPayload,
-  InspectionAngle,
   IssuedContractLinkView,
   ReconcilePayload,
   RenewPayload,
@@ -75,14 +73,6 @@ export interface UseContractResult {
   confirmPayment: (
     id: string,
     payload: ConfirmContractPaymentPayload,
-    idempotencyKey: string,
-  ) => Promise<boolean>;
-  submitCarOut: (
-    id: string,
-    payload: Omit<CarOutPayload, "photos" | "hirerSignatureAttachmentId"> & {
-      photos: { angle: InspectionAngle; file: File }[];
-      hirerSignature?: Blob | null;
-    },
     idempotencyKey: string,
   ) => Promise<boolean>;
   loadCarOut: (id: string) => Promise<void>;
@@ -195,7 +185,6 @@ export function useContract(): UseContractResult {
       store.createOffer(payload, locale, generateLink),
     generateRentalLink: (id) => store.generateRentalLink(id, locale),
     confirmPayment: store.confirmPayment,
-    submitCarOut: store.submitCarOut,
     loadCarOut: store.loadCarOut,
     saveCarOutDraft: store.saveCarOutDraft,
     uploadCarOutPhoto: store.uploadCarOutPhoto,

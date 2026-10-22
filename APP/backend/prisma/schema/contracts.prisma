@@ -145,24 +145,12 @@ enum ContractReconciliationLineType {
   OTHER
 }
 
-/// Demo 8-angle inspection set (Car-Out / Car-In). Evidence, not VehiclePhoto.
+/// Custody walk-around photos (Car-Out / Car-In). Evidence, not VehiclePhoto.
 enum ContractInspectionAngle {
   FRONT
   REAR
-  RIGHT_SIDE
-  LEFT_SIDE
-  FRONT_PLATE
-  REAR_PLATE
-  INTERIOR_ODOMETER
-  TIRES
   LEFT
   RIGHT
-  FRONT_LEFT
-  FRONT_RIGHT
-  REAR_LEFT
-  REAR_RIGHT
-  ODOMETER
-  DASHBOARD_FUEL
   OTHER
 }
 

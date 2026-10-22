@@ -15,8 +15,14 @@ export type ContractPaymentStatus =
   | "FAILED"
   | "CANCELLED";
 
+export type PublicRenewalExtensionUnit = "HOUR" | "DAY";
+
+export type PublicRenewalDurationUnit = "HOUR" | "DAY" | "WEEK" | "MONTH";
+
 export interface PublicRenewalOffer {
   additionalDays: number;
+  additionalDurationValue?: number;
+  additionalDurationUnit?: PublicRenewalExtensionUnit;
   additionalAmount: number;
   previousEndAt: string;
   newEndAt: string;
@@ -34,6 +40,8 @@ export interface PublicRenewalView {
   status: PublicRenewalStatus;
   priceType: string;
   rentalDays: number;
+  durationValue: number;
+  durationUnit: PublicRenewalDurationUnit;
   agreedAmount: number;
   currency: string;
   startAt: string | null;
