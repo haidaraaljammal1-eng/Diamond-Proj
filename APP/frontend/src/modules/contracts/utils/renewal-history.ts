@@ -1,9 +1,10 @@
+import type { DateTimeFormatOptions } from "use-intl";
 import type { ContractRenewalDto } from "../types/contract.types";
 import type { RentalDuration } from "./format-rental-duration";
 
 export type RenewalCollectionState = NonNullable<ContractRenewalDto["collectionState"]>;
 
-export const RENEWAL_DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
+export const RENEWAL_DATE_TIME_FORMAT: DateTimeFormatOptions = {
   dateStyle: "medium",
   timeStyle: "short",
 };
@@ -72,7 +73,9 @@ export function renewalStartSourceLabelKey(
 }
 
 /** Stable semantic endpoints for timeline UI (previous = start, new = end). */
-export function renewalTimelineEndpoints(renewal: ContractRenewalDto): {
+export function renewalTimelineEndpoints(
+  renewal: Pick<ContractRenewalDto, "previousEndAt" | "newEndAt">,
+): {
   startAt: string;
   endAt: string;
 } {

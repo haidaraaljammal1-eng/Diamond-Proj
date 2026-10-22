@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
+import type { DateTimeFormatOptions } from "use-intl";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog } from "@/shared/components/ui/dialog";
 import { Drawer } from "@/shared/components/ui/drawer";
@@ -37,7 +38,7 @@ import { ReconciliationImagePairsSection } from "../../forms/reconcile/reconcili
 import { DeferredRoadChargeDialog } from "../deferred-road-charge/deferred-road-charge-dialog";
 import styles from "./contract-detail-drawer.module.css";
 
-const CONTRACT_SUMMARY_DATETIME: Intl.DateTimeFormatOptions = {
+const CONTRACT_SUMMARY_DATETIME: DateTimeFormatOptions = {
   dateStyle: "medium",
   timeStyle: "short",
 };
