@@ -4,10 +4,13 @@
  */
 import dotenv from "dotenv";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 import { buildIntegrationProcessEnv } from "../tests/helpers/integration-harness";
 
-const integrationBootstrap = path.join(__dirname, "../tests/helpers/integration-bootstrap.ts");
+const integrationBootstrap = pathToFileURL(
+  path.join(__dirname, "../tests/helpers/integration-bootstrap.ts"),
+).href;
 
 dotenv.config({ override: true });
 

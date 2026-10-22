@@ -62,7 +62,6 @@ async function assertDialogLayout(page: Page) {
 
   const whatsApp = page.getByTestId("vehicle-detail-whatsapp-share");
   await expect(whatsApp).toBeVisible();
-  await expect(whatsApp).toBeDisabled();
   await expect(page.getByText(WHATSAPP_SOON_AR)).toHaveCount(0);
   await expect(page.getByText(WHATSAPP_SOON_EN)).toHaveCount(0);
 

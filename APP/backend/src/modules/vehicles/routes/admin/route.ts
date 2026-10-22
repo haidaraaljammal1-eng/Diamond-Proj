@@ -12,7 +12,12 @@ import {
   VehicleDetailSchema,
   VehicleImageSchema,
   VehiclePublicSchema,
+  VehicleWhatsAppShareBodySchema,
+  VehicleWhatsAppShareResponseSchema,
 } from "src/modules/vehicles/vehicles.schema";
+import { createVehicleWhatsAppShareService } from "src/modules/vehicles/vehicle-whatsapp-share.service";
+import { WhatsAppIdempotencyHeadersSchema } from "src/modules/whatsapp/whatsapp.schema";
+import { whatsappSendRateLimit } from "src/plugins/rate-limit";
 import { NumericIdParam } from "src/lib/http/common-schemas";
 import {
   commonErrorResponses,
@@ -22,7 +27,7 @@ import {
 } from "src/lib/http/response";
 import { PERMISSIONS } from "src/constants/permissions";
 import { AppError } from "src/lib/errors/app-error";
-import { requireAuth } from "src/lib/context/auth-context";
+import { hasPermission, requireAuth } from "src/lib/context/auth-context";
 import { t } from "src/config/i18n";
 
 const PhotoParam = NumericIdParam.extend({ photoId: z.string().uuid() });
@@ -31,6 +36,7 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const vehicles = createVehiclesService(fastify);
   const photos = createVehiclePhotosService(fastify);
+  const galleryShare = createVehicleWhatsAppShareService(fastify);
 
   app.get(
     "/",
@@ -226,6 +232,54 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
         metadata: { vehicleId: request.params.id },
       });
       return { data: { message: t("Deleted", { lng: request.language }) } };
+    },
+  );
+
+  app.post(
+    "/:id/share/whatsapp",
+    {
+      config: whatsappSendRateLimit(),
+      schema: {
+        summary: "Share vehicle gallery photos to a WhatsApp direct recipient",
+        operationId: "shareVehicleGalleryWhatsApp",
+        tags: ["Vehicles"],
+        permissions: [PERMISSIONS.VEHICLES_READ, PERMISSIONS.WHATSAPP_SEND],
+        params: NumericIdParam,
+        headers: WhatsAppIdempotencyHeadersSchema,
+        body: VehicleWhatsAppShareBodySchema,
+        response: {
+          200: dataResponse(VehicleWhatsAppShareResponseSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const identity = requireAuth(request);
+      if (
+        !hasPermission(identity, PERMISSIONS.VEHICLES_READ) ||
+        !hasPermission(identity, PERMISSIONS.WHATSAPP_SEND)
+      ) {
+        throw AppError.forbidden();
+      }
+      const key = request.headers["idempotency-key"];
+      const data = await galleryShare.shareGallery(
+        request.params.id,
+        identity,
+        {
+          idempotencyKey: typeof key === "string" ? key : "",
+          conversationId: request.body.conversationId,
+          providerContactId: request.body.providerContactId,
+          photoIds: request.body.photoIds,
+        },
+        (partial) =>
+          request.setAudit({
+            action: partial.action,
+            entityType: partial.entityType,
+            entityId: partial.entityId,
+            metadata: partial.metadata,
+          }),
+      );
+      return { data };
     },
   );
 

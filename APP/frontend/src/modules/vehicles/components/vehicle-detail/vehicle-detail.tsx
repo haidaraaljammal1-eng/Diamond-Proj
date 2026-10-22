@@ -27,6 +27,8 @@ export interface VehicleDetailProps {
   onUploadPhoto: (file: File) => void;
   onReplacePhoto: (photoId: string, file: File) => void;
   onDeletePhoto: (photoId: string) => void;
+  canShareWhatsApp: boolean;
+  onShareWhatsApp: () => void;
   onSetPrice: () => void;
   onPrimaryAction: () => void;
   onSendToMaintenance: () => void;
@@ -64,6 +66,8 @@ export function VehicleDetail({
   onUploadPhoto,
   onReplacePhoto,
   onDeletePhoto,
+  canShareWhatsApp,
+  onShareWhatsApp,
   onSetPrice,
   onPrimaryAction,
   onSendToMaintenance,
@@ -152,10 +156,12 @@ export function VehicleDetail({
           vehicleName={vehicle.displayName}
           gallery={vehicle.gallery}
           canManage={canManage}
+          canShareWhatsApp={canShareWhatsApp}
           isPhotoActionPending={isPhotoActionPending}
           onUploadPhoto={onUploadPhoto}
           onReplacePhoto={onReplacePhoto}
           onDeletePhoto={onDeletePhoto}
+          onShareWhatsApp={onShareWhatsApp}
         />
 
         <header className={styles.identityHeader}>

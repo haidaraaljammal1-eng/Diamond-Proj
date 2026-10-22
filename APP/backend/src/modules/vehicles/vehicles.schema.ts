@@ -138,6 +138,33 @@ export const FleetVehicleTypeOptionSchema = z.object({
 });
 export type FleetVehicleTypeOption = z.infer<typeof FleetVehicleTypeOptionSchema>;
 
+export const VehicleWhatsAppShareBodySchema = z
+  .object({
+    conversationId: z.string().uuid().optional(),
+    providerContactId: z.string().trim().min(1).max(128).optional(),
+    photoIds: z.array(z.string().uuid()).max(4).optional(),
+  })
+  .refine(
+    (body) => {
+      const hasConversation = Boolean(body.conversationId);
+      const hasContact = Boolean(body.providerContactId);
+      return hasConversation !== hasContact;
+    },
+    { message: "Provide exactly one of conversationId or providerContactId" },
+  );
+
+export const VehicleWhatsAppSharePhotoResultSchema = z.object({
+  photoId: z.string().uuid(),
+  status: z.enum(["SENT", "FAILED", "UNCERTAIN", "SKIPPED"]),
+  messageId: z.string().uuid().optional(),
+  reason: z.string().optional(),
+});
+
+export const VehicleWhatsAppShareResponseSchema = z.object({
+  conversationId: z.string().uuid(),
+  results: z.array(VehicleWhatsAppSharePhotoResultSchema),
+});
+
 const Vin = z.string().trim().min(1).max(64);
 const ModelYear = z.number().int().min(1900).max(2100);
 const ExternalId = z.string().trim().min(1).max(100);

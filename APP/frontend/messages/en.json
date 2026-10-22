@@ -753,6 +753,27 @@
       "operationStatus": "Operational status",
       "serviceStatus": "At workshop — maintenance follow-up"
     },
+    "whatsappShare": {
+      "title": "Share vehicle photos",
+      "description": "Send this vehicle's gallery to a WhatsApp contact through the office channel.",
+      "searchPlaceholder": "Search name or number",
+      "search": "Search",
+      "clearSearch": "Clear",
+      "conversations": "Recent chats",
+      "contacts": "Synced contacts",
+      "loading": "Loading recipients…",
+      "noConversations": "No direct conversations match your search.",
+      "noContacts": "No synced contacts match your search.",
+      "selectRecipient": "Select a recipient to continue.",
+      "selectedRecipient": "Recipient: {name}",
+      "send": "Send photos",
+      "cancel": "Cancel",
+      "sendingProgress": "Sending {current} of {total}…",
+      "resultSummary": "Sent {sent}, failed {failed}, uncertain {uncertain}.",
+      "photoSent": "Photo {id} sent",
+      "photoFailed": "Photo {id} failed ({reason})",
+      "photoUncertain": "Photo {id} status uncertain — check WhatsApp inbox before retrying"
+    },
     "collectionMode": {
       "title": "Payment method",
       "description": "Choose how this contract will be collected.",

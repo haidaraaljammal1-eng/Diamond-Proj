@@ -753,6 +753,27 @@
       "operationStatus": "حالة التشغيل",
       "serviceStatus": "في الورشة — متابعة الصيانة"
     },
+    "whatsappShare": {
+      "title": "مشاركة صور السيارة",
+      "description": "أرسل صور معرض هذه السيارة إلى جهة اتصال واتساب عبر قناة المكتب.",
+      "searchPlaceholder": "ابحث بالاسم أو الرقم",
+      "search": "بحث",
+      "clearSearch": "مسح",
+      "conversations": "محادثات حديثة",
+      "contacts": "جهات متزامنة",
+      "loading": "جاري تحميل المستلمين…",
+      "noConversations": "لا توجد محادثات مباشرة مطابقة.",
+      "noContacts": "لا توجد جهات متزامنة مطابقة.",
+      "selectRecipient": "اختر مستلمًا للمتابعة.",
+      "selectedRecipient": "المستلم: {name}",
+      "send": "إرسال الصور",
+      "cancel": "إلغاء",
+      "sendingProgress": "جاري الإرسال {current} من {total}…",
+      "resultSummary": "تم الإرسال {sent}، فشل {failed}، غير مؤكد {uncertain}.",
+      "photoSent": "تم إرسال الصورة {id}",
+      "photoFailed": "فشل إرسال الصورة {id} ({reason})",
+      "photoUncertain": "حالة الصورة {id} غير مؤكدة — راجع واتساب قبل إعادة المحاولة"
+    },
     "collectionMode": {
       "title": "طريقة الدفع",
       "description": "اختر طريقة تحصيل قيمة هذا العقد.",

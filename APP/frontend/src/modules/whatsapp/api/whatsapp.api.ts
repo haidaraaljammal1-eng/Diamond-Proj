@@ -17,6 +17,7 @@ import type {
   WhatsAppTemplateDto,
   WhatsAppHistorySyncStatusDto,
   WhatsAppContactSyncStatusDto,
+  WhatsAppContactProfileListItemDto,
   WhatsAppGroupContextDto,
 } from "../types/whatsapp.types";
 import { WHATSAPP_MESSAGE_PAGE_SIZE } from "../types/whatsapp.types";
@@ -383,4 +384,18 @@ export async function getWhatsAppConnectionQr(): Promise<{ imageDataUrl: string 
     `${WHATSAPP_PATH}/connection/qr`,
   );
   return response.data;
+}
+
+/** `GET /whatsapp/contact-profiles` (`whatsapp.read`). */
+export async function listWhatsAppContactProfiles(
+  params: { page?: number; pageSize?: number; search?: string } = {},
+): Promise<{ data: WhatsAppContactProfileListItemDto[]; meta: WhatsAppPageMeta | null }> {
+  const search = new URLSearchParams();
+  search.set("page", String(params.page ?? 1));
+  search.set("pageSize", String(params.pageSize ?? 20));
+  if (params.search?.trim()) search.set("search", params.search.trim());
+  const response = await apiRequest<WhatsAppContactProfileListItemDto[]>(
+    `${WHATSAPP_PATH}/contact-profiles?${search.toString()}`,
+  );
+  return { data: response.data, meta: parseWhatsAppPageMeta(response.meta) };
 }

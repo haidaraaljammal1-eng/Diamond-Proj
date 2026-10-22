@@ -36,6 +36,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   reactivateVehicle: all(FN.vehicles.addDelete),
   uploadVehiclePhoto: all(FN.vehicles.addDelete),
   deleteVehiclePhoto: all(FN.vehicles.addDelete),
+  shareVehicleGalleryWhatsApp: all(FN.vehicles.viewPage, FN.whatsapp.full),
   updateVehicle: all(FN.vehicles.editPrices),
 
   // GPS
@@ -203,6 +204,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   getWhatsAppMessageMedia: all(FN.whatsapp.full),
   listWhatsAppTemplates: all(FN.whatsapp.full),
   listWhatsAppConversations: all(FN.whatsapp.full),
+  listWhatsAppContactProfiles: all(FN.whatsapp.full),
   getWhatsAppConversation: all(FN.whatsapp.full),
   getWhatsAppConversationAvatar: all(FN.whatsapp.full),
   getWhatsAppGroupContext: all(FN.whatsapp.full),

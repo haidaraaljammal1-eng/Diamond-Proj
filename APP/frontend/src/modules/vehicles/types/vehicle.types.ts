@@ -13,6 +13,20 @@ export interface VehicleImageDto {
   url: string;
 }
 
+export type VehicleWhatsAppSharePhotoStatus = "SENT" | "FAILED" | "UNCERTAIN" | "SKIPPED";
+
+export interface VehicleWhatsAppSharePhotoResultDto {
+  photoId: string;
+  status: VehicleWhatsAppSharePhotoStatus;
+  messageId?: string;
+  reason?: string;
+}
+
+export interface VehicleWhatsAppShareResultDto {
+  conversationId: string;
+  results: VehicleWhatsAppSharePhotoResultDto[];
+}
+
 export type VehicleCurrentRentalStatus = "paid" | "active" | "retout";
 
 export interface VehicleCurrentRentalDto {

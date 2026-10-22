@@ -15,20 +15,24 @@ export interface VehicleDetailGalleryProps {
   vehicleName: string;
   gallery: VehicleImageDto[];
   canManage: boolean;
+  canShareWhatsApp: boolean;
   isPhotoActionPending: boolean;
   onUploadPhoto: (file: File) => void;
   onReplacePhoto: (photoId: string, file: File) => void;
   onDeletePhoto: (photoId: string) => void;
+  onShareWhatsApp: () => void;
 }
 
 export function VehicleDetailGallery({
   vehicleName,
   gallery,
   canManage,
+  canShareWhatsApp,
   isPhotoActionPending,
   onUploadPhoto,
   onReplacePhoto,
   onDeletePhoto,
+  onShareWhatsApp,
 }: VehicleDetailGalleryProps) {
   const t = useTranslations("Vehicles");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -125,8 +129,9 @@ export function VehicleDetailGallery({
           type="button"
           variant="secondary"
           size="sm"
-          disabled
+          disabled={!canShareWhatsApp || photos.length === 0 || isPhotoActionPending}
           data-testid="vehicle-detail-whatsapp-share"
+          onClick={onShareWhatsApp}
         >
           <Icon name="mdi:whatsapp" size={18} />
           {t("detail.shareWhatsApp")}

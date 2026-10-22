@@ -4,6 +4,14 @@ export type WhatsAppContactSyncStatusDto = {
   lastSyncedAt: string | null;
 };
 
+export interface WhatsAppContactProfileListItemDto {
+  id: string;
+  providerContactId: string;
+  displayName: string | null;
+  hasProfilePicture: boolean;
+  conversationId: string | null;
+}
+
 export type WhatsAppHistorySyncStatusDto = {
   runId: string | null;
   connectionId: string | null;

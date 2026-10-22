@@ -10,6 +10,7 @@ import type {
   VehicleImageDto,
   VehicleOperationalStatus,
   VehiclePublicDto,
+  VehicleWhatsAppShareResultDto,
   VehiclesListQuery,
 } from "../types/vehicle.types";
 import { parsePageMeta, VEHICLES_PAGE_SIZE } from "./vehicles.api.types";
@@ -158,6 +159,23 @@ export async function updateVehicleOperationalStatus(
     method: "PUT",
     body: { operationalStatus },
   });
+  return response.data;
+}
+
+/** `POST /vehicles/:id/share/whatsapp` (`vehicles.read` + `whatsapp.send`). */
+export async function shareVehicleGalleryWhatsApp(
+  vehicleId: number,
+  idempotencyKey: string,
+  body: { conversationId?: string; providerContactId?: string; photoIds?: string[] },
+): Promise<VehicleWhatsAppShareResultDto> {
+  const response = await apiRequest<VehicleWhatsAppShareResultDto>(
+    `${VEHICLES_PATH}/${vehicleId}/share/whatsapp`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body,
+    },
+  );
   return response.data;
 }
 

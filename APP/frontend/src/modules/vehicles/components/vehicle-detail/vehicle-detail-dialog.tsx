@@ -15,7 +15,14 @@ import {
   CONTRACTS_RETURN_PERMISSION,
 } from "@/modules/contracts/contracts.permissions";
 import { MAINTENANCE_MANAGE_PERMISSION } from "@/modules/maintenance/maintenance.permissions";
+import { getWhatsAppConnection } from "@/modules/whatsapp/api/whatsapp.api";
+import { WHATSAPP_SEND_PERMISSION } from "@/modules/whatsapp/whatsapp.permissions";
+import {
+  isFunctionalRbacV2UiEnabled,
+  useDiamondPageAccess,
+} from "@/modules/functional-rbac";
 import { useVehicle } from "../../hooks/use-vehicle";
+import { VehicleWhatsAppShareDialog } from "../vehicle-whatsapp-share-dialog/vehicle-whatsapp-share-dialog";
 import { resolveVehiclesErrorMessage } from "../../utils/resolve-vehicles-error";
 import type { VehicleCardDto } from "../../types/vehicle.types";
 import { VehicleDetail } from "./vehicle-detail";
@@ -57,6 +64,11 @@ export function VehicleDetailDialog({
   const canCancelRental = hasPermission(CONTRACTS_MANAGE_PERMISSION);
   const canManageMaintenance = hasPermission(MAINTENANCE_MANAGE_PERMISSION);
   const canRenewContract = hasPermission(CONTRACTS_RENEW_PERMISSION);
+  const whatsappPageAllowed = useDiamondPageAccess("whatsapp");
+  const v2 = isFunctionalRbacV2UiEnabled();
+  const canSendWhatsApp = v2 ? whatsappPageAllowed : hasPermission(WHATSAPP_SEND_PERMISSION);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [whatsappShareReady, setWhatsappShareReady] = useState(false);
 
   const {
     detail,
@@ -76,6 +88,30 @@ export function VehicleDetailDialog({
   const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
   const [fleetOpsPending, setFleetOpsPending] = useState(false);
   const [fleetOpsError, setFleetOpsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!canSendWhatsApp || !isReady || !detail) {
+      setWhatsappShareReady(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const connection = await getWhatsAppConnection();
+        if (cancelled) return;
+        const ready =
+          connection.status === "LINKED" &&
+          (connection.providerSessionStatus === "AUTHENTICATED" ||
+            connection.providerSessionStatus == null);
+        setWhatsappShareReady(ready && connection.capabilities.supportsImage);
+      } catch {
+        if (!cancelled) setWhatsappShareReady(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [canSendWhatsApp, isReady, detail?.id]);
 
   useEffect(() => {
     if (!vehicle) {
@@ -206,6 +242,10 @@ export function VehicleDetailDialog({
   const open = vehicle != null;
   const rental = detail?.currentRental;
   const isDeleteDialog = confirmKind === "cancel-rental-request";
+  const canShareWhatsApp =
+    canSendWhatsApp &&
+    whatsappShareReady &&
+    (detail?.gallery.length ?? 0) > 0;
 
   return (
     <>
@@ -248,6 +288,8 @@ export function VehicleDetailDialog({
             onUploadPhoto={(file) => void handleUploadPhoto(file)}
             onReplacePhoto={(photoId, file) => void handleReplacePhoto(photoId, file)}
             onDeletePhoto={(photoId) => void handleDeletePhoto(photoId)}
+            canShareWhatsApp={canShareWhatsApp}
+            onShareWhatsApp={() => setShareDialogOpen(true)}
             onSetPrice={() => {
               onClose();
               onSetPrice(detail);
@@ -392,6 +434,16 @@ export function VehicleDetailDialog({
           </div>
         ) : null}
       </Dialog>
+
+      {detail ? (
+        <VehicleWhatsAppShareDialog
+          open={shareDialogOpen}
+          vehicleId={detail.id}
+          vehicleLabel={detail.displayName}
+          gallery={detail.gallery}
+          onClose={() => setShareDialogOpen(false)}
+        />
+      ) : null}
     </>
   );
 }
