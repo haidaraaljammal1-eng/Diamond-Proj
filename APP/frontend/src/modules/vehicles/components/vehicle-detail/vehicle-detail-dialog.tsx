@@ -80,12 +80,17 @@ export function VehicleDetailDialog({
     error,
     isPhotoActionPending,
     photoActionError,
+    isVideoActionPending,
+    videoActionError,
     loadVehicle,
     clearVehicle,
     uploadVehiclePhoto,
     replaceVehiclePhoto,
     deleteVehiclePhoto,
     clearPhotoActionError,
+    uploadVehicleVideo,
+    deleteVehicleVideo,
+    clearVideoActionError,
   } = useVehicle();
 
   const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
@@ -122,9 +127,10 @@ export function VehicleDetailDialog({
       return;
     }
     clearPhotoActionError();
+    clearVideoActionError();
     setFleetOpsError(null);
     void loadVehicle(vehicle.id);
-  }, [vehicle, loadVehicle, clearVehicle, clearPhotoActionError, fleetReloadToken]);
+  }, [vehicle, loadVehicle, clearVehicle, clearPhotoActionError, clearVideoActionError, fleetReloadToken]);
 
   /**
    * Fleet `currentRental.status === "active"` is the backend projection of an ACTIVE
@@ -171,6 +177,7 @@ export function VehicleDetailDialog({
   ]);
 
   const photoActionErrorMessage = resolveVehiclesErrorMessage(t, photoActionError);
+  const videoActionErrorMessage = resolveVehiclesErrorMessage(t, videoActionError);
   const pendingFollowUp = detail?.prePaymentFollowUps?.[0] ?? null;
 
   const handleUploadPhoto = useCallback(
@@ -206,6 +213,21 @@ export function VehicleDetailDialog({
     },
     [detail, deleteVehiclePhoto, onPhotoNotice, t],
   );
+
+  const handleUploadVideo = useCallback(
+    async (file: File) => {
+      if (!detail) return;
+      const ok = await uploadVehicleVideo(detail.id, file);
+      if (ok) onPhotoNotice?.(t("detail.videoUploadSuccess"));
+    },
+    [detail, uploadVehicleVideo, onPhotoNotice, t],
+  );
+
+  const handleDeleteVideo = useCallback(async () => {
+    if (!detail) return;
+    const ok = await deleteVehicleVideo(detail.id);
+    if (ok) onPhotoNotice?.(t("detail.videoDeleteSuccess"));
+  }, [detail, deleteVehicleVideo, onPhotoNotice, t]);
 
   const runReturnNow = useCallback(async () => {
     if (!detail?.currentRental?.contractId) return;
@@ -288,12 +310,16 @@ export function VehicleDetailDialog({
             canManageMaintenance={canManageMaintenance}
             canCancelRental={canCancelRental && pendingFollowUp != null}
             isPhotoActionPending={isPhotoActionPending}
+            isVideoActionPending={isVideoActionPending}
             isFleetOpsPending={fleetOpsPending}
             photoActionErrorMessage={photoActionErrorMessage}
+            videoActionErrorMessage={videoActionErrorMessage}
             fleetOpsErrorMessage={fleetOpsError}
             onUploadPhoto={(file) => void handleUploadPhoto(file)}
             onReplacePhoto={(photoId, file) => void handleReplacePhoto(photoId, file)}
             onDeletePhoto={(photoId) => void handleDeletePhoto(photoId)}
+            onUploadVideo={(file) => void handleUploadVideo(file)}
+            onDeleteVideo={() => void handleDeleteVideo()}
             canShareWhatsApp={canShareWhatsApp}
             onShareWhatsApp={() => setShareDialogOpen(true)}
             onSetPrice={() => {

@@ -118,6 +118,7 @@ model Vehicle {
 
   experiences               PurchaseExperience[]
   photos                    VehiclePhoto[]
+  video                     VehicleVideo?
   contracts                 Contract[]
   maintenanceOrders         MaintenanceOrder[]
   manualExpenses            ManualExpense[]
@@ -152,6 +153,20 @@ model VehiclePhoto {
   @@unique([vehicleId, attachmentId])
   @@index([vehicleId, sortOrder])
   @@map("vehicle_photos")
+}
+
+/// Optional showcase video (at most one per vehicle).
+model VehicleVideo {
+  id           String     @id @default(uuid())
+  vehicleId    Int        @unique
+  vehicle      Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  attachmentId String     @unique
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  durationSec  Float
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("vehicle_videos")
 }
 
 // The actual customer experience event (purchase + delivery). Customer and

@@ -65,6 +65,28 @@ export function photoStreamPath(vehicleId: number, photoId: string): string {
   return `/vehicles/${vehicleId}/photos/${photoId}/stream`;
 }
 
+type VideoRow = {
+  id: string;
+  attachmentId: string;
+  durationSec: number;
+  attachment: { mimeType: string; size: number };
+};
+
+export function vehicleVideoStreamPath(vehicleId: number): string {
+  return `/vehicles/${vehicleId}/video/stream`;
+}
+
+export function toVehicleVideo(vehicleId: number, row: VideoRow) {
+  return {
+    id: row.id,
+    attachmentId: row.attachmentId,
+    durationSec: row.durationSec,
+    mimeType: row.attachment.mimeType,
+    size: row.attachment.size,
+    streamPath: vehicleVideoStreamPath(vehicleId),
+  };
+}
+
 export function toVehicleImage(vehicleId: number, row: PhotoRow): VehicleImage {
   return {
     id: row.id,

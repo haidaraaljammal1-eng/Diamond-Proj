@@ -56,6 +56,22 @@ export const VehicleImageSchema = z.object({
 });
 export type VehicleImage = z.infer<typeof VehicleImageSchema>;
 
+export const VehicleVideoSchema = z.object({
+  id: z.string().uuid(),
+  attachmentId: z.string().uuid(),
+  durationSec: z.number().positive(),
+  mimeType: z.string(),
+  size: z.number().int().positive(),
+  /** Authenticated stream path (`vehicles.read`); mint play access for browser playback. */
+  streamPath: z.string(),
+});
+export type VehicleVideo = z.infer<typeof VehicleVideoSchema>;
+
+export const VehicleVideoPlayAccessSchema = z.object({
+  streamUrl: z.string(),
+  expiresAt: z.date(),
+});
+
 /**
  * Current blocking rental context from Contracts (PAID / ACTIVE / RETOUT).
  * PAID means reserved and ready for Car-Out while operationalStatus stays AVAILABLE.
@@ -112,6 +128,7 @@ export type VehicleCard = z.infer<typeof VehicleCardSchema>;
 
 export const VehicleDetailSchema = VehicleCardSchema.extend({
   gallery: z.array(VehicleImageSchema),
+  video: VehicleVideoSchema.nullable(),
   activeMaintenanceOrder: VehicleActiveMaintenanceOrderSchema,
 });
 export type VehicleDetail = z.infer<typeof VehicleDetailSchema>;

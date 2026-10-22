@@ -21,12 +21,16 @@ export interface VehicleDetailProps {
   canManageMaintenance: boolean;
   canCancelRental: boolean;
   isPhotoActionPending: boolean;
+  isVideoActionPending: boolean;
   isFleetOpsPending: boolean;
   photoActionErrorMessage: string | null;
+  videoActionErrorMessage: string | null;
   fleetOpsErrorMessage: string | null;
   onUploadPhoto: (file: File) => void;
   onReplacePhoto: (photoId: string, file: File) => void;
   onDeletePhoto: (photoId: string) => void;
+  onUploadVideo: (file: File) => void;
+  onDeleteVideo: () => void;
   canShareWhatsApp: boolean;
   onShareWhatsApp: () => void;
   onSetPrice: () => void;
@@ -60,12 +64,16 @@ export function VehicleDetail({
   canManageMaintenance,
   canCancelRental,
   isPhotoActionPending,
+  isVideoActionPending,
   isFleetOpsPending,
   photoActionErrorMessage,
+  videoActionErrorMessage,
   fleetOpsErrorMessage,
   onUploadPhoto,
   onReplacePhoto,
   onDeletePhoto,
+  onUploadVideo,
+  onDeleteVideo,
   canShareWhatsApp,
   onShareWhatsApp,
   onSetPrice,
@@ -153,14 +161,19 @@ export function VehicleDetail({
         data-testid="vehicle-detail-main-scroll"
       >
         <VehicleDetailGallery
+          vehicleId={vehicle.id}
           vehicleName={vehicle.displayName}
           gallery={vehicle.gallery}
+          video={vehicle.video}
           canManage={canManage}
           canShareWhatsApp={canShareWhatsApp}
           isPhotoActionPending={isPhotoActionPending}
+          isVideoActionPending={isVideoActionPending}
           onUploadPhoto={onUploadPhoto}
           onReplacePhoto={onReplacePhoto}
           onDeletePhoto={onDeletePhoto}
+          onUploadVideo={onUploadVideo}
+          onDeleteVideo={onDeleteVideo}
           onShareWhatsApp={onShareWhatsApp}
         />
 
@@ -197,6 +210,9 @@ export function VehicleDetail({
       <div className={styles.scrollBody}>
         {photoActionErrorMessage ? (
           <p className={styles.photoError} role="alert">{photoActionErrorMessage}</p>
+        ) : null}
+        {videoActionErrorMessage ? (
+          <p className={styles.photoError} role="alert">{videoActionErrorMessage}</p>
         ) : null}
         {fleetOpsErrorMessage ? (
           <p className={styles.photoError} role="alert">{fleetOpsErrorMessage}</p>

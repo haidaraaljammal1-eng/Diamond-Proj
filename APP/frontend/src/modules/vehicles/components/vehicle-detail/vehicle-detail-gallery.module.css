@@ -22,11 +22,26 @@
   box-sizing: border-box;
 }
 
-.grid {
+.galleryColumns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.photoColumn {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  width: 100%;
+  min-width: 0;
+}
+
+.videoColumn {
+  min-width: 0;
+}
+
+.grid {
+  display: contents;
 }
 
 .slot {
@@ -134,11 +149,15 @@
 }
 
 @media (min-width: 640px) {
-  .grid {
-    /* Preserve prior ~216px column width; spread pairs across full dialog width */
-    grid-template-columns: repeat(2, 216px);
-    justify-content: space-between;
+  .galleryColumns {
+    grid-template-columns: 216px minmax(120px, 1fr) 216px;
+    align-items: stretch;
     column-gap: 12px;
+  }
+
+  .photoColumn {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 

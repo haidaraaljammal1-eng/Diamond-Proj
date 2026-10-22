@@ -41,7 +41,13 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
       pageModel: "parent_child",
       parentKey: null,
       labels: { ar: "عرض المركبات", en: "View Vehicles" },
-      operationalActions: ["listVehicles", "getVehicle", "streamVehiclePhoto"],
+      operationalActions: [
+        "listVehicles",
+        "getVehicle",
+        "streamVehiclePhoto",
+        "streamVehicleVideo",
+        "accessVehicleVideoPlayback",
+      ],
       technicalMapping: {
         existingKeys: [P.VEHICLES_READ],
         readiness: "ready",
@@ -60,6 +66,8 @@ export const FUNCTIONAL_CAPABILITY_REGISTRY: readonly FunctionalCapabilityDefini
         "reactivateVehicle",
         "uploadVehiclePhoto",
         "deleteVehiclePhoto",
+        "uploadVehicleVideo",
+        "deleteVehicleVideo",
       ],
       technicalMapping: {
         existingKeys: [P.VEHICLES_MANAGE],

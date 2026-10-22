@@ -8,6 +8,8 @@ import type {
   VehicleCardDto,
   VehicleDetailDto,
   VehicleImageDto,
+  VehicleVideoDto,
+  VehicleVideoPlayAccessDto,
   VehicleOperationalStatus,
   VehiclePublicDto,
   VehicleWhatsAppShareResultDto,
@@ -123,6 +125,65 @@ export async function uploadVehiclePhoto(
   }
 
   return (payload as ApiResponse<VehicleImageDto>).data;
+}
+
+/** `GET /vehicles/:id/video/play-access` (Backend permission: `vehicles.read`). */
+export async function accessVehicleVideoPlayback(
+  vehicleId: number,
+): Promise<VehicleVideoPlayAccessDto> {
+  const response = await apiRequest<VehicleVideoPlayAccessDto>(
+    `${VEHICLES_PATH}/${vehicleId}/video/play-access`,
+  );
+  return response.data;
+}
+
+/** `PUT /vehicles/:id/video` (Backend permission: `vehicles.manage`). */
+export async function uploadVehicleVideo(
+  vehicleId: number,
+  file: File,
+): Promise<VehicleVideoDto> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const accessToken = await getAccessToken();
+  const response = await fetch(`${env.apiUrl}${VEHICLES_PATH}/${vehicleId}/video`, {
+    method: "PUT",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    body: formData,
+  });
+
+  const payload = await readJson(response);
+  if (!response.ok) {
+    if (isApiErrorResponse(payload))
+      throw new ApiRequestError(payload.error, response.status);
+    throw new ApiRequestError(
+      {
+        code: `HTTP_${response.status}`,
+        message: response.statusText || "Request failed",
+      },
+      response.status,
+    );
+  }
+
+  if (typeof payload !== "object" || payload === null || !("data" in payload)) {
+    throw new ApiRequestError(
+      { code: "INVALID_RESPONSE", message: "Invalid API response" },
+      response.status,
+    );
+  }
+
+  return (payload as ApiResponse<VehicleVideoDto>).data;
+}
+
+/** `DELETE /vehicles/:id/video` (Backend permission: `vehicles.manage`). */
+export async function deleteVehicleVideo(vehicleId: number): Promise<void> {
+  await apiRequest(`${VEHICLES_PATH}/${vehicleId}/video`, {
+    method: "DELETE",
+  });
 }
 
 /** `DELETE /vehicles/:id/photos/:photoId` (Backend permission: `vehicles.manage`). */

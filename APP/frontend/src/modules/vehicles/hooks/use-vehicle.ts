@@ -16,6 +16,8 @@ export interface UseVehicleResult {
   error: ApiRequestError | null;
   isPhotoActionPending: boolean;
   photoActionError: ApiRequestError | null;
+  isVideoActionPending: boolean;
+  videoActionError: ApiRequestError | null;
   loadVehicle: (id: number) => Promise<void>;
   clearVehicle: () => void;
   uploadVehiclePhoto: (vehicleId: number, file: File) => Promise<UploadVehiclePhotoResult>;
@@ -26,6 +28,9 @@ export interface UseVehicleResult {
   ) => Promise<ReplaceVehiclePhotoResult>;
   deleteVehiclePhoto: (vehicleId: number, photoId: string) => Promise<boolean>;
   clearPhotoActionError: () => void;
+  uploadVehicleVideo: (vehicleId: number, file: File) => Promise<boolean>;
+  deleteVehicleVideo: (vehicleId: number) => Promise<boolean>;
+  clearVideoActionError: () => void;
 }
 
 export function useVehicle(): UseVehicleResult {
@@ -34,6 +39,8 @@ export function useVehicle(): UseVehicleResult {
   const detailError = useVehiclesStore((state) => state.detailError);
   const isPhotoActionPending = useVehiclesStore((state) => state.isPhotoActionPending);
   const photoActionError = useVehiclesStore((state) => state.photoActionError);
+  const isVideoActionPending = useVehiclesStore((state) => state.isVideoActionPending);
+  const videoActionError = useVehiclesStore((state) => state.videoActionError);
   const fetchVehicle = useVehiclesStore((state) => state.fetchVehicle);
   const clearDetail = useVehiclesStore((state) => state.clearDetail);
   const uploadVehiclePhotoForVehicle = useVehiclesStore(
@@ -46,6 +53,13 @@ export function useVehicle(): UseVehicleResult {
     (state) => state.deleteVehiclePhotoForVehicle,
   );
   const clearPhotoActionError = useVehiclesStore((state) => state.clearPhotoActionError);
+  const uploadVehicleVideoForVehicle = useVehiclesStore(
+    (state) => state.uploadVehicleVideoForVehicle,
+  );
+  const deleteVehicleVideoForVehicle = useVehiclesStore(
+    (state) => state.deleteVehicleVideoForVehicle,
+  );
+  const clearVideoActionError = useVehiclesStore((state) => state.clearVideoActionError);
 
   const loadVehicle = useCallback(
     (id: number) => fetchVehicle(id),
@@ -68,6 +82,16 @@ export function useVehicle(): UseVehicleResult {
     [deleteVehiclePhotoForVehicle],
   );
 
+  const uploadVehicleVideo = useCallback(
+    (vehicleId: number, file: File) => uploadVehicleVideoForVehicle(vehicleId, file),
+    [uploadVehicleVideoForVehicle],
+  );
+
+  const deleteVehicleVideo = useCallback(
+    (vehicleId: number) => deleteVehicleVideoForVehicle(vehicleId),
+    [deleteVehicleVideoForVehicle],
+  );
+
   return useMemo(
     () => ({
       detail,
@@ -76,12 +100,17 @@ export function useVehicle(): UseVehicleResult {
       error: detailStatus === "error" ? detailError : null,
       isPhotoActionPending,
       photoActionError,
+      isVideoActionPending,
+      videoActionError,
       loadVehicle,
       clearVehicle: clearDetail,
       uploadVehiclePhoto,
       replaceVehiclePhoto,
       deleteVehiclePhoto,
       clearPhotoActionError,
+      uploadVehicleVideo,
+      deleteVehicleVideo,
+      clearVideoActionError,
     }),
     [
       detail,
@@ -89,12 +118,17 @@ export function useVehicle(): UseVehicleResult {
       detailError,
       isPhotoActionPending,
       photoActionError,
+      isVideoActionPending,
+      videoActionError,
       loadVehicle,
       clearDetail,
       uploadVehiclePhoto,
       replaceVehiclePhoto,
       deleteVehiclePhoto,
       clearPhotoActionError,
+      uploadVehicleVideo,
+      deleteVehicleVideo,
+      clearVideoActionError,
     ],
   );
 }

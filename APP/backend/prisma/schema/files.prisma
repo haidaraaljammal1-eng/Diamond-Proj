@@ -18,6 +18,7 @@ model Attachment {
   createdAt    DateTime @default(now())
 
   vehiclePhotos              VehiclePhoto[]
+  vehicleVideos              VehicleVideo[]
   customerDocuments          CustomerDocument[]
   contractCarOutPhotos       ContractCarOutPhoto[]
   contractCarOutDraftPhotos  ContractCarOutDraftPhoto[]  @relation("CarOutDraftPhotoAttachment")

@@ -6,32 +6,43 @@ import { Button } from "@/shared/components/ui/button";
 import { Icon } from "@/shared/components/ui/icon";
 import { VehiclePhotoButton } from "../../forms/add-vehicle/vehicle-photo-button";
 import { VEHICLE_GALLERY_MAX_PHOTOS } from "../../forms/add-vehicle/vehicle-photo.constants";
-import type { VehicleImageDto } from "../../types/vehicle.types";
+import type { VehicleImageDto, VehicleVideoDto } from "../../types/vehicle.types";
 import { VehicleImage } from "../vehicle-image/vehicle-image";
 import { VehiclePhotoPreviewDialog } from "./vehicle-photo-preview-dialog";
+import { VehicleDetailVideoPanel } from "./vehicle-detail-video-panel";
 import styles from "./vehicle-detail-gallery.module.css";
 
 export interface VehicleDetailGalleryProps {
+  vehicleId: number;
   vehicleName: string;
   gallery: VehicleImageDto[];
+  video: VehicleVideoDto | null;
   canManage: boolean;
   canShareWhatsApp: boolean;
   isPhotoActionPending: boolean;
+  isVideoActionPending: boolean;
   onUploadPhoto: (file: File) => void;
   onReplacePhoto: (photoId: string, file: File) => void;
   onDeletePhoto: (photoId: string) => void;
+  onUploadVideo: (file: File) => void;
+  onDeleteVideo: () => void;
   onShareWhatsApp: () => void;
 }
 
 export function VehicleDetailGallery({
+  vehicleId,
   vehicleName,
   gallery,
+  video,
   canManage,
   canShareWhatsApp,
   isPhotoActionPending,
+  isVideoActionPending,
   onUploadPhoto,
   onReplacePhoto,
   onDeletePhoto,
+  onUploadVideo,
+  onDeleteVideo,
   onShareWhatsApp,
 }: VehicleDetailGalleryProps) {
   const t = useTranslations("Vehicles");
@@ -48,6 +59,74 @@ export function VehicleDetailGallery({
     return filled;
   }, [photos]);
 
+  const leftSlots = [slots[0], slots[2]];
+  const rightSlots = [slots[1], slots[3]];
+
+  const renderSlot = (photo: VehicleImageDto | null, index: number) => (
+    <article
+      key={photo?.id ?? `slot-${index}`}
+      className={styles.slot}
+      data-testid={`vehicle-detail-gallery-slot-${index}`}
+    >
+      {photo ? (
+        <>
+          <button
+            type="button"
+            className={styles.previewButton}
+            onClick={() => setPreviewUrl(photo.url)}
+            aria-label={t("detail.galleryItem", { name: vehicleName })}
+          >
+            <VehicleImage path={photo.url} alt={vehicleName} className={styles.previewImage} />
+          </button>
+          {canManage ? (
+            <div className={styles.slotActions}>
+              <VehiclePhotoButton
+                label={t("detail.galleryReplacePhoto")}
+                ariaLabel={t("detail.galleryReplacePhoto")}
+                variant="secondary"
+                size="sm"
+                disabled={isPhotoActionPending}
+                loading={isPhotoActionPending}
+                iconName="mdi:image-edit-outline"
+                onFileSelected={(file) => onReplacePhoto(photo.id, file)}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isPhotoActionPending}
+                aria-label={t("detail.galleryRemovePhoto")}
+                onClick={() => onDeletePhoto(photo.id)}
+              >
+                <Icon name="mdi:trash-can-outline" size={16} />
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className={styles.emptySlot}>
+          <div className={styles.emptyVisual} aria-hidden="true">
+            <Icon name="mdi:image-outline" size={22} />
+          </div>
+          {canManage ? (
+            <VehiclePhotoButton
+              label={t("detail.galleryAddPhoto")}
+              ariaLabel={t("detail.galleryAddPhoto")}
+              variant="secondaryStrong"
+              size="sm"
+              disabled={isPhotoActionPending || photos.length >= VEHICLE_GALLERY_MAX_PHOTOS}
+              loading={isPhotoActionPending}
+              iconName="mdi:image-plus"
+              onFileSelected={onUploadPhoto}
+            />
+          ) : (
+            <span className={styles.emptyLabel}>{t("detail.noPhoto")}</span>
+          )}
+        </div>
+      )}
+    </article>
+  );
+
   return (
     <section className={styles.section} aria-labelledby="vehicle-detail-gallery-title">
       <div className={styles.sectionHead}>
@@ -57,71 +136,23 @@ export function VehicleDetailGallery({
       </div>
 
       <div className={styles.galleryLayout}>
-      <div className={styles.grid} data-testid="vehicle-detail-gallery">
-        {slots.map((photo, index) => (
-          <article
-            key={photo?.id ?? `slot-${index}`}
-            className={styles.slot}
-            data-testid={`vehicle-detail-gallery-slot-${index}`}
-          >
-            {photo ? (
-              <>
-                <button
-                  type="button"
-                  className={styles.previewButton}
-                  onClick={() => setPreviewUrl(photo.url)}
-                  aria-label={t("detail.galleryItem", { name: vehicleName })}
-                >
-                  <VehicleImage path={photo.url} alt={vehicleName} className={styles.previewImage} />
-                </button>
-                {canManage ? (
-                  <div className={styles.slotActions}>
-                    <VehiclePhotoButton
-                      label={t("detail.galleryReplacePhoto")}
-                      ariaLabel={t("detail.galleryReplacePhoto")}
-                      variant="secondary"
-                      size="sm"
-                      disabled={isPhotoActionPending}
-                      loading={isPhotoActionPending}
-                      iconName="mdi:image-edit-outline"
-                      onFileSelected={(file) => onReplacePhoto(photo.id, file)}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={isPhotoActionPending}
-                      aria-label={t("detail.galleryRemovePhoto")}
-                      onClick={() => onDeletePhoto(photo.id)}
-                    >
-                      <Icon name="mdi:trash-can-outline" size={16} />
-                    </Button>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className={styles.emptySlot}>
-                <div className={styles.emptyVisual} aria-hidden="true">
-                  <Icon name="mdi:image-outline" size={22} />
-                </div>
-                {canManage ? (
-                  <VehiclePhotoButton
-                    label={t("detail.galleryAddPhoto")}
-                    ariaLabel={t("detail.galleryAddPhoto")}
-                    variant="secondaryStrong"
-                    size="sm"
-                    disabled={isPhotoActionPending || photos.length >= VEHICLE_GALLERY_MAX_PHOTOS}
-                    loading={isPhotoActionPending}
-                    iconName="mdi:image-plus"
-                    onFileSelected={onUploadPhoto}
-                  />
-                ) : (
-                  <span className={styles.emptyLabel}>{t("detail.noPhoto")}</span>
-                )}
-              </div>
-            )}
-          </article>
-        ))}
+      <div className={styles.galleryColumns} data-testid="vehicle-detail-gallery">
+        <div className={styles.photoColumn}>
+          {leftSlots.map((photo, columnIndex) => renderSlot(photo, columnIndex === 0 ? 0 : 2))}
+        </div>
+        <div className={styles.videoColumn}>
+          <VehicleDetailVideoPanel
+            vehicleId={vehicleId}
+            video={video}
+            canManage={canManage}
+            isActionPending={isVideoActionPending}
+            onUploadVideo={onUploadVideo}
+            onDeleteVideo={onDeleteVideo}
+          />
+        </div>
+        <div className={styles.photoColumn}>
+          {rightSlots.map((photo, columnIndex) => renderSlot(photo, columnIndex === 0 ? 1 : 3))}
+        </div>
       </div>
 
       <div className={styles.whatsAppRow}>

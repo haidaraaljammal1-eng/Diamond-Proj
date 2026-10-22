@@ -24,6 +24,7 @@ import {
   normalizeFleetTypeKey,
   resolvePrimaryImage,
   toVehicleImage,
+  toVehicleVideo,
   vehicleDisplayName,
 } from "src/modules/vehicles/vehicles.mapper";
 import { loadCurrentRentalsByVehicleIds } from "src/modules/contracts/current-rental";
@@ -168,11 +169,13 @@ function toVehicleDetail(
   currentRental: VehicleCard["currentRental"],
   prePaymentFollowUps: VehicleCard["prePaymentFollowUps"],
   activeMaintenanceOrder: VehicleDetail["activeMaintenanceOrder"],
+  video: VehicleDetail["video"],
 ): VehicleDetail {
   const card = toVehicleCard(row, currentRental, prePaymentFollowUps);
   return {
     ...card,
     gallery: row.photos.map((p) => toVehicleImage(row.id, p)),
+    video,
     activeMaintenanceOrder,
   };
 }
@@ -391,19 +394,25 @@ export function createVehiclesService(fastify: FastifyInstance) {
 
   async function get(id: number): Promise<VehicleDetail> {
     const row = await loadOrThrow(id);
-    const [rentals, followUps, activeMaintenanceOrder] = await Promise.all([
+    const [rentals, followUps, activeMaintenanceOrder, videoRow] = await Promise.all([
       loadCurrentRentalsByVehicleIds(prisma, [id], {
         onDuplicate: (info) =>
           fastify.log.error(info, "multiple blocking contracts for vehicle"),
       }),
       loadPrePaymentFollowUpsByVehicleIds(prisma, [id]),
       loadActiveMaintenanceOrderForVehicle(id),
+      prisma.vehicleVideo.findUnique({
+        where: { vehicleId: id },
+        include: { attachment: { select: { mimeType: true, size: true } } },
+      }),
     ]);
+    const video = videoRow ? toVehicleVideo(id, videoRow) : null;
     return toVehicleDetail(
       row,
       rentals.get(id) ?? null,
       followUps.get(id) ?? [],
       activeMaintenanceOrder,
+      video,
     );
   }
 

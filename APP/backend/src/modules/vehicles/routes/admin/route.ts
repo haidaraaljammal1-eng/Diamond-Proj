@@ -2,7 +2,10 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { createVehiclesService } from "src/modules/vehicles/vehicles.service";
+import multipart from "@fastify/multipart";
 import { createVehiclePhotosService } from "src/modules/vehicles/vehicle-photos.service";
+import { createVehicleVideoService } from "src/modules/vehicles/vehicle-video.service";
+import { VEHICLE_VIDEO_MAX_BYTES } from "src/modules/vehicles/vehicle-video.constants";
 import {
   CreateVehicleSchema,
   FleetVehicleTypeOptionSchema,
@@ -11,6 +14,8 @@ import {
   VehicleCardSchema,
   VehicleDetailSchema,
   VehicleImageSchema,
+  VehicleVideoPlayAccessSchema,
+  VehicleVideoSchema,
   VehiclePublicSchema,
   VehicleWhatsAppShareBodySchema,
   VehicleWhatsAppShareResponseSchema,
@@ -36,6 +41,7 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const vehicles = createVehiclesService(fastify);
   const photos = createVehiclePhotosService(fastify);
+  const video = createVehicleVideoService(fastify);
   const galleryShare = createVehicleWhatsAppShareService(fastify);
 
   app.get(
@@ -311,6 +317,125 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
         `inline; filename="${encodeURIComponent(photo.attachmentId)}"`,
       );
       return reply.send(stream);
+    },
+  );
+
+  app.get(
+    "/:id/video/play-access",
+    {
+      schema: {
+        summary: "Mint a short-lived vehicle video playback URL",
+        operationId: "accessVehicleVideoPlayback",
+        tags: ["Vehicles"],
+        permissions: [PERMISSIONS.VEHICLES_READ],
+        params: NumericIdParam,
+        response: {
+          200: dataResponse(VehicleVideoPlayAccessSchema),
+          ...commonErrorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const data = await video.mintPlayAccess(request.params.id, requireAuth(request));
+      return { data };
+    },
+  );
+
+  app.get(
+    "/:id/video/stream",
+    {
+      schema: {
+        summary: "Stream a vehicle video (Range-aware)",
+        operationId: "streamVehicleVideo",
+        tags: ["Vehicles"],
+        permissions: [PERMISSIONS.VEHICLES_READ],
+        params: NumericIdParam,
+      },
+    },
+    async (request, reply) => {
+      const rangeHeader = request.headers.range;
+      const opened = await video.openStreamWithAuth(
+        request.params.id,
+        typeof rangeHeader === "string" ? rangeHeader : undefined,
+        requireAuth(request),
+      );
+      if (opened.kind === "invalid_range") {
+        reply.header("Content-Range", `bytes */${opened.fileSize}`);
+        return reply.status(416).send();
+      }
+      request.setAudit({
+        action: "vehicles.video.accessed",
+        entityType: "vehicle_video",
+        entityId: opened.meta.id,
+        metadata: { vehicleId: request.params.id },
+      });
+      return video.sendStreamReply(reply, opened);
+    },
+  );
+
+  await app.register(async (videoUploadScope) => {
+    const videoUploadApp = videoUploadScope.withTypeProvider<ZodTypeProvider>();
+    await videoUploadScope.register(multipart, {
+      limits: {
+        fileSize: VEHICLE_VIDEO_MAX_BYTES,
+        files: 1,
+        fields: 10,
+      },
+    });
+
+    videoUploadApp.put(
+      "/:id/video",
+      {
+        schema: {
+          summary: "Upload or replace the vehicle showcase video",
+          operationId: "uploadVehicleVideo",
+          tags: ["Vehicles"],
+          permissions: [PERMISSIONS.VEHICLES_MANAGE],
+          consumes: ["multipart/form-data"],
+          params: NumericIdParam,
+          response: { 200: dataResponse(VehicleVideoSchema), ...commonErrorResponses },
+        },
+      },
+      async (request) => {
+        const file = await request.file();
+        if (!file) throw AppError.validation("Validation failed");
+        const { video: saved, previousAttachment } = await video.upload(
+          request.params.id,
+          file,
+          requireAuth(request).id,
+        );
+        await video.finalizeReplacement(request.params.id, previousAttachment);
+        request.setAudit({
+          action: "vehicles.video.upload",
+          entityType: "vehicle_video",
+          entityId: saved.id,
+          metadata: { vehicleId: request.params.id },
+        });
+        return { data: saved };
+      },
+    );
+  });
+
+  app.delete(
+    "/:id/video",
+    {
+      schema: {
+        summary: "Delete the vehicle showcase video",
+        operationId: "deleteVehicleVideo",
+        tags: ["Vehicles"],
+        permissions: [PERMISSIONS.VEHICLES_MANAGE],
+        params: NumericIdParam,
+        response: { 200: MessageResponseSchema, ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      await video.remove(request.params.id);
+      request.setAudit({
+        action: "vehicles.video.delete",
+        entityType: "vehicle_video",
+        metadata: { vehicleId: request.params.id },
+      });
+      return { data: { message: t("Deleted", { lng: request.language }) } };
     },
   );
 }

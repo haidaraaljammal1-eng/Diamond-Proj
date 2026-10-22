@@ -13,6 +13,20 @@ export interface VehicleImageDto {
   url: string;
 }
 
+export interface VehicleVideoDto {
+  id: string;
+  attachmentId: string;
+  durationSec: number;
+  mimeType: string;
+  size: number;
+  streamPath: string;
+}
+
+export interface VehicleVideoPlayAccessDto {
+  streamUrl: string;
+  expiresAt: string;
+}
+
 export type VehicleWhatsAppSharePhotoStatus = "SENT" | "FAILED" | "UNCERTAIN" | "SKIPPED";
 
 export interface VehicleWhatsAppSharePhotoResultDto {
@@ -95,6 +109,7 @@ export interface VehicleCardDto {
 
 export interface VehicleDetailDto extends VehicleCardDto {
   gallery: VehicleImageDto[];
+  video: VehicleVideoDto | null;
   activeMaintenanceOrder: VehicleActiveMaintenanceOrderDto | null;
 }
 

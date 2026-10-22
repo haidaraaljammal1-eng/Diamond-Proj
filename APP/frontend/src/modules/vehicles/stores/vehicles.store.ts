@@ -9,10 +9,12 @@ import {
   createVehicle as createVehicleRequest,
   deactivateVehicle as deactivateVehicleRequest,
   deleteVehiclePhoto as deleteVehiclePhotoRequest,
+  deleteVehicleVideo as deleteVehicleVideoRequest,
   getVehicle,
   getVehicles,
   updateVehicleRates as updateVehicleRatesRequest,
   uploadVehiclePhoto,
+  uploadVehicleVideo,
 } from "../api/vehicles.api";
 import type { PageMeta } from "../api/vehicles.api.types";
 import { VEHICLES_PAGE_SIZE } from "../api/vehicles.api.types";
@@ -65,6 +67,8 @@ interface VehiclesState {
   deactivateError: ApiRequestError | null;
   isPhotoActionPending: boolean;
   photoActionError: ApiRequestError | null;
+  isVideoActionPending: boolean;
+  videoActionError: ApiRequestError | null;
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   setQuery: (partial: Partial<VehiclesQuery>) => void;
@@ -94,6 +98,9 @@ interface VehiclesState {
   ) => Promise<ReplaceVehiclePhotoResult>;
   deleteVehiclePhotoForVehicle: (vehicleId: number, photoId: string) => Promise<boolean>;
   clearPhotoActionError: () => void;
+  uploadVehicleVideoForVehicle: (vehicleId: number, file: File) => Promise<boolean>;
+  deleteVehicleVideoForVehicle: (vehicleId: number) => Promise<boolean>;
+  clearVideoActionError: () => void;
 }
 
 let listInFlight: Promise<void> | null = null;
@@ -184,6 +191,8 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
     deactivateError: null,
     isPhotoActionPending: false,
     photoActionError: null,
+    isVideoActionPending: false,
+    videoActionError: null,
     load() {
       const status = get().status;
       if (status === "ready" || status === "loading") {
@@ -376,6 +385,41 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => {
         set({
           isPhotoActionPending: false,
           photoActionError: normalizeApiError(error),
+        });
+        return false;
+      }
+    },
+    clearVideoActionError() {
+      set({ videoActionError: null });
+    },
+    async uploadVehicleVideoForVehicle(vehicleId, file) {
+      set({ isVideoActionPending: true, videoActionError: null });
+      try {
+        await uploadVehicleVideo(vehicleId, file);
+        await get().fetchVehicle(vehicleId);
+        await refreshList();
+        set({ isVideoActionPending: false });
+        return true;
+      } catch (error) {
+        set({
+          isVideoActionPending: false,
+          videoActionError: normalizeApiError(error),
+        });
+        return false;
+      }
+    },
+    async deleteVehicleVideoForVehicle(vehicleId) {
+      set({ isVideoActionPending: true, videoActionError: null });
+      try {
+        await deleteVehicleVideoRequest(vehicleId);
+        await get().fetchVehicle(vehicleId);
+        await refreshList();
+        set({ isVideoActionPending: false });
+        return true;
+      } catch (error) {
+        set({
+          isVideoActionPending: false,
+          videoActionError: normalizeApiError(error),
         });
         return false;
       }

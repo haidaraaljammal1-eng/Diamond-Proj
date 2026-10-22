@@ -17,6 +17,8 @@ export interface VehiclePhotoButtonProps {
   iconName?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
+  accept?: string;
+  validateFile?: (file: File) => boolean;
   onFileSelected: (file: File) => void;
 }
 
@@ -29,6 +31,8 @@ export function VehiclePhotoButton({
   iconName = "mdi:image-plus",
   variant = "secondary",
   size = "md",
+  accept = VEHICLE_PHOTO_ACCEPT,
+  validateFile = isAcceptedVehiclePhotoFile,
   onFileSelected,
 }: VehiclePhotoButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,14 +42,14 @@ export function VehiclePhotoButton({
       <input
         ref={inputRef}
         type="file"
-        accept={VEHICLE_PHOTO_ACCEPT}
+        accept={accept}
         className={styles.hiddenInput}
         disabled={disabled || loading}
         aria-label={ariaLabel}
         onChange={(event) => {
           const selected = event.target.files?.[0];
           event.target.value = "";
-          if (!selected || !isAcceptedVehiclePhotoFile(selected)) return;
+          if (!selected || !validateFile(selected)) return;
           onFileSelected(selected);
         }}
       />
