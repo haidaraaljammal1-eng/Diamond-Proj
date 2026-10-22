@@ -3555,6 +3555,7 @@
       "pdfDownload": "تعذر تنزيل الفاتورة.",
       "whatsappUnconfigured": "خدمة واتساب غير مهيأة بعد. سيتم تفعيل الإرسال المباشر بعد ربط مزود WhatsApp Business.",
       "WHATSAPP_PROVIDER_UNCONFIGURED": "خدمة واتساب غير مهيأة بعد. سيتم تفعيل الإرسال المباشر بعد ربط مزود WhatsApp Business.",
+      "INVOICE_WHATSAPP_RECIPIENT_AMBIGUOUS": "تعذر مطابقة رقم واتساب العميل بأمان. اربط المحادثة من صندوق واتساب قبل إرسال الفاتورة.",
       "INVOICE_NOT_FOUND": "الفاتورة غير موجودة.",
       "NETWORK_ERROR": "خطأ في الاتصال بالشبكة."
     }

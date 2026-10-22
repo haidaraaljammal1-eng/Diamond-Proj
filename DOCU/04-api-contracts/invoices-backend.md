@@ -39,6 +39,6 @@ Permissions: `invoices.read`, `invoices.send_whatsapp` (seed via `PERMISSION_CAT
 
 ## WhatsApp
 
-Uses existing `WhatsAppProvider` (`uploadMedia` + `sendMediaMessage` document). `InvoiceDelivery` stores attempts, snapshots, and provider message id for future webhook updates.
+Staff send uses `createWhatsAppSendService().sendMedia` on a resolved DIRECT conversation (`Customer.mobile` → digit `customerWaId`). Uses an existing **staff-linked** thread when `customerId` and recipient digits (or staff-linked `@lid`) match; otherwise reuses or creates an **unlinked** conversation — invoice send never sets `customerId`. Outbound messages, attempts, media archive, and realtime events follow the standard WhatsApp module lifecycle. `InvoiceDelivery`: `SENT` only on provider `ACCEPTED`; `SEND_UNKNOWN` stays `SENDING` (not failed, same idempotency key must not auto-resend); `DELIVERED` is not inferred from HTTP accept.
 
 No manual invoice creation, edit, or delete endpoints in V1.

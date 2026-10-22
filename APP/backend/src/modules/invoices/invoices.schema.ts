@@ -89,6 +89,7 @@ export const InvoiceDeliverySchema = z.object({
   recipientNameSnapshot: z.string().nullable(),
   messageSnapshot: z.string(),
   provider: z.string().nullable(),
+  providerMessageId: z.string().nullable(),
   requestedAt: z.coerce.date(),
   sentAt: z.coerce.date().nullable(),
   deliveredAt: z.coerce.date().nullable(),

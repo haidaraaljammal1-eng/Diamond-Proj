@@ -81,6 +81,7 @@ export function createFakeWhatsAppProvider(options?: {
   let uploadCount = 0;
   let templateSendCount = 0;
   let mediaSendCount = 0;
+  let outboundDelayMs = 0;
 
   const provider: WhatsAppProvider = {
     name: "fake",
@@ -104,6 +105,9 @@ export function createFakeWhatsAppProvider(options?: {
       return { ok: false, code: "NOT_CONFIGURED" };
     },
     async sendOutboundMedia(input: WhatsAppSendOutboundMediaInput) {
+      if (outboundDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, outboundDelayMs));
+      }
       const uploaded = await this.uploadMedia({
         accessToken: input.accessToken,
         phoneNumberId: input.phoneNumberId,
@@ -269,6 +273,9 @@ export function createFakeWhatsAppProvider(options?: {
     },
     setSendUnknown(next: boolean) {
       sendUnknown = next;
+    },
+    setOutboundDelayMs(ms: number) {
+      outboundDelayMs = ms;
     },
     setSendMessageId(next: string | undefined) {
       sendMessageId = next;

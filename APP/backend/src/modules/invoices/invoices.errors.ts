@@ -9,6 +9,10 @@ export const InvoiceErrorReason = {
   CUSTOMER_PHONE_MISSING: "INVOICE_CUSTOMER_PHONE_MISSING",
   NOT_ISSUED: "INVOICE_NOT_ISSUED",
   WHATSAPP_UNCONFIGURED: "WHATSAPP_PROVIDER_UNCONFIGURED",
+  WHATSAPP_RECIPIENT_AMBIGUOUS: "INVOICE_WHATSAPP_RECIPIENT_AMBIGUOUS",
+  DELIVERY_IDEMPOTENCY_MISMATCH: "INVOICE_DELIVERY_IDEMPOTENCY_MISMATCH",
+  WHATSAPP_DELIVERY_UNCERTAIN: "INVOICE_WHATSAPP_DELIVERY_UNCERTAIN",
+  WHATSAPP_DELIVERY_IN_FLIGHT: "INVOICE_WHATSAPP_DELIVERY_IN_FLIGHT",
 } as const;
 
 const R = InvoiceErrorReason;
@@ -75,5 +79,38 @@ export function invoiceSupersededError(): AppError {
     code: ErrorCode.CONFLICT,
     message: "Only the current contract invoice can be sent to the customer",
     context: { reason: "INVOICE_SUPERSEDED" },
+  });
+}
+
+export function invoiceWhatsAppRecipientAmbiguousError(): AppError {
+  return new AppError({
+    code: ErrorCode.CONFLICT,
+    message: "WhatsApp recipient could not be matched safely to this customer",
+    context: { reason: R.WHATSAPP_RECIPIENT_AMBIGUOUS },
+  });
+}
+
+export function invoiceDeliveryIdempotencyMismatchError(): AppError {
+  return new AppError({
+    code: ErrorCode.CONFLICT,
+    message: "Idempotency key is already used for a different invoice delivery",
+    context: { reason: R.DELIVERY_IDEMPOTENCY_MISMATCH },
+  });
+}
+
+export function invoiceWhatsAppDeliveryUncertainError(): AppError {
+  return new AppError({
+    code: ErrorCode.CONFLICT,
+    message:
+      "A prior WhatsApp invoice delivery has an uncertain provider outcome; resolve it before sending again",
+    context: { reason: R.WHATSAPP_DELIVERY_UNCERTAIN },
+  });
+}
+
+export function invoiceWhatsAppDeliveryInFlightError(): AppError {
+  return new AppError({
+    code: ErrorCode.CONFLICT,
+    message: "Another WhatsApp invoice delivery is already in progress for this invoice",
+    context: { reason: R.WHATSAPP_DELIVERY_IN_FLIGHT },
   });
 }

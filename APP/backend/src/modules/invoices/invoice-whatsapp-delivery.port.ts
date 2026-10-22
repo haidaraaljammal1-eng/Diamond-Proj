@@ -1,7 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
-import { WHATSAPP_CURRENT_STATUSES } from "src/modules/whatsapp/whatsapp.constants";
+import { findOperationalWhatsAppConnection } from "src/modules/invoices/invoice-whatsapp-connection";
 import { decryptWhatsAppCredential } from "src/modules/whatsapp/whatsapp.credentials";
-import { isWhatsAppConnectionOperational } from "src/modules/whatsapp/whatsapp.connection-operational";
 import { createWhatsAppProvider } from "src/modules/whatsapp/whatsapp.provider";
 import { sanitizeMediaFilename } from "src/modules/whatsapp/whatsapp.media";
 import { resolveProviderRecipient } from "src/modules/whatsapp/whatsapp.recipient-addressing";
@@ -28,13 +27,7 @@ export async function sendInvoiceDocumentViaWhatsApp(
   }
 
   const caps = provider.capabilities();
-  const connection = await prisma.whatsAppConnection.findFirst({
-    where: { status: { in: [...WHATSAPP_CURRENT_STATUSES] } },
-    orderBy: { updatedAt: "desc" },
-  });
-  if (!isWhatsAppConnectionOperational(connection, caps)) {
-    return { ok: false, code: "NOT_CONFIGURED", message: "WhatsApp connection is not ready" };
-  }
+  const connection = await findOperationalWhatsAppConnection(prisma);
   if (!connection?.credentialCiphertext) {
     return { ok: false, code: "NOT_CONFIGURED", message: "WhatsApp connection is not ready" };
   }

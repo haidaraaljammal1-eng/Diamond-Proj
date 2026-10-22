@@ -3555,6 +3555,7 @@
       "pdfDownload": "Unable to download invoice.",
       "whatsappUnconfigured": "WhatsApp delivery is not configured yet. Direct sending will become available after the WhatsApp Business provider is connected.",
       "WHATSAPP_PROVIDER_UNCONFIGURED": "WhatsApp delivery is not configured yet. Direct sending will become available after the WhatsApp Business provider is connected.",
+      "INVOICE_WHATSAPP_RECIPIENT_AMBIGUOUS": "This customer's WhatsApp number could not be matched safely. Link the conversation in WhatsApp inbox before sending the invoice.",
       "INVOICE_NOT_FOUND": "Invoice not found.",
       "NETWORK_ERROR": "Network connection error."
     }

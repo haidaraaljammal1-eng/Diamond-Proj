@@ -185,6 +185,7 @@ if (!INTEGRATION_ENABLED) {
         FN.vehicles.addDelete,
         FN.violations.viewPage,
         FN.violations.manualCollection,
+        FN.violations.collectCharges,
         FN.invoices.viewPage,
         FN.invoices.sendWhatsapp,
         FN.whatsapp.full,
