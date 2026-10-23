@@ -1122,6 +1122,9 @@
       "close": "Close contract",
       "viewContract": "View contract",
       "viewContractFor": "View contract {number}",
+      "downloadPdf": "Download PDF",
+      "downloadPdfFor": "Download contract PDF {number}",
+      "pdfError": "Could not generate the contract PDF. Try again.",
       "manage": "Manage contract"
     },
     "deferredCharge": {

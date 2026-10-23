@@ -24,6 +24,7 @@ import { useRecordFocus } from "@/shared/hooks/use-record-focus";
 import tableStyles from "../contracts-table/contracts-table.module.css";
 import styles from "./contracts-screen.module.css";
 import { useOperatingCompanies } from "@/modules/operating-companies";
+import { saveContractPdfToDisk } from "../../api/contracts.api";
 
 export function ContractsScreen() {
   const t = useTranslations("Contracts");
@@ -59,6 +60,8 @@ export function ContractsScreen() {
   const [renewId, setRenewId] = useState<string | null>(null);
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [closeTarget, setCloseTarget] = useState<{ id: string; number?: string } | null>(null);
+  const [pdfDownloadingId, setPdfDownloadingId] = useState<string | null>(null);
+  const [pdfNotice, setPdfNotice] = useState<string | null>(null);
 
   useEffect(() => {
     registerNotificationTargets(
@@ -162,6 +165,22 @@ export function ContractsScreen() {
     [generateRentalLink],
   );
 
+  const downloadPdf = useCallback(
+    async (contract: ContractListItemDto) => {
+      if (pdfDownloadingId) return;
+      setPdfNotice(null);
+      setPdfDownloadingId(contract.id);
+      try {
+        await saveContractPdfToDisk(contract.id);
+      } catch {
+        setPdfNotice(t("actions.pdfError"));
+      } finally {
+        setPdfDownloadingId(null);
+      }
+    },
+    [pdfDownloadingId, t],
+  );
+
   const header = (
     <PageHeader
       crumbs={t("crumbs")}
@@ -218,6 +237,11 @@ export function ContractsScreen() {
   return (
     <>
       {header}
+      {pdfNotice ? (
+        <p className={styles.pdfNotice} role="alert">
+          {pdfNotice}
+        </p>
+      ) : null}
 
       {view === "loading" ? (
         <div className={styles.skeleton} role="status" aria-label={t("loading")} />
@@ -265,6 +289,8 @@ export function ContractsScreen() {
               contracts={contracts}
               onOpen={(contract) => setDrawerId(contract.id)}
               onRowAction={openAction}
+              onDownloadPdf={downloadPdf}
+              pdfDownloadingId={pdfDownloadingId}
             />
           )}
 

@@ -1,0 +1,10 @@
+.root {
+  background: #fff;
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+
+.wait {
+  min-height: 40px;
+}

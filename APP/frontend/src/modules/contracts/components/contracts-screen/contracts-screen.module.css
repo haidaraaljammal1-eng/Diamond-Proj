@@ -1,3 +1,13 @@
+.pdfNotice {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--diamond-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--diamond-danger) 8%, transparent);
+  color: var(--diamond-champagne);
+  font-size: 13px;
+}
+
 .panel {
   margin-top: 18px;
   padding: 22px 18px;

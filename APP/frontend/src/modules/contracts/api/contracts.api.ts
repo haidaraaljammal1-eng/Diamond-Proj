@@ -27,6 +27,71 @@ import type {
 
 const CONTRACTS_PATH = "/contracts";
 
+async function getStaffAccessToken(): Promise<string | undefined> {
+  if (typeof window === "undefined") return undefined;
+  const { getStaffAccessToken: readToken } = await import("@/infrastructure/api/client");
+  return readToken();
+}
+
+function parseContentDispositionFilename(header: string | null): string | null {
+  if (!header) return null;
+  const match = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"/i.exec(header);
+  const raw = match?.[1] ?? match?.[2];
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+export type ContractPdfDownload = { blob: Blob; filename: string };
+
+/** `GET /contracts/:id/pdf` — always regenerated; never stored server-side. */
+export async function downloadContractPdf(
+  id: string,
+  options: { download?: boolean } = {},
+): Promise<ContractPdfDownload> {
+  const accessToken = await getStaffAccessToken();
+  const suffix = options.download ? "?download=1" : "";
+  const response = await fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/pdf${suffix}`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      Accept: "application/pdf",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    const json = await response.json().catch(() => undefined);
+    if (isApiErrorResponse(json)) {
+      throw new ApiRequestError(json.error, response.status);
+    }
+    throw new ApiRequestError(
+      { code: "NETWORK_ERROR", message: `PDF request failed (${response.status})` },
+      response.status,
+    );
+  }
+  const blob = await response.blob();
+  const filename =
+    parseContentDispositionFilename(response.headers.get("Content-Disposition")) ??
+    `contract-${id}.pdf`;
+  return { blob, filename };
+}
+
+export async function saveContractPdfToDisk(id: string): Promise<void> {
+  const { blob, filename } = await downloadContractPdf(id, { download: true });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function getSignedContractSignature(id: string, slot: "hirer" | "additional-driver" | "sponsor", accessToken: string): Promise<Blob> {
   const response = await fetch(`${env.apiUrl}${CONTRACTS_PATH}/${id}/official-contract/signatures/${slot}/stream`, {
     headers: { Authorization: `Bearer ${accessToken}` },

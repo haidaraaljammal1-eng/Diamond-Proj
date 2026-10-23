@@ -16,6 +16,8 @@ export interface ContractsTableProps {
   contracts: ContractListItemDto[];
   onOpen: (contract: ContractListItemDto) => void;
   onRowAction?: (contract: ContractListItemDto) => void;
+  onDownloadPdf?: (contract: ContractListItemDto) => void;
+  pdfDownloadingId?: string | null;
 }
 
 function stopOpen(event: MouseEvent | KeyboardEvent) {
@@ -29,6 +31,8 @@ export function ContractsTable({
   contracts,
   onOpen,
   onRowAction,
+  onDownloadPdf,
+  pdfDownloadingId,
 }: ContractsTableProps) {
   const t = useTranslations("Contracts");
   const td = useTranslations("Contracts.duration");
@@ -138,6 +142,28 @@ export function ContractsTable({
                     >
                       <Icon name={action.icon} />
                       <span className={styles.stepLabel}>{t(action.labelKey)}</span>
+                    </Button>
+                  ) : null}
+                  {onDownloadPdf ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className={styles.pdfAction}
+                      aria-label={t("actions.downloadPdfFor", { number: contract.contractNumber })}
+                      title={t("actions.downloadPdf")}
+                      disabled={pdfDownloadingId === contract.id}
+                      onClick={(event) => {
+                        stopOpen(event);
+                        onDownloadPdf(contract);
+                      }}
+                      onKeyDown={stopOpen}
+                    >
+                      <Icon
+                        name={pdfDownloadingId === contract.id ? "mdi:loading" : "mdi:file-pdf-box"}
+                        size={18}
+                        className={pdfDownloadingId === contract.id ? styles.spin : undefined}
+                      />
                     </Button>
                   ) : null}
                   {HAS_SIGNED_CONTRACT.has(contract.status) ? (

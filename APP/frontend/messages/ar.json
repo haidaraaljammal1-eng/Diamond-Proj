@@ -1122,6 +1122,9 @@
       "close": "إغلاق العقد",
       "viewContract": "عرض العقد",
       "viewContractFor": "عرض العقد {number}",
+      "downloadPdf": "تنزيل PDF",
+      "downloadPdfFor": "تنزيل عقد PDF {number}",
+      "pdfError": "تعذر إنشاء ملف PDF للعقد. حاول مرة أخرى.",
       "manage": "إدارة العقد"
     },
     "deferredCharge": {

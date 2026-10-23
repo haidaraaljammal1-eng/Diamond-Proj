@@ -2486,6 +2486,10 @@ export function createContractsService(fastify: FastifyInstance) {
     return outcome.result!;
   }
 
+  async function getOfficialContractDraft(contractId: string) {
+    return withTransaction(prisma, (tx) => loadOfficialContract(tx, contractId));
+  }
+
   async function loadOfficialContract(
     tx: Parameters<Parameters<typeof withTransaction>[1]>[0],
     contractId: string,
@@ -3262,5 +3266,6 @@ export function createContractsService(fastify: FastifyInstance) {
     startRenewalPaymentPublic,
     getPaymentStatusByToken,
     openInspectionStream,
+    getOfficialContractDraft,
   };
 }

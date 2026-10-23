@@ -32,7 +32,6 @@ function readEnvDevelopmentValue(key: string): string | undefined {
   return readEnvFileValue(".env.development", key);
 }
 
-const localDevApiUrl = readEnvDevelopmentValue("NEXT_PUBLIC_API_URL");
 const sharedEnvLocalPath = path.join(
   frontendRoot,
   "..",
@@ -43,6 +42,19 @@ const sharedEnvLocalPath = path.join(
   "frontend",
   ".env.local",
 );
+
+/** Machine-local overrides (gitignored) beat shared `.env.development`. */
+function readLocalDevEnvValue(key: string): string | undefined {
+  return (
+    readEnvFileValue(".env.development.local", key) ??
+    readEnvFileValue(".env.local", key) ??
+    readEnvFileValue(sharedEnvLocalPath, key) ??
+    readEnvDevelopmentValue(key)
+  );
+}
+
+const localDevApiUrl = readLocalDevEnvValue("NEXT_PUBLIC_API_URL");
+const localDevApiProxy = readLocalDevEnvValue("NEXT_PUBLIC_API_PROXY");
 
 const localAuthSecret =
   readEnvFileValue(".env.local", "AUTH_SECRET") ??
@@ -78,7 +90,9 @@ const nextConfig: NextConfig = {
       (process.env.DOCKER_BUILD === "1"
         ? process.env.NEXT_PUBLIC_API_URL
         : localDevApiUrl ?? process.env.NEXT_PUBLIC_API_URL),
-    NEXT_PUBLIC_API_PROXY: rbacE2eApiPort ? "true" : process.env.NEXT_PUBLIC_API_PROXY,
+    NEXT_PUBLIC_API_PROXY: rbacE2eApiPort
+      ? "true"
+      : localDevApiProxy ?? process.env.NEXT_PUBLIC_API_PROXY,
     NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_UI: process.env.NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_UI,
     NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_BACKEND_ENABLED:
       process.env.NEXT_PUBLIC_FUNCTIONAL_RBAC_V2_BACKEND_ENABLED,

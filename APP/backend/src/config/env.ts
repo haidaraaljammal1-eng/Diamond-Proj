@@ -67,6 +67,9 @@ const EnvSchema = z
 
     CORS_ORIGINS: z.string().default("").transform(csv),
     FRONTEND_URL: z.string().default("http://localhost:5173"),
+    /** Staff contract PDF render page (Playwright). Local Next dev defaults to :3100. */
+    CONTRACT_PDF_FRONTEND_BASE_URL: z.string().default("http://127.0.0.1:3100"),
+    CONTRACT_PDF_LOCALE: z.enum(["en", "ar"]).default("en"),
 
     // In-process distribution scheduler (see src/plugins/scheduler.ts). ON by
     // default so a single-container deployment drives the automatic flow with no

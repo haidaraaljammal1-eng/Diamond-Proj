@@ -69,16 +69,37 @@ function applyEnvFile(fileName, target) {
   applyEnvFileAt(path.join(frontendRoot, fileName), target);
 }
 
+function readLocalDevEnvValue(key) {
+  return (
+    readEnvFile(".env.development.local", key) ??
+    readEnvFile(".env.local", key) ??
+    readEnvDevelopmentValue(key)
+  );
+}
+
 const env = { ...process.env };
+applyEnvFile(".env.development.local", env);
 applyEnvFile(".env.local", env);
 applyEnvFileAt(sharedEnvLocalPath, env);
+
 const e2ePort = env.RBAC_E2E_API_PORT?.trim();
+const localApiProxy = readLocalDevEnvValue("NEXT_PUBLIC_API_PROXY") ?? env.NEXT_PUBLIC_API_PROXY;
+
 if (e2ePort) {
   env.NEXT_PUBLIC_API_URL = `http://127.0.0.1:${e2ePort}`;
   env.RBAC_E2E_API_PROXY = "true";
 } else {
   env.NEXT_PUBLIC_API_URL =
-    readEnvDevelopmentValue("NEXT_PUBLIC_API_URL") ?? "http://localhost:8000";
+    readLocalDevEnvValue("NEXT_PUBLIC_API_URL") ?? "http://localhost:8000";
+  if (localApiProxy === "true") {
+    env.RBAC_E2E_API_PROXY = "true";
+    try {
+      const port = new URL(env.NEXT_PUBLIC_API_URL).port;
+      if (port) env.RBAC_E2E_API_PORT = port;
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 // Webpack dev: Turbopack rejects junctioned `node_modules` on Windows worktrees.

@@ -38,6 +38,7 @@ import { requireAuth } from "src/lib/context/auth-context";
 import { AppError } from "src/lib/errors/app-error";
 import { ErrorCode } from "src/constants/error-codes";
 import { createStaffDeferredRoadChargeService } from "src/modules/road-liabilities/staff-deferred-road-charge.service";
+import { createContractPdfService } from "src/modules/contracts/contract-pdf.service";
 import {
   StaffDeferredRegisterResultSchema,
   StaffManualChargeInputSchema,
@@ -50,6 +51,7 @@ const OfficialSignatureStaffParam = ContractIdParam.extend({ slot: z.enum(["hire
 export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const contracts = createContractsService(fastify);
+  const contractPdf = createContractPdfService(fastify);
   const deferredCharges = createStaffDeferredRoadChargeService(fastify);
   // Read-only integration state. Contracts business logic never calls TARS —
   // see DOCU/04-api-contracts/tars-integration.md.
@@ -83,6 +85,32 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.get(request.params.id) }),
+  );
+
+  app.get(
+    "/:id/pdf",
+    {
+      schema: {
+        summary: "Download official contract PDF (always regenerated from current data)",
+        operationId: "getContractPdf",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_READ],
+        params: ContractIdParam,
+        querystring: z.object({ download: z.coerce.boolean().optional() }),
+        response: { 200: z.any(), ...commonErrorResponses },
+      },
+    },
+    async (request, reply) => {
+      requireAuth(request);
+      const { buffer, filename } = await contractPdf.generateContractPdf(request.params.id);
+      const disposition = request.query.download ? "attachment" : "inline";
+      return reply
+        .header("Content-Type", "application/pdf")
+        .header("Content-Disposition", `${disposition}; filename="${filename}"`)
+        .header("Cache-Control", "private, no-store, no-cache, must-revalidate")
+        .header("Pragma", "no-cache")
+        .send(buffer);
+    },
   );
 
   app.get(

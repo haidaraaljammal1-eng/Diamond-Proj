@@ -30,12 +30,11 @@ export function useDashboardOverview() {
   const canReadFinance = useDiamondPageAccess("finance");
   const canReadGps = useDiamondPageAccess("gps");
   const canReadMaintenance = useDiamondPageAccess("maintenance");
-  const canGenerateLink =
-    useDiamondPageAccess("vehicles") &&
-    useLegacyOrFunctionalCapability(
-      CONTRACTS_MANAGE_PERMISSION,
-      FN.contracts.rentalLink,
-    );
+  const canRentalLink = useLegacyOrFunctionalCapability(
+    CONTRACTS_MANAGE_PERMISSION,
+    FN.contracts.rentalLink,
+  );
+  const canGenerateLink = canReadVehicles && canRentalLink;
 
   const quickAccess = useMemo(() => {
     if (!isFunctionalRbacV2UiEnabled()) {

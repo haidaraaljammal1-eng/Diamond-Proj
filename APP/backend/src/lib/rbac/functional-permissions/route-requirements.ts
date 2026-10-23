@@ -120,6 +120,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   // Contracts — view
   listContracts: all(FN.contracts.viewPage),
   getContract: all(FN.contracts.viewPage),
+  getContractPdf: all(FN.contracts.viewPage),
   getContractTarsState: all(FN.contracts.viewPage),
   streamStaffOfficialContractSignature: all(FN.contracts.viewPage),
   getContractCarOut: all(FN.contracts.viewPage),
