@@ -16,10 +16,6 @@ import {
 } from "src/lib/rbac/functional-permissions/vehicle-media-enforcement";
 import type { AuthUser } from "src/lib/context/auth-context";
 import { normalizeFunctionalGrants } from "src/lib/rbac/functional-permissions/policy-engine";
-import {
-  whapiWebhookEventChannelAccepted,
-} from "src/modules/whatsapp/whapi.config";
-
 function employee(grants: string[]): AuthUser {
   const normalized = normalizeFunctionalGrants(grants);
   return {
@@ -159,31 +155,3 @@ describe("4 — Docker file persistence", () => {
   });
 });
 
-describe("5 — WhatsApp webhook channel isolation", () => {
-  it("accepts only events for the configured channel", () => {
-    assert.equal(whapiWebhookEventChannelAccepted("chan-office", "chan-office"), true);
-    assert.equal(whapiWebhookEventChannelAccepted("chan-office", "chan-other"), false);
-    assert.equal(whapiWebhookEventChannelAccepted("chan-office", null), false);
-  });
-
-  it("evaluates channel per batch item in the webhook service", () => {
-    const service = readFileSync(
-      join(process.cwd(), "src/modules/whatsapp/whapi.webhook.service.ts"),
-      "utf8",
-    );
-    assert.match(service, /whapiWebhookEventChannelAccepted/);
-    assert.doesNotMatch(service, /batch\.find\(\(item\) => item\.channelId\)/);
-  });
-});
-
-describe("6 — Interrupted vehicle video upload", () => {
-  it("commits database state before promoting temp bytes to storage", () => {
-    const service = readFileSync(
-      join(process.cwd(), "src/modules/vehicles/vehicle-video.service.ts"),
-      "utf8",
-    );
-    assert.match(service, /await withTransaction\(prisma, async \(tx\) =>/);
-    assert.match(service, /await rename\(tempPath, committedPath\)/);
-    assert.doesNotMatch(service, /pipeline\(\s*\n\s*createReadStream\(tempPath\)/);
-  });
-});

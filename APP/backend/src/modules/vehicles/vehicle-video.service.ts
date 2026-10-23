@@ -11,7 +11,15 @@ import { generateStorageKey, resolveStoragePath } from "src/lib/files/storage-ke
 import { verifyMp4ContentType } from "src/lib/files/mp4";
 import { parseByteRangeHeader, sendRangedFile } from "src/lib/files/range-stream";
 import { isH264Codec, probeMp4Video } from "src/lib/files/video-probe";
+import {
+  acquireSessionAdvisoryLock,
+  releaseSessionAdvisoryLock,
+} from "src/lib/db/advisory-lock";
 import { withTransaction } from "src/lib/db/transaction";
+import {
+  commitVehicleVideoAfterFileOnDisk,
+  VEHICLE_VIDEO_MUTATION_LOCK_NS,
+} from "src/modules/vehicles/vehicle-video-upload.orchestrator";
 import {
   VEHICLE_VIDEO_MAX_BYTES,
   VEHICLE_VIDEO_MAX_DURATION_SEC,
@@ -142,17 +150,16 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
 
   async function upload(vehicleId: number, file: MultipartFile, uploadedById: number) {
     await assertVehicleExists(vehicleId);
+    await acquireSessionAdvisoryLock(prisma, VEHICLE_VIDEO_MUTATION_LOCK_NS, vehicleId);
 
     const tempKey = `tmp-${generateStorageKey(file.filename)}`;
     const tempPath = resolveStoragePath(storageDir, tempKey);
-    let committedPath: string | null = null;
 
     try {
       const { size, head } = await streamMultipartToTemp(file, tempPath);
       const { detected, durationSec } = await validateTempVideo(tempPath, file.mimetype, head);
 
       const storageKey = generateStorageKey(file.filename);
-      committedPath = resolveStoragePath(storageDir, storageKey);
 
       const checksum = createHash("sha256");
       await new Promise<void>((resolve, reject) => {
@@ -167,64 +174,50 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
         include: { attachment: true },
       });
 
-      const result = await withTransaction(prisma, async (tx) => {
-        const attachment = await tx.attachment.create({
-          data: {
-            originalName: file.filename,
-            storageKey,
-            mimeType: detected,
-            size,
-            checksum: checksum.digest("hex"),
-            uploadedById,
-          },
-        });
-
-        const video = existing
-          ? await tx.vehicleVideo.update({
-              where: { id: existing.id },
-              data: { attachmentId: attachment.id, durationSec },
-              include: { attachment: { select: { mimeType: true, size: true } } },
-            })
-          : await tx.vehicleVideo.create({
+      const result = await commitVehicleVideoAfterFileOnDisk({
+        storageDir,
+        storageKey,
+        tempPath,
+        commitDatabase: async () =>
+          withTransaction(prisma, async (tx) => {
+            const attachment = await tx.attachment.create({
               data: {
-                vehicleId,
-                attachmentId: attachment.id,
-                durationSec,
+                originalName: file.filename,
+                storageKey,
+                mimeType: detected,
+                size,
+                checksum: checksum.digest("hex"),
+                uploadedById,
               },
-              include: { attachment: { select: { mimeType: true, size: true } } },
             });
 
-        return {
-          video: toVehicleVideo(vehicleId, video),
-          previousAttachment: existing?.attachment ?? null,
-        };
+            const video = existing
+              ? await tx.vehicleVideo.update({
+                  where: { id: existing.id },
+                  data: { attachmentId: attachment.id, durationSec },
+                  include: { attachment: { select: { mimeType: true, size: true } } },
+                })
+              : await tx.vehicleVideo.create({
+                  data: {
+                    vehicleId,
+                    attachmentId: attachment.id,
+                    durationSec,
+                  },
+                  include: { attachment: { select: { mimeType: true, size: true } } },
+                });
+
+            return {
+              video: toVehicleVideo(vehicleId, video),
+              previousAttachment: existing?.attachment ?? null,
+            };
+          }),
       });
 
-      await mkdir(path.dirname(committedPath), { recursive: true });
-      try {
-        await rename(tempPath, committedPath);
-      } catch (error) {
-        const newAttachmentId = result.video.attachmentId;
-        await withTransaction(prisma, async (tx) => {
-          if (existing) {
-            await tx.vehicleVideo.update({
-              where: { id: existing.id },
-              data: {
-                attachmentId: existing.attachmentId,
-                durationSec: existing.durationSec,
-              },
-            });
-          } else {
-            await tx.vehicleVideo.deleteMany({ where: { vehicleId } });
-          }
-          await tx.attachment.delete({ where: { id: newAttachmentId } });
-        });
-        throw error;
-      }
-
-      return result;
+      await finalizeReplacement(vehicleId, result.previousAttachment);
+      return { video: result.video, previousAttachment: null };
     } finally {
       await unlink(tempPath).catch(() => undefined);
+      await releaseSessionAdvisoryLock(prisma, VEHICLE_VIDEO_MUTATION_LOCK_NS, vehicleId);
     }
   }
 
@@ -245,14 +238,19 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
   }
 
   async function remove(vehicleId: number) {
-    const video = await loadVideoOrThrow(vehicleId);
-    const absolutePath = resolveStoragePath(storageDir, video.attachment.storageKey);
+    await acquireSessionAdvisoryLock(prisma, VEHICLE_VIDEO_MUTATION_LOCK_NS, vehicleId);
+    try {
+      const video = await loadVideoOrThrow(vehicleId);
+      const absolutePath = resolveStoragePath(storageDir, video.attachment.storageKey);
 
-    await withTransaction(prisma, async (tx) => {
-      await tx.vehicleVideo.delete({ where: { id: video.id } });
-      await tx.attachment.delete({ where: { id: video.attachmentId } });
-    });
-    await unlink(absolutePath).catch(() => undefined);
+      await withTransaction(prisma, async (tx) => {
+        await tx.vehicleVideo.delete({ where: { id: video.id } });
+        await tx.attachment.delete({ where: { id: video.attachmentId } });
+      });
+      await unlink(absolutePath).catch(() => undefined);
+    } finally {
+      await releaseSessionAdvisoryLock(prisma, VEHICLE_VIDEO_MUTATION_LOCK_NS, vehicleId);
+    }
   }
 
   async function mintPlayAccess(vehicleId: number, viewer: AuthUser) {

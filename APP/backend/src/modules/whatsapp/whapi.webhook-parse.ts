@@ -52,6 +52,14 @@ function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+/** Item-level channel when Whapi includes it; otherwise envelope channel_id. */
+export function resolveWhapiWebhookItemChannelId(
+  item: Record<string, unknown>,
+  envelopeChannelId: string | null,
+): string | null {
+  return asString(item.channel_id) ?? asString(item.channelId) ?? envelopeChannelId;
+}
+
 function unixSeconds(value: unknown): Date | null {
   const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
   if (!Number.isFinite(n)) return null;
@@ -271,12 +279,22 @@ export function parseWhapiWebhookBatch(json: unknown, envelopeHash: string): Par
   const messages = Array.isArray(root.messages) ? root.messages : [];
   const events: ParsedWhapiWebhook[] = [];
   for (const item of statuses) {
-    events.push(parseStatusItem(asRecord(item) ?? {}, channelId, envelopeHash));
+    const row = asRecord(item) ?? {};
+    events.push(
+      parseStatusItem(row, resolveWhapiWebhookItemChannelId(row, channelId), envelopeHash),
+    );
   }
   for (const item of messages) {
     const message = asRecord(item);
     if (!message) continue;
-    events.push(parseMessageItem(message, channelId, readMessageAction(message, envelopeAction), envelopeHash));
+    events.push(
+      parseMessageItem(
+        message,
+        resolveWhapiWebhookItemChannelId(message, channelId),
+        readMessageAction(message, envelopeAction),
+        envelopeHash,
+      ),
+    );
   }
   if (events.length > 0) return events;
   const event = asRecord(root.event);
