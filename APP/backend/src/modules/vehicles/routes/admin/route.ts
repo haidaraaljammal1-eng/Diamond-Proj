@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { createVehiclesService } from "src/modules/vehicles/vehicles.service";
-import multipart from "@fastify/multipart";
 import { createVehiclePhotosService } from "src/modules/vehicles/vehicle-photos.service";
 import { createVehicleVideoService } from "src/modules/vehicles/vehicle-video.service";
 import { VEHICLE_VIDEO_MAX_BYTES } from "src/modules/vehicles/vehicle-video.constants";
@@ -373,48 +372,39 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
     },
   );
 
-  await app.register(async (videoUploadScope) => {
-    const videoUploadApp = videoUploadScope.withTypeProvider<ZodTypeProvider>();
-    await videoUploadScope.register(multipart, {
-      limits: {
-        fileSize: VEHICLE_VIDEO_MAX_BYTES,
-        files: 1,
-        fields: 10,
+  app.put(
+    "/:id/video",
+    {
+      schema: {
+        summary: "Upload or replace the vehicle showcase video",
+        operationId: "uploadVehicleVideo",
+        tags: ["Vehicles"],
+        permissions: [PERMISSIONS.VEHICLES_MANAGE],
+        consumes: ["multipart/form-data"],
+        params: NumericIdParam,
+        response: { 200: dataResponse(VehicleVideoSchema), ...commonErrorResponses },
       },
-    });
-
-    videoUploadApp.put(
-      "/:id/video",
-      {
-        schema: {
-          summary: "Upload or replace the vehicle showcase video",
-          operationId: "uploadVehicleVideo",
-          tags: ["Vehicles"],
-          permissions: [PERMISSIONS.VEHICLES_MANAGE],
-          consumes: ["multipart/form-data"],
-          params: NumericIdParam,
-          response: { 200: dataResponse(VehicleVideoSchema), ...commonErrorResponses },
-        },
-      },
-      async (request) => {
-        const file = await request.file();
-        if (!file) throw AppError.validation("Validation failed");
-        const { video: saved, previousAttachment } = await video.upload(
-          request.params.id,
-          file,
-          requireAuth(request).id,
-        );
-        await video.finalizeReplacement(request.params.id, previousAttachment);
-        request.setAudit({
-          action: "vehicles.video.upload",
-          entityType: "vehicle_video",
-          entityId: saved.id,
-          metadata: { vehicleId: request.params.id },
-        });
-        return { data: saved };
-      },
-    );
-  });
+    },
+    async (request) => {
+      const file = await request.file({
+        limits: { fileSize: VEHICLE_VIDEO_MAX_BYTES, files: 1, fields: 10 },
+      });
+      if (!file) throw AppError.validation("Validation failed");
+      const { video: saved, previousAttachment } = await video.upload(
+        request.params.id,
+        file,
+        requireAuth(request).id,
+      );
+      await video.finalizeReplacement(request.params.id, previousAttachment);
+      request.setAudit({
+        action: "vehicles.video.upload",
+        entityType: "vehicle_video",
+        entityId: saved.id,
+        metadata: { vehicleId: request.params.id },
+      });
+      return { data: saved };
+    },
+  );
 
   app.delete(
     "/:id/video",
