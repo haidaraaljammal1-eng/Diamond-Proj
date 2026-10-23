@@ -16,6 +16,7 @@ services:
     network_mode: host
     environment:
       DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@127.0.0.1:5432/diamond_staging
+      WHATSAPP_MEDIA_ROOT: /app/uploads/whatsapp-media
       PASSPORT_NUMBER_API_URL: http://127.0.0.1:8010
       UAE_DRIVING_LICENSE_API_URL: http://127.0.0.1:8020
       PASSPORT_NUMBER_API_ORCHESTRATE: "false"
