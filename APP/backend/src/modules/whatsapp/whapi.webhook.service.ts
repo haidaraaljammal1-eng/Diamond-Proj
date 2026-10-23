@@ -26,7 +26,10 @@ import { sanitizeWebhookPayload } from "src/modules/whatsapp/whatsapp.webhook-sa
 import { sha256Hex } from "src/modules/whatsapp/whatsapp.webhook-signature";
 import { mergeGroupMessagePayload } from "src/modules/whatsapp/whatsapp.group-display";
 import { parseWhapiWebhookBatch, type ParsedWhapiWebhook } from "src/modules/whatsapp/whapi.webhook-parse";
-import { whapiChannelIdsMatch, WHAPI_WEBHOOK_MAX_BYTES } from "src/modules/whatsapp/whapi.config";
+import {
+  whapiWebhookEventChannelAccepted,
+  WHAPI_WEBHOOK_MAX_BYTES,
+} from "src/modules/whatsapp/whapi.config";
 import type { WhatsAppWebhookHttpResult } from "src/modules/whatsapp/whatsapp.webhook.service";
 
 const CURRENT_STATUSES: WhatsAppConnectionStatus[] = [...WHATSAPP_CURRENT_STATUSES];
@@ -113,14 +116,7 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
     const envelopeHash = sha256Hex(rawBody);
     const batch = parseWhapiWebhookBatch(parsedJson, envelopeHash);
     const configuredChannel = connection?.providerInstanceId?.trim() ?? "";
-    const channelId = batch.find((item) => item.channelId)?.channelId ?? null;
-    if (!configuredChannel || !whapiChannelIdsMatch(configuredChannel, channelId)) {
-      for (const parsed of batch) {
-        await persistTrace(parsed, parsedJson, new Date(), null, "IGNORED", WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND);
-      }
-      return { httpStatus: 200, code: "RECEIVED" };
-    }
-    if (!connection) {
+    if (!connection || !configuredChannel) {
       for (const parsed of batch) {
         await persistTrace(parsed, parsedJson, new Date(), null, "IGNORED", WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND);
       }
@@ -131,6 +127,17 @@ export function createWhapiWebhookService(fastify: FastifyInstance) {
     logWebhookStage(fastify.log, "accepted", startedAt, { items: batch.length });
     let failed = false;
     for (const parsed of batch) {
+      if (!whapiWebhookEventChannelAccepted(configuredChannel, parsed.channelId)) {
+        await persistTrace(
+          parsed,
+          parsedJson,
+          new Date(),
+          null,
+          "IGNORED",
+          WhatsAppErrorReason.WEBHOOK_CONNECTION_NOT_FOUND,
+        );
+        continue;
+      }
       try {
         await persistParsed(parsed, parsedJson, connection.id, new Date());
       } catch (err) {

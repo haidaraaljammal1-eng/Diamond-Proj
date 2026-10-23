@@ -52,6 +52,7 @@ services:
       TZ: Asia/Dubai
       DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@postgres:5432/diamond_staging
       FILE_STORAGE_DIR: /app/uploads
+      WHATSAPP_MEDIA_ROOT: /app/uploads/whatsapp-media
       SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
       BUSINESS_TIMEZONE_OFFSET_MINUTES: "240"
       PAYMENT_PROVIDER: none

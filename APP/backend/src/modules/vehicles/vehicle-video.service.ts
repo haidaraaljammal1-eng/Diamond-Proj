@@ -2,9 +2,8 @@ import type { FastifyInstance } from "fastify";
 import type { MultipartFile } from "@fastify/multipart";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, stat, unlink } from "node:fs/promises";
+import { mkdir, rename, stat, unlink } from "node:fs/promises";
 import path from "node:path";
-import { pipeline } from "node:stream/promises";
 import { env } from "src/config/env";
 import { AppError } from "src/lib/errors/app-error";
 import { ErrorCode } from "src/constants/error-codes";
@@ -146,24 +145,18 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
 
     const tempKey = `tmp-${generateStorageKey(file.filename)}`;
     const tempPath = resolveStoragePath(storageDir, tempKey);
-    let absolutePath: string | null = null;
+    let committedPath: string | null = null;
 
     try {
       const { size, head } = await streamMultipartToTemp(file, tempPath);
       const { detected, durationSec } = await validateTempVideo(tempPath, file.mimetype, head);
 
       const storageKey = generateStorageKey(file.filename);
-      absolutePath = resolveStoragePath(storageDir, storageKey);
-      await mkdir(path.resolve(storageDir), { recursive: true });
-      await pipeline(
-        createReadStream(tempPath),
-        (await import("node:fs")).createWriteStream(absolutePath),
-      );
-      await unlink(tempPath).catch(() => undefined);
+      committedPath = resolveStoragePath(storageDir, storageKey);
 
       const checksum = createHash("sha256");
       await new Promise<void>((resolve, reject) => {
-        const hashStream = createReadStream(absolutePath!);
+        const hashStream = createReadStream(tempPath);
         hashStream.on("data", (chunk) => checksum.update(chunk));
         hashStream.on("error", reject);
         hashStream.on("end", () => resolve());
@@ -174,43 +167,62 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
         include: { attachment: true },
       });
 
-      try {
-        return await withTransaction(prisma, async (tx) => {
-          const attachment = await tx.attachment.create({
-            data: {
-              originalName: file.filename,
-              storageKey,
-              mimeType: detected,
-              size,
-              checksum: checksum.digest("hex"),
-              uploadedById,
-            },
-          });
-
-          const video = existing
-            ? await tx.vehicleVideo.update({
-                where: { id: existing.id },
-                data: { attachmentId: attachment.id, durationSec },
-                include: { attachment: { select: { mimeType: true, size: true } } },
-              })
-            : await tx.vehicleVideo.create({
-                data: {
-                  vehicleId,
-                  attachmentId: attachment.id,
-                  durationSec,
-                },
-                include: { attachment: { select: { mimeType: true, size: true } } },
-              });
-
-          return {
-            video: toVehicleVideo(vehicleId, video),
-            previousAttachment: existing?.attachment ?? null,
-          };
+      const result = await withTransaction(prisma, async (tx) => {
+        const attachment = await tx.attachment.create({
+          data: {
+            originalName: file.filename,
+            storageKey,
+            mimeType: detected,
+            size,
+            checksum: checksum.digest("hex"),
+            uploadedById,
+          },
         });
+
+        const video = existing
+          ? await tx.vehicleVideo.update({
+              where: { id: existing.id },
+              data: { attachmentId: attachment.id, durationSec },
+              include: { attachment: { select: { mimeType: true, size: true } } },
+            })
+          : await tx.vehicleVideo.create({
+              data: {
+                vehicleId,
+                attachmentId: attachment.id,
+                durationSec,
+              },
+              include: { attachment: { select: { mimeType: true, size: true } } },
+            });
+
+        return {
+          video: toVehicleVideo(vehicleId, video),
+          previousAttachment: existing?.attachment ?? null,
+        };
+      });
+
+      await mkdir(path.dirname(committedPath), { recursive: true });
+      try {
+        await rename(tempPath, committedPath);
       } catch (error) {
-        await unlink(absolutePath).catch(() => undefined);
+        const newAttachmentId = result.video.attachmentId;
+        await withTransaction(prisma, async (tx) => {
+          if (existing) {
+            await tx.vehicleVideo.update({
+              where: { id: existing.id },
+              data: {
+                attachmentId: existing.attachmentId,
+                durationSec: existing.durationSec,
+              },
+            });
+          } else {
+            await tx.vehicleVideo.deleteMany({ where: { vehicleId } });
+          }
+          await tx.attachment.delete({ where: { id: newAttachmentId } });
+        });
         throw error;
       }
+
+      return result;
     } finally {
       await unlink(tempPath).catch(() => undefined);
     }

@@ -5,6 +5,7 @@ import type {
   StaffRoadChargeCategory,
 } from "@prisma/client";
 import type { Tx } from "src/lib/db/transaction";
+import { acquireAdvisoryLock } from "src/lib/db/advisory-lock";
 import { isUniqueViolation } from "src/lib/db/prisma-error";
 import {
   roadChargeReferenceAlreadyUsedError,
@@ -13,6 +14,27 @@ import {
 import { normalizeRoadChargeReferenceNumber } from "src/modules/road-liabilities/road-charge-reference.normalize";
 
 type Db = PrismaClient | Tx;
+
+export const ROAD_CHARGE_REFERENCE_LOCK_NS = "road_charge_reference";
+
+export function roadChargeReferenceLockEntity(
+  chargeCategory: StaffRoadChargeCategory,
+  referenceNumber: string,
+): string {
+  return `${chargeCategory}:${normalizeRoadChargeReferenceNumber(referenceNumber)}`;
+}
+
+export async function acquireRoadChargeReferenceLock(
+  tx: Tx,
+  chargeCategory: StaffRoadChargeCategory,
+  referenceNumber: string,
+): Promise<void> {
+  await acquireAdvisoryLock(
+    tx,
+    ROAD_CHARGE_REFERENCE_LOCK_NS,
+    roadChargeReferenceLockEntity(chargeCategory, referenceNumber),
+  );
+}
 
 export interface ReserveStaffManualReferenceInput {
   chargeCategory: StaffRoadChargeCategory;

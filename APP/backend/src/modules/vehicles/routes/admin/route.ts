@@ -32,6 +32,7 @@ import {
 import { PERMISSIONS } from "src/constants/permissions";
 import { AppError } from "src/lib/errors/app-error";
 import { hasPermission, requireAuth } from "src/lib/context/auth-context";
+import { assertVehicleMediaMutationAuthorized } from "src/lib/rbac/functional-permissions/vehicle-media-enforcement";
 import { t } from "src/config/i18n";
 
 const PhotoParam = NumericIdParam.extend({ photoId: z.string().uuid() });
@@ -202,9 +203,11 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const identity = requireAuth(request);
+      assertVehicleMediaMutationAuthorized(identity);
       const file = await request.file();
       if (!file) throw AppError.validation("Validation failed");
-      const image = await photos.upload(request.params.id, file, requireAuth(request).id);
+      const image = await photos.upload(request.params.id, file, identity.id);
       request.setAudit({
         action: "vehicles.photo.upload",
         entityType: "vehicle_photo",
@@ -229,6 +232,7 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
+      assertVehicleMediaMutationAuthorized(requireAuth(request));
       await photos.remove(request.params.id, request.params.photoId);
       request.setAudit({
         action: "vehicles.photo.delete",
@@ -386,6 +390,8 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
+      const identity = requireAuth(request);
+      assertVehicleMediaMutationAuthorized(identity);
       const file = await request.file({
         limits: { fileSize: VEHICLE_VIDEO_MAX_BYTES, files: 1, fields: 10 },
       });
@@ -393,7 +399,7 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
       const { video: saved, previousAttachment } = await video.upload(
         request.params.id,
         file,
-        requireAuth(request).id,
+        identity.id,
       );
       await video.finalizeReplacement(request.params.id, previousAttachment);
       request.setAudit({
@@ -419,6 +425,7 @@ export default async function vehiclesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => {
+      assertVehicleMediaMutationAuthorized(requireAuth(request));
       await video.remove(request.params.id);
       request.setAudit({
         action: "vehicles.video.delete",

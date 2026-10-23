@@ -97,6 +97,14 @@ export function whapiChannelIdsMatch(
   return a.length > 0 && a === b;
 }
 
+/** Per-event channel guard for Whapi webhook batches (including mixed-channel envelopes). */
+export function whapiWebhookEventChannelAccepted(
+  configuredChannelId: string,
+  eventChannelId: string | null | undefined,
+): boolean {
+  return whapiChannelIdsMatch(configuredChannelId, eventChannelId);
+}
+
 /**
  * Whapi health returns `channel_id` and `user.id` as different fields.
  * When `channel_id` is present it is the only channel comparison.

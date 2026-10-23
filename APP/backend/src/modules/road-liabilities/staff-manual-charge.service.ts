@@ -27,6 +27,7 @@ import {
   confirmStaffManualReference,
   findStaffManualRegistryByIdempotency,
   releaseStaffManualReference,
+  acquireRoadChargeReferenceLock,
   reserveStaffManualReference,
 } from "src/modules/road-liabilities/road-charge-reference.service";
 import { reconcileStaffManualChargeOutcome } from "src/modules/road-liabilities/staff-manual-outcome.service";
@@ -78,6 +79,7 @@ async function createStaffManualProvisionalLiability(
   idempotencyKey: string,
 ): Promise<string> {
   assertPositiveAedAmount(input.amountAed);
+  await acquireRoadChargeReferenceLock(tx, input.chargeCategory, input.referenceNumber);
 
   const contract = await assertReturnedContractEligible(tx, contractId);
   const now = new Date();

@@ -21,6 +21,7 @@ import {
   confirmStaffManualReference,
   findStaffManualRegistryByIdempotency,
   releaseStaffManualReference,
+  acquireRoadChargeReferenceLock,
   reserveStaffManualReference,
 } from "src/modules/road-liabilities/road-charge-reference.service";
 import { createRoadLiabilityCustomerChargeService } from "src/modules/road-liabilities/road-liability-customer-charge.service";
@@ -113,6 +114,7 @@ async function createDeferredLiability(
   now: Date,
 ): Promise<string> {
   assertPositiveAedAmount(input.amountAed);
+  await acquireRoadChargeReferenceLock(tx, input.chargeCategory, input.referenceNumber);
   const fingerprint = staffDeferredObservationFingerprint(contract.id, idempotencyKey);
   const externalEventId = `staff-deferred:${idempotencyKey}`;
   const occurredAt = resolveStaffDeferredOccurredAt(contract, now);

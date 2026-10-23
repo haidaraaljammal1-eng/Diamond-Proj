@@ -5,6 +5,8 @@ import type { ParsedWebhookCardSetupEvent, ParsedWebhookPaymentEvent } from "src
 
 const MAX_WEBHOOK_ATTEMPTS = 8;
 const WEBHOOK_BATCH_SIZE = 20;
+/** Lease while PROCESSING; after expiry another worker may reclaim the inbox row. */
+export const STRIPE_WEBHOOK_PROCESSING_LEASE_MS = 5 * 60 * 1000;
 
 export type InboxInsertInput =
   | ({ kind: "PAYMENT" } & ParsedWebhookPaymentEvent)
@@ -53,13 +55,17 @@ export function createStripeWebhookInboxService(prisma: PrismaClient) {
 
   async function claimBatch(now: Date = new Date()) {
     return withTransaction(prisma, async (tx) => {
+      const leaseUntil = new Date(now.getTime() + STRIPE_WEBHOOK_PROCESSING_LEASE_MS);
       const rows = await tx.$queryRaw<
         Array<{ id: string }>
       >`
         SELECT id FROM stripe_webhook_events
-        WHERE "processingStatus" IN ('PENDING', 'FAILED')
+        WHERE "attemptCount" < ${MAX_WEBHOOK_ATTEMPTS}
           AND "availableAt" <= ${now}
-          AND "attemptCount" < ${MAX_WEBHOOK_ATTEMPTS}
+          AND (
+            "processingStatus" IN ('PENDING', 'FAILED')
+            OR "processingStatus" = 'PROCESSING'
+          )
         ORDER BY "receivedAt" ASC
         LIMIT ${WEBHOOK_BATCH_SIZE}
         FOR UPDATE SKIP LOCKED
@@ -69,7 +75,10 @@ export function createStripeWebhookInboxService(prisma: PrismaClient) {
       const ids = rows.map((row) => row.id);
       await tx.stripeWebhookEvent.updateMany({
         where: { id: { in: ids } },
-        data: { processingStatus: "PROCESSING" },
+        data: {
+          processingStatus: "PROCESSING",
+          availableAt: leaseUntil,
+        },
       });
       return tx.stripeWebhookEvent.findMany({ where: { id: { in: ids } } });
     });
@@ -121,5 +130,6 @@ export function createStripeWebhookInboxService(prisma: PrismaClient) {
     markRetry,
     markPermanentFailure,
     MAX_WEBHOOK_ATTEMPTS,
+    STRIPE_WEBHOOK_PROCESSING_LEASE_MS,
   };
 }
