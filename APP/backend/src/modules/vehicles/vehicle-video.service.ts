@@ -31,6 +31,30 @@ import type { AuthUser } from "src/lib/context/auth-context";
 
 const HEAD_BYTES = 64 * 1024;
 
+/** DB-only detach; physical delete runs after the mutation transaction commits. */
+export async function detachSupersededAttachmentInTransaction(
+  tx: Tx,
+  previousAttachment: { id: string; storageKey: string } | null,
+): Promise<string | null> {
+  if (!previousAttachment) return null;
+  const stillReferenced = await tx.vehicleVideo.findFirst({
+    where: { attachmentId: previousAttachment.id },
+  });
+  if (stillReferenced) return null;
+  await tx.attachment.delete({ where: { id: previousAttachment.id } });
+  return previousAttachment.storageKey;
+}
+
+export async function purgeUnreferencedVehicleVideoFile(
+  storageDir: string,
+  storageKey: string | null,
+  unlinkImpl: (absolutePath: string) => Promise<void> = unlink,
+): Promise<void> {
+  if (!storageKey) return;
+  const absolutePath = resolveStoragePath(storageDir, storageKey);
+  await unlinkImpl(absolutePath).catch(() => undefined);
+}
+
 export function createVehicleVideoService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
   const storageDir = env.FILE_STORAGE_DIR;
@@ -152,7 +176,7 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
     const tempPath = resolveStoragePath(storageDir, tempKey);
 
     try {
-      return await withVehicleVideoMutationLock(
+      const committed = await withVehicleVideoMutationLock(
         prisma,
         vehicleId,
         async (tx) => {
@@ -212,28 +236,19 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
             },
           });
 
-          await finalizeReplacementTx(tx, result.previousAttachment);
-          return { video: result.video, previousAttachment: null };
+          const supersededStorageKey = await detachSupersededAttachmentInTransaction(
+            tx,
+            result.previousAttachment,
+          );
+          return { video: result.video, supersededStorageKey };
         },
         { timeout: VEHICLE_VIDEO_MUTATION_TX_TIMEOUT_MS },
       );
+      await purgeUnreferencedVehicleVideoFile(storageDir, committed.supersededStorageKey);
+      return { video: committed.video, previousAttachment: null };
     } finally {
       await unlink(tempPath).catch(() => undefined);
     }
-  }
-
-  async function finalizeReplacementTx(
-    tx: Tx,
-    previousAttachment: { id: string; storageKey: string } | null,
-  ) {
-    if (!previousAttachment) return;
-    const absolutePath = resolveStoragePath(storageDir, previousAttachment.storageKey);
-    const stillReferenced = await tx.vehicleVideo.findFirst({
-      where: { attachmentId: previousAttachment.id },
-    });
-    if (stillReferenced) return;
-    await tx.attachment.delete({ where: { id: previousAttachment.id } }).catch(() => undefined);
-    await unlink(absolutePath).catch(() => undefined);
   }
 
   async function finalizeReplacement(
@@ -241,24 +256,27 @@ export function createVehicleVideoService(fastify: FastifyInstance) {
     previousAttachment: { id: string; storageKey: string } | null,
   ) {
     if (!previousAttachment) return;
-    await withVehicleVideoMutationLock(prisma, vehicleId, async (tx) => {
-      await finalizeReplacementTx(tx, previousAttachment);
-    });
+    const supersededStorageKey = await withVehicleVideoMutationLock(
+      prisma,
+      vehicleId,
+      async (tx) => detachSupersededAttachmentInTransaction(tx, previousAttachment),
+    );
+    await purgeUnreferencedVehicleVideoFile(storageDir, supersededStorageKey);
   }
 
   async function remove(vehicleId: number) {
-    await withVehicleVideoMutationLock(prisma, vehicleId, async (tx) => {
+    const storageKey = await withVehicleVideoMutationLock(prisma, vehicleId, async (tx) => {
       const video = await tx.vehicleVideo.findUnique({
         where: { vehicleId },
         include: { attachment: true },
       });
       if (!video) throw AppError.notFound("Vehicle video not found");
-      const absolutePath = resolveStoragePath(storageDir, video.attachment.storageKey);
 
       await tx.vehicleVideo.delete({ where: { id: video.id } });
       await tx.attachment.delete({ where: { id: video.attachmentId } });
-      await unlink(absolutePath).catch(() => undefined);
+      return video.attachment.storageKey;
     });
+    await purgeUnreferencedVehicleVideoFile(storageDir, storageKey);
   }
 
   async function mintPlayAccess(vehicleId: number, viewer: AuthUser) {
