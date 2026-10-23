@@ -5,8 +5,8 @@ test.use({ channel: "chrome" });
 
 async function staffLogin(page: import("@playwright/test").Page) {
   await page.goto("/ar/login", { waitUntil: "domcontentloaded" });
-  const email = page.getByRole("textbox", { name: /البريد|email/i });
-  const password = page.getByLabel(/كلمة المرور|password/i);
+  const email = page.getByRole("textbox", { name: /اسم المستخدم|email/i });
+  const password = page.getByRole("textbox", { name: /كلمة المرور|password/i });
   await email.fill(STAFF_EMAIL);
   await password.fill(STAFF_PASSWORD);
   await page.getByRole("button", { name: /دخول|login|sign in/i }).click();
