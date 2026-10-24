@@ -75,8 +75,8 @@ export function createContractPdfService(fastify: FastifyInstance) {
     }
     if (view.signatures.vehicleOutHirer.hasImage && detail.carOutHandover.signature.present) {
       try {
-        const { mimeType, stream } = await contracts.openCarOutSignatureStream(contractId);
-        images.vehicleOutHirer = await streamToDataUrl(stream, mimeType);
+        const { attachment, stream } = await contracts.openCarOutSignatureStream(contractId);
+        images.vehicleOutHirer = await streamToDataUrl(stream, attachment.mimeType);
       } catch {
         /* optional */
       }
@@ -118,7 +118,7 @@ export function createContractPdfService(fastify: FastifyInstance) {
           timeout: 45_000,
         });
         await page
-          .waitForFunction(() => document.fonts?.ready ?? true, { timeout: 15_000 })
+          .evaluate(() => document.fonts?.ready)
           .catch(() => undefined);
         const pdf = await page.pdf({
           format: "A4",

@@ -20,10 +20,11 @@
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "prisma/**/*.ts", "scripts/**/*.ts"],
   "exclude": [
     "node_modules",
     "dist",
+    "tests",
     "src/schemas/zod",
     "scripts/_tmp-*.ts",
     "scripts/rebuild-dev-fleet-gps-safe.ts",
