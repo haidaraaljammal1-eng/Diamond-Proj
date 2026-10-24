@@ -24,8 +24,14 @@ import {
  * mapping (`schema.functionalPermissions` or `operationId` registry), ONLY
  * functional grants apply — legacy keys are not an alternate bypass.
  */
+const PDF_RENDER_BOOTSTRAP_PATH = /^\/contracts\/pdf-render\/bootstrap\/[^/]+$/;
+
 export function enforcePermissions(fastify: FastifyInstance): void {
   fastify.addHook("preHandler", async (request) => {
+    const path = (request.url.split("?")[0] ?? request.url).replace(/\/$/, "");
+    if (PDF_RENDER_BOOTSTRAP_PATH.test(path)) {
+      return;
+    }
     const schema = request.routeOptions?.schema as FastifySchema | undefined;
     const auth = requireAuth(request);
 

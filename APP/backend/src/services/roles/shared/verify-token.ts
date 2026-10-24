@@ -24,8 +24,14 @@ const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
  * normally. Authenticated callers are also unaffected: auth passes, then
  * validation runs exactly as before and a bad body is still a 422.
  */
+const PDF_RENDER_BOOTSTRAP_PATH = /^\/contracts\/pdf-render\/bootstrap\/[^/]+$/;
+
 export function verifyToken(fastify: FastifyInstance): void {
   fastify.addHook("preValidation", async (request) => {
+    const path = (request.url.split("?")[0] ?? request.url).replace(/\/$/, "");
+    if (PDF_RENDER_BOOTSTRAP_PATH.test(path)) {
+      return;
+    }
     let payload: { sub: number; sid?: string };
     try {
       payload = await request.jwtVerify();
