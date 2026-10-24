@@ -48,6 +48,7 @@ import type {
   VehicleDetail,
   VehiclePublic,
 } from "src/modules/vehicles/vehicles.schema";
+import { env } from "src/config/env";
 
 const VEHICLE_SORTABLE = [
   "vin",
@@ -292,6 +293,9 @@ export function createVehiclesService(fastify: FastifyInstance) {
     }
 
     const where: Prisma.VehicleWhereInput = {
+      ...(env.CODESPACES_GPS_FLEET_PRESENTATION
+        ? { gpsBinding: { isActive: true } }
+        : {}),
       ...(query.active !== undefined ? { isActive: query.active } : {}),
       ...(query.companyId !== undefined ? { companyId: query.companyId } : {}),
       ...(query.modelId !== undefined ? { modelId: query.modelId } : {}),

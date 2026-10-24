@@ -17,6 +17,7 @@ export FILE_STORAGE_DIR="$ROOT/data/uploads"
 export WHATSAPP_MEDIA_ROOT="$ROOT/data/uploads/whatsapp-media"
 export CONTRACT_PDF_FRONTEND_BASE_URL="http://127.0.0.1:3100"
 export CONTRACT_PDF_BACKEND_URL="http://127.0.0.1:3000"
+export CODESPACES_GPS_FLEET_PRESENTATION="${CODESPACES_GPS_FLEET_PRESENTATION:-true}"
 COMPOSE="docker compose -f docker-compose.staging.yml -f docker-compose.codespaces.yml -f docker-compose.codespaces-full.yml"
 cd "$DEPLOY"
 $COMPOSE up -d postgres

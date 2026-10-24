@@ -6,6 +6,36 @@ Independent Codespace copy of local PostgreSQL `haidara` — **never** mutate th
 
 Use `deployment/codespaces-haidara-5f3fa29` (PDF integration + Codespaces compose overlays).
 
+## Codespace must use the dev container
+
+Create (or recreate) with an explicit config so `gh codespace ssh`, `postStartCommand`, and the **sshd** feature work:
+
+```bash
+gh codespace create -R haidaraaljammal1-eng/Diamond-Proj \
+  -b deployment/codespaces-haidara-5f3fa29 \
+  --devcontainer-path .devcontainer/devcontainer.json
+```
+
+If `gh codespace view` shows **Devcontainer Path** empty (`devcontainer_path: null`), CLI rebuild does **not** apply `.devcontainer/devcontainer.json`. In the Codespace in VS Code (web or desktop): **Codespaces: Rebuild Container** (or **Reopen in Container**).
+
+After rebuild, resume the host-native stack (when secrets and builds already exist):
+
+```bash
+bash /workspaces/Diamond-Proj/deploy/codespaces-autostart.sh
+```
+
+## Public HTTPS (port 3100 only)
+
+Register visibility only after the port appears in `gh codespace ports` (requires an active forwarder, usually after the dev container is running):
+
+```bash
+gh codespace ports visibility 3100:public -c <codespace-name>
+gh codespace ports visibility 3000:private -c <codespace-name>
+gh codespace ports --json browseUrl,sourcePort,visibility -c <codespace-name>
+```
+
+Do not treat `*.app.github.dev` as working while login returns **502** (nothing listening on 3100).
+
 ## Database (read-only export on Windows)
 
 ```powershell
@@ -44,4 +74,8 @@ Expose port **3100** as Public in Codespaces; keep **5432**, **3000**, **8010**,
 
 ## GPS
 
-Preserve restored bindings only — **do not** run provisioning/rebind scripts. Expect **27** active real bindings (7 LIVE + 20 Seven Stars).
+Preserve restored bindings only — **do not** run provisioning/rebind scripts. Expect **27** active real bindings (7 LIVE + 20 Seven Stars). The **GPS** UI should list those 27; the **Vehicles** page may show more active rows if historical contracts reference non-GPS vehicles (safe idle non-GPS rows can be soft-deactivated on the Codespace copy only).
+
+## OCR (8010 / 8020)
+
+Install Linux Python envs and models from `DOCUMENT-ENGINE` manifests on the Codespace; keep both ports **private**. Not required for the public staff URL.
