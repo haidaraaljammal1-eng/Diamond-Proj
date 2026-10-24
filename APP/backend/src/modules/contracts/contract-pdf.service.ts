@@ -118,7 +118,7 @@ export function createContractPdfService(fastify: FastifyInstance) {
           timeout: 45_000,
         });
         await page
-          .evaluate(() => document.fonts?.ready)
+          .waitForFunction("document.fonts ? document.fonts.ready : true", { timeout: 15_000 })
           .catch(() => undefined);
         const pdf = await page.pdf({
           format: "A4",
