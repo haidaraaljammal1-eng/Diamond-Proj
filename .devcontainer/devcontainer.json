@@ -8,6 +8,11 @@
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y postgresql-client",
   "forwardPorts": [3100, 3000],
   "portsAttributes": {
-    "3100": { "label": "Diamond frontend", "onAutoForward": "notify" }
+    "3100": {
+      "label": "Diamond frontend",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    },
+    "3000": { "visibility": "private" }
   }
 }
