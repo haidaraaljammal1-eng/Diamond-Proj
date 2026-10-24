@@ -36,6 +36,22 @@ gh codespace ports --json browseUrl,sourcePort,visibility -c <codespace-name>
 
 Do not treat `*.app.github.dev` as working while login returns **502** (nothing listening on 3100).
 
+## Empty Postgres volume recovery
+
+When `pgdata` is empty but Windows `haidara` is intact:
+
+1. On Windows (read-only): `pg_dump -Fc` to `deploy/backups/diamond-haidara-codespaces.dump`.
+2. Transfer privately to the Codespace (e.g. `gh codespace cp` after sshd works, or HTTPS to `/tmp/diamond-haidara.dump`).
+3. In the Codespace browser terminal:
+
+```bash
+cd /workspaces/Diamond-Proj && git pull && chmod +x deploy/*.sh
+bash deploy/codespaces-enable-gh-ssh.sh   # once, if gh ssh fails
+bash deploy/codespaces-recovery.sh
+```
+
+`codespaces-recovery.sh` starts Postgres, restores only when `users` count is near zero, rebuilds backend if the fleet presentation flag is missing, then runs `codespaces-autostart.sh`. Set `CODESPACES_GPS_FLEET_PRESENTATION=true` in `staging.env` (autostart defaults it to true on Codespaces).
+
 ## Database (read-only export on Windows)
 
 ```powershell
