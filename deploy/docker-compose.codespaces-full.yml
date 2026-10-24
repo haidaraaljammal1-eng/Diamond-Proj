@@ -1,0 +1,35 @@
+# Full Diamond presentation stack for GitHub Codespaces (host networking overlay).
+# Usage:
+#   docker compose -f docker-compose.staging.yml -f docker-compose.codespaces.yml -f docker-compose.codespaces-full.yml up -d
+#
+# Requires restored `haidara` data volume, uploads volume, staging.env (not in Git), and OCR sidecars.
+
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: haidara
+
+  migrate:
+    environment:
+      DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@127.0.0.1:5432/haidara
+      DIAMOND_FRESH_DATABASE_CONFIRM: haidara
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://diamond:${POSTGRES_PASSWORD}@127.0.0.1:5432/haidara
+      GPS_ENABLED: "true"
+      TARS_ENABLED: ${TARS_ENABLED:-false}
+      PASSPORT_NUMBER_API_URL: http://127.0.0.1:8010
+      UAE_DRIVING_LICENSE_API_URL: http://127.0.0.1:8020
+      PASSPORT_NUMBER_API_ORCHESTRATE: "false"
+      UAE_DRIVING_LICENSE_API_ORCHESTRATE: "false"
+      CONTRACT_PDF_FRONTEND_BASE_URL: ${STAGING_PUBLIC_ORIGIN:-http://127.0.0.1:3100}
+      CONTRACT_PDF_BACKEND_URL: http://127.0.0.1:3000
+
+  frontend:
+    environment:
+      NEXT_PUBLIC_API_PROXY: "true"
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
+      CONTRACT_PDF_BACKEND_URL: http://127.0.0.1:3000
+      RBAC_E2E_API_PORT: "3000"
+      RBAC_E2E_API_PROXY: "true"

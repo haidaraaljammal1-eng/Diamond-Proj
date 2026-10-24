@@ -9,7 +9,10 @@ import {
   buildContractPdfOfficialView,
   contractPdfFilename,
 } from "src/modules/contracts/contract-pdf-view";
+import { withContractPdfBrowser } from "src/modules/contracts/contract-pdf-browser";
+import { issueContractPdfBootstrapToken } from "src/modules/contracts/contract-pdf-bootstrap-store";
 import { createContractsService } from "src/modules/contracts/contracts.service";
+
 export type ContractPdfSignatureImages = Partial<
   Record<"hirer" | "additionalDriver" | "sponsor" | "vehicleOutHirer", string>
 >;
@@ -26,11 +29,10 @@ async function streamToDataUrl(stream: Readable, mimeType: string): Promise<stri
 const STAFF_SIGNATURE_SLOTS: Array<{
   key: keyof ContractPdfSignatureImages;
   slot: OfficialContractSignatureSlot;
-  path: "hirer" | "additional-driver" | "sponsor";
 }> = [
-  { key: "hirer", slot: "HIRER", path: "hirer" },
-  { key: "additionalDriver", slot: "ADDITIONAL_DRIVER", path: "additional-driver" },
-  { key: "sponsor", slot: "SPONSOR", path: "sponsor" },
+  { key: "hirer", slot: "HIRER" },
+  { key: "additionalDriver", slot: "ADDITIONAL_DRIVER" },
+  { key: "sponsor", slot: "SPONSOR" },
 ];
 
 export function createContractPdfService(fastify: FastifyInstance) {
@@ -88,8 +90,8 @@ export function createContractPdfService(fastify: FastifyInstance) {
   }): Promise<Buffer> {
     const baseUrl = (env.CONTRACT_PDF_FRONTEND_BASE_URL || "http://127.0.0.1:3100").replace(/\/$/, "");
     const locale = env.CONTRACT_PDF_LOCALE || "en";
-    const bootstrapQuery = encodeURIComponent(JSON.stringify(payload));
-    const target = `${baseUrl}/${locale}/internal/contract-pdf?b=${bootstrapQuery}`;
+    const token = issueContractPdfBootstrapToken(payload);
+    const target = `${baseUrl}/${locale}/internal/contract-pdf?t=${token}`;
 
     let chromium: typeof import("playwright").chromium;
     try {
@@ -102,28 +104,32 @@ export function createContractPdfService(fastify: FastifyInstance) {
       });
     }
 
-    const browser = await chromium.launch({ headless: true });
-    try {
-      const page = await browser.newPage();
-      await page.goto(target, { waitUntil: "domcontentloaded", timeout: 60_000 });
-      await page.waitForSelector('[data-testid="contract-pdf-export-ready"]', {
-        state: "attached",
-        timeout: 45_000,
-      });
-      await page.waitForSelector('[data-testid="official-contract-a4"]', {
-        state: "visible",
-        timeout: 45_000,
-      });
-      await page.waitForFunction(() => document.fonts?.ready ?? true, { timeout: 15_000 }).catch(() => undefined);
-      const pdf = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "0", right: "0", bottom: "0", left: "0" },
-      });
-      return Buffer.from(pdf);
-    } finally {
-      await browser.close();
-    }
+    return withContractPdfBrowser(chromium, async (browser) => {
+      const context = await browser.newContext();
+      try {
+        const page = await context.newPage();
+        await page.goto(target, { waitUntil: "domcontentloaded", timeout: 60_000 });
+        await page.waitForSelector('[data-testid="contract-pdf-export-ready"]', {
+          state: "attached",
+          timeout: 45_000,
+        });
+        await page.waitForSelector('[data-testid="official-contract-a4"]', {
+          state: "visible",
+          timeout: 45_000,
+        });
+        await page
+          .waitForFunction(() => document.fonts?.ready ?? true, { timeout: 15_000 })
+          .catch(() => undefined);
+        const pdf = await page.pdf({
+          format: "A4",
+          printBackground: true,
+          margin: { top: "0", right: "0", bottom: "0", left: "0" },
+        });
+        return Buffer.from(pdf);
+      } finally {
+        await context.close();
+      }
+    });
   }
 
   return {

@@ -38,6 +38,7 @@ import { requireAuth } from "src/lib/context/auth-context";
 import { AppError } from "src/lib/errors/app-error";
 import { ErrorCode } from "src/constants/error-codes";
 import { createStaffDeferredRoadChargeService } from "src/modules/road-liabilities/staff-deferred-road-charge.service";
+import { consumeContractPdfBootstrapToken } from "src/modules/contracts/contract-pdf-bootstrap-store";
 import { createContractPdfService } from "src/modules/contracts/contract-pdf.service";
 import {
   StaffDeferredRegisterResultSchema,
@@ -85,6 +86,30 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
       },
     },
     async (request) => ({ data: await contracts.get(request.params.id) }),
+  );
+
+  app.get(
+    "/pdf-render/bootstrap/:token",
+    {
+      schema: {
+        summary: "One-time contract PDF render bootstrap (Playwright)",
+        operationId: "getContractPdfRenderBootstrap",
+        tags: ["Contracts"],
+        params: z.object({ token: z.string().uuid() }),
+        response: { 200: z.any(), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const payload = consumeContractPdfBootstrapToken(request.params.token);
+      if (!payload) {
+        throw new AppError({
+          code: ErrorCode.VALIDATION_ERROR,
+          message: "PDF render session expired or invalid.",
+          statusCode: 404,
+        });
+      }
+      return { data: payload };
+    },
   );
 
   app.get(

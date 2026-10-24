@@ -2,10 +2,29 @@ import { ContractPdfExportScreen } from "@/modules/contracts/components/contract
 import type { ContractPdfExportBootstrap } from "@/modules/contracts/components/contract-pdf-export/contract-pdf-export.types";
 
 interface ContractPdfExportPageProps {
-  searchParams: Promise<{ b?: string }>;
+  searchParams: Promise<{ t?: string; b?: string }>;
 }
 
-function decodeBootstrap(raw: string | undefined): ContractPdfExportBootstrap | null {
+async function loadBootstrapFromToken(token: string): Promise<ContractPdfExportBootstrap | null> {
+  const backend = (
+    process.env.CONTRACT_PDF_BACKEND_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://127.0.0.1:3002"
+  ).replace(/\/$/, "");
+  try {
+    const res = await fetch(`${backend}/contracts/pdf-render/bootstrap/${token}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: ContractPdfExportBootstrap };
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** @deprecated Legacy query bootstrap — do not use for new PDF renders. */
+function decodeLegacyBootstrap(raw: string | undefined): ContractPdfExportBootstrap | null {
   if (!raw) return null;
   try {
     return JSON.parse(decodeURIComponent(raw)) as ContractPdfExportBootstrap;
@@ -16,7 +35,7 @@ function decodeBootstrap(raw: string | undefined): ContractPdfExportBootstrap | 
 
 /** Headless Playwright target — not linked from staff navigation. */
 export default async function ContractPdfExportPage({ searchParams }: ContractPdfExportPageProps) {
-  const { b } = await searchParams;
-  const initialPayload = decodeBootstrap(b);
+  const { t, b } = await searchParams;
+  const initialPayload = t ? await loadBootstrapFromToken(t) : decodeLegacyBootstrap(b);
   return <ContractPdfExportScreen initialPayload={initialPayload} />;
 }
