@@ -3,9 +3,11 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/sshd:1": { "version": "latest" }
   },
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y postgresql-client",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y postgresql-client && chmod +x deploy/codespaces-autostart.sh",
+  "postStartCommand": "bash deploy/codespaces-autostart.sh",
   "forwardPorts": [3100, 3000],
   "portsAttributes": {
     "3100": {
