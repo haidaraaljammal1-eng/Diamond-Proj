@@ -168,6 +168,7 @@ export const ROUTE_FUNCTIONAL_REQUIREMENTS: Readonly<
   // Renewal
   generateContractRenewalLink: all(FN.contracts.renewal),
   settleContractRenewalCash: all(FN.contracts.renewal),
+  cancelContractRenewalElectronic: all(FN.contracts.renewal),
   renewContract: all(FN.contracts.renewal),
 
   // Users

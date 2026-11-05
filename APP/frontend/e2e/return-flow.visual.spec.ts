@@ -355,6 +355,7 @@ test.describe("Live desk states (non-mutating)", () => {
         latestSalikGpsSignalAt: "2026-09-10T10:31:00.000Z",
       },
       postCloseReceivables: { count: 0, openAmount: 0, items: [] },
+      deferredReconciliationCharges: [],
     });
     await openFirstRow(page);
     await expect(page.getByTestId("contract-custody")).toContainText("Vehicle returned");

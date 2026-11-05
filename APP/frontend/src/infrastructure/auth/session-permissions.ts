@@ -51,8 +51,8 @@ export function applyAuthUserToToken<T extends SessionPermissionToken>(
   return {
     ...token,
     userId: String(user.id),
-    roles: user.roles.map((role) => role.key),
-    permissions: [...user.permissions],
+    roles: (user.roles ?? []).map((role) => role.key),
+    permissions: [...(user.permissions ?? [])],
     permissionsSyncedAt: now,
   };
 }

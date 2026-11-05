@@ -11,6 +11,7 @@ import {
   isReconciliationPaymentFailed,
   isReconciliationPaymentPending,
   manualChargeLines,
+  formatReconciliationTableDate,
   totalsEntries,
 } from "./reconciliation.utils.ts";
 
@@ -182,5 +183,13 @@ describe("reconciliation.utils", () => {
     };
     assert.equal(canCollectReconciliation(withRenewal), true);
     assert.equal(withRenewal.settlementAmountDue, 500);
+  });
+
+  it("formatReconciliationTableDate uses DD/MM/YYYY without locale bidi", () => {
+    assert.equal(
+      formatReconciliationTableDate("2026-10-30T14:30:00.000Z"),
+      "30/10/2026",
+    );
+    assert.equal(formatReconciliationTableDate("not-a-date"), "—");
   });
 });

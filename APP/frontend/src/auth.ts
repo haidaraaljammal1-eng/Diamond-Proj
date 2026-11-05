@@ -29,9 +29,13 @@ async function backendRequest<T>(
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     cache: "no-store",
   });
-  const payload = (await response.json().catch(() => undefined)) as
-    | { data?: T; error?: { code?: string; message?: string } }
-    | undefined;
+  const raw = await response.text();
+  let payload: { data?: T; error?: { code?: string; message?: string } } | undefined;
+  try {
+    payload = raw ? (JSON.parse(raw) as typeof payload) : undefined;
+  } catch {
+    payload = undefined;
+  }
   if (!response.ok || !payload?.data)
     throw new Error(payload?.error?.code ?? `HTTP_${response.status}`);
   return payload.data;
@@ -86,8 +90,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           // The session carries role KEYS: the Backend sends role objects and
           // every consumer (navigation, dashboard) matches on `system_admin`.
-          roles: user.roles.map((role) => role.key),
-          permissions: user.permissions,
+          roles: (user.roles ?? []).map((role) => role.key),
+          permissions: user.permissions ?? [],
           accessToken: result.accessToken,
           accessTokenExpiresAt: Date.now() + result.expiresIn * 1000,
           refreshToken: result.refreshToken,
@@ -97,6 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, trigger }) {
+      try {
       if (user) {
         token.userId = user.id;
         token.roles = user.roles;
@@ -147,6 +152,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           error: "RefreshAccessTokenError" as const,
           accessToken: undefined,
           refreshToken: undefined,
+        };
+      }
+      } catch {
+        return {
+          ...token,
+          error: "RefreshAccessTokenError" as const,
         };
       }
     },

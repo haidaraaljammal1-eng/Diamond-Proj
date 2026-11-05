@@ -76,6 +76,7 @@ function RenewForm({
     useContract();
   const keyRef = useRef(createIdempotencyKey());
   const [officeConfirm, setOfficeConfirm] = useState<RenewFormValues | null>(null);
+  const [officeRegistered, setOfficeRegistered] = useState(false);
   const methods = useForm<RenewFormValues>({
     resolver: zodResolver(renewFormSchema) as never,
     defaultValues: { durationUnit: "DAY", durationValue: 7, additionalAmount: 0 },
@@ -245,6 +246,7 @@ function RenewForm({
                 void renew(contractId, payload, keyRef.current).then((ok) => finish(ok));
                 return;
               }
+              setOfficeRegistered(false);
               setOfficeConfirm(values);
             })()
           }
@@ -254,51 +256,77 @@ function RenewForm({
       </div>
       <Dialog
         open={officeConfirm != null}
-        onClose={() => setOfficeConfirm(null)}
+        onClose={() => {
+          if (officeRegistered) {
+            setOfficeConfirm(null);
+            setOfficeRegistered(false);
+            finish(true);
+            return;
+          }
+          setOfficeConfirm(null);
+        }}
         title={t("renew.officeConfirmTitle")}
         description={t("renew.officeConfirmLead")}
         closeLabel={t("common.cancel")}
       >
         {officeConfirm ? (
           <div className={styles.officeConfirm}>
-            <p>{t("renew.officeConfirmBody")}</p>
-            <ul className={styles.officeList}>
-              <li>
-                {t("renew.officeCurrentEnd")}: <b>{currentEndLabel}</b>
-              </li>
-              <li>
-                {t("renew.previewAdded")}:{" "}
-                <b>
-                  {formatRentalDuration(
-                    {
-                      durationValue: officeConfirm.durationValue,
-                      durationUnit: officeConfirm.durationUnit,
-                    },
-                    (key, values) => t(`renew.duration.${key}`, values),
-                  )}
-                </b>
-              </li>
-              <li>
-                {t("renew.amount")}: <b>{format.number(officeConfirm.additionalAmount)} AED</b>
-              </li>
-            </ul>
-            <Button
-              type="button"
-              size="md"
-              loading={renewPending}
-              onClick={() =>
-                void renew(contractId, toRenewPayload(officeConfirm), keyRef.current).then(
-                  (ok) => {
-                    if (ok) {
-                      setOfficeConfirm(null);
-                      finish(true);
-                    }
-                  },
-                )
-              }
-            >
-              {t("renew.officeConfirmSubmit")}
-            </Button>
+            {officeRegistered ? (
+              <p className={styles.officeSuccess} role="status">
+                {t("renew.officeConfirmSuccess")}
+              </p>
+            ) : (
+              <>
+                {errorMessage ? (
+                  <p className={styles.error} role="alert">
+                    {errorMessage}
+                  </p>
+                ) : null}
+                <p>{t("renew.officeConfirmBody")}</p>
+                <ul className={styles.officeList}>
+                  <li>
+                    {t("renew.officeCurrentEnd")}: <b>{currentEndLabel}</b>
+                  </li>
+                  <li>
+                    {t("renew.previewAdded")}:{" "}
+                    <b>
+                      {formatRentalDuration(
+                        {
+                          durationValue: officeConfirm.durationValue,
+                          durationUnit: officeConfirm.durationUnit,
+                        },
+                        (key, values) => t(`renew.duration.${key}`, values),
+                      )}
+                    </b>
+                  </li>
+                  <li>
+                    {t("renew.amount")}: <b>{format.number(officeConfirm.additionalAmount)} AED</b>
+                  </li>
+                </ul>
+                <Button
+                  type="button"
+                  size="md"
+                  disabled={renewPending}
+                  onClick={() => {
+                    setOfficeRegistered(true);
+                    const idempotencyKey = keyRef.current;
+                    keyRef.current = createIdempotencyKey();
+                    void renew(contractId, toRenewPayload(officeConfirm), idempotencyKey).then(
+                      (ok) => {
+                        if (ok) {
+                          void loadContract(contractId);
+                          onCompleted?.();
+                          return;
+                        }
+                        setOfficeRegistered(false);
+                      },
+                    );
+                  }}
+                >
+                  {t("renew.officeConfirmSubmit")}
+                </Button>
+              </>
+            )}
           </div>
         ) : null}
       </Dialog>

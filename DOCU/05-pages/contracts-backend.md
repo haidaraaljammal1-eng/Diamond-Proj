@@ -274,11 +274,12 @@ Staff only. Public token routes have no staff permissions.
 | POST | `/contracts/:id/close` | close |
 | POST | `/contracts/:id/renewal-link` | renew (body: `additionalDays`, `additionalAmount`) |
 | POST | `/contracts/:id/renew` | renew |
+| POST | `/contracts/:id/renewals/:renewalId/cancel` | renew — cancel pending electronic offer only (`PENDING` / `AWAITING_PAYMENT`) |
 | GET | `/contracts/:id/car-out/photos/:photoId/stream` | read |
 | GET | `/contracts/:id/car-in/photos/:photoId/stream` | read |
 | GET | `/contracts/:id/tars` | read |
 
-List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. List items include `hasSalikGpsSignal` (batched). `customerName` on list/detail prefers the hirer name stored on that contract’s `snapshot` (written at public form submit, frozen again at signing); the shared `Customer` master row is only a fallback when no snapshot name exists. Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, `roadLiabilitySignals`, `postCloseReceivables`, and `actions` capability flags (`canCarIn` is true on RETOUT with no Car-In yet). No raw tokens.
+List query: `search` (number, plate, vehicle name, customer name/phone), `status`, `vehicleId`, `customerId`, `from`/`to`, `page`, `pageSize`, `sort`. List items include `hasSalikGpsSignal` (batched). `customerName` on list/detail prefers the hirer name stored on that contract’s `snapshot` (written at public form submit, frozen again at signing); the shared `Customer` master row is only a fallback when no snapshot name exists. Detail includes core, vehicle/customer refs, snapshot, payment summary, Car-Out/In, reconciliation, renewals, `deferredReconciliationCharges` (staff manual liabilities destined for final reconciliation, unsettled), `roadLiabilitySignals`, `postCloseReceivables`, and `actions` capability flags (`canCarIn` is true on RETOUT with no Car-In yet). No raw tokens.
 
 ## Public routes
 
@@ -297,7 +298,7 @@ List query: `search` (number, plate, vehicle name, customer name/phone), `status
 | GET | `/contracts/renew/:token` |
 | POST | `/contracts/renew/:token/confirm` |
 
-`POST /contracts/:id/renewal-link` is ACTIVE-only. It upserts a pending `ContractRenewal` (the stored offer) and issues an opaque hashed RENEWAL token (`CONTRACT_LINK_TTL_SECONDS.RENEWAL` = 48h). Prior unused RENEWAL links are revoked. Public `GET /contracts/renew/:token` returns `PublicContractView` plus optional `renewal` (`additionalDays`, `additionalAmount`, `previousEndAt`, `newEndAt`, `confirmed`, `awaitingPayment`) and `payment.providerAvailable`. Used RENEWAL tokens may be re-read (`allowCompleted`) for the success reload. Public `POST /contracts/renew/:token/confirm` approves the stored offer (`approvedAt`). When `additionalAmount > 0`, terms apply only after `POST /contracts/renew/:token/payment` is confirmed by Stripe. Zero additional amount applies without payment. The Contract stays ACTIVE; Vehicle stays RENTED; no second Contract is created. Staff `POST /contracts/:id/renew` still applies immediately, deletes pending offers, and revokes unused RENEWAL links. No TARS renewal execution.
+`POST /contracts/:id/renewal-link` is ACTIVE-only. It upserts a pending `ContractRenewal` (the stored offer) and issues an opaque hashed RENEWAL token (`CONTRACT_LINK_TTL_SECONDS.RENEWAL` = 48h). Prior unused RENEWAL links are revoked. Public `GET /contracts/renew/:token` returns `PublicContractView` plus optional `renewal` (`additionalDays`, `additionalAmount`, `previousEndAt`, `newEndAt`, `confirmed`, `awaitingPayment`) and `payment.providerAvailable`. Used RENEWAL tokens may be re-read (`allowCompleted`) for the success reload. Public `POST /contracts/renew/:token/confirm` approves the stored offer (`approvedAt`). When `additionalAmount > 0`, terms apply only after `POST /contracts/renew/:token/payment` is confirmed by Stripe. Zero additional amount applies without payment. The Contract stays ACTIVE; Vehicle stays RENTED; no second Contract is created. Staff `POST /contracts/:id/renew` still applies immediately, deletes pending offers, and revokes unused RENEWAL links. Staff `POST /contracts/:id/renewals/:renewalId/cancel` (ACTIVE only) removes an unapplied link-based renewal in `PENDING` or `AWAITING_PAYMENT`: revokes unused RENEWAL links, safely neutralizes an active Stripe checkout when present (`ALREADY_PAID` reconciles and rejects cancel), cancels in-flight RENEWAL payments, and deletes the renewal row. Applied office renewals, settled renewals, and `COMPLETED_NO_CHARGE` rows reject cancel (`RENEWAL_CANCEL_NOT_ALLOWED` / `ALREADY_PAID`). No TARS renewal execution.
 
 ## Errors
 
@@ -333,7 +334,7 @@ Staff audit via `request.setAudit` on create, links, payment, Car-Out, Car-In, r
 
 ## Tests
 
-Unit: `tests/unit/contracts-status.test.ts` (includes 48h RENEWAL TTL), `tests/unit/public-rental-flow.test.ts`, `tests/unit/contracts-road-liability-charge.test.ts`. Integration: `tests/integration/contracts.test.ts`, `tests/integration/contracts-renewal.test.ts`, `tests/integration/public-rental-flow.test.ts`, and `tests/integration/contracts-road-liability-charge.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
+Unit: `tests/unit/contracts-status.test.ts` (includes 48h RENEWAL TTL), `tests/unit/public-rental-flow.test.ts`, `tests/unit/contracts-road-liability-charge.test.ts`. Integration: `tests/integration/contracts.test.ts`, `tests/integration/contracts-renewal.test.ts`, `tests/integration/contracts-renewal-cancel.test.ts`, `tests/integration/public-rental-flow.test.ts`, and `tests/integration/contracts-road-liability-charge.test.ts` — require `RUN_INTEGRATION=true` and `DATABASE_URL`/`TEST_DATABASE_URL` pointing at disposable `haidara_test`. Do not run against Development `haidara`. No fake active contracts are seeded onto the Development Fleet.
 
 ## TARS Integration Boundary
 

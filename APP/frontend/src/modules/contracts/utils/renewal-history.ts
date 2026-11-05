@@ -24,6 +24,10 @@ export function renewalHistoryLabelKey(state: RenewalCollectionState): string {
   return `detail.renewalCollectionState.${state}`;
 }
 
+export function canCancelElectronicRenewal(state: RenewalCollectionState): boolean {
+  return state === "PENDING" || state === "AWAITING_PAYMENT";
+}
+
 /** Authoritative stored duration; falls back to legacy additionalDays as days. */
 export function renewalStoredDuration(renewal: ContractRenewalDto): RentalDuration {
   const value = renewal.additionalDurationValue ?? renewal.additionalDays;

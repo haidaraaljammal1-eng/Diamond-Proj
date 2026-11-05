@@ -113,6 +113,18 @@
   gap: 12px;
 }
 
+.officeSuccess {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--success, #1a6b3c) 35%, transparent);
+  background: color-mix(in srgb, var(--success, #1a6b3c) 8%, #fff);
+  color: var(--success, #1a6b3c);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .officeList {
   margin: 0;
   padding-inline-start: 1.2rem;

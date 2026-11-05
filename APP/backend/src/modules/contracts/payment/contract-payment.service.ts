@@ -1830,6 +1830,69 @@ export function createContractPaymentService(prisma: PrismaClient) {
     return withTransaction(prisma, (tx) => settleCashRentalInTx(tx, contractId, actorUserId));
   }
 
+  async function prepareElectronicRenewalCancellation(renewalId: string): Promise<void> {
+    const active = await prisma.contractPayment.findMany({
+      where: {
+        purpose: "RENEWAL",
+        targetId: renewalId,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+    });
+    for (const payment of active) {
+      if (payment.method === "CASH" || !payment.providerReference) continue;
+      const outcome = await neutralizeProviderCheckout(payment.providerReference);
+      if (outcome === "ALREADY_PAID") {
+        const reconciled = await reconcilePaymentWithProvider(payment.id);
+        if (reconciled?.status === "CONFIRMED") {
+          throw contractError.paymentAlreadySettled();
+        }
+        throw contractError.electronicRenewalCollectionActive();
+      }
+      if (outcome === "BLOCKED") throw contractError.electronicRenewalCollectionActive();
+    }
+  }
+
+  async function cancelRenewalPaymentsInTx(tx: Tx, renewalId: string): Promise<void> {
+    const confirmed = await tx.contractPayment.findFirst({
+      where: { purpose: "RENEWAL", targetId: renewalId, status: "CONFIRMED" },
+    });
+    if (confirmed) throw contractError.paymentAlreadySettled();
+
+    const active = await tx.contractPayment.findMany({
+      where: {
+        purpose: "RENEWAL",
+        targetId: renewalId,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+    });
+    for (const payment of active) {
+      const materializing = await tx.contractPaymentAttempt.findFirst({
+        where: {
+          contractPaymentId: payment.id,
+          status: { in: ["PREPARING", "RECOVERING"] },
+        },
+        select: { id: true },
+      });
+      if (materializing && payment.method !== "CASH" && !payment.providerReference) {
+        throw contractError.electronicRenewalCollectionActive();
+      }
+      await markPaymentTerminal(tx, payment, "CANCELLED", "renewal_cancelled_by_staff");
+      await tx.contractPaymentAttempt.updateMany({
+        where: {
+          contractPaymentId: payment.id,
+          status: { in: ["PREPARING", "RECOVERING", "READY"] },
+        },
+        data: { status: "EXPIRED" },
+      });
+      await emitPayment(tx, "payment.failed", payment.contractId, {
+        paymentId: payment.id,
+        purpose: payment.purpose,
+        status: "CANCELLED",
+        dedupe: payment.id,
+      });
+    }
+  }
+
   async function prepareOfficeRenewalRegistration(contractId: string): Promise<void> {
     const unapplied = await prisma.contractRenewal.findMany({
       where: { contractId, appliedAt: null },
@@ -1971,6 +2034,8 @@ export function createContractPaymentService(prisma: PrismaClient) {
     applyZeroAmountSettlement,
     applyRenewalExtensionInTx,
     prepareOfficeRenewalRegistration,
+    prepareElectronicRenewalCancellation,
+    cancelRenewalPaymentsInTx,
     settleRenewalCash,
     settleRenewalCashInTx,
     settlePaymentFromProvider,

@@ -123,6 +123,7 @@ import type {
   RenewSchema,
 } from "src/modules/contracts/contracts.schema";
 import { buildRenewalPersistenceFields } from "src/modules/contracts/contracts-renewal-duration";
+import { isElectronicRenewalCancellable } from "src/modules/contracts/contracts-renewal-collection";
 import {
   isManualExternalReconLineType,
 } from "src/modules/contracts/contracts-road-liability-charge";
@@ -149,6 +150,7 @@ import {
 } from "src/modules/road-liabilities/road-liability.mapper";
 import { createRoadLiabilityCustomerChargeService } from "src/modules/road-liabilities/road-liability-customer-charge.service";
 import { loadSalikGpsSignals } from "src/modules/contracts/contract-road-liability-signals";
+import { listContractDeferredReconciliationCharges } from "src/modules/contracts/contracts-deferred-reconciliation-charges";
 import type { z } from "zod";
 import type { ListContractsQuerySchema } from "src/modules/contracts/contracts.schema";
 import { assertCustodyPhotoAngles, carOutReadiness } from "src/modules/contracts/car-out-evidence";
@@ -251,7 +253,8 @@ export function createContractsService(fastify: FastifyInstance) {
       hasCarOut: Boolean(row.carOut),
       hasConflictingContract: Boolean(conflict),
     });
-    return toDetail(row, signals.get(row.id), canCarOut);
+    const deferredReconciliationCharges = await listContractDeferredReconciliationCharges(db, row.id);
+    return toDetail(row, signals.get(row.id), canCarOut, deferredReconciliationCharges);
   }
 
   function assertLicenseProgress(
@@ -1595,6 +1598,61 @@ export function createContractsService(fastify: FastifyInstance) {
     );
     if (outcome.deduped) return get(contractId);
     return outcome.result!;
+  }
+
+  async function cancelElectronicRenewal(
+    contractId: string,
+    renewalId: string,
+    _actorUserId: number,
+  ) {
+    const head = await prisma.contractRenewal.findUnique({
+      where: { id: renewalId },
+      select: {
+        id: true,
+        contractId: true,
+        additionalAmount: true,
+        approvedAt: true,
+        appliedAt: true,
+        settledPaymentId: true,
+      },
+    });
+    if (!head || head.contractId !== contractId) throw contractError.notFound();
+    if (!isElectronicRenewalCancellable(head)) throw contractError.renewalCancelNotAllowed();
+
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      select: { status: true },
+    });
+    if (!contract) throw contractError.notFound();
+    if (contract.status !== "ACTIVE") throw contractError.renewalCancelNotAllowed();
+
+    await paymentService.prepareElectronicRenewalCancellation(renewalId);
+
+    return withTransaction(prisma, async (tx) => {
+      await acquireAdvisoryLock(tx, CONTRACT_LIFECYCLE_LOCK_NS, contractId);
+      const renewal = await tx.contractRenewal.findUnique({ where: { id: renewalId } });
+      if (!renewal || renewal.contractId !== contractId) throw contractError.notFound();
+      if (!isElectronicRenewalCancellable(renewal)) throw contractError.renewalCancelNotAllowed();
+
+      const lockedContract = await tx.contract.findUnique({
+        where: { id: contractId },
+        select: { status: true },
+      });
+      if (!lockedContract || lockedContract.status !== "ACTIVE") {
+        throw contractError.renewalCancelNotAllowed();
+      }
+
+      await paymentService.cancelRenewalPaymentsInTx(tx, renewalId);
+      await revokeUnusedRenewalLinks(tx, contractId);
+      await tx.contractRenewal.delete({ where: { id: renewalId } });
+
+      return decorateDetail(
+        await tx.contract.findUniqueOrThrow({
+          where: { id: contractId },
+          include: CONTRACT_DETAIL_INCLUDE,
+        }),
+      );
+    });
   }
 
   async function generateReconciliationLink(contractId: string, actorUserId: number) {
@@ -3229,6 +3287,7 @@ export function createContractsService(fastify: FastifyInstance) {
     close,
     renew,
     settleRenewalCash,
+    cancelElectronicRenewal,
     confirmReturnPublic,
     confirmReturnStaff,
     deletePendingRentalRequest,

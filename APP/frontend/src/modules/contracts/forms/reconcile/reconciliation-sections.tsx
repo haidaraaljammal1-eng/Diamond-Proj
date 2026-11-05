@@ -20,6 +20,7 @@ import {
   isReconciliationEditable,
   manualChargeLines,
   roadLiabilityTypeKey,
+  formatReconciliationTableDate,
   totalsEntries,
 } from "../../utils/reconciliation.utils";
 import {
@@ -246,6 +247,7 @@ function RoadLiabilityTable({
 }) {
   const t = useTranslations("Contracts");
   const format = useFormatter();
+  const showActions = showReview && editable;
 
   return (
     <div className={styles.liabilityTableWrap}>
@@ -254,56 +256,93 @@ function RoadLiabilityTable({
           <col className={styles.liabilityColType} />
           <col className={styles.liabilityColDate} />
           <col className={styles.liabilityColReference} />
-          <col className={styles.liabilityColAmount} span={3} />
-          {showReview && editable ? <col className={styles.liabilityColActions} /> : null}
+          <col className={styles.liabilityColAmount} />
+          <col className={styles.liabilityColAmount} />
+          <col className={styles.liabilityColAmount} />
+          {showActions ? <col className={styles.liabilityColActions} /> : null}
         </colgroup>
         <thead>
           <tr>
-            <th scope="col">{t("finalReconciliation.columnType")}</th>
-            <th scope="col">{t("finalReconciliation.columnDate")}</th>
-            <th scope="col">{t("finalReconciliation.columnReference")}</th>
-            <th scope="col" className={styles.liabilityAmount} data-testid="reconciliation-liability-header-official">
+            <th scope="col" className={styles.liabilityColType}>
+              {t("finalReconciliation.columnType")}
+            </th>
+            <th scope="col" className={styles.liabilityColDate}>
+              {t("finalReconciliation.columnDate")}
+            </th>
+            <th scope="col" className={styles.liabilityColReference}>
+              {t("finalReconciliation.columnReference")}
+            </th>
+            <th
+              scope="col"
+              className={`${styles.liabilityColAmount} ${styles.liabilityAmount}`}
+              data-testid="reconciliation-liability-header-official"
+            >
               {t("finalReconciliation.officialAmount")}
             </th>
-            <th scope="col" className={styles.liabilityAmount} data-testid="reconciliation-liability-header-admin">
+            <th
+              scope="col"
+              className={`${styles.liabilityColAmount} ${styles.liabilityAmount}`}
+              data-testid="reconciliation-liability-header-admin"
+            >
               {t("finalReconciliation.adminFee")}
             </th>
-            <th scope="col" className={styles.liabilityAmount} data-testid="reconciliation-liability-header-charge">
+            <th
+              scope="col"
+              className={`${styles.liabilityColAmount} ${styles.liabilityAmount}`}
+              data-testid="reconciliation-liability-header-charge"
+            >
               {t("finalReconciliation.customerCharge")}
             </th>
-            {showReview && editable ? <th scope="col" /> : null}
+            {showActions ? (
+              <th scope="col" className={styles.liabilityColActions} aria-hidden="true" />
+            ) : null}
           </tr>
         </thead>
         <tbody>
           {items.map((item) => (
             <tr key={item.id} data-testid={`road-liability-${item.id}`}>
-              <td className={styles.liabilityType}>
+              <td className={`${styles.liabilityColType} ${styles.liabilityType}`}>
                 {t(`finalReconciliation.${roadLiabilityTypeKey(item.type)}`)}
                 {showReview && !item.attached ? (
                   <span className={styles.needsReviewChip}>{t("finalReconciliation.needsReview")}</span>
                 ) : null}
               </td>
-              <td dir="ltr">
-                {format.dateTime(new Date(item.occurredAt), { dateStyle: "medium" })}
+              <td className={styles.liabilityColDate}>
+                <span className={styles.liabilityDateText}>
+                  {formatReconciliationTableDate(item.occurredAt)}
+                </span>
               </td>
-              <td dir="ltr">{item.externalReference ?? "—"}</td>
-              <td className={styles.liabilityAmount} data-testid={`reconciliation-liability-official-${item.id}`}>
+              <td className={styles.liabilityColReference}>
+                <span className={styles.liabilityReferenceText}>
+                  {item.externalReference ?? "—"}
+                </span>
+              </td>
+              <td
+                className={`${styles.liabilityColAmount} ${styles.liabilityAmount}`}
+                data-testid={`reconciliation-liability-official-${item.id}`}
+              >
                 <span className={styles.liabilityNumeric} dir="ltr">
                   {format.number(item.officialAmount)}
                 </span>
               </td>
-              <td className={styles.liabilityAmount} data-testid={`reconciliation-liability-admin-${item.id}`}>
+              <td
+                className={`${styles.liabilityColAmount} ${styles.liabilityAmount}`}
+                data-testid={`reconciliation-liability-admin-${item.id}`}
+              >
                 <span className={styles.liabilityNumeric} dir="ltr">
                   {item.adminFee > 0 ? format.number(item.adminFee) : "—"}
                 </span>
               </td>
-              <td className={styles.liabilityAmount} data-testid={`reconciliation-liability-charge-${item.id}`}>
+              <td
+                className={`${styles.liabilityColAmount} ${styles.liabilityAmount}`}
+                data-testid={`reconciliation-liability-charge-${item.id}`}
+              >
                 <span className={styles.liabilityNumeric} dir="ltr">
                   {format.number(item.customerCharge)}
                 </span>
               </td>
-              {showReview && editable && onConfirm ? (
-                <td className={styles.liabilityActions}>
+              {showActions && onConfirm ? (
+                <td className={`${styles.liabilityColActions} ${styles.liabilityActions}`}>
                   {!item.attached ? (
                     <Button
                       type="button"
@@ -733,10 +772,14 @@ export function ReconciliationOutstandingRenewalsSection({ data }: { data: FullR
         <ul className={styles.renewalOutstandingList}>
           {data.outstandingRenewals.map((row) => (
             <li key={row.id} className={styles.renewalOutstandingItem}>
-              <p>
-                {format.dateTime(new Date(row.previousEndAt), { dateStyle: "medium" })}
+              <p className={styles.renewalDateRange} dir="ltr">
+                <span className={styles.liabilityDateText}>
+                  {formatReconciliationTableDate(row.previousEndAt)}
+                </span>
                 {" → "}
-                {format.dateTime(new Date(row.newEndAt), { dateStyle: "medium" })}
+                <span className={styles.liabilityDateText}>
+                  {formatReconciliationTableDate(row.newEndAt)}
+                </span>
               </p>
               <p className={styles.muted}>
                 +{format.number(row.additionalDays)} · {format.number(row.amount)} AED

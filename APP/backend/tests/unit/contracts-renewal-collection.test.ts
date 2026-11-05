@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   deriveRenewalCollectionState,
   isRenewalFinanciallySettled,
+  isElectronicRenewalCancellable,
 } from "src/modules/contracts/contracts-renewal-collection";
 
 describe("contracts-renewal-collection", () => {
@@ -81,6 +82,45 @@ describe("contracts-renewal-collection", () => {
         settledPaymentId: null,
       }),
       true,
+    );
+  });
+
+  it("allows electronic cancellation only before application or settlement", () => {
+    assert.equal(
+      isElectronicRenewalCancellable({
+        additionalAmount: 300,
+        approvedAt: null,
+        appliedAt: null,
+        settledPaymentId: null,
+      }),
+      true,
+    );
+    assert.equal(
+      isElectronicRenewalCancellable({
+        additionalAmount: 300,
+        approvedAt: new Date(),
+        appliedAt: null,
+        settledPaymentId: null,
+      }),
+      true,
+    );
+    assert.equal(
+      isElectronicRenewalCancellable({
+        additionalAmount: 300,
+        approvedAt: new Date(),
+        appliedAt: new Date(),
+        settledPaymentId: null,
+      }),
+      false,
+    );
+    assert.equal(
+      isElectronicRenewalCancellable({
+        additionalAmount: 300,
+        approvedAt: new Date(),
+        appliedAt: new Date(),
+        settledPaymentId: "pay-1",
+      }),
+      false,
     );
   });
 });

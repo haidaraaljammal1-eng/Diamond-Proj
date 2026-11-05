@@ -1066,6 +1066,37 @@ export default async function contractsAdminRoutes(fastify: FastifyInstance) {
   );
 
   app.post(
+    "/:id/renewals/:renewalId/cancel",
+    {
+      schema: {
+        summary: "Cancel a pending electronic renewal offer",
+        operationId: "cancelContractRenewalElectronic",
+        tags: ["Contracts"],
+        permissions: [PERMISSIONS.CONTRACTS_RENEW],
+        params: z.object({
+          id: z.string().uuid(),
+          renewalId: z.string().uuid(),
+        }),
+        response: { 200: dataResponse(ContractDetailSchema), ...commonErrorResponses },
+      },
+    },
+    async (request) => {
+      const actor = requireAuth(request);
+      const data = await contracts.cancelElectronicRenewal(
+        request.params.id,
+        request.params.renewalId,
+        actor.id,
+      );
+      request.setAudit({
+        action: "contracts.renewal_cancel",
+        entityType: "contract",
+        entityId: request.params.id,
+      });
+      return { data };
+    },
+  );
+
+  app.post(
     "/:id/renew",
     {
       schema: {

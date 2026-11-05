@@ -18,6 +18,7 @@ import {
   reconcileContract as reconcileRequest,
   renewContract as renewRequest,
   settleRenewalCash as settleRenewalCashRequest,
+  cancelElectronicRenewal as cancelElectronicRenewalRequest,
   getCarOut as getCarOutRequest,
   saveCarOutDraft as saveCarOutDraftRequest,
   uploadCarOutPhoto as uploadCarOutPhotoRequest,
@@ -129,6 +130,7 @@ interface ContractsState {
     renewalId: string,
     idempotencyKey: string,
   ) => Promise<boolean>;
+  cancelElectronicRenewal: (contractId: string, renewalId: string) => Promise<boolean>;
   reconcile: (id: string, payload: ReconcilePayload) => Promise<boolean>;
   close: (id: string, idempotencyKey: string) => Promise<boolean>;
   clearOfferError: () => void;
@@ -520,7 +522,11 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       try {
         const detail = await renewRequest(id, payload, idempotencyKey);
         set({ renewSlot: IDLE_SLOT, detail, detailStatus: "ready" });
-        await refreshAll();
+        try {
+          await refreshAll();
+        } catch {
+          // Renewal already applied; background refresh must not undo success UX.
+        }
         return true;
       } catch (error) {
         set({ renewSlot: { pending: false, error: normalizeApiError(error) } });
@@ -531,6 +537,18 @@ export const useContractsStore = create<ContractsState>((set, get) => {
       set({ renewSlot: { pending: true, error: null } });
       try {
         const detail = await settleRenewalCashRequest(contractId, renewalId, idempotencyKey);
+        set({ renewSlot: IDLE_SLOT, detail, detailStatus: "ready" });
+        await refreshAll();
+        return true;
+      } catch (error) {
+        set({ renewSlot: { pending: false, error: normalizeApiError(error) } });
+        return false;
+      }
+    },
+    async cancelElectronicRenewal(contractId, renewalId) {
+      set({ renewSlot: { pending: true, error: null } });
+      try {
+        const detail = await cancelElectronicRenewalRequest(contractId, renewalId);
         set({ renewSlot: IDLE_SLOT, detail, detailStatus: "ready" });
         await refreshAll();
         return true;

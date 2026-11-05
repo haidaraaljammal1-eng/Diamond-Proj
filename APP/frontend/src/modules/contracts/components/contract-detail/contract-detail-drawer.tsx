@@ -24,6 +24,7 @@ import {
   renewalCollectionState,
   renewalHistoryLabelKey,
   renewalStoredDuration,
+  canCancelElectronicRenewal,
 } from "../../utils/renewal-history";
 import { RenewalDateRange } from "./renewal-date-range";
 import { RenewalDetailDialog } from "./renewal-detail-dialog";
@@ -98,6 +99,7 @@ export function ContractDetailDrawer({
   const checkout = useStripeCheckout();
   const [providerAvailable, setProviderAvailable] = useState(true);
   const [collectRenewalId, setCollectRenewalId] = useState<string | null>(null);
+  const [cancelRenewalId, setCancelRenewalId] = useState<string | null>(null);
   const [deferredChargeOpen, setDeferredChargeOpen] = useState(false);
   const [renewalDetailId, setRenewalDetailId] = useState<string | null>(null);
   const collectKeyRef = useRef(createIdempotencyKey());
@@ -108,7 +110,9 @@ export function ContractDetailDrawer({
     actions,
     loadContract,
     settleRenewalCash,
+    cancelElectronicRenewal,
     renewPending,
+    permissions,
   } = useContract();
 
   useEffect(() => {
@@ -124,6 +128,10 @@ export function ContractDetailDrawer({
   const collectRenewal =
     collectRenewalId && detail
       ? detail.renewals.find((row) => row.id === collectRenewalId) ?? null
+      : null;
+  const cancelRenewal =
+    cancelRenewalId && detail
+      ? detail.renewals.find((row) => row.id === cancelRenewalId) ?? null
       : null;
 
   return (
@@ -448,6 +456,19 @@ export function ContractDetailDrawer({
                             {t("detail.renewalCollect")}
                           </Button>
                         ) : null}
+                        {canCancelElectronicRenewal(state) && permissions.canRenew ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className={styles.renewalBtnCancel}
+                            disabled={renewPending}
+                            data-testid={`renewal-cancel-${renewal.id}`}
+                            onClick={() => setCancelRenewalId(renewal.id)}
+                          >
+                            {t("detail.renewalCancel")}
+                          </Button>
+                        ) : null}
                       </div>
                       {state === "OFFICE_UNPAID" && detail.status === "REVIEW" ? (
                         <p className={styles.muted}>{t("finalReconciliation.autoIncludedInSettlement")}</p>
@@ -455,6 +476,34 @@ export function ContractDetailDrawer({
                     </li>
                   );
                 })}
+              </ol>
+            </section>
+          ) : null}
+
+          {detail.deferredReconciliationCharges?.length > 0 ? (
+            <section className={styles.section} data-testid="deferred-reconciliation-charges">
+              <p className={styles.sectionTitle}>{t("detail.deferredReconciliationCharges")}</p>
+              <ol className={styles.renewalList}>
+                {detail.deferredReconciliationCharges.map((charge) => (
+                  <li key={charge.id} className={styles.renewalItem}>
+                    <p className={styles.renewalMeta}>
+                      {format.dateTime(new Date(charge.createdAt), {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                      {" · "}
+                      {charge.type === "SALIK_TOLL"
+                        ? t("reconcile.type.SALIK")
+                        : t("reconcile.type.VIOLATION")}
+                    </p>
+                    <p className={styles.muted}>
+                      {t("detail.deferredReconciliationReference")}:{" "}
+                      <span dir="ltr">{charge.referenceNumber}</span>
+                    </p>
+                    <p className={styles.muted}>{money(charge.amount, charge.currency)}</p>
+                    <p className={styles.renewalDue}>{t("detail.deferredReconciliationSettlementNote")}</p>
+                  </li>
+                ))}
               </ol>
             </section>
           ) : null}
@@ -558,6 +607,48 @@ export function ContractDetailDrawer({
           >
             {t("detail.renewalCollectConfirm")}
           </Button>
+        </div>
+      ) : null}
+    </Dialog>
+    <Dialog
+      open={cancelRenewal != null}
+      onClose={() => {
+        if (!renewPending) setCancelRenewalId(null);
+      }}
+      title={t("detail.renewalCancelTitle")}
+      description={t("detail.renewalCancelBody")}
+      closeLabel={t("common.cancel")}
+    >
+      {cancelRenewal && detail ? (
+        <div className={styles.renewalCollectDialog}>
+          <RenewalDateRange renewal={cancelRenewal} />
+          <p className={styles.muted}>
+            {t(renewalHistoryLabelKey(renewalCollectionState(cancelRenewal)))}
+          </p>
+          <div className={styles.renewalCancelActions}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              disabled={renewPending}
+              onClick={() => setCancelRenewalId(null)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              size="md"
+              loading={renewPending}
+              data-testid="renewal-cancel-confirm"
+              onClick={() =>
+                void cancelElectronicRenewal(detail.id, cancelRenewal.id).then((ok) => {
+                  if (ok) setCancelRenewalId(null);
+                })
+              }
+            >
+              {t("detail.renewalCancelConfirm")}
+            </Button>
+          </div>
         </div>
       ) : null}
     </Dialog>

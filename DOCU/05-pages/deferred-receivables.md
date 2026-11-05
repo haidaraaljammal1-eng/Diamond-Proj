@@ -9,6 +9,7 @@ Staff can **register** traffic/Salik amounts on a contract without immediate car
 - Creates `RoadLiability` (`STAFF_MANUAL`, `OPEN`) + reference registry; **no** Stripe/off-session
 - `REVIEW` / `CLOSED`: auto-attaches via unified customer-charge (`RECONCILIATION` or post-close receivable)
 - `ACTIVE` / `RETOUT`: stays open until reconciliation attach/settlement
+- Contract detail (`GET /contracts/:id`) exposes unsettled staff-deferred reconciliation-bound rows in `deferredReconciliationCharges` (reference, amount, type, createdAt).
 
 ## Finance open receivables
 

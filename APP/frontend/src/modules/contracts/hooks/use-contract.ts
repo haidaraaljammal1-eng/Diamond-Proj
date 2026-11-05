@@ -95,6 +95,7 @@ export interface UseContractResult {
     renewalId: string,
     idempotencyKey: string,
   ) => Promise<boolean>;
+  cancelElectronicRenewal: (contractId: string, renewalId: string) => Promise<boolean>;
   reconcile: (id: string, payload: ReconcilePayload) => Promise<boolean>;
   close: (id: string, idempotencyKey: string) => Promise<boolean>;
   clearOfferError: () => void;
@@ -201,6 +202,7 @@ export function useContract(): UseContractResult {
     generateRenewalLink: (id, payload) => store.generateRenewalLink(id, locale, payload),
     renew: store.renew,
     settleRenewalCash: store.settleRenewalCash,
+    cancelElectronicRenewal: store.cancelElectronicRenewal,
     reconcile: store.reconcile,
     close: store.close,
     clearOfferError: store.clearOfferError,

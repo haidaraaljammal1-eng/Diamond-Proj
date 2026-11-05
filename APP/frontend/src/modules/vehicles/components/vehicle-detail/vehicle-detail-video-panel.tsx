@@ -98,38 +98,54 @@ export function VehicleDetailVideoPanel({
               ) : null}
             </>
           ) : (
-            <p className={styles.placeholderHint}>{t("detail.videoEmpty")}</p>
+            <>
+              <p className={styles.placeholderHint}>{t("detail.videoEmpty")}</p>
+              {canManage ? (
+                <VehiclePhotoButton
+                  label={t("detail.videoUpload")}
+                  ariaLabel={t("detail.videoUpload")}
+                  variant="primary"
+                  size="sm"
+                  className={styles.uploadButton}
+                  disabled={isActionPending}
+                  loading={isActionPending}
+                  iconName="mdi:video-plus-outline"
+                  onFileSelected={onUploadVideo}
+                  accept={VEHICLE_VIDEO_ACCEPT}
+                  validateFile={(file) => file.type === VEHICLE_VIDEO_ACCEPT}
+                />
+              ) : null}
+            </>
           )}
         </div>
       )}
 
-      {canManage ? (
+      {canManage && video ? (
         <div className={styles.actions}>
           <VehiclePhotoButton
-            label={video ? t("detail.videoReplace") : t("detail.videoUpload")}
-            ariaLabel={video ? t("detail.videoReplace") : t("detail.videoUpload")}
-            variant="secondary"
+            label={t("detail.videoReplace")}
+            ariaLabel={t("detail.videoReplace")}
+            variant="primary"
             size="sm"
+            className={styles.uploadButton}
             disabled={isActionPending}
             loading={isActionPending}
-            iconName={video ? "mdi:video-switch" : "mdi:video-plus-outline"}
+            iconName="mdi:video-switch"
             onFileSelected={onUploadVideo}
             accept={VEHICLE_VIDEO_ACCEPT}
             validateFile={(file) => file.type === VEHICLE_VIDEO_ACCEPT}
           />
-          {video ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={isActionPending}
-              aria-label={t("detail.videoRemove")}
-              onClick={onDeleteVideo}
-              data-testid="vehicle-detail-video-delete"
-            >
-              <Icon name="mdi:trash-can-outline" size={16} />
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isActionPending}
+            aria-label={t("detail.videoRemove")}
+            onClick={onDeleteVideo}
+            data-testid="vehicle-detail-video-delete"
+          >
+            <Icon name="mdi:trash-can-outline" size={16} />
+          </Button>
         </div>
       ) : null}
     </div>

@@ -278,6 +278,12 @@ export const contractError = {
       "Outstanding renewals at review are collected only through final reconciliation settlement",
       "RENEWAL_INCLUDED_IN_FINAL_SETTLEMENT",
     ),
+  renewalCancelNotAllowed: () =>
+    err(
+      ErrorCode.CONFLICT,
+      "This renewal cannot be cancelled in its current state",
+      "RENEWAL_CANCEL_NOT_ALLOWED",
+    ),
   paymentAttemptNotFound: () =>
     err(ErrorCode.NOT_FOUND, "Payment attempt was not found", "PAYMENT_ATTEMPT_NOT_FOUND"),
   paymentStatusTokenInvalid: () =>

@@ -17,6 +17,7 @@ export interface VehiclePhotoButtonProps {
   iconName?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
+  className?: string;
   accept?: string;
   validateFile?: (file: File) => boolean;
   onFileSelected: (file: File) => void;
@@ -31,6 +32,7 @@ export function VehiclePhotoButton({
   iconName = "mdi:image-plus",
   variant = "secondary",
   size = "md",
+  className,
   accept = VEHICLE_PHOTO_ACCEPT,
   validateFile = isAcceptedVehiclePhotoFile,
   onFileSelected,
@@ -57,6 +59,7 @@ export function VehiclePhotoButton({
         type="button"
         variant={variant}
         size={size}
+        className={className}
         disabled={disabled}
         loading={loading}
         onClick={() => inputRef.current?.click()}

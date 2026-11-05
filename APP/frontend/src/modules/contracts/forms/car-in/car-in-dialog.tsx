@@ -166,22 +166,20 @@ function CarInReturn({ contractId, onClose }: { contractId: string; onClose: () 
 
   return <div className={styles.handover} data-testid="car-in-return">
       <header className={styles.context}>
-        <div className={styles.identity}>
-          <div className={styles.vehicle}>
-            <div className={styles.vehicleTitleLine}>
-              <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
-              <CompanyIdentity company={detail.company} />
-            </div>
-            <div className={styles.vehicleMeta}>
-              {plate ? <span className={styles.plate} dir="ltr" aria-label={`${t("carIn.context.plate")} ${plate}`}>{plate}</span> : null}
-              {vehicleMeta ? <span>{vehicleMeta}</span> : null}
-            </div>
+        <div className={styles.vehicle}>
+          <div className={styles.vehicleTitleLine}>
+            <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
+            <CompanyIdentity company={detail.company} />
           </div>
-          <dl className={styles.parties}>
-            <div><dt>{t("carIn.context.contract")}</dt><dd dir="ltr">{detail.contractNumber}</dd></div>
-            <div><dt>{t("carIn.context.hirer")}</dt><dd>{signedContract?.hirer.name ?? detail.customer?.name ?? "—"}</dd></div>
-          </dl>
+          <div className={styles.vehicleMeta}>
+            {plate ? <span className={styles.plate} dir="ltr" aria-label={`${t("carIn.context.plate")} ${plate}`}>{plate}</span> : null}
+            {vehicleMeta ? <span>{vehicleMeta}</span> : null}
+          </div>
         </div>
+        <dl className={styles.parties}>
+          <div><dt>{t("carIn.context.contract")}</dt><dd dir="ltr">{detail.contractNumber}</dd></div>
+          <div><dt>{t("carIn.context.hirer")}</dt><dd>{signedContract?.hirer.name ?? detail.customer?.name ?? "—"}</dd></div>
+        </dl>
         <div className={styles.statusLine}>
           <Chip tone="gold" dot><span className={styles.chipLabel}>{t("carIn.context.status")}</span>{t(`status.${detail.status}`)}</Chip>
           <Chip tone={detail.vehicle.operationalStatus === "RENTED" ? "gold" : "neutral"} dot><span className={styles.chipLabel}>{t("carIn.vehicleStatusLabel")}</span>{vehicleStatus}</Chip>

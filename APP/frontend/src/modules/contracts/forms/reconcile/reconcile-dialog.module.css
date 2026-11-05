@@ -588,26 +588,77 @@
   border-collapse: collapse;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  direction: ltr;
 }
 
 .liabilityColType {
-  width: 18%;
+  width: 16%;
+  min-width: 4.5rem;
 }
 
 .liabilityColDate {
   width: 14%;
+  min-width: 5.25rem;
 }
 
 .liabilityColReference {
   width: 18%;
+  min-width: 5.5rem;
 }
 
 .liabilityColAmount {
-  width: 12%;
+  width: 11%;
+  min-width: 3.25rem;
 }
 
 .liabilityColActions {
   width: 14%;
+  min-width: 5.5rem;
+}
+
+.liabilityTable :is(th, td).liabilityColType {
+  width: 16%;
+  min-width: 4.5rem;
+}
+
+.liabilityTable :is(th, td).liabilityColDate {
+  width: 14%;
+  min-width: 5.25rem;
+  text-align: center;
+}
+
+.liabilityTable :is(th, td).liabilityColReference {
+  width: 18%;
+  min-width: 5.5rem;
+}
+
+.liabilityTable :is(th, td).liabilityColAmount {
+  width: 11%;
+  min-width: 3.25rem;
+}
+
+.liabilityTable :is(th, td).liabilityColActions {
+  width: 14%;
+  min-width: 5.5rem;
+}
+
+.liabilityReferenceText {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+.liabilityDateText {
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: center;
 }
 
 .liabilityTable thead th {
@@ -620,6 +671,10 @@
   color: var(--diamond-dim);
   border-block-end: 1px solid var(--diamond-hair);
   vertical-align: bottom;
+}
+
+.liabilityTable thead th.liabilityColDate {
+  text-align: center;
 }
 
 .liabilityTable thead th.liabilityAmount {
@@ -654,6 +709,11 @@
   font-size: 10px;
   font-weight: 600;
   color: var(--diamond-warn);
+}
+
+.renewalDateRange {
+  margin: 0;
+  text-align: start;
 }
 
 .liabilityAmount {
@@ -912,8 +972,8 @@
 /* ── Sticky action bar ── */
 
 .actionBarShell {
-  margin-inline: -16px;
-  padding-inline: 16px;
+  margin-inline: -4px;
+  padding-inline: 28px;
   padding-block-start: 2px;
   border-block-start: 1px solid color-mix(in srgb, var(--diamond-gold) 18%, var(--diamond-line));
   background: linear-gradient(
@@ -930,11 +990,13 @@
   z-index: 4;
   display: flex;
   flex-wrap: wrap;
+  flex-direction: row;
+  direction: ltr;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 20px;
+  gap: 16px 40px;
   margin-block-start: auto;
-  padding: 12px 0 14px;
+  padding: 12px 12px 14px;
   border-block-start: none;
   background: transparent;
   backdrop-filter: blur(8px);
@@ -958,11 +1020,13 @@
 }
 
 .actionBarActions {
+  order: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .linkActions {
@@ -1124,6 +1188,10 @@
   display: grid;
   gap: 8px;
   min-width: 0;
+  order: 3;
+  flex: 1 1 100%;
+  width: 100%;
+  direction: rtl;
 }
 
 .awaitingPaymentLinkLabel {
@@ -1251,6 +1319,10 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  order: 2;
+  flex: 0 0 auto;
+  text-align: end;
+  direction: rtl;
 }
 
 .actionBarLabel {
@@ -1289,8 +1361,8 @@
   }
 
   .actionBarShell {
-    margin-inline: -14px;
-    padding-inline: 14px;
+    margin-inline: -2px;
+    padding-inline: 22px;
   }
 
   .angleGrid {
@@ -1303,16 +1375,16 @@
   }
 
   .actionBar {
-    flex-direction: column;
-    align-items: stretch;
+    gap: 12px 24px;
+    padding-inline: 8px;
   }
 
   .actionBarActions {
-    justify-content: stretch;
+    justify-content: flex-start;
   }
 
   .actionBarActions > * {
-    flex: 1;
+    flex: 0 0 auto;
   }
 
   .awaitingPaymentGrid,

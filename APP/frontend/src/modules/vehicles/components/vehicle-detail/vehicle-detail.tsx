@@ -126,6 +126,22 @@ export function VehicleDetail({
   const showViewMaintenance =
     canManageMaintenance && vehicle.operationalStatus === "service";
 
+  const showSetPriceButton =
+    actions.showSetRentalPrice && primary.labelKey === "available";
+  /** Pricing locked (handover / pre-payment follow-up): keep footer grid balanced. */
+  const showSetPricePlaceholder =
+    showMaintenanceEnter &&
+    !showSetPriceButton &&
+    (actions.showCarOut || primary.labelKey === "urgentFollowUp");
+
+  const setPriceDisabledTitle =
+    primary.labelKey === "urgentFollowUp" &&
+    t.has("actions.setPriceDetailDisabledFollowUpTitle")
+      ? t("actions.setPriceDetailDisabledFollowUpTitle")
+      : t.has("actions.setPriceDetailDisabledTitle")
+        ? t("actions.setPriceDetailDisabledTitle")
+        : undefined;
+
   const showRatesSection = vehicle.operationalStatus === "available";
 
   const showRenewRentalButton =
@@ -333,13 +349,24 @@ export function VehicleDetail({
             {primaryFleetAction.label}
           </Button>
         ) : null}
-        {actions.showSetRentalPrice && primary.labelKey === "available" ? (
+        {showSetPriceButton ? (
           <Button
             type="button"
             size="sm"
             variant="secondary"
             disabled={isFleetOpsPending || primary.disabled}
             onClick={onSetPrice}
+          >
+            {t("actions.setPriceDetail")}
+          </Button>
+        ) : showSetPricePlaceholder ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled
+            aria-disabled="true"
+            title={setPriceDisabledTitle}
           >
             {t("actions.setPriceDetail")}
           </Button>

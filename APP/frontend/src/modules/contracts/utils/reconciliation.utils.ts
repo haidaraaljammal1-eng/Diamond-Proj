@@ -90,6 +90,16 @@ export function flattenImagePairs(pairs: ReconciliationImagePairDto[]): Reconcil
   return images;
 }
 
+/** Calendar date for reconciliation tables (LTR-safe; avoids RTL slash reordering). */
+export function formatReconciliationTableDate(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = parsed.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 export function roadLiabilityTypeKey(type: ReconciliationRoadLiabilityType): string {
   if (type === "RTA_VIOLATION") return "trafficViolation";
   return "salik";

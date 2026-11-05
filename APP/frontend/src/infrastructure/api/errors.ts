@@ -8,9 +8,14 @@ export class ApiRequestError extends Error {
   readonly status: number;
 
   constructor(error: ApiError, status: number) {
-    super(error.message);
+    super(
+      typeof error?.message === "string" && error.message.length > 0
+        ? error.message
+        : "Request failed",
+    );
     this.name = "ApiRequestError";
-    this.code = error.code;
+    this.code =
+      typeof error?.code === "string" && error.code.length > 0 ? error.code : "UNKNOWN";
     this.details = error.details;
     this.context = error.context;
     this.requestId = error.requestId;

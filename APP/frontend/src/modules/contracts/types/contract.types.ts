@@ -301,6 +301,16 @@ export interface ContractPostCloseReceivablesSummaryDto {
   items: ContractPostCloseReceivableItemDto[];
 }
 
+export interface ContractDeferredReconciliationChargeDto {
+  id: string;
+  type: "RTA_VIOLATION" | "SALIK_TOLL" | "SALIK_VIOLATION";
+  referenceNumber: string;
+  amount: number;
+  currency: string;
+  createdAt: string;
+  attachedToReconciliation: boolean;
+}
+
 export interface ContractDetailDto {
   id: string;
   contractNumber: string;
@@ -339,6 +349,7 @@ export interface ContractDetailDto {
   actions: ContractActionsDto;
   roadLiabilitySignals: ContractRoadLiabilitySignalsDto;
   postCloseReceivables: ContractPostCloseReceivablesSummaryDto;
+  deferredReconciliationCharges: ContractDeferredReconciliationChargeDto[];
 }
 
 export type RentalCollectionMode = "ELECTRONIC" | "CASH";

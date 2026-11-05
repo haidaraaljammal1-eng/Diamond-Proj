@@ -740,6 +740,17 @@ export const ContractDetailSchema = z.object({
         .optional(),
     }),
   ),
+  deferredReconciliationCharges: z.array(
+    z.object({
+      id: z.string().uuid(),
+      type: z.enum(["RTA_VIOLATION", "SALIK_TOLL", "SALIK_VIOLATION"]),
+      referenceNumber: z.string(),
+      amount: z.number().int(),
+      currency: z.string(),
+      createdAt: z.date(),
+      attachedToReconciliation: z.boolean(),
+    }),
+  ),
   actions: z.object({
     canGenerateRentalLink: z.boolean(),
     canConfirmPayment: z.boolean(),

@@ -314,6 +314,18 @@ export async function settleRenewalCash(
   return response.data;
 }
 
+/** `POST /contracts/:id/renewals/:renewalId/cancel` */
+export async function cancelElectronicRenewal(
+  contractId: string,
+  renewalId: string,
+): Promise<ContractDetailDto> {
+  const response = await apiRequest<ContractDetailDto>(
+    `${CONTRACTS_PATH}/${contractId}/renewals/${renewalId}/cancel`,
+    { method: "POST" },
+  );
+  return response.data;
+}
+
 /** `POST /contracts/:id/reconcile` (`contracts.reconcile`). */
 export async function reconcileContract(
   id: string,

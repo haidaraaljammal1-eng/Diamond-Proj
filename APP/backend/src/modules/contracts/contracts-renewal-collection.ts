@@ -109,6 +109,13 @@ export function renewalCollectableStatuses(): readonly string[] {
   return ["ACTIVE", "RETOUT", "REVIEW"];
 }
 
+/** Staff may cancel link-based electronic renewals before application or settlement. */
+export function isElectronicRenewalCancellable(row: RenewalStateInput): boolean {
+  if (row.appliedAt != null) return false;
+  const state = deriveRenewalCollectionState(row);
+  return state === "PENDING" || state === "AWAITING_PAYMENT";
+}
+
 export type RenewalPaymentMeta = {
   paymentMethod: ContractPaymentMethod | null;
   paymentStatus: ContractPaymentStatus | null;

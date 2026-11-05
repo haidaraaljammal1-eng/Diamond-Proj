@@ -201,22 +201,20 @@ function CarOutHandover({ contractId, onClose }: { contractId: string; onClose: 
         </p>
       ) : null}
       <header className={styles.context}>
-        <div className={styles.identity}>
-          <div className={styles.vehicle}>
-            <div className={styles.vehicleTitleLine}>
-              <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
-              <CompanyIdentity company={detail.company} />
-            </div>
-            <div className={styles.vehicleMeta}>
-              {plate ? <span className={styles.plate} dir="ltr" aria-label={`${t("carOut.context.plate")} ${plate}`}>{plate}</span> : null}
-              {vehicleMeta ? <span>{vehicleMeta}</span> : null}
-            </div>
+        <div className={styles.vehicle}>
+          <div className={styles.vehicleTitleLine}>
+            <strong className={styles.vehicleName}>{detail.vehicle.displayName}</strong>
+            <CompanyIdentity company={detail.company} />
           </div>
-          <dl className={styles.parties}>
-            <div><dt>{t("carOut.context.contract")}</dt><dd dir="ltr">{detail.contractNumber}</dd></div>
-            <div><dt>{t("carOut.context.hirer")}</dt><dd>{signedContract?.hirer.name ?? detail.customer?.name ?? "—"}</dd></div>
-          </dl>
+          <div className={styles.vehicleMeta}>
+            {plate ? <span className={styles.plate} dir="ltr" aria-label={`${t("carOut.context.plate")} ${plate}`}>{plate}</span> : null}
+            {vehicleMeta ? <span>{vehicleMeta}</span> : null}
+          </div>
         </div>
+        <dl className={styles.parties}>
+          <div><dt>{t("carOut.context.contract")}</dt><dd dir="ltr">{detail.contractNumber}</dd></div>
+          <div><dt>{t("carOut.context.hirer")}</dt><dd>{signedContract?.hirer.name ?? detail.customer?.name ?? "—"}</dd></div>
+        </dl>
         <div className={styles.statusLine}>
           <Chip tone="gold" dot><span className={styles.chipLabel}>{t("carOut.context.status")}</span>{t(`status.${detail.status}`)}</Chip>
           {paymentConfirmed ? <Chip tone="ok" dot><span className={styles.chipLabel}>{t("carOut.paymentStatusLabel")}</span>{t("carOut.paymentConfirmed")}</Chip> : null}

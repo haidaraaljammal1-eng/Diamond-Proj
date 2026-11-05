@@ -17,6 +17,7 @@ import {
 } from "src/modules/contracts/contracts-reconciliation";
 import { deriveRenewalCollectionState } from "src/modules/contracts/contracts-renewal-collection";
 import { canRegisterDeferredRoadCharge } from "src/modules/road-liabilities/staff-deferred-road-charge.service";
+import type { ContractDeferredReconciliationChargeRead } from "src/modules/contracts/contracts-deferred-reconciliation-charges";
 import { resolveContractDisplayCustomerName } from "src/modules/contracts/contract-display-customer";
 import { rentalPaymentAuthorizationState } from "src/modules/contracts/payment/payment-authorization.policy";
 
@@ -204,6 +205,7 @@ export function toDetail(
   row: ContractDetailRow,
   signals: ContractRoadLiabilitySignals = EMPTY_ROAD_LIABILITY_SIGNALS,
   canCarOut = false,
+  deferredReconciliationCharges: ContractDeferredReconciliationChargeRead[] = [],
 ): ContractDetail {
   const payment = row.payments[0] ?? null;
   const out = row.carOut ?? row.carOutDraft;
@@ -451,5 +453,14 @@ export function toDetail(
     actions: actionsFor(row, canCarOut),
     roadLiabilitySignals: signals,
     postCloseReceivables: toPostCloseSummary(row),
+    deferredReconciliationCharges: deferredReconciliationCharges.map((item) => ({
+      id: item.id,
+      type: item.type,
+      referenceNumber: item.referenceNumber,
+      amount: item.amount,
+      currency: item.currency,
+      createdAt: item.createdAt,
+      attachedToReconciliation: item.attachedToReconciliation,
+    })),
   };
 }
