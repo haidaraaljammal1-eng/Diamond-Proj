@@ -27,6 +27,8 @@ export async function attachPendingRoadLiabilitiesForReconciliationInTx(
 
   const pending = await listPendingRoadLiabilities(tx, contractId);
   let attached = 0;
+  let reconciliationId = contract.reconciliation?.id ?? null;
+  let reconciliationFinalizedAt = contract.reconciliation?.finalizedAt ?? null;
 
   for (const row of pending) {
     const liability = await tx.roadLiability.findUnique({ where: { id: row.id } });
@@ -55,7 +57,9 @@ export async function attachPendingRoadLiabilitiesForReconciliationInTx(
       contract: {
         id: contract.id,
         status: contract.status,
-        reconciliation: contract.reconciliation,
+        reconciliation: reconciliationId
+          ? { id: reconciliationId, finalizedAt: reconciliationFinalizedAt }
+          : null,
         carIn: contract.carIn,
       },
       destination: "RECONCILIATION",
@@ -63,6 +67,16 @@ export async function attachPendingRoadLiabilitiesForReconciliationInTx(
       adjustmentNote: null,
       actorUserId,
     });
+    if (!reconciliationId) {
+      const recon = await tx.contractReconciliation.findUnique({
+        where: { contractId },
+        select: { id: true, finalizedAt: true },
+      });
+      if (recon) {
+        reconciliationId = recon.id;
+        reconciliationFinalizedAt = recon.finalizedAt;
+      }
+    }
     attached += 1;
   }
 

@@ -285,7 +285,8 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
       );
       const cashConfirmEligible =
         capability.cashCollectionRequired &&
-        (!liability.customerCharge || liability.customerCharge.destinationType === "DIRECT_COLLECTION");
+        liability.customerCharge?.destinationType === "DIRECT_COLLECTION" &&
+        liability.customerCharge.operationalState !== "PAID";
 
       const payments = liability.customerCharge?.contractPayment
         ? [{ id: liability.customerCharge.contractPayment.id, status: liability.customerCharge.contractPayment.status }]

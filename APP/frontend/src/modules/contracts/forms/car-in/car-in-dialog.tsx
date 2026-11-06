@@ -42,7 +42,7 @@ export function CarInDialog({ contractId, onClose }: CarInDialogProps) {
 function CarInReturn({ contractId, onClose }: { contractId: string; onClose: () => void }) {
   const t = useTranslations("Contracts");
   const format = useFormatter();
-  const { detail, detailStatus, carInHandover, carInPending, carInError, loadContract, loadCarIn, saveCarInDraft, uploadCarInPhoto, uploadCarInSignature, deleteCarInPhoto, completeCarIn } = useContract();
+  const { detail, detailStatus, carInHandover, carInPending, carInError, loadContract, loadCarIn, saveCarInDraft, uploadCarInPhoto, uploadCarInSignature, deleteCarInPhoto, completeCarIn, clearCarInError } = useContract();
   const { companies } = useOperatingCompanies();
   const [step, setStep] = useState<1 | 2>(1);
   const [loaded, setLoaded] = useState(false);
@@ -62,11 +62,12 @@ function CarInReturn({ contractId, onClose }: { contractId: string; onClose: () 
 
   useEffect(() => {
     let active = true;
+    clearCarInError();
     void Promise.all([loadContract(contractId), loadCarIn(contractId)]).then(() => {
       if (active) setLoaded(true);
     });
     return () => { active = false; };
-  }, [contractId, loadContract, loadCarIn]);
+  }, [contractId, loadContract, loadCarIn, clearCarInError]);
   // Restore the saved draft once, so reopening resumes exactly where the return stopped.
   useEffect(() => {
     const savedReturn = carInHandover ?? detail?.carInHandover;

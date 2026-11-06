@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { forceStaffLogout } from "@/infrastructure/auth/force-staff-logout";
 import { ApiRequestError } from "./errors";
 import { shouldRedirectToLogin } from "./session-redirect";
 import type { ApiErrorResponse, ApiResponse } from "./types";
@@ -31,14 +32,20 @@ async function getAccessToken(): Promise<string | undefined> {
 
 let loggingOut = false;
 
+function staffLocaleFromPathname(): "ar" | "en" {
+  if (typeof window === "undefined") return "ar";
+  return window.location.pathname.split("/")[1] === "en" ? "en" : "ar";
+}
+
 function redirectToLogin(): void {
   if (typeof window === "undefined" || loggingOut) return;
   if (window.location.pathname.includes("/login")) return;
   loggingOut = true;
-  const locale = window.location.pathname.split("/")[1] === "en" ? "en" : "ar";
-  void import("next-auth/react").then(({ signOut }) =>
-    signOut({ redirectTo: `/${locale}/login` }),
-  );
+  const locale = staffLocaleFromPathname();
+  void forceStaffLogout(locale).catch(() => {
+    loggingOut = false;
+    window.location.replace(`/${locale}/login`);
+  });
 }
 
 async function requestWithToken(

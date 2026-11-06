@@ -2,14 +2,48 @@ import type { FastifyInstance } from "fastify";
 import { AppError } from "src/lib/errors/app-error";
 import { ErrorCode } from "src/constants/error-codes";
 import { resolveEffectivePermissions } from "src/lib/rbac/effective-permissions";
+import { isExpired } from "src/lib/security/tokens";
 
 const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
+
+async function assertAccessSessionLive(
+  fastify: FastifyInstance,
+  userId: number,
+  sessionId: string | undefined,
+): Promise<void> {
+  if (!sessionId) {
+    throw new AppError({
+      code: ErrorCode.TOKEN_INVALID,
+      message: "Invalid or expired token",
+    });
+  }
+
+  const session = await fastify.prisma.authSession.findUnique({
+    where: { id: sessionId },
+    select: { userId: true, revokedAt: true, expiresAt: true },
+  });
+
+  if (
+    !session ||
+    session.userId !== userId ||
+    session.revokedAt !== null ||
+    isExpired(session.expiresAt)
+  ) {
+    throw new AppError({
+      code: ErrorCode.TOKEN_INVALID,
+      message: "Invalid or expired token",
+    });
+  }
+}
 
 /**
  * Authentication hook. Verifies the short-lived access token and attaches a
  * READ-ONLY identity to `request.auth`. The hot path performs a single SELECT
  * (never a write); the lastSeen update is throttled and fire-and-forget so
  * authentication never blocks on (or churns) the database.
+ *
+ * Access tokens carry `sid` (authSession id). Each request rejects revoked or
+ * expired sessions so password reset / logout take effect before refresh.
  *
  * Runs at `preValidation`, i.e. BEFORE schema validation — deliberately, not by
  * accident. At `preHandler` (after validation) an ANONYMOUS caller who posted a
@@ -44,6 +78,8 @@ export function verifyToken(fastify: FastifyInstance): void {
         message: "Invalid or expired token",
       });
     }
+
+    await assertAccessSessionLive(fastify, payload.sub, payload.sid);
 
     const user = await fastify.prisma.user.findUnique({
       where: { id: payload.sub },

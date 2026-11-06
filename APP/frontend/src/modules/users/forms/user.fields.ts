@@ -1,12 +1,17 @@
 import type { FormField } from "@/shared/components/forms/form-builder";
 import type { SelectOption } from "@/shared/components/ui/select";
-import type { CreateUserValues, EditUserValues } from "./user.schema";
+import type {
+  CreateUserValues,
+  EditUserValues,
+  EditUserWithPasswordResetValues,
+} from "./user.schema";
 
 export interface UserFieldLabels {
   email: string;
   name: string;
   password: string;
   confirmPassword: string;
+  newPassword: string;
   role: string;
   rolePlaceholder: string;
 }
@@ -93,4 +98,33 @@ export function editUserFields(
   includeRoleField: boolean,
 ): FormField<EditUserValues>[] {
   return userIdentityFields(labels, roleOptions, includeRoleField);
+}
+
+export function editUserWithPasswordResetFields(
+  labels: UserFieldLabels,
+  roleOptions: readonly SelectOption[],
+  includeRoleField: boolean,
+): FormField<EditUserWithPasswordResetValues>[] {
+  const fields = userIdentityFields<EditUserWithPasswordResetValues>(
+    labels,
+    roleOptions,
+    includeRoleField,
+  );
+
+  fields.push(
+    {
+      type: "password",
+      name: "newPassword",
+      placeholder: labels.newPassword,
+      autoComplete: "new-password",
+    },
+    {
+      type: "password",
+      name: "confirmPassword",
+      placeholder: labels.confirmPassword,
+      autoComplete: "new-password",
+    },
+  );
+
+  return fields;
 }

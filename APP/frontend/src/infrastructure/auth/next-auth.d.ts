@@ -32,5 +32,7 @@ declare module "next-auth/jwt" {
     error?: "RefreshAccessTokenError";
     /** Last time roles/permissions were copied from GET /auth/me. */
     permissionsSyncedAt?: number;
+    /** Last time GET /auth/me confirmed the backend authSession is live. */
+    backendSessionVerifiedAt?: number;
   }
 }

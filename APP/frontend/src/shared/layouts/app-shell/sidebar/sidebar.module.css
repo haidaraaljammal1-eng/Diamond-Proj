@@ -430,6 +430,31 @@
 
 .accountLogout {
   display: none;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8a6630;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Collapsed dock: reveal logout on the account row (was display:none forever). */
+.rail:not([data-expanded="true"]) .account:hover .accountLogout,
+.rail:not([data-expanded="true"]) .account:focus-within .accountLogout {
+  display: grid;
+  position: absolute;
+  inset-inline-end: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(201, 161, 92, 0.35);
+  box-shadow: 0 2px 8px rgba(43, 36, 23, 0.12);
 }
 
 /* ════════════════════════════════════════════════════════════════════════

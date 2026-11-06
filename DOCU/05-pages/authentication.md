@@ -27,6 +27,10 @@ Frontend permission snapshots are loaded and replaced (never merged) from `GET /
 
 New domain permissions require: catalog → seed → `RolePermission` → `GET /auth/me` verification → frontend session verification after the next revalidation. A manual logout is not required for the snapshot to catch up.
 
+The access token JWT carries the Backend `authSession` id (`sid`). Every authenticated staff request re-validates that session is not revoked or expired; admin password reset (and logout / suspension flows that revoke sessions) therefore stops in-flight access immediately, not only at refresh time. AppShell `SessionGuard` also pings `GET /auth/me` on an interval and window focus so an open tab signs out without waiting for the user to navigate.
+
+Staff route guards (`proxy.ts`, protected layout, login page) treat a session as usable only when it has a live `accessToken` and no `RefreshAccessTokenError`. The login page must not redirect on `session.user` alone after a backend session revoke. Forced logout navigates to `/login?reauth=1` and clears the Auth.js cookie before `location.replace`. The login screen must stay visible on `?reauth=1` even while NextAuth `status` is briefly still `authenticated` (do not hide the form with the post-login fade class). Auth.js `signOut` must finish before navigation; Backend `POST /auth/logout` in the sign-out event is fire-and-forget so client sign-out cannot hang.
+
 ## Route guards
 
 The single `src/proxy.ts` combines next-intl and Auth.js. Authenticated users are redirected before render from locale-aware `/ar|en/login`, `/forgot-password`, and `/reset-password` to the same-locale dashboard. Unauthenticated users are redirected from `/ar|en/dashboard` and its descendants to the same-locale login. The dashboard also verifies the server session as a defense in depth. Auth API routes, static files, and assets are excluded by the Proxy matcher.
@@ -36,8 +40,9 @@ The single `src/proxy.ts` combines next-intl and Auth.js. Authenticated users ar
 - `APP/frontend/src/auth.ts`: Credentials provider, JWT refresh, permission re-hydration from `GET /auth/me`, session projection, Backend logout.
 - `APP/frontend/src/infrastructure/auth/session-permissions.ts`: when and how the JWT permission snapshot is replaced.
 - `APP/frontend/src/proxy.ts`: locale-aware pre-render route guards.
+- `APP/frontend/src/shared/layouts/app-shell/session-guard.tsx`: signs out on refresh failure and periodic `/auth/me` when the Backend session was revoked.
 - `APP/frontend/src/app/api/auth/[...nextauth]/route.ts`: Auth.js App Router handler.
-- `APP/frontend/src/modules/auth/hooks/`: UI authentication facades.
+- `APP/frontend/src/modules/auth/hooks/`: UI authentication facades. Sidebar logout calls `forceStaffLogout` (clear session + full navigation to `/login?reauth=1`), not `router.refresh()` alone.
 - `APP/frontend/src/infrastructure/api/client.ts`: central access-token injection.
 
 ## Token refresh (single-use rotation)

@@ -57,6 +57,7 @@ export function DeferredRoadChargeDialog({
 
   const referenceNumber = useMemo(() => parseStaffChargeReference(referenceRaw), [referenceRaw]);
   const amount = useMemo(() => parseWholeAed(amountRaw), [amountRaw]);
+  const isClosedContract = contract?.status === "CLOSED";
 
   const canSubmit =
     contract != null && amount != null && referenceNumber.length > 0 && !submitting && !successMessage;
@@ -85,7 +86,7 @@ export function DeferredRoadChargeDialog({
         },
         crypto.randomUUID(),
       );
-      setSuccessMessage(t("success"));
+      setSuccessMessage(t(isClosedContract ? "successClosed" : "success"));
       onSuccess();
     } catch (err) {
       setError(err as ApiRequestError);
@@ -98,8 +99,8 @@ export function DeferredRoadChargeDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={t("title")}
-      description={t("subtitle")}
+      title={t(isClosedContract ? "titleClosed" : "title")}
+      description={t(isClosedContract ? "subtitleClosed" : "subtitle")}
       closeLabel={tCharge("close")}
       data-testid="deferred-road-charge-dialog"
     >
@@ -172,7 +173,7 @@ export function DeferredRoadChargeDialog({
                 />
               </div>
 
-              <p className={styles.note}>{t("note")}</p>
+              <p className={styles.note}>{t(isClosedContract ? "noteClosed" : "note")}</p>
 
               <div className={styles.actions}>
                 <Button type="button" variant="ghost" size="md" onClick={onClose} disabled={submitting}>
@@ -186,7 +187,7 @@ export function DeferredRoadChargeDialog({
                   data-testid="deferred-charge-submit"
                   onClick={() => void handleSubmit()}
                 >
-                  {t("submit")}
+                  {t(isClosedContract ? "submitClosed" : "submit")}
                 </Button>
               </div>
             </>

@@ -1,3 +1,21 @@
+.storedPassword {
+  margin-top: 4px;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--diamond-muted);
+}
+
+.fieldHint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--diamond-dim);
+}
+
 .form {
   margin-top: 14px;
 }

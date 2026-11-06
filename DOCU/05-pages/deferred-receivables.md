@@ -10,15 +10,16 @@ Staff can **register** traffic/Salik amounts on a contract without immediate car
 - `REVIEW` / `CLOSED`: auto-attaches via unified customer-charge (`RECONCILIATION` or post-close receivable)
 - `ACTIVE` / `RETOUT`: stays open until reconciliation attach/settlement
 - Contract detail (`GET /contracts/:id`) exposes unsettled staff-deferred reconciliation-bound rows in `deferredReconciliationCharges` (reference, amount, type, createdAt).
+- **CLOSED** contracts: staff button label and dialog copy use the closed-contract variant; registration still uses the same API and creates post-close receivables (not reconciliation-bound deferred rows).
 
 ## Finance open receivables
 
 | Source | Rule |
 | --- | --- |
-| `ROAD_LIABILITY` | Staff manual `OPEN` liabilities not on reconciliation/post-close; optional `cashCollectionAvailable` for CASH contracts |
+| `ROAD_LIABILITY` | Staff manual `OPEN` liabilities not yet on reconciliation/post-close. **Deferred-for-reconciliation** rows (no `customerCharge` yet) appear for visibility with **View only** — `cashCollectionAvailable` is false; collect at **reconciliation**, not Finance cash confirm. **Direct collection** liabilities (`DIRECT_COLLECTION`) may still expose Finance cash when the contract requires cash. |
 | `RENEWAL` | Office unpaid **or** customer-approved `AWAITING_PAYMENT` (`approvedAt`, no `appliedAt`, no settlement) |
 
-Cash confirm for eligible `ROAD_LIABILITY` rows: `POST /finance/open-receivables/road-liabilities/:roadLiabilityId/cash-confirm` — delegates to existing `confirmCashCollection`.
+Cash confirm for eligible `ROAD_LIABILITY` rows: `POST /finance/open-receivables/road-liabilities/:roadLiabilityId/cash-confirm` — **only** when the liability is already on the **direct collection** path. Deferred registrations awaiting reconciliation are rejected (422).
 
 ## Unchanged flows
 

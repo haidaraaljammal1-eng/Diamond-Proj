@@ -1,12 +1,13 @@
 "use client";
 
+import { useLocale } from "next-intl";
+import { forceStaffLogout } from "@/infrastructure/auth/force-staff-logout";
 import { useAuthStore } from "../stores/auth.store";
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export function useAuth() {
+  const locale = useLocale();
   const { data: session, status } = useSession();
-  const router = useRouter();
   const user = session?.user ?? null;
   /** NextAuth `update()` sets `status` to loading while keeping `session.user`; do not block the shell. */
   const isLoading = status === "loading" && user == null;
@@ -17,9 +18,8 @@ export function useAuth() {
   const logout = async () => {
     setLoggingOut(true);
     try {
-      await signOut({ redirect: false });
-      router.refresh();
-    } finally {
+      await forceStaffLogout(locale === "en" ? "en" : "ar");
+    } catch {
       setLoggingOut(false);
     }
   };

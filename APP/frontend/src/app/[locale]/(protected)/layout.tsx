@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
+import { isStaffSessionUsable } from "@/infrastructure/auth/staff-session";
 import { AppShell } from "@/shared/layouts/app-shell";
 
 /**
@@ -23,7 +24,7 @@ export default async function ProtectedLayout({
   const { locale } = await params;
   const session = await auth();
 
-  if (!session?.user) redirect(`/${locale}/login`);
+  if (!isStaffSessionUsable(session)) redirect(`/${locale}/login`);
 
   setRequestLocale(locale);
 

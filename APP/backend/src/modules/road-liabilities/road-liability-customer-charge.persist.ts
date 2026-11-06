@@ -55,16 +55,24 @@ export async function persistRoadLiabilityCustomerChargeInTx(
     if (!input.contract.carIn) throw contractError.carInRequired();
     let reconciliationId = input.contract.reconciliation?.id;
     if (!reconciliationId) {
-      const created = await tx.contractReconciliation.create({
-        data: {
-          contractId: input.contract.id,
-          chargesTotal: 0,
-          depositAmount: 0,
-          deductions: 0,
-          finalAmount: 0,
-        },
+      const existing = await tx.contractReconciliation.findUnique({
+        where: { contractId: input.contract.id },
+        select: { id: true },
       });
-      reconciliationId = created.id;
+      if (existing) {
+        reconciliationId = existing.id;
+      } else {
+        const created = await tx.contractReconciliation.create({
+          data: {
+            contractId: input.contract.id,
+            chargesTotal: 0,
+            depositAmount: 0,
+            deductions: 0,
+            finalAmount: 0,
+          },
+        });
+        reconciliationId = created.id;
+      }
     }
     const line = await tx.contractReconciliationLine.create({
       data: {

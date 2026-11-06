@@ -8,6 +8,7 @@ import {
   createUser as createUserRequest,
   deleteUser as deleteUserRequest,
   listUsers,
+  resetUserPassword as resetUserPasswordRequest,
   setUserRoles,
   updateUser as updateUserRequest,
   updateUserStatus,
@@ -160,6 +161,9 @@ export const useUsersStore = create<UsersState>((set, get) => {
         }
         if (payload.roleIds !== undefined) {
           await setUserRoles(id, payload.roleIds);
+        }
+        if (payload.passwordReset) {
+          await resetUserPasswordRequest(id, payload.passwordReset);
         }
         await refreshUsers();
         set({ isUpdating: false });

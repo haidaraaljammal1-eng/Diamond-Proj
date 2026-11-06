@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
+import { resolveStaffReauthRequested, shouldAutoRedirectStaffFromLoginScreen } from "@/infrastructure/auth/staff-login-guard";
+import { isStaffSessionUsable } from "@/infrastructure/auth/staff-session";
 import { useLogin } from "@/modules/auth";
 import { FormBuilder } from "@/shared/components/forms/form-builder";
 import { loginFields } from "@/modules/auth/forms/login/login.fields";
@@ -20,13 +23,17 @@ const devDefaultValues: LoginFormValues = {
 
 export function LoginScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("Login");
-  const { login, error, status, isLoggedIn } = useLogin();
+  const { data: session } = useSession();
+  const { login, error, status } = useLogin();
+  const reauth = resolveStaffReauthRequested(searchParams.get("reauth"));
 
   useEffect(() => {
-    if (status === "authenticated") router.replace(`/${locale}/dashboard`);
-  }, [locale, router, status]);
+    if (!shouldAutoRedirectStaffFromLoginScreen(session, reauth)) return;
+    router.replace(`/${locale}/dashboard`);
+  }, [locale, reauth, router, session]);
 
   const handleSubmit = async ({ email, password }: LoginFormValues) => {
     if (await login({ email, password }))
@@ -45,12 +52,17 @@ export function LoginScreen() {
     return errorMessages[error] || t("error.generic");
   };
 
-  if (status === "authenticated") return null;
+  if (shouldAutoRedirectStaffFromLoginScreen(session, reauth)) return null;
+
+  const shellOff =
+    !reauth &&
+    status === "authenticated" &&
+    isStaffSessionUsable(session);
 
   return (
     <div
       id="login"
-      className={[styles.shell, isLoggedIn ? styles.shellOff : ""].filter(Boolean).join(" ")}
+      className={[styles.shell, shellOff ? styles.shellOff : ""].filter(Boolean).join(" ")}
       data-testid="login-shell"
     >
       <div className={styles.loginbox}>

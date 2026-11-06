@@ -88,3 +88,18 @@ export async function setUserRoles(
 export async function deleteUser(id: number): Promise<void> {
   await apiRequest<null>(`${USERS_PATH}/${id}`, { method: "DELETE" });
 }
+
+/** `POST /users/:id/reset-password` (Backend permission: `users.reset_password`). */
+export async function resetUserPassword(
+  id: number,
+  payload: { newPassword: string; confirmPassword: string },
+): Promise<UserDto> {
+  const response = await apiRequest<UserDto>(
+    `${USERS_PATH}/${id}/reset-password`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+  return response.data;
+}

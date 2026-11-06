@@ -4,7 +4,9 @@ import type { AuthUser } from "./auth.types.ts";
 import {
   applyAuthUserToToken,
   PERMISSIONS_SYNC_TTL_MS,
+  SESSION_LIVE_VERIFY_TTL_MS,
   shouldSyncPermissionsFromAuthMe,
+  shouldVerifyBackendSessionLive,
   syncJwtPermissionsFromAuthMe,
   type SessionPermissionToken,
 } from "./session-permissions.ts";
@@ -69,6 +71,37 @@ describe("shouldSyncPermissionsFromAuthMe", () => {
         "update",
       ),
       false,
+    );
+  });
+});
+
+describe("shouldVerifyBackendSessionLive", () => {
+  const token: SessionPermissionToken = {
+    accessToken: "at-1",
+    backendSessionVerifiedAt: 1_000,
+  };
+
+  it("requires verification when never confirmed with /auth/me", () => {
+    assert.equal(
+      shouldVerifyBackendSessionLive({ accessToken: "at-1" }, 2_000),
+      true,
+    );
+  });
+
+  it("skips verification inside the live TTL window", () => {
+    assert.equal(
+      shouldVerifyBackendSessionLive(
+        token,
+        1_000 + SESSION_LIVE_VERIFY_TTL_MS - 1,
+      ),
+      false,
+    );
+  });
+
+  it("re-verifies after the live TTL window", () => {
+    assert.equal(
+      shouldVerifyBackendSessionLive(token, 1_000 + SESSION_LIVE_VERIFY_TTL_MS),
+      true,
     );
   });
 });
@@ -143,5 +176,24 @@ describe("syncJwtPermissionsFromAuthMe", () => {
       shouldSyncPermissionsFromAuthMe(next, 20 + 1_000),
       false,
     );
+  });
+
+  it("marks the JWT dead when /auth/me returns TOKEN_INVALID", async () => {
+    const previous: SessionPermissionToken = {
+      accessToken: "at-revoked",
+      refreshToken: "rt-revoked",
+      permissions: ["dashboard.read"],
+    };
+    const next = await syncJwtPermissionsFromAuthMe(
+      previous,
+      async () => {
+        throw new Error("TOKEN_INVALID");
+      },
+      30,
+    );
+    assert.equal(next.error, "RefreshAccessTokenError");
+    assert.equal(next.accessToken, undefined);
+    assert.equal(next.refreshToken, undefined);
+    assert.equal(shouldSyncPermissionsFromAuthMe(next, 31), false);
   });
 });

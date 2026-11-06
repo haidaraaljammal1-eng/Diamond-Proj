@@ -34,10 +34,16 @@ export interface CreateUserPayload {
   confirmPassword: string;
 }
 
+export interface UpdateUserPasswordPayload {
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface UpdateUserPayload {
   email?: string;
   name?: string | null;
   roleIds?: number[];
+  passwordReset?: UpdateUserPasswordPayload;
 }
 
 export interface CreateUserResult {

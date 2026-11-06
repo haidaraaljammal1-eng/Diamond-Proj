@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { auth } from "@/auth";
+import { isStaffSessionUsable } from "@/infrastructure/auth/staff-session";
+import { STAFF_REAUTH_QUERY } from "@/infrastructure/auth/staff-login-guard";
 import { routing } from "@/infrastructure/i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
@@ -17,10 +19,13 @@ export default auth((request) => {
   );
   const isProtectedRoute =
     route === "/dashboard" || route.startsWith("/dashboard/");
-  const isAuthenticated = !!request.auth?.user;
+  const isAuthenticated = isStaffSessionUsable(request.auth);
 
-  if (isAuthRoute && isAuthenticated)
-    return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
+  if (isAuthRoute && isAuthenticated) {
+    if (request.nextUrl.searchParams.get(STAFF_REAUTH_QUERY) !== "1") {
+      return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
+    }
+  }
   if (isProtectedRoute && !isAuthenticated)
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   return intlMiddleware(request);

@@ -98,6 +98,9 @@ export function ContractDetailDrawer({
   const format = useFormatter();
   const checkout = useStripeCheckout();
   const [providerAvailable, setProviderAvailable] = useState(true);
+  const [postCloseCheckoutReceivableId, setPostCloseCheckoutReceivableId] = useState<
+    string | null
+  >(null);
   const [collectRenewalId, setCollectRenewalId] = useState<string | null>(null);
   const [cancelRenewalId, setCancelRenewalId] = useState<string | null>(null);
   const [deferredChargeOpen, setDeferredChargeOpen] = useState(false);
@@ -118,6 +121,10 @@ export function ContractDetailDrawer({
   useEffect(() => {
     if (contractId) void loadContract(contractId);
   }, [contractId, loadContract]);
+
+  useEffect(() => {
+    setPostCloseCheckoutReceivableId(null);
+  }, [contractId]);
 
   const errorMessage = resolveContractsErrorMessage(t, detailError);
   const money = (value: number, currency: string) =>
@@ -292,8 +299,16 @@ export function ContractDetailDrawer({
           {detail.postCloseReceivables && detail.postCloseReceivables.count > 0 ? (
             <section className={styles.section} data-testid="contract-post-close">
               <p className={styles.sectionTitle}>{t("detail.postClose")}</p>
-              {detail.postCloseReceivables.items.map((item) => (
-                <div key={item.id} className={styles.postCloseItem}>
+              <div className={styles.postCloseList}>
+                {detail.postCloseReceivables.items.map((item) => {
+                  const isActivePostCloseCheckout =
+                    postCloseCheckoutReceivableId === item.id;
+                  const itemCheckoutUrl = isActivePostCloseCheckout
+                    ? checkout.lastCheckoutUrl
+                    : null;
+
+                  return (
+                  <div key={item.id} className={styles.postCloseItem}>
                   <div className={styles.kv}>
                     <span>
                       {item.roadLiabilityType === "SALIK_TOLL"
@@ -310,10 +325,11 @@ export function ContractDetailDrawer({
                       settled={false}
                       amountDue={item.amount}
                       currency={item.currency}
-                      pending={checkout.pending}
-                      checkoutUrl={checkout.lastCheckoutUrl}
+                      pending={checkout.pending && isActivePostCloseCheckout}
+                      checkoutUrl={itemCheckoutUrl}
                       onCreateLink={() => {
                         if (!detail) return;
+                        setPostCloseCheckoutReceivableId(item.id);
                         void checkout
                           .runCheckout(() =>
                             startPostCloseReceivablePayment(detail.id, item.id),
@@ -322,18 +338,19 @@ export function ContractDetailDrawer({
                             setProviderAvailable(result.providerAvailable);
                             void loadContract(detail.id);
                           })
-                          .catch(() => setProviderAvailable(false));
+                          .catch(() => {
+                            setProviderAvailable(false);
+                            setPostCloseCheckoutReceivableId(null);
+                          });
                       }}
-                      onCopyLink={() => void checkout.copyCheckoutLink()}
-                      onOpenLink={() => {
-                        if (checkout.lastCheckoutUrl) {
-                          window.open(checkout.lastCheckoutUrl, "_blank", "noopener,noreferrer");
-                        }
-                      }}
+                      onCopyLink={() => void checkout.copyCheckoutLink(itemCheckoutUrl)}
+                      onOpenLink={() => checkout.openCheckoutInNewTab(itemCheckoutUrl)}
                     />
                   ) : null}
-                </div>
-              ))}
+                  </div>
+                  );
+                })}
+              </div>
             </section>
           ) : null}
 
@@ -553,7 +570,9 @@ export function ContractDetailDrawer({
                   data-testid="contract-register-deferred-charge"
                   onClick={() => setDeferredChargeOpen(true)}
                 >
-                  {t("actions.registerDeferredCharge")}
+                  {detail.status === "CLOSED"
+                    ? t("actions.registerDeferredChargeClosed")
+                    : t("actions.registerDeferredCharge")}
                 </Button>
               ) : null}
               {actions.showReconcile ? (

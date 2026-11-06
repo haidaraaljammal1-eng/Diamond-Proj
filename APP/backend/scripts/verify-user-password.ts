@@ -131,7 +131,8 @@ async function main() {
   // ── TEST 1b — new user can log in with the password ─────────────────────────
   const u1Login = await login(email1, PW1);
   const u1Refresh: string = u1Login.body?.data?.refreshToken;
-  check("TEST 1b new user logs in with the set password", u1Login.status === 200 && !!u1Login.body?.data?.accessToken, `status ${u1Login.status}`);
+  const u1Access: string = u1Login.body?.data?.accessToken;
+  check("TEST 1b new user logs in with the set password", u1Login.status === 200 && !!u1Access, `status ${u1Login.status}`);
 
   // ── TEST 2 — mismatch → validation error, user not created ──────────────────
   const email2 = `pw-verify-2-${STAMP}@ex.test`;
@@ -167,6 +168,12 @@ async function main() {
   check("TEST 4  NEW password works", newLogin.status === 200 && !!newLogin.body?.data?.accessToken, `status ${newLogin.status}`);
   const refreshOld = await call("/auth/refresh", { method: "POST", body: { refreshToken: u1Refresh } });
   check("TEST 10 pre-reset session revoked (refresh rejected)", refreshOld.status === 401, `status ${refreshOld.status}`);
+  const meOldToken = await call("/auth/me", { token: u1Access });
+  check(
+    "TEST 10 pre-reset access token rejected after reset",
+    meOldToken.status === 401 && meOldToken.body?.error?.code === "TOKEN_INVALID",
+    `status ${meOldToken.status} code ${meOldToken.body?.error?.code ?? "?"}`,
+  );
 
   // ── TEST 5 + 6 — separation: users.update WITHOUT reset_password → 403 ───────
   const perms = await prisma.permission.findMany({

@@ -5,11 +5,13 @@ import {
   useLegacyOrFunctionalCapability,
 } from "@/modules/functional-rbac";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
+import { usePermissions } from "@/modules/auth";
 import { useUsersStore } from "../stores/users.store";
 import type { CreateUserPayload, UpdateUserPayload } from "../types/user.types";
 import {
   USERS_CREATE_PERMISSION,
   USERS_DELETE_PERMISSION,
+  USERS_RESET_PASSWORD_PERMISSION,
   USERS_UPDATE_PERMISSION,
 } from "../users.permissions";
 
@@ -18,6 +20,7 @@ export interface UseUserMutationsResult {
   canUpdate: boolean;
   canDelete: boolean;
   canEnableDisable: boolean;
+  canResetPassword: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
@@ -39,6 +42,7 @@ export interface UseUserMutationsResult {
 }
 
 export function useUserMutations(): UseUserMutationsResult {
+  const { hasPermission } = usePermissions();
   const canCreate = useLegacyOrFunctionalCapability(
     USERS_CREATE_PERMISSION,
     FN.users.create,
@@ -55,6 +59,7 @@ export function useUserMutations(): UseUserMutationsResult {
     USERS_UPDATE_PERMISSION,
     FN.users.enableDisable,
   );
+  const canResetPassword = hasPermission(USERS_RESET_PASSWORD_PERMISSION);
 
   const isCreating = useUsersStore((state) => state.isCreating);
   const isUpdating = useUsersStore((state) => state.isUpdating);
@@ -77,6 +82,7 @@ export function useUserMutations(): UseUserMutationsResult {
     canUpdate,
     canDelete,
     canEnableDisable,
+    canResetPassword,
     isCreating,
     isUpdating,
     isDeleting,

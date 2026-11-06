@@ -19,6 +19,7 @@ Navigation key: `team` (Demo label: Staff / الموظفون).
 | `users.read`    | `GET /users` — page access and list           |
 | `users.create`  | `POST /users` — “New employee” dialog         |
 | `users.update`  | `PATCH /users/:id/status` — card status switch |
+| `users.reset_password` | `POST /users/:id/reset-password` — new password in edit dialog (optional) |
 | `roles.read`    | `GET /lookups/roles` — role picker (accepted any-of with `users.create` / `users.update`) |
 
 Frontend visibility is UX only; the Backend enforces every request.
@@ -33,11 +34,12 @@ Frontend visibility is UX only; the Backend enforces every request.
 | `PUT /users/:id/roles`          | Replace roles — `users.update`                |
 | `DELETE /users/:id`             | Delete user — `users.delete`                  |
 | `PATCH /users/:id/status`       | `ACTIVE` \| `SUSPENDED` only                  |
+| `POST /users/:id/reset-password` | Admin set/replace password — `users.reset_password` (separate from `users.update`) |
 | `GET /lookups/roles`            | Role picker options (id + label + key), capped at 50 |
 
 Card actions (permission-gated UX):
 
-- **Edit** → `users.update` — Dialog + FormBuilder (`PUT /users/:id`, optional `PUT /users/:id/roles`)
+- **Edit** → `users.update` — Dialog + FormBuilder (`PUT /users/:id`, optional `PUT /users/:id/roles`). Holders of `users.reset_password` also see a read-only “current password” indicator (hash never exposed), optional new password fields, and `POST /users/:id/reset-password` when new values are saved.
 - **Delete** → `users.delete` — confirmation Dialog (`DELETE /users/:id`)
 
 ## User fields shown
@@ -87,7 +89,7 @@ lookup). Password uses the
 shared `PasswordInput` via FormBuilder field type `password`. Frontend rules:
 min 8 characters, at least one letter, at least one number, confirmation match.
 The Backend hashes the password (argon2id) and creates the account `ACTIVE`.
-No phone field. Edit dialog does not change the password.
+No phone field. Edit dialog does not change the password unless the session has `users.reset_password` and the admin enters a new password (Backend revokes active sessions on reset).
 
 ## Development cleanup
 

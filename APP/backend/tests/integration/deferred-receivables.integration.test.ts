@@ -149,7 +149,7 @@ if (!INTEGRATION_ENABLED) {
       assert.notEqual(second.statusCode, 200);
     });
 
-    test("finance lists ROAD_LIABILITY and cash-confirm clears obligation once", async () => {
+    test("finance lists deferred ROAD_LIABILITY for visibility only (no finance cash collect)", async () => {
       seq += 1;
       const vehicle = await prisma.vehicle.create({
         data: {
@@ -191,14 +191,14 @@ if (!INTEGRATION_ENABLED) {
       const rows = list.json().data as Array<{ sourceId: string; cashCollectionAvailable?: boolean }>;
       const row = rows.find((r) => r.sourceId === liabilityId);
       assert.ok(row);
-      assert.equal(row?.cashCollectionAvailable, true);
+      assert.equal(row?.cashCollectionAvailable, false);
 
       const confirm = await app.inject({
         method: "POST",
         url: `/finance/open-receivables/road-liabilities/${liabilityId}/cash-confirm`,
         headers: { ...auth(), "idempotency-key": `cash-${run}-${seq}` },
       });
-      assert.equal(confirm.statusCode, 200, confirm.body);
+      assert.equal(confirm.statusCode, 422, confirm.body);
 
       const listAfter = await app.inject({
         method: "GET",
@@ -206,21 +206,12 @@ if (!INTEGRATION_ENABLED) {
         headers: auth(),
       });
       const rowsAfter = listAfter.json().data as Array<{ sourceId: string }>;
-      assert.equal(rowsAfter.find((r) => r.sourceId === liabilityId), undefined);
+      assert.ok(rowsAfter.find((r) => r.sourceId === liabilityId));
 
       const charge = await prisma.roadLiabilityCustomerCharge.findUnique({
         where: { roadLiabilityId: liabilityId },
-        include: { contractPayment: true },
       });
-      assert.ok(charge?.contractPayment);
-      assert.equal(charge.contractPayment.status, "CONFIRMED");
-      const ledger = await prisma.financialLedgerEntry.count({
-        where: {
-          sourceType: "CONTRACT_PAYMENT",
-          sourceId: charge.contractPayment.id,
-        },
-      });
-      assert.equal(ledger, 1);
+      assert.equal(charge, null);
     });
 
     test("CLOSED register → post-close receivable → trusted payment → ledger once", async () => {
@@ -450,7 +441,7 @@ if (!INTEGRATION_ENABLED) {
       );
     });
 
-    test("finance cash-confirm idempotency key prevents duplicate ledger on concurrent retry", async () => {
+    test("finance cash-confirm stays blocked for deferred-for-reconciliation liability", async () => {
       seq += 1;
       const vehicle = await prisma.vehicle.create({
         data: {
@@ -492,17 +483,12 @@ if (!INTEGRATION_ENABLED) {
         url: `/finance/open-receivables/road-liabilities/${liabilityId}/cash-confirm`,
         headers: { ...auth(), "idempotency-key": key },
       });
-      assert.equal(first.statusCode, 200, first.body);
-      assert.equal(second.statusCode, 200, second.body);
+      assert.equal(first.statusCode, 422, first.body);
+      assert.equal(second.statusCode, 422, second.body);
       const charge = await prisma.roadLiabilityCustomerCharge.findUnique({
         where: { roadLiabilityId: liabilityId },
-        include: { contractPayment: true },
       });
-      assert.ok(charge?.contractPayment);
-      const ledger = await prisma.financialLedgerEntry.count({
-        where: { sourceType: "CONTRACT_PAYMENT", sourceId: charge.contractPayment.id },
-      });
-      assert.equal(ledger, 1);
+      assert.equal(charge, null);
     });
   });
 }

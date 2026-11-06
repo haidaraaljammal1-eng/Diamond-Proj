@@ -28,7 +28,7 @@ import {
 import { resolveCollectionAuthorization } from "src/modules/road-liabilities/road-liability-collection.capability";
 import { buildRoadLiabilityFailureCustomer } from "src/modules/road-liabilities/road-liability-failure-customer";
 import { mapStripeFailureToLocalized } from "src/modules/road-liabilities/road-liability-stripe-failure-mapping";
-import { ROAD_LIABILITY_COLLECTION_LOCK_NS } from "src/modules/road-liabilities/road-liability.constants";
+import { ROAD_LIABILITY_COLLECTION_LOCK_NS, STAFF_MANUAL_SOURCE_KEY } from "src/modules/road-liabilities/road-liability.constants";
 import { vehicleDisplayName } from "src/modules/vehicles/vehicles.mapper";
 import type { z } from "zod";
 import type {
@@ -596,6 +596,13 @@ export function createRoadLiabilityCollectionService(fastify: FastifyInstance) {
       );
       if (!capability.cashCollectionRequired) {
         throw roadLiabilityCollectionError.cashCollectionNotAllowed();
+      }
+
+      if (
+        liability.authoritativeSourceKey === STAFF_MANUAL_SOURCE_KEY &&
+        !liability.customerCharge
+      ) {
+        throw roadLiabilityCollectionError.notCollectible();
       }
 
       await withTransaction(prisma, async (tx) => {

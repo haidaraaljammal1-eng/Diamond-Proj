@@ -21,7 +21,7 @@ export function SidebarAccount() {
   const initial = (user?.name?.trim()?.[0] ?? "D").toUpperCase();
 
   return (
-    <div className={styles.account}>
+    <div className={styles.account} data-testid="staff-account-row">
       <span className={styles.accountAvatar} aria-hidden="true">
         {initial}
         <span className={styles.accountStatus} title={t("onlineStatus")} />
@@ -35,7 +35,8 @@ export function SidebarAccount() {
       <button
         type="button"
         className={styles.accountLogout}
-        onClick={logout}
+        data-testid="staff-logout-button"
+        onClick={() => void logout()}
         disabled={isLoggingOut}
         aria-busy={isLoggingOut}
         aria-label={isLoggingOut ? t("logoutBusy") : t("logout")}

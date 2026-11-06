@@ -9,6 +9,7 @@ import { createRefreshCoordinator } from "@/infrastructure/auth/refresh-coordina
 import { selectAuthMeFetcher } from "@/infrastructure/auth/auth-me-fetch";
 import {
   shouldSyncPermissionsFromAuthMe,
+  shouldVerifyBackendSessionLive,
   syncJwtPermissionsFromAuthMe,
 } from "@/infrastructure/auth/session-permissions";
 import { env } from "@/config/env";
@@ -119,13 +120,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         Date.now() < token.accessTokenExpiresAt - 30_000;
 
       if (accessTokenStillFresh) {
-        if (shouldSyncPermissionsFromAuthMe(token, Date.now(), trigger)) {
+        const now = Date.now();
+        if (
+          shouldSyncPermissionsFromAuthMe(token, now, trigger) ||
+          shouldVerifyBackendSessionLive(token, now, trigger)
+        ) {
           const fetchMe = selectAuthMeFetcher(
             trigger,
             fetchCurrentUserFresh,
             fetchCurrentUser,
           );
-          return syncJwtPermissionsFromAuthMe(token, fetchMe);
+          return syncJwtPermissionsFromAuthMe(token, fetchMe, now);
         }
         return token;
       }
@@ -174,9 +179,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   events: {
-    async signOut(message) {
+    signOut(message) {
       if ("token" in message && message.token?.accessToken) {
-        await backendRequest<{ message: string }>(
+        void backendRequest<{ message: string }>(
           "/auth/logout",
           undefined,
           message.token.accessToken,

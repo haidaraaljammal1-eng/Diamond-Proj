@@ -15,10 +15,29 @@ export interface SessionPermissionToken {
   accessToken?: string;
   error?: string;
   permissionsSyncedAt?: number;
+  /** Last successful GET /auth/me (backend session still live). */
+  backendSessionVerifiedAt?: number;
 }
+
+/** Re-check revoked sessions while the access JWT still looks fresh. */
+export const SESSION_LIVE_VERIFY_TTL_MS = 30_000;
 
 /** Re-read `/auth/me` at most this often when the access token is still valid. */
 export const PERMISSIONS_SYNC_TTL_MS = 5 * 60 * 1000;
+
+export function shouldVerifyBackendSessionLive(
+  token: SessionPermissionToken,
+  now: number,
+  trigger?: string,
+  ttlMs = SESSION_LIVE_VERIFY_TTL_MS,
+): boolean {
+  if (!token.accessToken || token.error === "RefreshAccessTokenError") {
+    return false;
+  }
+  if (trigger === "update") return true;
+  if (token.backendSessionVerifiedAt == null) return true;
+  return now - token.backendSessionVerifiedAt >= ttlMs;
+}
 
 export function shouldSyncPermissionsFromAuthMe(
   token: SessionPermissionToken,
@@ -47,6 +66,7 @@ export function applyAuthUserToToken<T extends SessionPermissionToken>(
   roles: string[];
   permissions: string[];
   permissionsSyncedAt: number;
+  backendSessionVerifiedAt: number;
 } {
   return {
     ...token,
@@ -54,6 +74,7 @@ export function applyAuthUserToToken<T extends SessionPermissionToken>(
     roles: (user.roles ?? []).map((role) => role.key),
     permissions: [...(user.permissions ?? [])],
     permissionsSyncedAt: now,
+    backendSessionVerifiedAt: now,
   };
 }
 
@@ -68,7 +89,21 @@ export async function syncJwtPermissionsFromAuthMe<T extends SessionPermissionTo
   try {
     const user = await fetchMe(token.accessToken);
     return applyAuthUserToToken(token, user, now);
-  } catch {
+  } catch (err) {
+    const code = err instanceof Error ? err.message : "";
+    if (
+      code === "TOKEN_INVALID" ||
+      code === "TOKEN_EXPIRED" ||
+      code === "UNAUTHORIZED"
+    ) {
+      return {
+        ...token,
+        error: "RefreshAccessTokenError" as const,
+        accessToken: undefined,
+        refreshToken: undefined,
+        permissionsSyncedAt: now,
+      };
+    }
     // Keep the last snapshot and back off until TTL so a failing `/auth/me`
     // cannot loop on every NextAuth jwt callback.
     return { ...token, permissionsSyncedAt: now };

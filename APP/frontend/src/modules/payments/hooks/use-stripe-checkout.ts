@@ -8,14 +8,18 @@ export function useStripeCheckout() {
   const [lastCheckoutUrl, setLastCheckoutUrl] = useState<string | null>(null);
   const [lastStatusToken, setLastStatusToken] = useState<string | null>(null);
 
-  const openCheckout = useCallback((checkout: PaymentCheckoutDto) => {
+  const storeCheckout = useCallback((checkout: PaymentCheckoutDto) => {
     const url = checkout.checkoutUrl ?? checkout.payment.checkoutUrl ?? null;
     setLastCheckoutUrl(url);
     setLastStatusToken(checkout.statusToken);
+    return url;
+  }, []);
+
+  /** Opens Stripe Checkout in a new tab (staff must click explicitly). */
+  const openCheckoutInNewTab = useCallback((url: string | null) => {
     if (url && typeof window !== "undefined") {
       window.open(url, "_blank", "noopener,noreferrer");
     }
-    return url;
   }, []);
 
   const runCheckout = useCallback(
@@ -23,18 +27,19 @@ export function useStripeCheckout() {
       setPending(true);
       try {
         const checkout = await start();
-        openCheckout(checkout);
+        storeCheckout(checkout);
         return checkout;
       } finally {
         setPending(false);
       }
     },
-    [openCheckout],
+    [storeCheckout],
   );
 
-  const copyCheckoutLink = useCallback(async () => {
-    if (!lastCheckoutUrl || typeof navigator === "undefined") return false;
-    await navigator.clipboard.writeText(lastCheckoutUrl);
+  const copyCheckoutLink = useCallback(async (url?: string | null) => {
+    const target = url ?? lastCheckoutUrl;
+    if (!target || typeof navigator === "undefined") return false;
+    await navigator.clipboard.writeText(target);
     return true;
   }, [lastCheckoutUrl]);
 
@@ -43,7 +48,8 @@ export function useStripeCheckout() {
     lastCheckoutUrl,
     lastStatusToken,
     runCheckout,
-    openCheckout,
+    openCheckoutInNewTab,
+    storeCheckout,
     copyCheckoutLink,
   };
 }

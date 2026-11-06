@@ -7,15 +7,22 @@ import { Dialog } from "@/shared/components/ui/dialog";
 import { FormBuilder } from "@/shared/components/forms/form-builder";
 import { useUserMutations } from "../../hooks/use-user-mutations";
 import { useRoleLookup } from "../../hooks/use-role-lookup";
-import { createUserFields, editUserFields } from "../../forms/user.fields";
+import {
+  createUserFields,
+  editUserFields,
+  editUserWithPasswordResetFields,
+} from "../../forms/user.fields";
 import {
   createUserSchema,
   editUserSchema,
+  editUserWithPasswordResetSchema,
   type CreateUserValues,
   type EditUserValues,
+  type EditUserWithPasswordResetValues,
 } from "../../forms/user.schema";
 import type { UserDto } from "../../types/user.types";
 import { resolveUsersErrorMessage } from "../../utils/resolve-users-error";
+import { StoredPasswordIndicator } from "./stored-password-indicator";
 import styles from "./user-form-dialog.module.css";
 
 export type UserFormTarget = { mode: "create" } | { mode: "edit"; user: UserDto };
@@ -45,6 +52,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     editUser,
     canCreate,
     canUpdate,
+    canResetPassword,
     isCreating,
     isUpdating,
     createError,
@@ -76,6 +84,7 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     name: t("form.namePlaceholder"),
     password: t("form.passwordPlaceholder"),
     confirmPassword: t("form.confirmPasswordPlaceholder"),
+    newPassword: t("form.newPasswordPlaceholder"),
     role: t("form.roleLabel"),
     rolePlaceholder: t("form.rolePlaceholder"),
   };
@@ -100,13 +109,38 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
     if (succeeded) onClose();
   };
 
-  const handleEdit = async (userId: number, values: EditUserValues) => {
+  const handleEdit = async (
+    userId: number,
+    values: EditUserValues | EditUserWithPasswordResetValues,
+  ) => {
+    const newPassword =
+      "newPassword" in values ? (values.newPassword?.trim() ?? "") : "";
+    const confirmPassword =
+      "confirmPassword" in values ? (values.confirmPassword?.trim() ?? "") : "";
+
     const succeeded = await editUser(userId, {
       email: values.email,
       name: toNameValue(values.name),
       roleIds: canPickRolesOnEdit ? toRoleIds(values.roleId) : undefined,
+      ...(canResetPassword && newPassword
+        ? {
+            passwordReset: {
+              newPassword,
+              confirmPassword,
+            },
+          }
+        : {}),
     });
     if (succeeded) onClose();
+  };
+
+  const editDefaultValues = {
+    email: target?.mode === "edit" ? target.user.email : "",
+    name: target?.mode === "edit" ? (target.user.name ?? "") : "",
+    roleId:
+      target?.mode === "edit" && target.user.roles[0]
+        ? String(target.user.roles[0].id)
+        : "",
   };
 
   const isSubmitting = target?.mode === "edit" ? isUpdating : isCreating;
@@ -132,22 +166,44 @@ export function UserFormDialog({ target, onClose }: UserFormDialogProps) {
       ) : null}
 
       {target?.mode === "edit" ? (
-        <FormBuilder<EditUserValues>
-          key={`edit-${target.user.id}`}
-          className={styles.form}
-          fields={editUserFields(fieldLabels, roleOptions, canPickRolesOnEdit)}
-          schema={editUserSchema}
-          defaultValues={{
-            email: target.user.email,
-            name: target.user.name ?? "",
-            roleId: target.user.roles[0] ? String(target.user.roles[0].id) : "",
-          }}
-          onSubmit={(values) => handleEdit(target.user.id, values)}
-          submitLabel={t("form.save")}
-          submittingLabel={t("form.saving")}
-          submitSize="md"
-          secondaryAction={cancelAction}
-        />
+        canResetPassword ? (
+          <>
+            <StoredPasswordIndicator />
+            <FormBuilder<EditUserWithPasswordResetValues>
+              key={`edit-reset-${target.user.id}`}
+              className={styles.form}
+              fields={editUserWithPasswordResetFields(
+                fieldLabels,
+                roleOptions,
+                canPickRolesOnEdit,
+              )}
+              schema={editUserWithPasswordResetSchema}
+              defaultValues={{
+                ...editDefaultValues,
+                newPassword: "",
+                confirmPassword: "",
+              }}
+              onSubmit={(values) => handleEdit(target.user.id, values)}
+              submitLabel={t("form.save")}
+              submittingLabel={t("form.saving")}
+              submitSize="md"
+              secondaryAction={cancelAction}
+            />
+          </>
+        ) : (
+          <FormBuilder<EditUserValues>
+            key={`edit-${target.user.id}`}
+            className={styles.form}
+            fields={editUserFields(fieldLabels, roleOptions, canPickRolesOnEdit)}
+            schema={editUserSchema}
+            defaultValues={editDefaultValues}
+            onSubmit={(values) => handleEdit(target.user.id, values)}
+            submitLabel={t("form.save")}
+            submittingLabel={t("form.saving")}
+            submitSize="md"
+            secondaryAction={cancelAction}
+          />
+        )
       ) : (
         <FormBuilder<CreateUserValues>
           key="create"
