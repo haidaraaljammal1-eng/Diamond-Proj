@@ -29,6 +29,7 @@ import { writeOutboxEvent } from "src/lib/db/outbox";
 import {
   ROAD_LIABILITY_OUTBOX_AGGREGATE,
   ROAD_LIABILITY_OUTBOX_EVENT,
+  ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT,
 } from "src/modules/road-liabilities/road-liability.constants";
 
 const DEFERRED_REGISTER_STATUSES = new Set<ContractStatus>([
@@ -178,6 +179,22 @@ async function createDeferredLiability(
     idempotencyKey,
     actorUserId,
     roadLiabilityId: liability.id,
+  });
+
+  await writeOutboxEvent(tx, {
+    eventType: ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT,
+    aggregateType: ROAD_LIABILITY_OUTBOX_AGGREGATE,
+    aggregateId: liability.id,
+    dedupeKey: `${ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT}:${liability.id}`,
+    payload: {
+      liabilityId: liability.id,
+      contractId: contract.id,
+      vehicleId: contract.vehicleId,
+      type: liability.type,
+      amount: liability.amount,
+      currency: liability.currency,
+      occurredAt: liability.occurredAt.toISOString(),
+    },
   });
 
   await writeOutboxEvent(tx, {

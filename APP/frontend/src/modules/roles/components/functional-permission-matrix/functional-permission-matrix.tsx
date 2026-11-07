@@ -15,6 +15,7 @@ const ROLE_COLUMN_WIDTH = 172;
 export interface FunctionalPermissionMatrixProps {
   matrix: FunctionalPermissionMatrix;
   onEditRole?: (role: RoleDto) => void;
+  onDeleteRole?: (role: RoleDto) => void;
   onToggleGrant?: (
     role: RoleDto,
     capabilityKey: string,
@@ -54,6 +55,7 @@ function usePlaceholderColumns(roleCount: number) {
 export function FunctionalPermissionMatrix({
   matrix,
   onEditRole,
+  onDeleteRole,
   onToggleGrant,
   isCellPending,
   matrixEditingDisabled = false,
@@ -104,6 +106,12 @@ export function FunctionalPermissionMatrix({
                   }
                   onEdit={onEditRole ? () => onEditRole(role) : undefined}
                   editLabel={t("form.editRole", { role: role.name })}
+                  onDelete={
+                    onDeleteRole && !role.isSystem
+                      ? () => onDeleteRole(role)
+                      : undefined
+                  }
+                  deleteLabel={t("form.deleteRole", { role: role.name })}
                 />
               ))}
               {Array.from({ length: placeholders }, (_, index) => (

@@ -1,0 +1,22 @@
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.confirmDelete {
+  color: #b54a42 !important;
+}
+
+.error {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(181, 74, 66, 0.28);
+  background: rgba(181, 74, 66, 0.08);
+  color: #8f3a34;
+  font-size: 12.5px;
+  line-height: 1.45;
+}

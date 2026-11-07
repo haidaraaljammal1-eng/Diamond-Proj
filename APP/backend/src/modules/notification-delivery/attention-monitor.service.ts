@@ -80,7 +80,7 @@ export async function runAttentionMonitorCycle(
   const snapshot = await loadSnapshot(prisma);
   if (!attentionMonitorHasOutstandingCases(snapshot)) return false;
 
-  const message = buildAttentionSummaryMessage(snapshot);
+  const message = buildAttentionSummaryMessage();
   const result = await send(message);
   if (!result.success) return false;
 
@@ -93,6 +93,10 @@ export async function runAttentionMonitorCycle(
 export function createAttentionMonitorService(app: { prisma: PrismaClient }) {
   return {
     runDueCycle(now = new Date()) {
+      // Superseded by Daily Operations & Receivables digest — never send in parallel.
+      if (env.DAILY_OPERATIONS_DIGEST_ENABLED) {
+        return Promise.resolve(false);
+      }
       return runAttentionMonitorCycle(app.prisma, {
         enabled: env.ATTENTION_MONITOR_ENABLED,
         timeZone: env.ATTENTION_MONITOR_TIMEZONE,

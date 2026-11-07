@@ -14,11 +14,12 @@ import {
   buildAttentionSummaryMessage,
   buildCarInMessage,
   buildPaymentReceivedMessage,
+  buildRoadLiabilityReceivedMessage,
 } from "src/modules/notification-delivery/business-notification.messages";
 import {
+  loadActorUsername,
   loadCarInContext,
   resolveRoadLiabilityCollectionChannel,
-  UNKNOWN_STAFF_ACTOR_LABEL,
 } from "src/modules/notification-delivery/business-notification.context";
 import { createBusinessNotificationService } from "src/modules/notification-delivery/business-notification.service";
 import { PUSHOVER_BUSINESS_IDEMPOTENCY_SCOPE, ATTENTION_MONITOR_IDEMPOTENCY_SCOPE } from "src/modules/notification-delivery/business-notification.constants";
@@ -38,23 +39,9 @@ test("attention monitor fires independently for each configured Dubai slot", () 
   }
 });
 
-test("attention summary lists deferred, post-close, and renewal sections", () => {
-  const message = buildAttentionSummaryMessage({
-    unpaidContractsCount: 0,
-    unpaidContractsTotal: 0,
-    unpaidDeferredViolationsCount: 2,
-    unpaidDeferredViolationsTotal: 400,
-    unpaidPostCloseViolationsCount: 1,
-    unpaidPostCloseViolationsTotal: 120,
-    awaitingRenewalsCount: 3,
-    awaitingRenewalsTotal: 900,
-    overdueRentalsCount: 0,
-    outstandingFinancialTotal: 1420,
-    currency: "AED",
-  });
-  assert.match(message.message, /Unpaid deferred violations:/);
-  assert.match(message.message, /Unpaid post-close violations:/);
-  assert.match(message.message, /Renewals awaiting payment:/);
+test("attention summary is a fixed staff headline when outstanding cases exist", () => {
+  const message = buildAttentionSummaryMessage();
+  assert.match(message.message, /Outstanding items require attention/);
 });
 
 test("attention monitor slot parsing and due-slot resolution", () => {
@@ -82,7 +69,6 @@ test("attention summary sends nothing content-wise when all counts are zero", ()
       unpaidPostCloseViolationsTotal: 0,
       awaitingRenewalsCount: 0,
       awaitingRenewalsTotal: 0,
-      overdueRentalsCount: 0,
       outstandingFinancialTotal: 0,
       currency: "AED",
     }),
@@ -90,7 +76,7 @@ test("attention summary sends nothing content-wise when all counts are zero", ()
   );
 });
 
-test("attention summary message consolidates outstanding categories", () => {
+test("attention summary message shape is stable", () => {
   const message = buildAttentionSummaryMessage({
     unpaidContractsCount: 3,
     unpaidContractsTotal: 8400,
@@ -100,17 +86,47 @@ test("attention summary message consolidates outstanding categories", () => {
     unpaidPostCloseViolationsTotal: 0,
     awaitingRenewalsCount: 0,
     awaitingRenewalsTotal: 0,
-    overdueRentalsCount: 1,
     outstandingFinancialTotal: 9650,
     currency: "AED",
   });
+  assert.match(message.message, /Outstanding items require attention/);
+});
 
-  assert.match(message.message, /Unpaid contracts:/);
-  assert.match(message.message, /3 — AED 8,400/);
-  assert.match(message.message, /Unpaid deferred violations:/);
-  assert.match(message.message, /Overdue rentals:/);
-  assert.match(message.message, /Outstanding financial total:/);
-  assert.match(message.message, /AED 9,650/);
+test("road_liability.received Salik uses Salik title and body; traffic keeps existing copy", () => {
+  const salikToll = buildRoadLiabilityReceivedMessage({
+    liabilityType: "SALIK_TOLL",
+    contractNumber: "DE-2026-000900",
+    vehicleName: "Chevrolet Tahoe",
+    staffActor: { staffUsername: "Haidara Admin" },
+  });
+  assert.equal(salikToll.title, "New Salik Recorded");
+  assert.match(salikToll.message, /^New Salik recorded\./);
+  assert.match(salikToll.message, /Contract: DE-2026-000900/);
+  assert.match(salikToll.message, /Vehicle: Chevrolet Tahoe/);
+  assert.match(salikToll.message, /By: Haidara Admin/);
+  assert.doesNotMatch(salikToll.message, /New road liability recorded/);
+
+  const salikViolation = buildRoadLiabilityReceivedMessage({
+    liabilityType: "SALIK_VIOLATION",
+    contractNumber: "DE-2026-000901",
+    vehicleName: null,
+    staffActor: null,
+  });
+  assert.equal(salikViolation.title, "New Salik Recorded");
+  assert.match(salikViolation.message, /^New Salik recorded\./);
+
+  const traffic = buildRoadLiabilityReceivedMessage({
+    liabilityType: "RTA_VIOLATION",
+    contractNumber: "DE-2026-000902",
+    vehicleName: "Rented Sedan 05",
+    staffActor: { staffUsername: "Fleet Staff" },
+  });
+  assert.equal(traffic.title, "Diamond Rent Car");
+  assert.match(traffic.message, /^New road liability recorded\./);
+  assert.match(traffic.message, /Contract: DE-2026-000902/);
+  assert.match(traffic.message, /Vehicle: Rented Sedan 05/);
+  assert.match(traffic.message, /By: Fleet Staff/);
+  assert.doesNotMatch(traffic.message, /New Salik recorded/);
 });
 
 test("resolveRoadLiabilityCollectionChannel distinguishes cash, off-session, and checkout", async () => {
@@ -173,6 +189,7 @@ test("payment.confirmed ROAD_LIABILITY sends road liability collected message on
         currency: "AED",
         method: "CASH",
         provider: null,
+        createdByUserId: 5,
         confirmedAt: new Date("2026-09-24T09:00:00.000Z"),
         contract: {
           contractNumber: "DR-RL-1",
@@ -193,6 +210,10 @@ test("payment.confirmed ROAD_LIABILITY sends road liability collected message on
     contractPaymentOffSessionAttempt: { findFirst: async () => null },
     contractReconciliationLine: { findFirst: async () => null },
     contractPostCloseReceivable: { findUnique: async () => null },
+    user: {
+      findUnique: async ({ where }: { where: { id: number } }) =>
+        where.id === 5 ? { email: "collector@example.com", name: "Collector" } : null,
+    },
   } as never;
 
   const service = createBusinessNotificationService(prisma, async (payload) => {
@@ -210,8 +231,9 @@ test("payment.confirmed ROAD_LIABILITY sends road liability collected message on
   });
 
   assert.equal(sends.length, 1);
-  assert.match(sends[0] ?? "", /Road Liability Collected/);
-  assert.match(sends[0] ?? "", /Collection Channel: Cash/);
+  assert.match(sends[0] ?? "", /Payment confirmed successfully/);
+  assert.match(sends[0] ?? "", /By: Collector/);
+  assert.doesNotMatch(sends[0] ?? "", /By: collector@example\.com/);
 });
 
 test("business notification deliverOnce dedupes repeated immediate events", async () => {
@@ -241,24 +263,16 @@ test("business notification deliverOnce dedupes repeated immediate events", asyn
     "payment.confirmed:pay_1",
     buildPaymentReceivedMessage({
       contractNumber: "DR-1",
-      customerName: "Ahmad",
       vehicleName: "Camry",
-      amount: 1000,
-      currency: "AED",
-      paymentSource: "Stripe",
-      occurredAt: new Date("2026-09-24T09:00:00.000Z"),
+      actor: { staffUsername: "Collector" },
     }),
   );
   await service.deliverOnce(
     "payment.confirmed:pay_1",
     buildPaymentReceivedMessage({
       contractNumber: "DR-1",
-      customerName: "Ahmad",
       vehicleName: "Camry",
-      amount: 1000,
-      currency: "AED",
-      paymentSource: "Stripe",
-      occurredAt: new Date("2026-09-24T09:00:00.000Z"),
+      actor: { staffUsername: "Collector" },
     }),
   );
 
@@ -277,7 +291,7 @@ test("business notification handler does not throw when downstream send fails", 
   }));
 
   await assert.doesNotReject(async () => {
-    await service.handleOutboxEvent("contract.signed", { contractId: "missing" });
+    await service.handleOutboxEvent("contract.closed", { contractId: "missing" });
   });
 });
 
@@ -287,24 +301,49 @@ test("formatLocalDateParts uses configured timezone", () => {
   assert.equal(parts.dateKey, "2026-09-24");
 });
 
-test("CAR_IN_COMPLETED message uses persisted employee name", () => {
+test("loadActorUsername prefers User.name over email for By line", async () => {
+  const withName = await loadActorUsername(
+    {
+      user: {
+        findUnique: async () => ({ email: "admin@diamond.test", name: "Haidara Admin" }),
+      },
+    } as never,
+    1,
+    "",
+  );
+  assert.equal(withName.staffUsername, "Haidara Admin");
+
+  const nameMissing = await loadActorUsername(
+    {
+      user: {
+        findUnique: async () => ({ email: "admin@diamond.test", name: "   " }),
+      },
+    } as never,
+    1,
+    "",
+  );
+  assert.equal(nameMissing.staffUsername, "admin@diamond.test");
+
+  const unresolved = await loadActorUsername(
+    { user: { findUnique: async () => null } } as never,
+    99,
+    "",
+  );
+  assert.equal(unresolved.staffUsername, "");
+});
+
+test("CAR_IN_COMPLETED message uses employee display name on By line", () => {
   const message = buildCarInMessage({
     contractNumber: "DR-1042",
     vehicleName: "Toyota Camry",
-    customerName: "Ahmad Ali",
-    mileageIn: 42580,
-    fuelIn: "75%",
-    damageSummary: "None reported",
-    actor: { label: "Ahmed Hassan" },
-    occurredAt: new Date("2026-09-24T09:00:00.000Z"),
+    actor: { staffUsername: "Ahmed Hassan" },
   });
 
-  assert.match(message.message, /🚗 Vehicle Returned/);
+  assert.match(message.message, /Vehicle return submitted for review/);
   assert.match(message.message, /By: Ahmed Hassan/);
-  assert.doesNotMatch(message.message, /By: Staff/);
 });
 
-test("loadCarInContext resolves persisted performer and falls back for historical rows", async () => {
+test("loadCarInContext resolves performer display name and falls back for historical rows", async () => {
   const prisma = {
     contract: {
       findUnique: async () => ({
@@ -322,12 +361,12 @@ test("loadCarInContext resolves persisted performer and falls back for historica
     },
     user: {
       findUnique: async ({ where }: { where: { id: number } }) =>
-        where.id === 7 ? { name: "Ahmed Hassan" } : null,
+        where.id === 7 ? { email: "ahmed.hassan@example.com", name: "Ahmed Hassan" } : null,
     },
   } as never;
 
   const withActor = await loadCarInContext(prisma, "contract-1");
-  assert.equal(withActor?.actor.label, "Ahmed Hassan");
+  assert.equal(withActor?.actor.staffUsername, "Ahmed Hassan");
 
   const historicalPrisma = {
     contract: {
@@ -348,7 +387,7 @@ test("loadCarInContext resolves persisted performer and falls back for historica
   } as never;
 
   const withoutActor = await loadCarInContext(historicalPrisma, "contract-2");
-  assert.equal(withoutActor?.actor.label, UNKNOWN_STAFF_ACTOR_LABEL);
+  assert.equal(withoutActor?.actor.staffUsername, "");
 });
 
 test("attention monitor sends one consolidated summary when outstanding cases exist", async () => {
@@ -386,7 +425,6 @@ test("attention monitor sends one consolidated summary when outstanding cases ex
       unpaidPostCloseViolationsTotal: 0,
       awaitingRenewalsCount: 0,
       awaitingRenewalsTotal: 0,
-      overdueRentalsCount: 1,
       outstandingFinancialTotal: 5250,
       currency: "AED",
     }),
@@ -394,8 +432,7 @@ test("attention monitor sends one consolidated summary when outstanding cases ex
 
   assert.equal(sent, true);
   assert.equal(sends.length, 1);
-  assert.match(sends[0] ?? "", /Diamond Attention Required/);
-  assert.match(sends[0] ?? "", /Unpaid contracts:/);
+  assert.match(sends[0] ?? "", /Outstanding items require attention/);
 });
 
 test("attention monitor sends nothing when no outstanding cases exist", async () => {
@@ -430,7 +467,6 @@ test("attention monitor sends nothing when no outstanding cases exist", async ()
       unpaidPostCloseViolationsTotal: 0,
       awaitingRenewalsCount: 0,
       awaitingRenewalsTotal: 0,
-      overdueRentalsCount: 0,
       outstandingFinancialTotal: 0,
       currency: "AED",
     }),
@@ -474,7 +510,6 @@ test("attention monitor suppresses duplicate sends for the same slot", async () 
       unpaidPostCloseViolationsTotal: 0,
       awaitingRenewalsCount: 0,
       awaitingRenewalsTotal: 0,
-      overdueRentalsCount: 0,
       outstandingFinancialTotal: 1000,
       currency: "AED",
     }),

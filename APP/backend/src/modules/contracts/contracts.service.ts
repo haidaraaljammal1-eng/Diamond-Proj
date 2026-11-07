@@ -1355,7 +1355,6 @@ export function createContractsService(fastify: FastifyInstance) {
           revision: { increment: 1 },
         },
       });
-      await emit(tx, "contract.signed", contract.id);
       return loadPublicRental(tx, contract.id, locale);
     });
   }
@@ -2826,7 +2825,6 @@ export function createContractsService(fastify: FastifyInstance) {
       if (row.collectionMode === "CASH") {
         await paymentService.settleCashRentalInTx(tx, contract.id, null);
       }
-      await emit(tx, "contract.signed", contract.id);
       return { contractId: contract.id, view: await loadOfficialContract(tx, contract.id) };
     });
   }

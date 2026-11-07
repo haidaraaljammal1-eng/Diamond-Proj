@@ -43,6 +43,8 @@
     "brandSub": "RENT CAR · DUBAI",
     "searchPlaceholder": "Search Diamond…",
     "searchLabel": "Global search",
+    "searchResultsLabel": "Sidebar pages",
+    "searchNoResults": "No matching pages",
     "userRoleOwner": "Owner · Admin",
     "userRoleEmployee": "Employee",
     "langTitle": "Language / اللغة",
@@ -278,7 +280,7 @@
     "invalidDurationValue": "Enter a valid rental duration (at least 1)."
   },
   "FunctionalRbac": {
-    "rolesSubtitle": "Functional access matrix — page groups as rows, roles as columns. Matches backend RBAC V2 capabilities.",
+    "rolesSubtitle": "Set each role's access",
     "modeBanner": {
       "mismatch": "RBAC V2 UI is on but the backend is not in matching mode. Matrix edits may be read-only until both sides use the same mode."
     },
@@ -309,7 +311,7 @@
   "Roles": {
     "crumbs": "Administration · Access control",
     "title": "Roles & Permissions",
-    "subtitle": "The access matrix exactly as the backend defines it — roles are columns, permissions are rows.",
+    "subtitle": "Set each role's access",
     "summaryRoles": "roles",
     "summaryPermissions": "permissions",
     "refresh": "Refresh",
@@ -471,6 +473,7 @@
       "editTitle": "Edit role",
       "editDescription": "Update the role name and description. The permission grants themselves are not edited here.",
       "editRole": "Edit {role}",
+      "deleteRole": "Delete {role}",
       "namePlaceholder": "Role name",
       "descriptionPlaceholder": "Description (optional)",
       "create": "Create role",
@@ -478,6 +481,12 @@
       "saving": "Saving…",
       "close": "Close",
       "cancel": "Cancel"
+    },
+    "delete": {
+      "title": "Delete role",
+      "description": "“{name}” will be permanently deleted. Staff assigned this role lose its access.",
+      "descriptionGeneric": "This role will be permanently deleted.",
+      "confirm": "Delete role"
     },
     "cellLabel": "{permission} — {role}"
   },
@@ -2948,7 +2957,7 @@
       "RENEWAL": "Renewal",
       "RECONCILIATION": "Return Reconciliation",
       "POST_CLOSE_RECEIVABLE": "Post-Close Charge",
-      "ROAD_LIABILITY": "Violations"
+      "ROAD_LIABILITY": "Violations/Salik"
     },
     "receivablePaymentState": {
       "UNPAID": "Awaiting Payment",

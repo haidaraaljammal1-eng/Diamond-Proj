@@ -28,7 +28,10 @@ permissions (`APP/backend/src/constants/permissions.ts`):
 | `permissions.read` | `GET /permissions` — the matrix rows |
 
 `roles.manage` is required additionally for the create/edit dialogs; without it
-no write control is rendered.
+no write control is rendered. Column headers also offer a small delete control
+(next to edit) for non-system roles via `DELETE /roles/:id`. Under Functional
+RBAC V2 only `system_admin` may delete; classic mode uses `roles.manage`.
+System roles never show delete.
 
 Without both, nothing is requested and a "no access" panel is rendered instead.
 The navigation entry is hidden by the same rule. This is UX only — the Backend
@@ -43,6 +46,7 @@ still enforces every request.
 | `POST /roles` (admin)                  | `{ data: Role }`               | Create — `roles.manage`; new role starts with no grants  |
 | `PUT /roles/:id` (admin)               | `{ data: Role }`               | Update name/description — `roles.manage`                 |
 | `PUT /roles/:id/permissions` (admin)    | `{ data: Role }`               | Replace grants — `roles.manage`; refuses system roles    |
+| `DELETE /roles/:id` (admin)            | `{ data: { message } }`        | Delete — refuses system roles; V2 requires system_admin  |
 
 Both are loaded in parallel (`Promise.all`). A failure in either one surfaces as
 one error state — a partial matrix is never rendered.

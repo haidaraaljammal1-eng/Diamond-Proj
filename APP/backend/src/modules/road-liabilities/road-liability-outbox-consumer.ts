@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { PERMISSIONS } from "src/constants/permissions";
 import { SYSTEM_ROLES } from "src/constants/roles";
-import { createBusinessNotificationService } from "src/modules/notification-delivery/business-notification.service";
 import {
   ROAD_LIABILITY_CHARGEABLE_NOTIFICATION,
   ROAD_LIABILITY_OUTBOX_EVENT,
@@ -12,7 +11,6 @@ const OUTBOX_TYPES = [ROAD_LIABILITY_OUTBOX_EVENT];
 
 export function createRoadLiabilityOutboxConsumer(app: FastifyInstance) {
   const prisma = app.prisma;
-  const businessNotifications = createBusinessNotificationService(prisma);
 
   async function permissionHolders(permKey: string): Promise<number[]> {
     const rows = await prisma.user.findMany({
@@ -64,15 +62,6 @@ export function createRoadLiabilityOutboxConsumer(app: FastifyInstance) {
         amount,
       },
       dedupeKeyPrefix: `${ROAD_LIABILITY_CHARGEABLE_NOTIFICATION}:${liabilityId}`,
-    });
-
-    // Fan-out Pushover from the same source event. The business-notification
-    // outbox consumer no longer competes for this row.
-    await businessNotifications.handleOutboxEvent(ROAD_LIABILITY_OUTBOX_EVENT, {
-      liabilityId,
-      contractId,
-      type,
-      amount,
     });
   }
 

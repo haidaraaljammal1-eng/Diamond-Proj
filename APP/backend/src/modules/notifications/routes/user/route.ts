@@ -16,6 +16,7 @@ import {
 } from "src/lib/http/response";
 import { requireAuth } from "src/lib/context/auth-context";
 import { t } from "src/config/i18n";
+import { PERMISSIONS } from "src/constants/permissions";
 
 /** Own-inbox only. Every query is scoped to the authenticated user's id. */
 export default async function notificationUserRoutes(fastify: FastifyInstance) {
@@ -29,6 +30,7 @@ export default async function notificationUserRoutes(fastify: FastifyInstance) {
         summary: "List my notifications",
         operationId: "listMyNotifications",
         tags: ["Notifications"],
+        permissions: [PERMISSIONS.NOTIFICATIONS_READ],
         querystring: ListNotificationsQuerySchema,
         response: { 200: listResponse(NotificationSchema), ...commonErrorResponses },
       },
@@ -43,6 +45,7 @@ export default async function notificationUserRoutes(fastify: FastifyInstance) {
         summary: "My unread notification count",
         operationId: "myUnreadCount",
         tags: ["Notifications"],
+        permissions: [PERMISSIONS.NOTIFICATIONS_READ],
         response: { 200: UnreadCountResponseSchema, ...commonErrorResponses },
       },
     },
@@ -58,6 +61,7 @@ export default async function notificationUserRoutes(fastify: FastifyInstance) {
         summary: "Mark all my notifications read",
         operationId: "markAllNotificationsRead",
         tags: ["Notifications"],
+        permissions: [PERMISSIONS.NOTIFICATIONS_READ],
         response: { 200: MessageResponseSchema, ...commonErrorResponses },
       },
     },
@@ -78,6 +82,7 @@ export default async function notificationUserRoutes(fastify: FastifyInstance) {
         summary: "Mark a notification read",
         operationId: "markNotificationRead",
         tags: ["Notifications"],
+        permissions: [PERMISSIONS.NOTIFICATIONS_READ],
         params: UuidIdParam,
         response: { 200: MessageResponseSchema, ...commonErrorResponses },
       },

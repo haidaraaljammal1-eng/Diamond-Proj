@@ -16,9 +16,11 @@ import { PermissionMatrix } from "../permission-matrix/permission-matrix";
 import { FunctionalPermissionMatrix } from "../functional-permission-matrix/functional-permission-matrix";
 import { RoleFormDialog } from "../role-form-dialog";
 import type { RoleFormTarget } from "../role-form-dialog";
+import { RoleDeleteDialog } from "../role-delete-dialog";
 import { useRoleMutations } from "../../hooks/use-role-mutations";
 import { useFunctionalMatrixDelegation } from "../../hooks/use-functional-matrix-delegation";
 import { usePermissions } from "@/modules/auth";
+import type { RoleDto } from "../../types/role.types";
 import styles from "./roles-screen.module.css";
 
 const ALL_GROUPS = "__all__";
@@ -44,6 +46,7 @@ export function RolesScreen() {
     canManage,
     canEditRoleMetadata,
     canEditMatrix,
+    canDeleteRole,
     matrixEditingDisabled,
     togglePermission,
     toggleFunctionalGrant,
@@ -56,6 +59,7 @@ export function RolesScreen() {
 
   // Which role dialog is open — UI-local, never store state.
   const [formTarget, setFormTarget] = useState<RoleFormTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RoleDto | null>(null);
 
   useEffect(() => {
     if (formTarget !== null && !canEditRoleMetadata) {
@@ -284,6 +288,9 @@ export function RolesScreen() {
                   ? (role) => setFormTarget({ mode: "edit", role })
                   : undefined
               }
+              onDeleteRole={
+                canDeleteRole ? (role) => setDeleteTarget(role) : undefined
+              }
               onToggleGrant={
                 canEditMatrix
                   ? (role, capabilityKey, next) => {
@@ -306,6 +313,9 @@ export function RolesScreen() {
             onEditRole={
               canManage ? (role) => setFormTarget({ mode: "edit", role }) : undefined
             }
+            onDeleteRole={
+              canDeleteRole ? (role) => setDeleteTarget(role) : undefined
+            }
             onTogglePermission={
               canManage
                 ? (role, permissionKey, next) => {
@@ -318,7 +328,7 @@ export function RolesScreen() {
         )}
       </div>
 
-      {writeError && formTarget === null ? (
+      {writeError && formTarget === null && deleteTarget === null ? (
         <p className={styles.writeError} role="alert">
           {t.has(`error.${writeError.code}`)
             ? t(`error.${writeError.code}`)
@@ -334,6 +344,10 @@ export function RolesScreen() {
       ) : null}
 
       <RoleFormDialog target={formTarget} onClose={() => setFormTarget(null)} />
+      <RoleDeleteDialog
+        role={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

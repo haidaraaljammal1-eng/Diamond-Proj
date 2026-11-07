@@ -6,6 +6,7 @@ import {
   isFunctionalRbacV2UiEnabled,
   useLegacyOrFunctionalCapability,
 } from "@/modules/functional-rbac";
+import { usePermissions } from "@/modules/auth";
 import type { ApiRequestError } from "@/infrastructure/api/errors";
 import {
   cellKey,
@@ -21,12 +22,15 @@ export interface UseRoleMutationsResult {
   canManage: boolean;
   canEditRoleMetadata: boolean;
   canEditMatrix: boolean;
+  /** Backend: `roles.manage` (classic) or system_admin only under V2. */
+  canDeleteRole: boolean;
   matrixEditingDisabled: boolean;
   isSubmitting: boolean;
   error: ApiRequestError | null;
   clearError: () => void;
   createRole: (payload: CreateRolePayload) => Promise<boolean>;
   updateRole: (id: number, payload: UpdateRolePayload) => Promise<boolean>;
+  deleteRole: (id: number) => Promise<boolean>;
   togglePermission: (
     roleId: number,
     permissionKey: string,
@@ -43,6 +47,7 @@ export interface UseRoleMutationsResult {
 export function useRoleMutations(): UseRoleMutationsResult {
   const v2 = isFunctionalRbacV2UiEnabled();
   const mismatch = isFunctionalRbacV2ModeMismatch();
+  const { isSystemAdmin } = usePermissions();
   const canManageLegacy = useLegacyOrFunctionalCapability(
     ROLES_MANAGE_PERMISSION,
     FN.roles.managePermissions,
@@ -61,6 +66,7 @@ export function useRoleMutations(): UseRoleMutationsResult {
   const clearError = useRolesPermissionsStore((state) => state.clearSubmitError);
   const createRole = useRolesPermissionsStore((state) => state.createRole);
   const updateRole = useRolesPermissionsStore((state) => state.updateRole);
+  const deleteRole = useRolesPermissionsStore((state) => state.deleteRole);
   const togglePermission = useRolesPermissionsStore(
     (state) => state.toggleRolePermission,
   );
@@ -70,17 +76,21 @@ export function useRoleMutations(): UseRoleMutationsResult {
   const pendingCells = useRolesPermissionsStore((state) => state.pendingCells);
 
   const matrixEditingDisabled = v2 && mismatch;
+  const canManage = v2 ? canEditRoleMetadata : canManageLegacy;
+  const canDeleteRole = v2 ? isSystemAdmin : canManageLegacy;
 
   return {
-    canManage: v2 ? canEditRoleMetadata : canManageLegacy,
+    canManage,
     canEditRoleMetadata: v2 ? canEditRoleMetadata : canManageLegacy,
     canEditMatrix: v2 ? canManageMatrix : canManageLegacy,
+    canDeleteRole,
     matrixEditingDisabled,
     isSubmitting,
     error,
     clearError,
     createRole,
     updateRole,
+    deleteRole,
     togglePermission,
     toggleFunctionalGrant,
     isCellPending: (roleId, permissionKey) =>

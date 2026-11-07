@@ -3,26 +3,16 @@ import { test } from "node:test";
 import { buildPaymentAuthorizationIncompleteMessage } from "src/modules/notification-delivery/business-notification.messages";
 import { createBusinessNotificationService } from "src/modules/notification-delivery/business-notification.service";
 
-test("authorization incomplete staff message is Arabic and actionable", () => {
+test("authorization incomplete staff message is English and lists key fields", () => {
   const built = buildPaymentAuthorizationIncompleteMessage({
     contractNumber: "C-100",
-    customerName: "Test Customer",
     vehicleName: "Sedan",
-    operatingCompanyCode: "ELITE",
-    amount: 1000,
-    currency: "AED",
-    paymentStatus: "CONFIRMED",
-    authorizationStatus: "INCOMPLETE",
-    stripeReference: "cs_test_abc",
-    errorCode: "CARD_AUTHORIZATION_INCOMPLETE",
-    occurredAt: new Date("2026-01-15T10:00:00.000Z"),
+    actor: { staffUsername: "Haidara Staff" },
   });
-  assert.match(built.title, /حفظ البطاقة/);
-  assert.match(built.message, /تم استلام قيمة الإيجار بنجاح/);
-  assert.match(built.message, /يمكن متابعة إجراءات تسليم المركبة/);
+  assert.match(built.message, /Card authorization incomplete/);
   assert.match(built.message, /C-100/);
-  assert.match(built.message, /cs_test_abc/);
-  assert.match(built.message, /ELITE/);
+  assert.match(built.message, /Vehicle: Sedan/);
+  assert.match(built.message, /By: Haidara Staff/);
 });
 
 test("payment.authorization_incomplete outbox dedupes staff alerts", async () => {
@@ -39,6 +29,7 @@ test("payment.authorization_incomplete outbox dedupes staff alerts", async () =>
         provider: "stripe",
         providerReference: "cs_test_1",
         confirmedAt: new Date(),
+        createdByUserId: 9,
         contract: {
           contractNumber: "C-1",
           customer: { name: "Customer" },
@@ -51,6 +42,10 @@ test("payment.authorization_incomplete outbox dedupes staff alerts", async () =>
           },
         },
       }),
+    },
+    user: {
+      findUnique: async ({ where }: { where: { id: number } }) =>
+        where.id === 9 ? { email: "creator@example.com", name: "Creator" } : null,
     },
     idempotencyKey: {
       create: async ({ data }: { data: { scope: string; key: string } }) => {
@@ -82,4 +77,6 @@ test("payment.authorization_incomplete outbox dedupes staff alerts", async () =>
   });
 
   assert.equal(sends.length, 1);
+  assert.match(sends[0] ?? "", /By: Creator/);
+  assert.doesNotMatch(sends[0] ?? "", /By: creator@example\.com/);
 });

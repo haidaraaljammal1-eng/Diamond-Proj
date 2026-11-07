@@ -23,7 +23,6 @@ export interface AttentionMonitorSnapshot {
   unpaidPostCloseViolationsTotal: number;
   awaitingRenewalsCount: number;
   awaitingRenewalsTotal: number;
-  overdueRentalsCount: number;
   outstandingFinancialTotal: number;
   currency: string;
 }
@@ -81,13 +80,6 @@ export async function loadAttentionMonitorSnapshot(
     select: { additionalAmount: true },
   });
 
-  const overdueRentals = await prisma.contract.count({
-    where: {
-      status: "ACTIVE",
-      endAt: { lt: new Date() },
-    },
-  });
-
   const unpaidContractsTotal = unpaidContracts.reduce((sum, row) => sum + row.agreedAmount, 0);
   const unpaidDeferredViolationsTotal = unpaidDeferredViolations.reduce(
     (sum, row) => sum + (row.amount ?? 0),
@@ -108,7 +100,6 @@ export async function loadAttentionMonitorSnapshot(
     unpaidPostCloseViolationsTotal,
     awaitingRenewalsCount: awaitingRenewals.length,
     awaitingRenewalsTotal,
-    overdueRentalsCount: overdueRentals,
     outstandingFinancialTotal:
       unpaidContractsTotal +
       unpaidDeferredViolationsTotal +
@@ -123,7 +114,6 @@ export function attentionMonitorHasOutstandingCases(snapshot: AttentionMonitorSn
     snapshot.unpaidContractsCount > 0 ||
     snapshot.unpaidDeferredViolationsCount > 0 ||
     snapshot.unpaidPostCloseViolationsCount > 0 ||
-    snapshot.awaitingRenewalsCount > 0 ||
-    snapshot.overdueRentalsCount > 0
+    snapshot.awaitingRenewalsCount > 0
   );
 }

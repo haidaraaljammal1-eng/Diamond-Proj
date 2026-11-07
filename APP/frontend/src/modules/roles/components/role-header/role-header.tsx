@@ -13,6 +13,10 @@ export interface RoleHeaderProps {
   onEdit?: () => void;
   /** Already-translated accessible name of the edit control. */
   editLabel?: string;
+  /** Opens delete confirmation. Absent for system roles or when not allowed. */
+  onDelete?: () => void;
+  /** Already-translated accessible name of the delete control. */
+  deleteLabel?: string;
 }
 
 /**
@@ -27,6 +31,8 @@ export function RoleHeader({
   countLabel,
   onEdit,
   editLabel,
+  onDelete,
+  deleteLabel,
 }: RoleHeaderProps) {
   return (
     <th scope="col" className={styles.head} title={role.description ?? undefined}>
@@ -48,6 +54,21 @@ export function RoleHeader({
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z" />
               <path d="M14.5 7.5l2 2" />
+            </svg>
+          </button>
+        ) : null}
+        {onDelete ? (
+          <button
+            type="button"
+            className={styles.delete}
+            onClick={onDelete}
+            aria-label={deleteLabel}
+            title={deleteLabel}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16" />
+              <path d="M9 7V5h6v2" />
+              <path d="M8 7l1 12h6l1-12" />
             </svg>
           </button>
         ) : null}

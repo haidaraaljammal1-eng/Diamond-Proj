@@ -38,6 +38,7 @@
     "dev:postgres:start": "tsx scripts/start-local-postgres.ts",
     "dev:postgres:setup-db": "tsx scripts/setup-local-postgres-db.ts",
     "test:pushover": "tsx scripts/test-pushover.ts",
+    "demo:pushover:all": "tsx scripts/demo-all-pushover-messages.ts",
     "test:gemini": "tsx scripts/test-gemini.ts",
     "test:gemini-document": "tsx scripts/test-gemini-document.ts",
     "gps:poc:store-credentials": "tsx scripts/live-gps-poc.ts store-credentials",

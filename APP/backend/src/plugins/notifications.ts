@@ -1,6 +1,8 @@
 import fp from "fastify-plugin";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { runIdempotent } from "src/lib/db/idempotency";
+import { notificationService } from "src/modules/notification-delivery/notification.service";
+import { mirrorSuccessfulPushoverToInApp } from "src/modules/notification-delivery/pushover-in-app-mirror.service";
 
 /**
  * Generic notification pipeline:
@@ -152,6 +154,16 @@ export const notificationsPlugin = fp(
     };
 
     fastify.decorate("notify", notify);
+
+    // Central hook: every successful Pushover send (instant or scheduled) is
+    // mirrored into the staff in-app inbox for users with notifications.read.
+    notificationService.setInAppMirror(async (input) => {
+      await mirrorSuccessfulPushoverToInApp(notify, prisma, input);
+    });
+
+    fastify.addHook("onClose", async () => {
+      notificationService.setInAppMirror(null);
+    });
   },
   { name: "notifications", dependencies: ["prisma", "capabilities"] },
 );

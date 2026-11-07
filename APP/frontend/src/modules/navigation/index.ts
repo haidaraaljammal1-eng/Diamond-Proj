@@ -2,6 +2,10 @@ export { navigationConfig } from "./navigation.config";
 export { NAVIGATION_ICONS } from "./navigation.icons";
 export { useNavigation } from "./hooks/use-navigation";
 export {
+  filterNavigationSearch,
+  type NavigationSearchHit,
+} from "./utils/filter-navigation-search";
+export {
   SYSTEM_ADMIN_ROLE,
   type NavigationConfig,
   type NavigationGroup,

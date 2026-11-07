@@ -14,6 +14,8 @@ export interface PermissionMatrixProps {
   labels: PermissionLabels;
   /** Provided only when the session may manage roles. */
   onEditRole?: (role: RoleDto) => void;
+  /** Opens delete confirm for a non-system role when the actor may delete. */
+  onDeleteRole?: (role: RoleDto) => void;
   /**
    * Grants or revokes one permission, saved immediately. Absent when the
    * session may not manage roles; the cells are then read-only.
@@ -68,6 +70,7 @@ export function PermissionMatrix({
   matrix,
   labels,
   onEditRole,
+  onDeleteRole,
   onTogglePermission,
   isCellPending,
 }: PermissionMatrixProps) {
@@ -100,6 +103,12 @@ export function PermissionMatrix({
                   })}
                   onEdit={onEditRole ? () => onEditRole(role) : undefined}
                   editLabel={t("form.editRole", { role: role.name })}
+                  onDelete={
+                    onDeleteRole && !role.isSystem
+                      ? () => onDeleteRole(role)
+                      : undefined
+                  }
+                  deleteLabel={t("form.deleteRole", { role: role.name })}
                 />
               ))}
               {Array.from({ length: placeholders }, (_, index) => (

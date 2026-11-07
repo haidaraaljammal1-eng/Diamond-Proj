@@ -75,7 +75,28 @@
   background: rgba(201, 161, 92, 0.1);
 }
 
-.edit svg {
+.delete {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--diamond-hair);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--diamond-muted);
+  cursor: pointer;
+  transition: var(--diamond-transition);
+}
+
+.delete:hover {
+  color: #b54a42;
+  border-color: rgba(181, 74, 66, 0.45);
+  background: rgba(181, 74, 66, 0.08);
+}
+
+.edit svg,
+.delete svg {
   width: 12px;
   height: 12px;
   fill: none;

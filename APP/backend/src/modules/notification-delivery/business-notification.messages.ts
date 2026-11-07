@@ -1,7 +1,22 @@
 import { env } from "src/config/env";
 
+/** Staff login identifier — sourced from `User.email` (canonical account identity). */
 export interface BusinessActor {
-  label: string;
+  staffUsername: string;
+}
+
+function pushoverTitle(): string {
+  return env.PUSHOVER_NOTIFICATION_TITLE;
+}
+
+function blockLines(lines: string[]): string {
+  return lines.filter((line) => line.length > 0).join("\n");
+}
+
+function byLine(actor: BusinessActor): string[] {
+  const u = actor.staffUsername.trim();
+  if (u.length === 0 || u === "—") return [];
+  return [`By: ${u}`];
 }
 
 export interface ContractSignedMessageInput {
@@ -17,133 +32,100 @@ export interface ContractSignedMessageInput {
 
 export interface PaymentReceivedMessageInput {
   contractNumber: string;
-  customerName: string;
   vehicleName: string | null;
-  amount: number;
-  currency: string;
-  paymentSource: string;
-  occurredAt: Date;
+  actor: BusinessActor;
 }
 
 export interface PaymentFailedMessageInput {
   contractNumber: string;
-  customerName: string;
   vehicleName: string | null;
-  amount: number;
-  currency: string;
-  purposeLabel: string;
-  occurredAt: Date;
+  actor: BusinessActor;
 }
 
 export interface PaymentAuthorizationIncompleteMessageInput {
   contractNumber: string;
-  customerName: string;
   vehicleName: string | null;
-  operatingCompanyCode: string;
-  amount: number;
-  currency: string;
-  paymentStatus: string;
-  authorizationStatus: string;
-  stripeReference: string | null;
-  errorCode: string;
-  occurredAt: Date;
+  actor: BusinessActor;
 }
 
 export interface CarOutMessageInput {
   contractNumber: string;
   vehicleName: string;
-  customerName: string;
-  mileageOut: number;
-  fuelOut: string;
   actor: BusinessActor;
-  occurredAt: Date;
 }
 
 export interface RentalExtendedMessageInput {
   contractNumber: string;
   vehicleName: string;
-  customerName: string;
-  previousEndAt: Date;
-  newEndAt: Date;
-  additionalAmount: number | null;
-  currency: string;
   actor: BusinessActor;
-  occurredAt: Date;
 }
 
 export interface CarInMessageInput {
   contractNumber: string;
   vehicleName: string;
-  customerName: string;
-  mileageIn: number;
-  fuelIn: string;
-  damageSummary: string;
   actor: BusinessActor;
-  occurredAt: Date;
 }
 
 export interface RoadLiabilityReceivedMessageInput {
-  vehicleName: string | null;
-  customerName: string | null;
+  /** Prisma `RoadLiability.type` — used to distinguish Salik from traffic. */
+  liabilityType: "RTA_VIOLATION" | "SALIK_TOLL" | "SALIK_VIOLATION";
   contractNumber: string | null;
-  reference: string;
-  officialAmount: number | null;
-  adminFee: number | null;
-  totalDue: number | null;
-  currency: string;
-  source: string;
-  occurredAt: Date;
+  vehicleName: string | null;
+  staffActor?: BusinessActor | null;
+}
+
+function isSalikLiabilityType(
+  type: RoadLiabilityReceivedMessageInput["liabilityType"],
+): boolean {
+  return type === "SALIK_TOLL" || type === "SALIK_VIOLATION";
 }
 
 export interface RoadLiabilityCollectedMessageInput {
-  vehicleName: string | null;
-  customerName: string;
   contractNumber: string;
-  reference: string;
-  officialAmount: number;
-  adminFee: number;
-  totalCollected: number;
-  currency: string;
-  collectionChannel: string;
-  occurredAt: Date;
+  vehicleName: string | null;
+  actor: BusinessActor;
 }
 
 export interface RoadLiabilityCollectionFailedMessageInput {
   contractNumber: string;
-  customerName: string;
   vehicleName: string | null;
-  reference: string | null;
-  amount: number;
-  currency: string;
-  purposeLabel: string;
-  occurredAt: Date;
+  actor: BusinessActor;
 }
 
 export interface MaintenanceStartedMessageInput {
   vehicleName: string;
-  orderReference: string;
   actor: BusinessActor;
-  occurredAt: Date;
+}
+
+export interface MaintenanceScheduleMissedMessageInput {
+  vehicleName: string;
+}
+
+export interface MaintenanceDelayedMessageInput {
+  vehicleName: string;
 }
 
 export interface MaintenanceCompletedMessageInput {
   vehicleName: string;
-  orderReference: string;
-  actualCost: number | null;
-  currency: string;
   actor: BusinessActor;
-  occurredAt: Date;
 }
 
 export interface ManualExpenseMessageInput {
-  category: string;
-  description: string;
-  amount: number;
-  currency: string;
   actor: BusinessActor;
-  occurredAt: Date;
 }
 
+export interface ContractFleetReturnMessageInput {
+  contractNumber: string;
+  vehicleName: string;
+  actor: BusinessActor;
+}
+
+export interface OverdueRentalReminderInput {
+  contractNumber: string;
+  vehicleName: string;
+}
+
+/** @deprecated Demo / legacy — attention monitor sends a fixed summary line only. */
 export interface AttentionSummaryMessageInput {
   unpaidContractsCount: number;
   unpaidContractsTotal: number;
@@ -153,7 +135,6 @@ export interface AttentionSummaryMessageInput {
   unpaidPostCloseViolationsTotal: number;
   awaitingRenewalsCount: number;
   awaitingRenewalsTotal: number;
-  overdueRentalsCount: number;
   outstandingFinancialTotal: number;
   currency: string;
 }
@@ -170,278 +151,275 @@ function formatDateTime(value: Date, timeZone = env.ATTENTION_MONITOR_TIMEZONE):
   }).format(value);
 }
 
-function formatDate(value: Date, timeZone = env.ATTENTION_MONITOR_TIMEZONE): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    dateStyle: "medium",
-  }).format(value);
-}
-
 export function buildContractSignedMessage(input: ContractSignedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "📝 Contract Signed",
+    title: pushoverTitle(),
+    message: blockLines([
+      "Event: Contract signed",
       `Contract: ${input.contractNumber}`,
       `Vehicle: ${input.vehicleName}`,
       `Customer: ${input.customerName}`,
-      `Amount Due: ${formatMoney(input.amountDue, input.currency)}`,
-      `By: ${input.actor.label}`,
-      `Payment: ${input.paymentState}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      `Amount due: ${formatMoney(input.amountDue, input.currency)}`,
+      `Payment state: ${input.paymentState}`,
+      `When: ${formatDateTime(input.occurredAt)}`,
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildPaymentReceivedMessage(input: PaymentReceivedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "💳 Payment Received",
+    title: pushoverTitle(),
+    message: blockLines([
+      "Payment confirmed successfully.",
       `Contract: ${input.contractNumber}`,
-      `Customer: ${input.customerName}`,
-      ...(input.vehicleName ? [`Vehicle: ${input.vehicleName}`] : []),
-      `Amount Collected: ${formatMoney(input.amount, input.currency)}`,
-      `Payment Source: ${input.paymentSource}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      ...(input.vehicleName != null && input.vehicleName.trim() !== ""
+        ? [`Vehicle: ${input.vehicleName}`]
+        : []),
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildPaymentAuthorizationIncompleteMessage(
   input: PaymentAuthorizationIncompleteMessageInput,
 ) {
-  const stripeRef = input.stripeReference?.trim() || "—";
   return {
-    title: "تنبيه مالي — حفظ البطاقة غير متاح",
-    message: [
-      "🟠 HIGH — تم استلام قيمة الإيجار بنجاح، ولكن تعذر حفظ بطاقة العميل للتحصيل المستقبلي. يمكن متابعة إجراءات تسليم المركبة، مع العلم أن تحصيل المخالفات لاحقًا من البطاقة قد لا يكون متاحًا.",
-      `العقد: ${input.contractNumber}`,
-      `العميل: ${input.customerName}`,
-      ...(input.vehicleName ? [`المركبة: ${input.vehicleName}`] : []),
-      `الشركة: ${input.operatingCompanyCode}`,
-      `المبلغ: ${formatMoney(input.amount, input.currency)}`,
-      `حالة التحصيل: ${input.paymentStatus}`,
-      `حالة تفويض البطاقة: ${input.authorizationStatus}`,
-      `مرجع Stripe: ${stripeRef}`,
-      `رمز الخطأ: ${input.errorCode}`,
-      `الوقت: ${formatDateTime(input.occurredAt)}`,
-      "الإجراء المقترح: راجع الدفع المؤكد في Stripe، ثم عالج حفظ البطاقة قبل أي تحصيل off-session للمخالفات.",
-    ].join("\n"),
+    title: pushoverTitle(),
+    message: blockLines([
+      "Card authorization incomplete.",
+      `Contract: ${input.contractNumber}`,
+      ...(input.vehicleName != null && input.vehicleName.trim() !== ""
+        ? [`Vehicle: ${input.vehicleName}`]
+        : []),
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildPaymentFailedMessage(input: PaymentFailedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "⚠️ Contract Payment Failed",
+    title: pushoverTitle(),
+    message: blockLines([
+      "Payment failed.",
       `Contract: ${input.contractNumber}`,
-      `Customer: ${input.customerName}`,
-      ...(input.vehicleName ? [`Vehicle: ${input.vehicleName}`] : []),
-      `Amount: ${formatMoney(input.amount, input.currency)}`,
-      `Purpose: ${input.purposeLabel}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      ...(input.vehicleName != null && input.vehicleName.trim() !== ""
+        ? [`Vehicle: ${input.vehicleName}`]
+        : []),
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildCarOutMessage(input: CarOutMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "🚗 Car-Out Completed",
-      `Vehicle: ${input.vehicleName}`,
-      `Customer: ${input.customerName}`,
+    title: pushoverTitle(),
+    message: blockLines([
+      "Vehicle handed over successfully.",
       `Contract: ${input.contractNumber}`,
-      `Mileage OUT: ${input.mileageOut}`,
-      `Fuel OUT: ${input.fuelOut}`,
-      `By: ${input.actor.label}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      `Vehicle: ${input.vehicleName}`,
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildRentalExtendedMessage(input: RentalExtendedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "📅 Rental Extended",
-      `Vehicle: ${input.vehicleName}`,
-      `Customer: ${input.customerName}`,
+    title: pushoverTitle(),
+    message: blockLines([
+      "Rental extended successfully.",
       `Contract: ${input.contractNumber}`,
-      `Old End: ${formatDate(input.previousEndAt)}`,
-      `New End: ${formatDate(input.newEndAt)}`,
-      ...(input.additionalAmount != null
-        ? [`Additional Amount: ${formatMoney(input.additionalAmount, input.currency)}`]
-        : []),
-      `By: ${input.actor.label}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      `Vehicle: ${input.vehicleName}`,
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildCarInMessage(input: CarInMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "🚗 Vehicle Returned",
+    title: pushoverTitle(),
+    message: blockLines([
+      "Vehicle return submitted for review.",
       `Contract: ${input.contractNumber}`,
       `Vehicle: ${input.vehicleName}`,
-      `Customer: ${input.customerName}`,
-      `Mileage IN: ${input.mileageIn.toLocaleString("en-US")} km`,
-      `Fuel IN: ${input.fuelIn}`,
-      `By: ${input.actor.label}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildRoadLiabilityReceivedMessage(input: RoadLiabilityReceivedMessageInput) {
+  const salik = isSalikLiabilityType(input.liabilityType);
+  const lines: string[] = [salik ? "New Salik recorded." : "New road liability recorded."];
+  if (input.contractNumber != null && input.contractNumber.trim() !== "") {
+    lines.push(`Contract: ${input.contractNumber}`);
+  }
+  if (input.vehicleName != null && input.vehicleName.trim() !== "") {
+    lines.push(`Vehicle: ${input.vehicleName}`);
+  }
+  if (input.staffActor) {
+    lines.push(...byLine(input.staffActor));
+  }
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "🚦 Road Liability Received",
-      ...(input.vehicleName ? [`Vehicle: ${input.vehicleName}`] : []),
-      ...(input.customerName ? [`Customer: ${input.customerName}`] : []),
-      ...(input.contractNumber ? [`Contract: ${input.contractNumber}`] : []),
-      `Reference: ${input.reference}`,
-      ...(input.officialAmount != null
-        ? [`Official Amount: ${formatMoney(input.officialAmount, input.currency)}`]
-        : []),
-      ...(input.adminFee != null ? [`Admin Fee: ${formatMoney(input.adminFee, input.currency)}`] : []),
-      ...(input.totalDue != null ? [`Total Due: ${formatMoney(input.totalDue, input.currency)}`] : []),
-      `Source: ${input.source}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+    // Traffic keeps the shared brand title + existing body headline unchanged.
+    // Salik only: event-specific title + body headline.
+    title: salik ? "New Salik Recorded" : pushoverTitle(),
+    message: blockLines(lines),
   };
 }
 
 export function buildRoadLiabilityCollectedMessage(input: RoadLiabilityCollectedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "✅ Road Liability Collected",
-      ...(input.vehicleName ? [`Vehicle: ${input.vehicleName}`] : []),
-      `Customer: ${input.customerName}`,
+    title: pushoverTitle(),
+    message: blockLines([
+      "Payment confirmed successfully.",
       `Contract: ${input.contractNumber}`,
-      `Reference: ${input.reference}`,
-      `Official Amount: ${formatMoney(input.officialAmount, input.currency)}`,
-      `Admin Fee: ${formatMoney(input.adminFee, input.currency)}`,
-      `Total Collected: ${formatMoney(input.totalCollected, input.currency)}`,
-      `Collection Channel: ${input.collectionChannel}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      ...(input.vehicleName != null && input.vehicleName.trim() !== ""
+        ? [`Vehicle: ${input.vehicleName}`]
+        : []),
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildRoadLiabilityCollectionFailedMessage(input: RoadLiabilityCollectionFailedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "❌ Road Liability Collection Failed",
+    title: pushoverTitle(),
+    message: blockLines([
+      "Payment failed.",
       `Contract: ${input.contractNumber}`,
-      `Customer: ${input.customerName}`,
-      ...(input.vehicleName ? [`Vehicle: ${input.vehicleName}`] : []),
-      ...(input.reference ? [`Reference: ${input.reference}`] : []),
-      `Amount: ${formatMoney(input.amount, input.currency)}`,
-      `Purpose: ${input.purposeLabel}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      ...(input.vehicleName != null && input.vehicleName.trim() !== ""
+        ? [`Vehicle: ${input.vehicleName}`]
+        : []),
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildMaintenanceStartedMessage(input: MaintenanceStartedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "🔧 Maintenance Started",
+    title: pushoverTitle(),
+    message: blockLines(["Maintenance started.", `Vehicle: ${input.vehicleName}`, ...byLine(input.actor)]),
+  };
+}
+
+export function buildMaintenanceScheduleMissedMessage(input: MaintenanceScheduleMissedMessageInput) {
+  return {
+    title: pushoverTitle(),
+    message: blockLines([
+      "Scheduled maintenance has not started.",
       `Vehicle: ${input.vehicleName}`,
-      `Order: ${input.orderReference}`,
-      `By: ${input.actor.label}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+    ]),
+  };
+}
+
+export function buildMaintenanceDelayedMessage(input: MaintenanceDelayedMessageInput) {
+  return {
+    title: pushoverTitle(),
+    message: blockLines(["Maintenance completion is overdue.", `Vehicle: ${input.vehicleName}`]),
   };
 }
 
 export function buildMaintenanceCompletedMessage(input: MaintenanceCompletedMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "✅ Maintenance Completed",
+    title: pushoverTitle(),
+    message: blockLines([
+      "Maintenance completed.",
       `Vehicle: ${input.vehicleName}`,
-      `Order: ${input.orderReference}`,
-      ...(input.actualCost != null
-        ? [`Actual Cost: ${formatMoney(input.actualCost, input.currency)}`]
-        : []),
-      `By: ${input.actor.label}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+      ...byLine(input.actor),
+    ]),
   };
 }
 
 export function buildManualExpenseMessage(input: ManualExpenseMessageInput) {
   return {
-    title: "Diamond Rent Car",
-    message: [
-      "💸 Manual Expense Created",
-      `Category: ${input.category}`,
-      `Description: ${input.description}`,
-      `Amount: ${formatMoney(input.amount, input.currency)}`,
-      `By: ${input.actor.label}`,
-      `Time: ${formatDateTime(input.occurredAt)}`,
-    ].join("\n"),
+    title: pushoverTitle(),
+    message: blockLines(["New expense recorded.", ...byLine(input.actor)]),
   };
 }
 
-export function buildAttentionSummaryMessage(input: AttentionSummaryMessageInput) {
-  const lines = ["⚠️ Diamond Attention Required", ""];
+export function buildContractFleetReturnMessage(input: ContractFleetReturnMessageInput) {
+  return {
+    title: pushoverTitle(),
+    message: blockLines([
+      "Contract closed successfully.",
+      `Contract: ${input.contractNumber}`,
+      `Vehicle: ${input.vehicleName}`,
+      ...byLine(input.actor),
+    ]),
+  };
+}
 
-  if (input.unpaidContractsCount > 0) {
-    lines.push(
-      "Unpaid contracts:",
-      `${input.unpaidContractsCount} — ${formatMoney(input.unpaidContractsTotal, input.currency)}`,
-      "",
-    );
-  }
+export function buildOverdueRentalReminderMessage(input: OverdueRentalReminderInput) {
+  return {
+    title: pushoverTitle(),
+    message: blockLines([
+      "Vehicle return is overdue.",
+      `Contract: ${input.contractNumber}`,
+      `Vehicle: ${input.vehicleName}`,
+    ]),
+  };
+}
 
-  if (input.unpaidDeferredViolationsCount > 0) {
-    lines.push(
-      "Unpaid deferred violations:",
-      `${input.unpaidDeferredViolationsCount} — ${formatMoney(input.unpaidDeferredViolationsTotal, input.currency)}`,
-      "",
-    );
-  }
+export function buildOpenReceivablesReminderMessage() {
+  return {
+    title: pushoverTitle(),
+    message: blockLines(["Pending receivables require review."]),
+  };
+}
 
-  if (input.unpaidPostCloseViolationsCount > 0) {
-    lines.push(
-      "Unpaid post-close violations:",
-      `${input.unpaidPostCloseViolationsCount} — ${formatMoney(input.unpaidPostCloseViolationsTotal, input.currency)}`,
-      "",
-    );
-  }
+export function buildAttentionSummaryMessage(_input?: AttentionSummaryMessageInput) {
+  return {
+    title: pushoverTitle(),
+    message: blockLines(["Outstanding items require attention."]),
+  };
+}
 
-  if (input.awaitingRenewalsCount > 0) {
-    lines.push(
-      "Renewals awaiting payment:",
-      `${input.awaitingRenewalsCount} — ${formatMoney(input.awaitingRenewalsTotal, input.currency)}`,
-      "",
-    );
-  }
+export interface DailyOperationsDigestMessageInput {
+  unpaidRentalsCount: number;
+  unpaidRenewalsCount: number;
+  trafficViolationsCount: number;
+  salikCount: number;
+  reconciliationCount: number;
+  postCloseReceivablesCount: number;
+  overdueVehicleReturnsCount: number;
+  scheduledMaintenanceNotStartedCount: number;
+  maintenanceCompletionDelayedCount: number;
+}
 
-  if (input.overdueRentalsCount > 0) {
-    lines.push("Overdue rentals:", `${input.overdueRentalsCount}`, "");
-  }
-
-  if (input.outstandingFinancialTotal > 0) {
-    lines.push(
-      "Outstanding financial total:",
-      formatMoney(input.outstandingFinancialTotal, input.currency),
-    );
-  }
+/** Unified scheduled digest — counts only; no PII / contract / vehicle lines. */
+export function buildDailyOperationsDigestMessage(input: DailyOperationsDigestMessageInput) {
+  const total =
+    input.unpaidRentalsCount +
+    input.unpaidRenewalsCount +
+    input.trafficViolationsCount +
+    input.salikCount +
+    input.reconciliationCount +
+    input.postCloseReceivablesCount +
+    input.overdueVehicleReturnsCount +
+    input.scheduledMaintenanceNotStartedCount +
+    input.maintenanceCompletionDelayedCount;
 
   return {
-    title: "Diamond Rent Car",
-    message: lines.join("\n").trim(),
+    title: pushoverTitle(),
+    message: blockLines([
+      "Daily Operations & Receivables",
+      "",
+      "FINANCIAL RECEIVABLES",
+      `- Unpaid Rentals: ${input.unpaidRentalsCount}`,
+      `- Unpaid Renewals: ${input.unpaidRenewalsCount}`,
+      `- Traffic Violations: ${input.trafficViolationsCount}`,
+      `- Salik: ${input.salikCount}`,
+      `- Reconciliation: ${input.reconciliationCount}`,
+      `- Post-Close Receivables: ${input.postCloseReceivablesCount}`,
+      "",
+      "OVERDUE VEHICLE RETURNS",
+      `- Vehicles Awaiting Return: ${input.overdueVehicleReturnsCount}`,
+      "",
+      "MAINTENANCE OVERDUE",
+      `- Scheduled Maintenance Not Started: ${input.scheduledMaintenanceNotStartedCount}`,
+      `- Maintenance Completion Delayed: ${input.maintenanceCompletionDelayedCount}`,
+      "",
+      `Total Outstanding Items: ${total}`,
+    ]),
   };
 }

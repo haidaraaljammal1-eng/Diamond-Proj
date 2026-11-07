@@ -2,52 +2,13 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { Popover } from "@/shared/components/ui/popover";
 import { Button } from "@/shared/components/ui/button";
-import { sendDesktopNotification } from "@/modules/notifications/simulation/desktop-notification";
-import {
-  NOTIFICATION_FILTERS,
-  type NotificationCategory,
-  type NotificationFilter,
-} from "@/modules/notifications/simulation/notifications-simulation.fixture";
-import { useNotificationsSimulation } from "@/modules/notifications/simulation/use-notifications-simulation";
+import { useNotificationsInbox } from "@/modules/notifications/hooks/use-notifications-inbox";
+import type { NotificationsInboxFilter } from "@/modules/notifications/types/notifications.types";
 import styles from "./app-header.module.css";
 
-type DesktopFeedback = "sent" | "denied" | "unsupported" | "error" | null;
-
-function CategoryIcon({ category }: { category: NotificationCategory }) {
-  return (
-    <span className={styles.notificationCategoryIcon} aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        {category === "CONTRACTS" && (
-          <>
-            <path d="M7 3.5h7l3 3V20.5H7z" />
-            <path d="M14 3.5v4h4M10 12h4M10 15h4" />
-          </>
-        )}
-        {category === "HANDOVER_RETURN" && (
-          <>
-            <path d="M4 8h14M14 5l4 3-4 3M20 16H6M10 13l-4 3 4 3" />
-          </>
-        )}
-        {category === "VEHICLES" && (
-          <>
-            <path d="m5 16 1.4-5h11.2l1.4 5" />
-            <path d="M7.5 11 9 7.5h6l1.5 3.5M4.5 16h15v3h-2v-1.5h-11V19h-2z" />
-            <path d="M8 15h.01M16 15h.01" />
-          </>
-        )}
-        {category === "VIOLATIONS" && (
-          <>
-            <path d="m12 4 8 15H4z" />
-            <path d="M12 9v4M12 16h.01" />
-          </>
-        )}
-      </svg>
-    </span>
-  );
-}
+const INBOX_FILTERS: NotificationsInboxFilter[] = ["UNREAD", "ALL"];
 
 function relativeTime(createdAt: string, locale: string): string {
   const elapsedMinutes = Math.max(0, Math.round((Date.now() - Date.parse(createdAt)) / 60_000));
@@ -61,39 +22,30 @@ function relativeTime(createdAt: string, locale: string): string {
 export function NotificationsBell() {
   const t = useTranslations("Shell");
   const locale = useLocale();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [desktopFeedback, setDesktopFeedback] = useState<DesktopFeedback>(null);
   const {
-    enabled,
+    canRead,
     notifications,
     filter,
     unreadCount,
     setFilter,
     markRead,
     markAllRead,
-  } = useNotificationsSimulation();
+    refresh,
+  } = useNotificationsInbox();
 
-  const sendDesktopDemo = async () => {
-    setDesktopFeedback(
-      await sendDesktopNotification({
-        title: t("desktopDemo.title"),
-        body: t("desktopDemo.body", { count: unreadCount }),
-        tag: "diamond-demo-summary",
-      }),
-    );
-  };
-
-  const filterLabel = (item: NotificationFilter) => {
+  const filterLabel = (item: NotificationsInboxFilter) => {
     if (item === "UNREAD") return t("notificationFilters.unread", { count: unreadCount });
-    if (item === "ALL") return t("notificationFilters.all");
-    return t(`notificationFilters.${item === "HANDOVER_RETURN" ? "handoverReturn" : item.toLowerCase()}`);
+    return t("notificationFilters.all");
   };
 
   return (
     <Popover
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next && canRead) void refresh();
+      }}
       align="end"
       maxHeight={640}
       panelWidth={460}
@@ -128,69 +80,62 @@ export function NotificationsBell() {
             <span className={styles.notificationSummary}>{t("notificationSummary", { count: unreadCount })}</span>
           </div>
           {unreadCount > 0 && (
-            <Button type="button" variant="secondary" size="sm" onClick={markAllRead}>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void markAllRead()}>
               {t("notificationsMarkAllRead")}
             </Button>
           )}
         </header>
 
-        <div className={styles.notificationFilters} role="group" aria-label={t("notificationFilters.label")}>
-          {NOTIFICATION_FILTERS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={styles.notificationFilter}
-              data-active={filter === item || undefined}
-              aria-pressed={filter === item}
-              onClick={() => setFilter(item)}
-            >
-              {filterLabel(item)}
-            </button>
-          ))}
-        </div>
+        {canRead ? (
+          <>
+            <div className={styles.notificationFilters} role="group" aria-label={t("notificationFilters.label")}>
+              {INBOX_FILTERS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={styles.notificationFilter}
+                  data-active={filter === item || undefined}
+                  aria-pressed={filter === item}
+                  onClick={() => setFilter(item)}
+                >
+                  {filterLabel(item)}
+                </button>
+              ))}
+            </div>
 
-        <div className={styles.notifList} role="list">
-          {notifications.length === 0 ? (
-            <p className={styles.notifEmpty}>{t("notificationsEmpty")}</p>
-          ) : (
-            notifications.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={styles.notifRow}
-                data-unread={!item.read || undefined}
-                role="listitem"
-                onClick={() => {
-                  markRead(item.id);
-                  setOpen(false);
-                  router.push(
-                    `/${locale}${item.actionTarget.route}?focus=${encodeURIComponent(item.actionTarget.entityId)}`,
+            <div className={styles.notifList} role="list">
+              {notifications.length === 0 ? (
+                <p className={styles.notifEmpty}>{t("notificationsEmpty")}</p>
+              ) : (
+                notifications.map((item) => {
+                  const unread = item.readAt == null;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={styles.notifRow}
+                      data-unread={unread || undefined}
+                      role="listitem"
+                      onClick={() => {
+                        if (unread) void markRead(item.id);
+                      }}
+                    >
+                      <span className={styles.notifRowBody}>
+                        <span className={styles.notifRowTitle}>{item.title}</span>
+                        <span className={styles.notifRowDescription}>{item.body}</span>
+                        <span className={styles.notifRowTime}>{relativeTime(item.createdAt, locale)}</span>
+                      </span>
+                      {unread && <span className={styles.notifDot} aria-label={t("notificationUnread")} />}
+                    </button>
                   );
-                }}
-              >
-                <CategoryIcon category={item.category} />
-                <span className={styles.notifRowBody}>
-                  <span className={styles.notifRowTitle}>{t(item.titleKey, item.titleValues)}</span>
-                  <span className={styles.notifRowDescription}>{t(item.descriptionKey, item.descriptionValues)}</span>
-                  <span className={styles.notifRowTime}>{relativeTime(item.createdAt, locale)}</span>
-                </span>
-                {!item.read && <span className={styles.notifDot} aria-label={t("notificationUnread")} />}
-              </button>
-            ))
-          )}
-        </div>
-
-        {enabled && (
-          <footer className={styles.notificationDemoFooter}>
-            <Button type="button" variant="secondary" size="sm" className={styles.desktopDemoButton} onClick={() => void sendDesktopDemo()}>
-              {t("desktopDemo.action")}
-            </Button>
-            {desktopFeedback && (
-              <p className={styles.desktopDemoFeedback} role="status">
-                {t(`desktopDemo.feedback.${desktopFeedback}`)}
-              </p>
-            )}
-          </footer>
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          <div className={styles.notifList}>
+            <p className={styles.notifEmpty}>{t("notificationsEmpty")}</p>
+          </div>
         )}
       </section>
     </Popover>

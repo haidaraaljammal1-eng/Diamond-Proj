@@ -8,6 +8,7 @@ import {
   deactivateVehicle,
   STAFF_EMAIL,
   STAFF_PASSWORD,
+  type SeededVehicle,
 } from "./helpers/e2e-api";
 import {
   completeContractReviewAndSign,
@@ -15,22 +16,23 @@ import {
   continueAfterContractSign,
   fillAndSaveRenterDetails,
 } from "./helpers/rental-contract";
+import { loginStaffWithCredentials } from "./helpers/rbac-v2";
 
 test.use({ channel: "chrome" });
 test.describe.configure({ timeout: 420_000, mode: "serial" });
 
 async function staffLogin(page: Page, locale: "en") {
-  await page.goto(`/${locale}/login`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.locator("#email").fill(STAFF_EMAIL);
-  await page.locator("#password").fill(STAFF_PASSWORD);
-  await page.getByRole("button", { name: /login|sign in/i }).click();
-  await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 30_000 });
+  await loginStaffWithCredentials(page, locale, STAFF_EMAIL, STAFF_PASSWORD);
 }
 
-async function generateElectronicLink(page: Page, vehicleId: number) {
+async function generateElectronicLink(page: Page, vehicle: SeededVehicle) {
   await page.goto("/en/vehicles");
+  // Fleet list is paginated (newest first); search by plate so the seeded card is always on screen.
+  await expect(page.getByTestId("vehicle-filters")).toBeVisible({ timeout: 60_000 });
+  await page.getByTestId("vehicle-search").fill(vehicle.plateNumber);
+  await page.getByTestId("data-search-submit").click();
   await expect(page.getByTestId("vehicles-grid")).toBeVisible({ timeout: 60_000 });
-  const card = page.locator(`[data-testid="vehicle-card"][data-record-id="${vehicleId}"]`);
+  const card = page.locator(`[data-testid="vehicle-card"][data-record-id="${vehicle.id}"]`);
   await expect(card).toBeVisible({ timeout: 60_000 });
   await card.getByRole("button", { name: /generate link|set price/i }).click();
   await expect(page.getByTestId("rental-collection-mode-options")).toBeVisible();
@@ -50,7 +52,7 @@ test("en electronic rental settles via test-provider payment", async ({ page, co
 
   try {
     await staffLogin(page, "en");
-    const link = await generateElectronicLink(page, vehicle.id);
+    const link = await generateElectronicLink(page, vehicle);
     const rentalToken = extractRentalToken(link);
 
     const rentalPage = await context.newPage();

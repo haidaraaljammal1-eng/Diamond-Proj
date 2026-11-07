@@ -433,6 +433,13 @@ export async function finalizeReconciliationAndCloseInTx(
     eventType: "contract.closed",
     aggregateType: "contract",
     aggregateId: contractId,
+    dedupeKey: `contract.closed:${contractId}:pushover`,
+    payload: { contractId, vehicleId: contract.vehicleId, actorUserId: actorUserId ?? null },
+  });
+  await writeOutboxEvent(tx, {
+    eventType: "contract.closed",
+    aggregateType: "contract",
+    aggregateId: contractId,
     dedupeKey: `contract.closed:${contractId}:reconciliation_close`,
     payload: { contractId, vehicleId: contract.vehicleId, actorUserId: actorUserId ?? null },
   });

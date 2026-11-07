@@ -1,61 +1,47 @@
 # Header Notification Center
 
-Updated 2026-09-19.
+Updated 2026-11-07.
 
 ## Scope
 
-The header bell opens a browser-only Notification Center. It uses the shared
-Popover and an isolated Zustand store; it does not call an API, write a
-database record, schedule delivery, register a service worker, or use Web Push.
+The AppShell header bell opens the staff Notification Center. Inbox rows come
+from Backend `GET /notifications` (permission `notifications.read`), newest
+first, and include **only** mirrored Pushover alerts (`eventKey =
+pushover.staff_alert`). Other IN_APP notifications (e.g. legacy
+`road_liability.chargeable`) are not listed in the bell.
 
-The demo is enabled only when `NEXT_PUBLIC_DEMO_SIMULATION_ENABLED=true` and
-`isUiDemoSimulationEnabled("notifications")` is true. It is separate from the
-three rental provider substitutions (`NEXT_PUBLIC_DIAMOND_SIMULATION`): License
-OCR, Passport OCR, and successful Payment remain backend development actions.
+The list is polled about every 30 seconds while the tab is visible and
+refreshed when the popover opens — no full page reload required.
+
+## Pushover → in-app mirror
+
+Every **successful** shared Pushover send (instant business events and the
+Daily Operations & Receivables digest) is mirrored centrally in
+`NotificationService.send` into IN_APP rows for every ACTIVE user who holds
+`notifications.read`.
+
+- Event key: `pushover.staff_alert`
+- Stored fields: title, body, createdAt (send time)
+- Deduped with `dedupeKeyPrefix` from the business idempotency key (or
+  provider request id / content fingerprint)
+- Failed Pushover sends are not mirrored
+- Secrets (tokens/keys) are never stored
+
+### Retention
+
+Mirrored Pushover rows expire after **48 hours** from `createdAt`:
+
+- List / unread APIs hide expired rows even before cleanup
+- Background runner deletes expired `pushover.staff_alert` rows
+
+Other IN_APP event keys (e.g. complaints) are not TTL-deleted by this cycle.
 
 ## Header placement
 
-The AppShell header keeps the action cluster (rail controls, bell, user, and
-language) in the left grid area, the search field in the middle, and the
-breadcrumb on the right. RTL uses explicit grid-column placement so the same
-physical arrangement is preserved in Arabic. On compact phone widths the
-inactive global search and breadcrumb are hidden, leaving the menu, brand,
-bell, user, and language controls in one overflow-free row. The bell never uses
-detached coordinates.
-
-## Notification data and targeting
-
-The fixture contains lifecycle examples such as unpaid contracts, unpaid
-violations, overdue returns, and paid contracts awaiting handover. A fixture is
-created only after a real record is loaded by one of the Contracts, Vehicles,
-Dashboard, or Violations pages. Each item carries:
-
-```text
-actionTarget = {
-  entityType: "vehicle" | "contract" | "violation",
-  entityId: string,
-  route: "/vehicles" | "/contracts" | "/violations"
-}
-```
-
-Frontend-only Road Liabilities simulation rows are excluded from target
-registration, so the demo never points at a synthetic identifier. If no real
-record has been loaded, no notification is shown. Clicking an item marks it
-read and navigates to the locale route with `?focus=<entityId>`.
-
-## Record focus
-
-Vehicles, Contracts, and Violations pages expose `data-record-id` (and the
-contract number / vehicle external ID where applicable). The shared
-`useRecordFocus` hook reads the focus query, safely does nothing for an unknown
-record, and otherwise scrolls the matching row/card into view and applies a
-temporary Diamond gold highlight. The highlight is removed automatically and
-uses reduced-motion behavior when the user requests it.
+Unchanged: action cluster (rail, bell, user, language) left; search middle;
+breadcrumb right. RTL keeps the same physical arrangement.
 
 ## Center behavior
 
-The existing filters, unread badge, mark-read actions, and scoped desktop
-Notification API demo are unchanged. Desktop popover width is approximately
-460px with an internal scrolling list; mobile uses the existing viewport-safe
-width with a 12px outer margin. Desktop notification delivery is one summary
-notification while the browser context is open, not production push.
+Filters: Unread / All. Mark one or mark-all-read. Rows show title, body text,
+and relative send time. Clicking an unread row marks it read.

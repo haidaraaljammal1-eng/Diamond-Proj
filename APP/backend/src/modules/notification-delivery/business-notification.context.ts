@@ -34,19 +34,29 @@ export function summarizeDamageMarks(value: unknown): string {
   return `${value.length} mark(s)`;
 }
 
+/** @deprecated Use empty actor when performer is unknown; kept for test descriptions. */
 export const UNKNOWN_STAFF_ACTOR_LABEL = "Unknown Staff";
 
-export async function loadActorLabel(
+/**
+ * Pushover "By:" line — staff display name from `User.name` (employee full name).
+ * Falls back to email only when name is blank (legacy / incomplete rows).
+ * Returns empty `staffUsername` when the actor cannot be resolved (caller omits `By:`).
+ */
+export async function loadActorUsername(
   prisma: PrismaClient,
   userId: number | null | undefined,
   fallback: string,
 ): Promise<BusinessActor> {
-  if (!userId) return { label: fallback };
+  if (!userId) return { staffUsername: fallback === "—" || fallback === "Staff" ? "" : fallback };
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true },
+    select: { email: true, name: true },
   });
-  return { label: user?.name?.trim() || fallback };
+  const fromName = user?.name?.trim();
+  if (fromName) return { staffUsername: fromName };
+  const fromEmail = user?.email?.trim();
+  if (fromEmail) return { staffUsername: fromEmail };
+  return { staffUsername: "" };
 }
 
 export async function loadContractBasics(prisma: PrismaClient, contractId: string) {
@@ -80,6 +90,7 @@ export async function loadPaymentContext(prisma: PrismaClient, paymentId: string
     },
   });
   if (!payment) return null;
+  const paymentActor = await loadActorUsername(prisma, payment.createdByUserId, "");
   return {
     payment,
     contractNumber: payment.contract.contractNumber,
@@ -87,6 +98,7 @@ export async function loadPaymentContext(prisma: PrismaClient, paymentId: string
     vehicleName: notificationVehicleDisplayName(payment.contract.vehicle),
     operatingCompanyCode: payment.contract.company?.code ?? "UNKNOWN",
     paymentSource: payment.provider === "stripe" ? "Stripe" : payment.method,
+    paymentActor,
   };
 }
 
@@ -100,7 +112,7 @@ export async function loadCarOutContext(prisma: PrismaClient, contractId: string
     },
   });
   if (!contract?.carOut) return null;
-  const actor = await loadActorLabel(prisma, contract.carOut.performedByUserId, "Staff");
+  const actor = await loadActorUsername(prisma, contract.carOut.performedByUserId, "");
   return {
     contractNumber: contract.contractNumber,
     customerName: contract.customer?.name ?? "Unknown customer",
@@ -142,7 +154,7 @@ export async function loadRenewalContext(
         },
       });
   if (!renewal || !renewal.appliedAt) return null;
-  const actor = await loadActorLabel(prisma, renewal.createdByUserId, "Staff");
+  const actor = await loadActorUsername(prisma, renewal.createdByUserId, "");
   return {
     contractNumber: renewal.contract.contractNumber,
     customerName: renewal.contract.customer?.name ?? "Unknown customer",
@@ -153,6 +165,27 @@ export async function loadRenewalContext(
     currency: renewal.contract.currency,
     actor,
     occurredAt: renewal.appliedAt ?? renewal.approvedAt ?? new Date(),
+  };
+}
+
+export async function loadContractClosedNotificationContext(
+  prisma: PrismaClient,
+  contractId: string,
+  actorUserId: number | null,
+) {
+  const contract = await prisma.contract.findUnique({
+    where: { id: contractId },
+    include: {
+      vehicle: { include: { model: { select: { name: true } } } },
+    },
+  });
+  if (!contract?.closedAt) return null;
+  const actor = await loadActorUsername(prisma, actorUserId, "");
+  return {
+    contractNumber: contract.contractNumber,
+    vehicleName: notificationVehicleDisplayName(contract.vehicle),
+    actor,
+    occurredAt: contract.closedAt,
   };
 }
 
@@ -169,11 +202,7 @@ export async function loadCarInContext(prisma: PrismaClient, contractId: string)
     },
   });
   if (!contract?.carIn) return null;
-  const actor = await loadActorLabel(
-    prisma,
-    contract.carIn.performedByUserId,
-    UNKNOWN_STAFF_ACTOR_LABEL,
-  );
+  const actor = await loadActorUsername(prisma, contract.carIn.performedByUserId, "");
   return {
     contractNumber: contract.contractNumber,
     customerName: contract.customer?.name ?? "Unknown customer",
@@ -212,7 +241,13 @@ export async function loadRoadLiabilityContext(prisma: PrismaClient, liabilityId
   const adminFee = liability.customerCharge?.adjustmentAmount ?? null;
   const totalDue = liability.customerCharge?.customerChargeAmount ?? officialAmount;
 
+  const staffActor =
+    liability.staffEnteredByUserId != null
+      ? await loadActorUsername(prisma, liability.staffEnteredByUserId, "")
+      : null;
+
   return {
+    liabilityType: liability.type,
     vehicleName: liability.vehicle ? notificationVehicleDisplayName(liability.vehicle) : null,
     customerName: liability.attributedContract?.customer?.name ?? null,
     contractNumber: liability.attributedContract?.contractNumber ?? null,
@@ -225,6 +260,7 @@ export async function loadRoadLiabilityContext(prisma: PrismaClient, liabilityId
     currency: liability.currency ?? "AED",
     source: liability.authoritativeSourceKey ?? "System",
     occurredAt: liability.occurredAt,
+    staffActor,
   };
 }
 
@@ -360,7 +396,7 @@ export async function loadMaintenanceContext(prisma: PrismaClient, maintenanceOr
     },
   });
   if (!order) return null;
-  const actor = await loadActorLabel(prisma, order.createdByUserId, "Staff");
+  const actor = await loadActorUsername(prisma, order.createdByUserId, "");
   return {
     vehicleName: notificationVehicleDisplayName(order.vehicle),
     orderReference: `MO-${order.id}`,
@@ -383,7 +419,7 @@ export async function loadManualExpenseContext(prisma: PrismaClient, expenseId: 
     },
   });
   if (!expense) return null;
-  const actor = await loadActorLabel(prisma, expense.createdByUserId, "Staff");
+  const actor = await loadActorUsername(prisma, expense.createdByUserId, "");
   return {
     category: expense.category,
     description: expense.description,

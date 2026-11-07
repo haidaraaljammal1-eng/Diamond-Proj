@@ -43,6 +43,8 @@
     "brandSub": "RENT CAR · DUBAI",
     "searchPlaceholder": "ابحث في النظام…",
     "searchLabel": "بحث عام",
+    "searchResultsLabel": "تبويبات القائمة",
+    "searchNoResults": "لا توجد تبويبات مطابقة",
     "userRoleOwner": "المالك · أدمن",
     "userRoleEmployee": "موظف",
     "langTitle": "Language / اللغة",
@@ -278,7 +280,7 @@
     "invalidDurationValue": "أدخل مدة إيجار صالحة (1 على الأقل)."
   },
   "FunctionalRbac": {
-    "rolesSubtitle": "مصفوفة الوصول الوظيفي — مجموعات الصفحات أسطر والأدوار أعمدة، وفق صلاحيات RBAC V2 في الـBackend.",
+    "rolesSubtitle": "تحديد صلاحيات كل دور",
     "modeBanner": {
       "mismatch": "واجهة RBAC V2 مفعّلة لكن الـBackend ليس على نفس الوضع. قد تكون تعديلات المصفوفة للقراءة فقط حتى يتطابق الوضعان."
     },
@@ -309,7 +311,7 @@
   "Roles": {
     "crumbs": "الإدارة · التحكم في الوصول",
     "title": "الأدوار والصلاحيات",
-    "subtitle": "مصفوفة الوصول كما يعرّفها الـBackend تمامًا — الأعمدة أدوار والأسطر صلاحيات.",
+    "subtitle": "تحديد صلاحيات كل دور",
     "summaryRoles": "دور",
     "summaryPermissions": "صلاحية",
     "refresh": "تحديث",
@@ -471,6 +473,7 @@
       "editTitle": "تعديل الدور",
       "editDescription": "تحديث اسم الدور ووصفه. منح الصلاحيات نفسها لا يُعدَّل من هنا.",
       "editRole": "تعديل {role}",
+      "deleteRole": "حذف {role}",
       "namePlaceholder": "اسم الدور",
       "descriptionPlaceholder": "الوصف (اختياري)",
       "create": "إنشاء الدور",
@@ -478,6 +481,12 @@
       "saving": "جارٍ الحفظ…",
       "close": "إغلاق",
       "cancel": "إلغاء"
+    },
+    "delete": {
+      "title": "حذف الدور",
+      "description": "سيتم حذف الدور «{name}» نهائياً. الموظفون المرتبطون به يفقدون صلاحياته.",
+      "descriptionGeneric": "سيتم حذف هذا الدور نهائياً.",
+      "confirm": "حذف الدور"
     },
     "cellLabel": "{permission} — {role}"
   },
@@ -2949,7 +2958,7 @@
       "RENEWAL": "تجديد",
       "RECONCILIATION": "تسوية الإرجاع",
       "POST_CLOSE_RECEIVABLE": "مطالبة بعد الإغلاق",
-      "ROAD_LIABILITY": "المخالفات"
+      "ROAD_LIABILITY": "مخالفات/سالك"
     },
     "receivablePaymentState": {
       "UNPAID": "بانتظار الدفع",

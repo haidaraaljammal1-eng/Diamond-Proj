@@ -63,6 +63,7 @@ export function FormBuilder<T extends FieldValues>({
   return (
     <FormProvider {...methods}>
       <form
+        method="post"
         className={[styles.root, className].filter(Boolean).join(" ")}
         onSubmit={(event) => {
           event.preventDefault();

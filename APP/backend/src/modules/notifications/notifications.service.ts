@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { Prisma } from "@prisma/client";
 import { AppError } from "src/lib/errors/app-error";
 import { paginate } from "src/lib/http/pagination";
 import type { z } from "zod";
@@ -7,15 +8,36 @@ import type {
   ListNotificationsQuerySchema,
   UpdatePreferencesSchema,
 } from "src/modules/notifications/notifications.schema";
+import {
+  PUSHOVER_IN_APP_EVENT_KEY,
+  pushoverInAppCutoff,
+} from "src/modules/notification-delivery/pushover-in-app-mirror.service";
 
 export function createNotificationsService(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
+
+  /**
+   * Header bell inbox: Pushover mirrors only (`pushover.staff_alert`).
+   * Other IN_APP rows (e.g. road_liability.chargeable Arabic alerts) stay in
+   * the DB for their own pipelines but are not shown in the bell.
+   */
+  function visibleInboxWhere(
+    userId: number,
+    unreadOnly?: boolean,
+  ): Prisma.NotificationWhereInput {
+    return {
+      userId,
+      eventKey: PUSHOVER_IN_APP_EVENT_KEY,
+      createdAt: { gte: pushoverInAppCutoff() },
+      ...(unreadOnly ? { readAt: null } : {}),
+    };
+  }
 
   async function list(
     userId: number,
     query: z.infer<typeof ListNotificationsQuerySchema>,
   ) {
-    const where = { userId, ...(query.unreadOnly ? { readAt: null } : {}) };
+    const where = visibleInboxWhere(userId, query.unreadOnly);
     return paginate({
       page: query.page,
       pageSize: query.pageSize,
@@ -40,13 +62,16 @@ export function createNotificationsService(fastify: FastifyInstance) {
   }
 
   async function unreadCount(userId: number) {
-    return prisma.notification.count({ where: { userId, readAt: null } });
+    return prisma.notification.count({
+      where: visibleInboxWhere(userId, true),
+    });
   }
 
   async function markRead(userId: number, id: string) {
     // Scoped by userId → a user can only affect their own notifications.
+    const visibility = visibleInboxWhere(userId);
     const result = await prisma.notification.updateMany({
-      where: { id, userId },
+      where: { id, AND: [visibility] },
       data: { readAt: new Date() },
     });
     if (result.count === 0) throw AppError.notFound("Notification not found");
@@ -54,7 +79,7 @@ export function createNotificationsService(fastify: FastifyInstance) {
 
   async function markAllRead(userId: number) {
     const result = await prisma.notification.updateMany({
-      where: { userId, readAt: null },
+      where: visibleInboxWhere(userId, true),
       data: { readAt: new Date() },
     });
     return result.count;

@@ -390,6 +390,13 @@ export function createFinanceReceivablesService(prisma: PrismaClient) {
   }
 
   return {
+    /** Unpaginated open-receivable rows (same sources as the Finance grid). */
+    async listAllOpenReceivableRows(
+      scope: FinanceCompanyScope = ALL_COMPANIES,
+    ): Promise<OpenReceivableRow[]> {
+      return listAll(undefined, scope);
+    },
+
     async totalOutstanding(scope: FinanceCompanyScope = ALL_COMPANIES): Promise<number> {
       const rows = await listAll(undefined, scope);
       return rows.reduce((sum, row) => sum + row.outstandingAmount, 0);

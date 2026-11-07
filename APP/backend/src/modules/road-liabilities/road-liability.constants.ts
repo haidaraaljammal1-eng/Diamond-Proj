@@ -27,6 +27,8 @@ export const GPS_CROSSING_DEDUP_MS = 120_000;
 export const AUTHORITATIVE_PREDICTION_MATCH_MS = 30 * 60 * 1000;
 
 export const ROAD_LIABILITY_OUTBOX_EVENT = "road_liability.chargeable";
+/** Pushover: official or staff-registered road liability attributed to a contract (arrival). */
+export const ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT = "road_liability.received";
 export const ROAD_LIABILITY_OUTBOX_AGGREGATE = "RoadLiability";
 export const ROAD_LIABILITY_CHARGEABLE_NOTIFICATION = "road_liability.chargeable";
 export const ROAD_LIABILITY_COLLECTION_LOCK_NS = "road_liability_collection";

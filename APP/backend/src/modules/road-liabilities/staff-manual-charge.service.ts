@@ -7,11 +7,16 @@ import {
 } from "src/lib/db/advisory-lock";
 import type { Tx } from "src/lib/db/transaction";
 import { withTransaction } from "src/lib/db/transaction";
+import { writeOutboxEvent } from "src/lib/db/outbox";
 import { runIdempotent, fingerprintIdempotentPayload } from "src/lib/db/idempotency";
 import { assertPositiveAedAmount } from "src/modules/contracts/payment/money";
 import { ErrorCode } from "src/constants/error-codes";
 import { AppError } from "src/lib/errors/app-error";
-import { STAFF_MANUAL_SOURCE_KEY } from "src/modules/road-liabilities/road-liability.constants";
+import {
+  ROAD_LIABILITY_OUTBOX_AGGREGATE,
+  ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT,
+  STAFF_MANUAL_SOURCE_KEY,
+} from "src/modules/road-liabilities/road-liability.constants";
 import {
   RoadChargeReferenceReason,
   roadChargeReferenceRegistrySchemaOutdatedError,
@@ -142,6 +147,22 @@ async function createStaffManualProvisionalLiability(
     idempotencyKey,
     actorUserId,
     roadLiabilityId: liability.id,
+  });
+
+  await writeOutboxEvent(tx, {
+    eventType: ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT,
+    aggregateType: ROAD_LIABILITY_OUTBOX_AGGREGATE,
+    aggregateId: liability.id,
+    dedupeKey: `${ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT}:${liability.id}`,
+    payload: {
+      liabilityId: liability.id,
+      contractId: contract.id,
+      vehicleId: contract.vehicleId,
+      type: liability.type,
+      amount: liability.amount,
+      currency: liability.currency,
+      occurredAt: liability.occurredAt.toISOString(),
+    },
   });
 
   return liability.id;

@@ -6,7 +6,7 @@ import {
 import {
   loadCarInContext,
   loadCarOutContext,
-  loadContractBasics,
+  loadContractClosedNotificationContext,
   loadMaintenanceContext,
   loadManualExpenseContext,
   loadPaymentContext,
@@ -17,7 +17,7 @@ import {
 import {
   buildCarInMessage,
   buildCarOutMessage,
-  buildContractSignedMessage,
+  buildContractFleetReturnMessage,
   buildMaintenanceCompletedMessage,
   buildMaintenanceStartedMessage,
   buildManualExpenseMessage,
@@ -34,23 +34,6 @@ import type { NotificationSendResult } from "src/modules/notification-delivery/n
 
 type JsonPayload = Record<string, unknown>;
 
-function purposeLabel(purpose: string): string {
-  switch (purpose) {
-    case "RENTAL":
-      return "Rental payment";
-    case "RENEWAL":
-      return "Renewal payment";
-    case "RECONCILIATION":
-      return "Road liability collection";
-    case "POST_CLOSE_RECEIVABLE":
-      return "Post-close road liability collection";
-    case "ROAD_LIABILITY":
-      return "Road liability collection";
-    default:
-      return purpose;
-  }
-}
-
 export function createBusinessNotificationService(
   prisma: PrismaClient,
   send = notificationService.send.bind(notificationService),
@@ -63,7 +46,7 @@ export function createBusinessNotificationService(
       const outcome = await runIdempotent(
         prisma,
         { scope: PUSHOVER_BUSINESS_IDEMPOTENCY_SCOPE, key: idempotencyKey },
-        () => send(payload),
+        () => send({ ...payload, inAppDedupeKey: idempotencyKey }),
       );
       if (outcome.deduped) return null;
       return outcome.result ?? null;
@@ -74,17 +57,6 @@ export function createBusinessNotificationService(
 
   async function handleOutboxEvent(eventType: string, payload: JsonPayload): Promise<void> {
     switch (eventType) {
-      case "contract.signed": {
-        const contractId = String(payload.contractId ?? "");
-        const contract = await loadContractBasics(prisma, contractId);
-        if (!contract) return;
-        await deliverOnce(`contract.signed:${contractId}`, buildContractSignedMessage({
-          ...contract,
-          actor: { label: "Customer" },
-          occurredAt: contract.acceptedAt,
-        }));
-        return;
-      }
       case "payment.confirmed": {
         const paymentId = String(payload.paymentId ?? "");
         const purpose = String(payload.purpose ?? "");
@@ -94,12 +66,8 @@ export function createBusinessNotificationService(
         if (purpose === "RENTAL") {
           await deliverOnce(`payment.confirmed:${paymentId}`, buildPaymentReceivedMessage({
             contractNumber: ctx.contractNumber,
-            customerName: ctx.customerName,
             vehicleName: ctx.vehicleName,
-            amount: ctx.payment.amount,
-            currency: ctx.payment.currency,
-            paymentSource: ctx.paymentSource,
-            occurredAt: ctx.payment.confirmedAt ?? new Date(),
+            actor: ctx.paymentActor,
           }));
           return;
         }
@@ -114,16 +82,9 @@ export function createBusinessNotificationService(
           await deliverOnce(
             `road-liability.collected:${paymentId}`,
             buildRoadLiabilityCollectedMessage({
-              vehicleName: collection.vehicleName,
-              customerName: collection.customerName,
               contractNumber: collection.contractNumber,
-              reference: collection.liability.reference,
-              officialAmount: collection.liability.officialAmount,
-              adminFee: collection.liability.adminFee,
-              totalCollected: collection.liability.totalCollected,
-              currency: collection.currency,
-              collectionChannel: collection.collectionChannel,
-              occurredAt: collection.occurredAt,
+              vehicleName: collection.vehicleName,
+              actor: ctx.paymentActor,
             }),
           );
         }
@@ -136,12 +97,8 @@ export function createBusinessNotificationService(
         const purpose = ctx.payment.purpose;
         const message = buildPaymentFailedMessage({
           contractNumber: ctx.contractNumber,
-          customerName: ctx.customerName,
           vehicleName: ctx.vehicleName,
-          amount: ctx.payment.amount,
-          currency: ctx.payment.currency,
-          purposeLabel: purposeLabel(purpose),
-          occurredAt: ctx.payment.failedAt ?? new Date(),
+          actor: ctx.paymentActor,
         });
 
         if (
@@ -149,18 +106,12 @@ export function createBusinessNotificationService(
           purpose === "POST_CLOSE_RECEIVABLE" ||
           purpose === "ROAD_LIABILITY"
         ) {
-          const collection = await loadRoadLiabilityCollectionContext(prisma, paymentId);
           await deliverOnce(
             `road-liability.collection-failed:${paymentId}`,
             buildRoadLiabilityCollectionFailedMessage({
               contractNumber: ctx.contractNumber,
-              customerName: ctx.customerName,
               vehicleName: ctx.vehicleName,
-              reference: collection?.liability?.reference ?? null,
-              amount: ctx.payment.amount,
-              currency: ctx.payment.currency,
-              purposeLabel: purposeLabel(purpose),
-              occurredAt: ctx.payment.failedAt ?? new Date(),
+              actor: ctx.paymentActor,
             }),
           );
           return;
@@ -173,24 +124,12 @@ export function createBusinessNotificationService(
         const paymentId = String(payload.paymentId ?? "");
         const ctx = await loadPaymentContext(prisma, paymentId);
         if (!ctx) return;
-        const stripeReference =
-          (payload.providerReference as string | undefined) ??
-          ctx.payment.providerReference ??
-          null;
         await deliverOnce(
           `payment.authorization_incomplete:${paymentId}`,
           buildPaymentAuthorizationIncompleteMessage({
             contractNumber: ctx.contractNumber,
-            customerName: ctx.customerName,
             vehicleName: ctx.vehicleName,
-            operatingCompanyCode: ctx.operatingCompanyCode,
-            amount: ctx.payment.amount,
-            currency: ctx.payment.currency,
-            paymentStatus: "CONFIRMED",
-            authorizationStatus: "INCOMPLETE",
-            stripeReference,
-            errorCode: "CARD_AUTHORIZATION_INCOMPLETE",
-            occurredAt: ctx.payment.confirmedAt ?? new Date(),
+            actor: ctx.paymentActor,
           }),
         );
         return;
@@ -220,11 +159,33 @@ export function createBusinessNotificationService(
         await deliverOnce(`contract.return_submitted:${contractId}`, buildCarInMessage(ctx));
         return;
       }
-      case "road_liability.chargeable": {
+      case "contract.closed": {
+        const contractId = String(payload.contractId ?? "");
+        const actorUserId =
+          typeof payload.actorUserId === "number"
+            ? payload.actorUserId
+            : payload.actorUserId != null
+              ? Number(payload.actorUserId)
+              : null;
+        const ctx = await loadContractClosedNotificationContext(
+          prisma,
+          contractId,
+          Number.isFinite(actorUserId) ? actorUserId : null,
+        );
+        if (!ctx) return;
+        await deliverOnce(`contract.closed:${contractId}`, buildContractFleetReturnMessage(ctx));
+        return;
+      }
+      case "road_liability.received": {
         const liabilityId = String(payload.liabilityId ?? "");
         const ctx = await loadRoadLiabilityContext(prisma, liabilityId);
         if (!ctx) return;
-        await deliverOnce(`road-liability.received:${liabilityId}`, buildRoadLiabilityReceivedMessage(ctx));
+        await deliverOnce(`road_liability.received:${liabilityId}`, buildRoadLiabilityReceivedMessage({
+          liabilityType: ctx.liabilityType,
+          contractNumber: ctx.contractNumber,
+          vehicleName: ctx.vehicleName,
+          staffActor: ctx.staffActor ?? undefined,
+        }));
         return;
       }
       case "maintenance.started": {
@@ -233,9 +194,7 @@ export function createBusinessNotificationService(
         if (!ctx) return;
         await deliverOnce(`maintenance.started:${maintenanceOrderId}`, buildMaintenanceStartedMessage({
           vehicleName: ctx.vehicleName,
-          orderReference: ctx.orderReference,
           actor: ctx.actor,
-          occurredAt: ctx.occurredAt,
         }));
         return;
       }
@@ -245,11 +204,7 @@ export function createBusinessNotificationService(
         if (!ctx) return;
         await deliverOnce(`maintenance.completed:${maintenanceOrderId}`, buildMaintenanceCompletedMessage({
           vehicleName: ctx.vehicleName,
-          orderReference: ctx.orderReference,
-          actualCost: ctx.actualCost,
-          currency: ctx.currency,
           actor: ctx.actor,
-          occurredAt: ctx.occurredAt,
         }));
         return;
       }

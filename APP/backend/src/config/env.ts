@@ -240,10 +240,32 @@ const EnvSchema = z
     PUSHOVER_ENABLED: envBool(false),
     PUSHOVER_APP_TOKEN: z.string().optional().default(""),
     PUSHOVER_USER_KEY: z.string().optional().default(""),
+    /** Shown as Pushover notification title for all Diamond business Pushover alerts. */
+    PUSHOVER_NOTIFICATION_TITLE: z.string().trim().min(1).default("Diamond Rent Car"),
 
-    ATTENTION_MONITOR_ENABLED: envBool(false),
     ATTENTION_MONITOR_TIMEZONE: z.string().trim().min(1).default("Asia/Dubai"),
+    /**
+     * Unified Daily Operations & Receivables digest (09:00 / 14:00 / 19:00 Asia/Dubai).
+     * Replaces the five legacy scheduled Pushover monitors when enabled.
+     */
+    DAILY_OPERATIONS_DIGEST_ENABLED: envBool(false),
+    DAILY_OPERATIONS_DIGEST_TIMES: z.string().default("09:00,14:00,19:00"),
+    /** @deprecated Prefer DAILY_OPERATIONS_DIGEST_*. Kept for rollback; disabled when digest is on. */
+    ATTENTION_MONITOR_ENABLED: envBool(false),
+    /** Slot reminders for legacy attention monitor (unused when digest is enabled). */
     ATTENTION_MONITOR_TIMES: z.string().default("09:00,14:00,19:00"),
+    /** @deprecated Prefer DAILY_OPERATIONS_DIGEST_*. */
+    OVERDUE_RENTAL_MONITOR_ENABLED: envBool(false),
+    OVERDUE_RENTAL_MONITOR_TIMES: z.string().default("09:00,14:00,19:00"),
+    /** @deprecated Prefer DAILY_OPERATIONS_DIGEST_*. */
+    OPEN_RECEIVABLES_REMINDER_ENABLED: envBool(false),
+    OPEN_RECEIVABLES_REMINDER_TIMES: z.string().default("10:00,14:00,19:00"),
+    /** @deprecated Prefer DAILY_OPERATIONS_DIGEST_*. */
+    MAINTENANCE_SCHEDULE_MISSED_MONITOR_ENABLED: envBool(false),
+    MAINTENANCE_SCHEDULE_MISSED_MONITOR_TIMES: z.string().default("09:00,14:00,19:00"),
+    /** @deprecated Prefer DAILY_OPERATIONS_DIGEST_*. */
+    MAINTENANCE_DELAY_MONITOR_ENABLED: envBool(false),
+    MAINTENANCE_DELAY_MONITOR_TIMES: z.string().default("09:00,14:00,19:00"),
 
     SEED_DEV_ADMIN: envBool(false),
     DEV_ADMIN_EMAIL: z.string().default("admin@example.com"),

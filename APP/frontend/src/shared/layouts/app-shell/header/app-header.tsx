@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { BrandLogo } from "@/shared/components/ui/brand-logo";
@@ -8,6 +7,7 @@ import { Select, type SelectOption } from "@/shared/components/ui/select";
 import { useAuth } from "@/modules/auth";
 import { useAppShellStore } from "../store/app-shell.store";
 import { AppBreadcrumb } from "./app-breadcrumb";
+import { HeaderNavSearch } from "./header-nav-search";
 import { RailToggle } from "./rail-toggle";
 import { NotificationsBell } from "./notifications-bell";
 import styles from "./app-header.module.css";
@@ -38,9 +38,9 @@ const GlobeIcon = (
  * The brand is NOT here — it heads the rail — except below the drawer
  * breakpoint, where the rail is off-screen and the mark returns to the bar.
  *
- * Search is shell-level UI: it has no backend endpoint yet, so submitting is
- * inert. The locale select swaps the `/[locale]` path segment on change.
- * Notification demo state stays isolated in `notifications-bell.tsx`.
+ * Search filters the same visible Sidebar link items from `useNavigation`
+ * and navigates to the selected tab. The locale select swaps the `/[locale]`
+ * path segment on change.
  */
 export function AppHeader() {
   const t = useTranslations("Shell");
@@ -50,7 +50,6 @@ export function AppHeader() {
   const { user } = useAuth();
   const mobileSidebarOpen = useAppShellStore((s) => s.mobileSidebarOpen);
   const toggleMobileSidebar = useAppShellStore((s) => s.toggleSidebar);
-  const [query, setQuery] = useState("");
 
   const isAdmin = user?.roles?.includes("system_admin") === true;
   const displayName = user?.name?.trim() || "Diamond";
@@ -89,31 +88,9 @@ export function AppHeader() {
         <AppBreadcrumb />
       </div>
 
-      <form
-        className={styles.search}
-        role="search"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          className={styles.searchIcon}
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.6-3.6" />
-        </svg>
-        <input
-          type="search"
-          className={styles.searchInput}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-          aria-label={t("searchLabel")}
-        />
-      </form>
+      <HeaderNavSearch />
 
       <div className={styles.endGroup}>
-
         <NotificationsBell />
 
         <div className={styles.meChip} title={t("avatarLabel")}>

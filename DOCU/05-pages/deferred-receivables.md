@@ -28,4 +28,5 @@ Cash confirm for eligible `ROAD_LIABILITY` rows: `POST /finance/open-receivables
 
 ## Pushover
 
-Attention monitor includes deferred/open road liabilities and renewals awaiting payment (existing Dubai slot schedule + idempotency).
+- **Daily Operations & Receivables** (when `DAILY_OPERATIONS_DIGEST_ENABLED`): unified Pushover digest at 09:00 / 14:00 / 19:00 Asia/Dubai for open Finance receivables, overdue ACTIVE returns, and overdue maintenance. See `DOCU/00-system-overview/pushover-staff-notifications.md`. Legacy Attention / Open Receivables / Overdue Rental / Maintenance Missed / Maintenance Delay scheduled monitors are superseded.
+- **Instant business events** (when `PUSHOVER_ENABLED`): payment confirmed/failed, road liability attributed (`road_liability.received`, not duplicated from `road_liability.chargeable`), Car-Out / Car-In, contract close, renewal applied, maintenance scheduled/completed — title from `PUSHOVER_NOTIFICATION_TITLE`; body is **English**, multi-line (event, vehicle, contract, key amounts/dates, staff).

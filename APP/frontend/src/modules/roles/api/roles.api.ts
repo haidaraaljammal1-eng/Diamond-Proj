@@ -99,3 +99,10 @@ export async function setRoleFunctionalGrants(
   );
   return response.data;
 }
+
+/** `DELETE /roles/:id` (Backend permission: `roles.manage`; V2: system_admin only). */
+export async function deleteRole(id: number): Promise<void> {
+  await apiRequest<{ message: string }>(`${ROLES_PATH}/${id}`, {
+    method: "DELETE",
+  });
+}

@@ -42,6 +42,11 @@ const NOTIFICATION_DEFINITIONS = [
     name: "Chargeable road liability",
     defaultChannels: ["IN_APP"],
   },
+  {
+    key: "pushover.staff_alert",
+    name: "Pushover staff alert (in-app mirror)",
+    defaultChannels: ["IN_APP"],
+  },
 ];
 
 const COMPLAINT_CATEGORIES: { code: string; nameEn: string; nameAr: string; defaultPriority: "CRITICAL" | "URGENT" | "HIGH" | "MEDIUM" | "LOW"; sortOrder: number }[] = [

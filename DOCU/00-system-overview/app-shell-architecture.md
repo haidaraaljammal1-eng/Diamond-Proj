@@ -41,6 +41,7 @@ No sidebar/navigation/permission/business logic lives here.
 | `app-shell.tsx` | Layout structure (header + rail + content) |
 | `app-shell.module.css` | Stage + mobile scrim |
 | `header/app-header.tsx` | Demo `#topbar` capsule (left actions, search, breadcrumb, user/language controls) |
+| `header/header-nav-search.tsx` | Header search → filters visible Sidebar link items and navigates to the selected tab |
 | `sidebar/sidebar.tsx` | Demo `#rail` icon dock, render-only |
 | `sidebar/sidebar-item.tsx` | `.navit` item (link/action, active state, badge) |
 | `sidebar/sidebar-brand.tsx` | Crystal mark + `DIAMOND` wordmark |
@@ -63,6 +64,9 @@ AppShell owns no API, no business logic, no page data.
 - `hooks/use-navigation.ts` — active item from the URL (never stored),
   locale-aware hrefs, permission filtering by real Backend permissions,
   and Demo `adminOnly` role behavior.
+- `utils/filter-navigation-search.ts` — header search matches translated
+  rail **link** labels only (same permission-filtered set as the Sidebar).
+  Selecting a hit navigates to that item’s locale href.
 
 Policies:
 

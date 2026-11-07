@@ -3,12 +3,13 @@ import { createCallCenterService } from "src/modules/call-center/call-center.ser
 import { createComplaintsService } from "src/modules/complaints/complaints.service";
 import { createStripeWebhookWorker } from "src/modules/contracts/payment/stripe-webhook-worker.service";
 import { createBusinessNotificationOutboxConsumer } from "src/modules/notification-delivery/business-notification-outbox.consumer";
-import { createAttentionMonitorService } from "src/modules/notification-delivery/attention-monitor.service";
+import { createDailyOperationsDigestService } from "src/modules/notification-delivery/daily-operations-digest.service";
 import { createRoadLiabilityOutboxConsumer } from "src/modules/road-liabilities/road-liability-outbox-consumer";
 import { createInvoiceOutboxConsumer } from "src/modules/invoices/invoice-outbox-consumer";
 import { createReportExecService } from "src/modules/reports/report-exec.service";
 import { createGpsProviderSyncService } from "src/modules/gps/gps-provider-sync.service";
 import { runWhatsAppMediaCleanupCycle } from "src/modules/whatsapp/whatsapp.media-cleanup";
+import { runPushoverInAppNotificationCleanup } from "src/modules/notification-delivery/pushover-in-app-mirror.service";
 
 /**
  * The background cycles of the system, driven either by the in-process
@@ -28,7 +29,7 @@ export function createBackgroundRunner(app: FastifyInstance) {
   const roadLiabilityOutbox = createRoadLiabilityOutboxConsumer(app);
   const invoiceOutbox = createInvoiceOutboxConsumer(app);
   const businessNotifications = createBusinessNotificationOutboxConsumer(app);
-  const attentionMonitor = createAttentionMonitorService(app);
+  const dailyOperationsDigest = createDailyOperationsDigestService(app);
   const gpsProviderSync = createGpsProviderSyncService(app);
 
   async function runAllCycles(): Promise<void> {
@@ -89,12 +90,12 @@ export function createBackgroundRunner(app: FastifyInstance) {
       app.log.error({ err }, "business-notification: outbox cycle failed");
     }
     try {
-      const sent = await attentionMonitor.runDueCycle();
+      const sent = await dailyOperationsDigest.runDueCycle();
       if (sent) {
-        app.log.info("attention-monitor: summary sent");
+        app.log.info("pushover: daily-operations-digest sent");
       }
     } catch (err) {
-      app.log.error({ err }, "attention-monitor: cycle failed");
+      app.log.error({ err }, "pushover: daily-operations-digest failed");
     }
     try {
       const gps = await gpsProviderSync.runGpsProviderSyncCycle();
@@ -117,6 +118,14 @@ export function createBackgroundRunner(app: FastifyInstance) {
       }
     } catch (err) {
       app.log.error({ err }, "whatsapp-media: cleanup failed");
+    }
+    try {
+      const removed = await runPushoverInAppNotificationCleanup(app.prisma);
+      if (removed > 0) {
+        app.log.info({ removed }, "pushover-in-app: expired notifications removed");
+      }
+    } catch (err) {
+      app.log.error({ err }, "pushover-in-app: cleanup failed");
     }
   }
 

@@ -12,11 +12,12 @@ import {
   isFunctionalRbacV2UiEnabled,
 } from "@/modules/functional-rbac";
 import {
-  createRole,
+  createRole as createRoleRequest,
+  deleteRole as deleteRoleRequest,
   listAllRoles,
   setRoleFunctionalGrants,
   setRolePermissions,
-  updateRole,
+  updateRole as updateRoleRequest,
 } from "../api/roles.api";
 import type {
   CreateRolePayload,
@@ -49,6 +50,7 @@ interface RolesPermissionsState {
   /** Resolves to `true` when the Backend accepted the write. */
   createRole: (payload: CreateRolePayload) => Promise<boolean>;
   updateRole: (id: number, payload: UpdateRolePayload) => Promise<boolean>;
+  deleteRole: (id: number) => Promise<boolean>;
   /**
    * Grants or revokes one permission for one role and saves immediately.
    * Applied optimistically and rolled back when the Backend refuses.
@@ -169,10 +171,13 @@ export const useRolesPermissionsStore = create<RolesPermissionsState>(
         set({ submitError: null });
       },
       async createRole(payload) {
-        return submit(() => createRole(payload));
+        return submit(() => createRoleRequest(payload));
       },
       async updateRole(id, payload) {
-        return submit(() => updateRole(id, payload));
+        return submit(() => updateRoleRequest(id, payload));
+      },
+      async deleteRole(id) {
+        return submit(() => deleteRoleRequest(id));
       },
       pendingCells: {},
       async toggleFunctionalGrant(roleId, capabilityKey, next) {

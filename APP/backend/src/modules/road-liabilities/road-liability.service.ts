@@ -9,6 +9,7 @@ import {
   ROAD_LIABILITY_INGEST_LOCK_NS,
   ROAD_LIABILITY_OUTBOX_AGGREGATE,
   ROAD_LIABILITY_OUTBOX_EVENT,
+  ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT,
 } from "src/modules/road-liabilities/road-liability.constants";
 import { roadLiabilityNotFoundError } from "src/modules/road-liabilities/road-liability.errors";
 import {
@@ -73,6 +74,41 @@ function fingerprintFor(input: NormalizedRoadObservationInput, extras: {
   });
 }
 
+function maybeWriteRoadLiabilityReceivedOutbox(
+  tx: Tx,
+  liability: Pick<
+    RoadLiability,
+    | "id"
+    | "type"
+    | "vehicleId"
+    | "attributedContractId"
+    | "amount"
+    | "currency"
+    | "occurredAt"
+    | "authoritativeSourceKey"
+  >,
+): Promise<void> {
+  if (liability.attributedContractId == null) {
+    return Promise.resolve();
+  }
+  return writeOutboxEvent(tx, {
+    eventType: ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT,
+    aggregateType: ROAD_LIABILITY_OUTBOX_AGGREGATE,
+    aggregateId: liability.id,
+    dedupeKey: `${ROAD_LIABILITY_RECEIVED_OUTBOX_EVENT}:${liability.id}`,
+    payload: {
+      liabilityId: liability.id,
+      contractId: liability.attributedContractId,
+      vehicleId: liability.vehicleId,
+      type: liability.type,
+      sourceKey: liability.authoritativeSourceKey,
+      amount: liability.amount,
+      currency: liability.currency,
+      occurredAt: liability.occurredAt.toISOString(),
+    },
+  }).then(() => undefined);
+}
+
 function maybeWriteChargeableOutbox(
   tx: Tx,
   liability: Pick<
@@ -109,6 +145,27 @@ function maybeWriteChargeableOutbox(
       occurredAt: liability.occurredAt.toISOString(),
     },
   }).then(() => undefined);
+}
+
+async function maybeWriteRoadLiabilityNotificationOutbox(
+  tx: Tx,
+  liability: Pick<
+    RoadLiability,
+    | "id"
+    | "type"
+    | "vehicleId"
+    | "attributedContractId"
+    | "amount"
+    | "currency"
+    | "occurredAt"
+    | "authoritativeSourceKey"
+    | "confirmationStatus"
+    | "attributionStatus"
+    | "collectionStatus"
+  >,
+): Promise<void> {
+  await maybeWriteRoadLiabilityReceivedOutbox(tx, liability);
+  await maybeWriteChargeableOutbox(tx, liability);
 }
 
 async function syncProviderReferenceRegistry(
@@ -252,7 +309,7 @@ export function createRoadLiabilityService(fastify: FastifyInstance) {
             },
           });
           liabilityId = updated.id;
-          await maybeWriteChargeableOutbox(tx, updated);
+          await maybeWriteRoadLiabilityNotificationOutbox(tx, updated);
         }
       }
 
@@ -285,7 +342,7 @@ export function createRoadLiabilityService(fastify: FastifyInstance) {
           },
         });
         liabilityId = created.id;
-        await maybeWriteChargeableOutbox(tx, created);
+        await maybeWriteRoadLiabilityNotificationOutbox(tx, created);
       }
 
       if (liabilityId) {

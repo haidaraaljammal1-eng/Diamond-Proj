@@ -6,6 +6,11 @@ export interface NotificationPayload {
   priority?: NotificationPriority;
   url?: string;
   urlTitle?: string;
+  /**
+   * Stable key for mirroring a successful Pushover send into the in-app inbox
+   * without duplicating retries of the same business event.
+   */
+  inAppDedupeKey?: string;
 }
 
 export type NotificationErrorCode =
